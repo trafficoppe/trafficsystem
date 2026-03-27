@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ฟอร์มบันทึกและตรวจสภาพ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        
+        <div class="sidebar">
+            <div class="sidebar-header">
+                ระบบงานจราจร
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="landing.html?main=staff">บุคลากร/พนักงาน</a></li>
+                <li><a href="landing.html?main=mission">การดูแลพื้นที่ส่วนกลาง</a></li>
+                <li><a href="landing.html?main=vehicle">ยานพาหนะทั้งหมด</a></li>
+                <li><a href="landing.html?main=fire&unit=ถังดับเพลิง">อุปกรณ์ดับเพลิง</a></li>
+                <li><a href="landing.html?main=form">แบบฟอร์มต่างๆ</a></li>
+                
+                <li class="has-submenu" style="margin-top: 20px; border-top: 1px solid #34495e;">
+                    <a href="report.html" style="color: #f1c40f; font-weight: 500;">
+                        📊 รายงาน
+                    </a>
+                    <ul class="submenu" id="submenu-report">
+                        <li><a href="report.html">รายงานประจำเดือน</a></li>
+                    </ul>
+                </li>
+                
+                <li style="margin-top: 20px; border-top: 1px solid #34495e;">
+                    <a href="#" onclick="window.history.back();" style="color: #e74c3c; font-weight: 500;">
+                        กลับหน้าหลัก
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="main-content">
+            <div class="top-header">
+                <div class="page-title">ฟอร์มบันทึกและตรวจสภาพ</div>
+            </div>
+            
+            <div class="form-layout-container">
+                <div class="form-section">
+                    <form id="inspectionForm">
+                        <div class="form-group">
+                            <label>ผู้ตรวจสอบ:</label>
+                            <input type="text" name="inspector" required placeholder="ชื่อผู้ตรวจ">
+                        </div>
+                        <div class="form-group">
+                            <label>ประเภท:</label>
+                            <select id="vehicleType" name="vehicleType" onchange="updateFormFields()" required>
+                                <option value="">-- เลือกประเภท --</option>
+                                <option value="รถจักรยานยนต์">รถจักรยานยนต์</option>
+                                <option value="รถจักรยานไฟฟ้า">รถจักรยานไฟฟ้า</option>
+                                <option value="รถกอล์ฟ">รถกอล์ฟ</option>
+                                <option value="อุปกรณ์ดับเพลิง">อุปกรณ์ดับเพลิง</option>
+                            </select>
+                        </div>
+                        
+                        <div id="dynamicFields"></div>
+                        
+                        <div class="form-group" style="margin-top: 20px;">
+                            <label>สถานะทั่วไป (สำหรับลงบันทึกประจำวัน):</label>
+                            <select id="status" name="status" required>
+                                <option value="ปกติ" selected>ปกติ (พร้อมใช้งาน)</option>
+                                <option value="แจ้งซ่อม">ชำรุด / แจ้งซ่อม</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>หมายเหตุ / อาการชำรุดเพิ่มเติม (ถ้ามี):</label>
+                            <textarea name="note" rows="3" placeholder="ระบุอาการชำรุดเพิ่มเติม"></textarea>
+                        </div>
+                        
+                        <button type="submit" id="submitBtn">บันทึกข้อมูล</button>
+                        <div id="message"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
