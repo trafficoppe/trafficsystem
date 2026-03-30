@@ -1,0 +1,836 @@
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #27ae60;
+    --bg-color: #f4f7f6;
+    --text-color: #333;
+    --sidebar-width: 250px;
+    --card-bg: #fff;
+    --hover-color: #1e8449;
+    --repair-color: #e74c3c; 
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Kanit', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ==========================================
+   CSS สำหรับ Sidebar & Navigation
+   ========================================== */
+.sidebar, .sidebar-left {
+    width: var(--sidebar-width);
+    background-color: var(--primary-color);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    z-index: 100;
+}
+
+.sidebar-header, .sidebar-logo {
+    padding: 20px;
+    background-color: #1a252f;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+    border-bottom: 1px solid #34495e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.sidebar-logo h2 {
+    font-size: 18px;
+    color: white;
+}
+
+.sidebar-menu {
+    list-style: none;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-top: 10px;
+}
+
+.sidebar-menu li a {
+    display: block;
+    padding: 15px 20px;
+    color: #bdc3c7;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-weight: 400;
+    border-left: 4px solid transparent;
+    position: relative;
+}
+
+.sidebar-menu li a:hover, .sidebar-menu li a.active {
+    background-color: #34495e;
+    color: white;
+    border-left-color: var(--secondary-color);
+}
+
+.submenu {
+    list-style: none;
+    background-color: #22313f;
+    display: none; 
+}
+
+.submenu.show-submenu {
+    display: block;
+}
+
+.submenu li a {
+    padding: 12px 20px 12px 40px;
+    font-size: 14px;
+}
+
+/* ==========================================
+   CSS สำหรับหน้าหลัก (Landing Page)
+   ========================================== */
+.main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.top-header, .main-header {
+    background-color: white;
+    padding: 15px 30px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 90;
+}
+
+.main-header h1 {
+    font-size: 22px;
+    color: var(--primary-color);
+}
+
+.page-title {
+    font-size: 22px;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-color);
+    border-radius: 20px;
+    padding: 5px 15px;
+    width: 300px;
+    border: 1px solid #ddd;
+}
+
+.search-container input {
+    border: none;
+    background: transparent;
+    outline: none;
+    padding: 8px;
+    width: 100%;
+    font-size: 14px;
+}
+
+.content-area {
+    padding: 20px 30px;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.filter-btn, .sub-filter-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 20px;
+    background-color: #e0e6ed;
+    color: #555;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filter-btn:hover, .sub-filter-btn:hover {
+    background-color: #cbd4db;
+}
+
+.filter-btn.active, .sub-filter-btn.active {
+    background-color: var(--secondary-color);
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(39, 174, 96, 0.3);
+}
+
+.badge {
+    background-color: rgba(255,255,255,0.8);
+    color: var(--primary-color);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.filter-btn.active .badge {
+    background-color: white;
+    color: var(--secondary-color);
+}
+
+/* 🚀 ปรับขนาดความกว้างของการ์ดให้ใหญ่ขึ้น (จาก 280px เป็น 320px) */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.vehicle-card {
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    transition: transform 0.3s, box-shadow 0.3s;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #eee;
+    position: relative; 
+}
+
+.vehicle-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.card-image-wrapper {
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    position: relative;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    box-sizing: border-box; 
+}
+
+.image-slide-track {
+    display: flex;
+    height: 100%;
+    transition: transform 0.3s ease;
+}
+
+.image-slide-track img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.card-image-wrapper:has(img:nth-child(2)):hover .image-slide-track {
+    transform: translateX(-100%);
+}
+
+.card-content {
+    padding: 15px;
+    text-align: center;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    width: 100%; /* สำคัญสำหรับการตัดคำ */
+}
+
+/* 🚀 บังคับชื่อให้อยู่บรรทัดเดียว ถ้ายาวเกินให้เป็น ... */
+.card-title {
+    font-size: 18px;
+    color: var(--primary-color);
+    margin-bottom: 4px;
+    font-weight: 600;
+    width: 100%;
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+}
+
+.card-plate {
+    font-size: 14px;
+    font-weight: 500;
+    color: #d35400; 
+    margin-bottom: 4px;
+}
+
+.card-plate.large {
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.card-subtitle {
+    font-size: 13px;
+    font-weight: normal;
+    color: #666;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: white;
+}
+
+.status-good {
+    background-color: #27ae60;
+}
+
+.status-bad {
+    background-color: #e74c3c;
+}
+
+.loading {
+    text-align: center;
+    font-size: 18px;
+    color: #7f8c8d;
+    padding: 40px;
+    grid-column: 1 / -1;
+}
+
+#vehicleGallery.form-list-mode {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; 
+}
+
+.form-bar {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    text-decoration: none; 
+    color: #333;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.form-bar:hover {
+    transform: translateY(-3px); 
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+    background-color: #fcfcfc; 
+}
+
+.form-name {
+    flex-grow: 1; 
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.schedule-table-container {
+    width: 100%;
+    overflow-x: auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    padding: 20px;
+    border: 1px solid #ddd;
+}
+
+.schedule-date-header {
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+    text-align: center;
+}
+
+.schedule-table th, .schedule-table td {
+    padding: 12px 10px;
+    border: 1px solid #bdc3c7; 
+    font-size: 15px;
+    vertical-align: middle;
+}
+
+.schedule-table thead .shift-header {
+    background-color: #2980b9; 
+    color: white;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.schedule-table thead .name-header {
+    background-color: #ffffff; 
+    color: #333; 
+    font-weight: 500;
+}
+
+.schedule-table thead .name-header th {
+    line-height: 1.6; 
+}
+
+.schedule-table tr:hover {
+    background-color: #f1f2f6;
+}
+
+.cell-rest {
+    background-color: #e74c3c !important;
+    color: white !important;
+    font-weight: bold;
+}
+
+/* ==========================================
+   CSS สำหรับหน้าฟอร์มตรวจสภาพ (index.html)
+   ========================================== */
+.app-container {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    background-color: var(--bg-color);
+}
+
+.form-layout-container {
+    flex-grow: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+.form-section {
+    background: #fff;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border: 1px solid #eaeaea;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #2c3e50;
+    font-size: 15px;
+}
+
+.form-group input[type="text"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ccd1d9;
+    border-radius: 8px;
+    font-size: 15px;
+    transition: border-color 0.3s;
+    outline: none;
+    background-color: #fcfcfc;
+    font-family: 'Kanit', sans-serif;
+}
+
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--secondary-color);
+    background-color: #fff;
+}
+
+.checklist-container {
+    background-color: #f8f9fa;
+    padding: 25px;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+    margin-bottom: 25px;
+}
+
+.checklist-container h4 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    border-bottom: 2px solid #ddd;
+    padding-bottom: 10px;
+    font-size: 18px;
+}
+
+.checklist-item {
+    background: #fff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    border: 1px solid #eee;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.chk-label {
+    font-weight: 500;
+    color: #34495e;
+    display: block;
+    margin-bottom: 12px;
+    font-size: 15px;
+}
+
+.checklist-options {
+    display: flex;
+    gap: 15px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px 20px;
+    background: #f1f2f6;
+    border-radius: 20px;
+    transition: 0.2s;
+    font-size: 14px;
+    font-weight: normal;
+    margin: 0;
+}
+
+.radio-label input[type="radio"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.radio-label:hover {
+    background: #dfe4ea;
+}
+
+.check-fail:hover {
+    background: #fdf3d8;
+    color: #d35400;
+}
+
+.reason-input {
+    display: none;
+    width: 100%;
+    margin-top: 15px;
+    padding: 12px;
+    border: 1px solid #e74c3c;
+    border-radius: 6px;
+    background-color: #fffaf9;
+    font-size: 14px;
+    font-family: 'Kanit', sans-serif;
+}
+
+.reason-input.show {
+    display: block;
+    animation: fadeIn 0.3s;
+}
+
+.final-status-box {
+    background-color: #e8f8f5;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 5px solid var(--secondary-color);
+}
+
+#submitBtn {
+    width: 100%;
+    padding: 16px;
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    margin-top: 15px;
+    box-shadow: 0 4px 6px rgba(39, 174, 96, 0.2);
+}
+
+#submitBtn:hover {
+    background-color: var(--hover-color);
+    transform: translateY(-2px);
+}
+
+#message {
+    text-align: center;
+    margin-top: 15px;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* ==========================================
+   CSS สำหรับ Modal (ป๊อปอัพรูปภาพ)
+   ========================================== */
+.modal {
+    display: none; 
+    position: fixed; 
+    z-index: 1000; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; 
+    background-color: rgba(0,0,0,0.8); 
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto; 
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    position: relative;
+    animation: modalFadeIn 0.3s;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-image-container {
+    position: relative;
+    width: 100%;
+    height: 350px;
+    background-color: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.close {
+    color: white;
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 10;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    transition: 0.2s;
+}
+
+.close:hover {
+    color: #f1c40f;
+}
+
+.slide-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+    border: none;
+    padding: 15px 10px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: 0.3s;
+    border-radius: 5px;
+}
+
+.slide-btn:hover {
+    background-color: rgba(0,0,0,0.8);
+}
+
+#prevImageBtn { left: 10px; }
+#nextImageBtn { right: 10px; }
+
+.image-counter {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background-color: rgba(0,0,0,0.6);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+
+#modalDetails {
+    padding: 25px;
+}
+
+#modalDetails h2 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 22px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+#modalDetails p {
+    margin-bottom: 10px;
+    font-size: 15px;
+    color: #444;
+    display: flex;
+}
+
+#modalDetails p strong {
+    width: 130px;
+    flex-shrink: 0;
+    color: #666;
+}
+
+.action-buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.action-btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    transition: 0.3s;
+}
+
+.btn-inspect { background-color: #27ae60; }
+.btn-inspect:hover { background-color: #1e8449; }
+
+/* ==========================================
+   CSS สำหรับสัญลักษณ์ประเภทไฟที่ดับได้
+   ========================================== */
+.fire-class-container {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+    margin-bottom: 6px;
+}
+
+.fire-class-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.class-a { background-color: #27ae60; } 
+.class-b { background-color: #e74c3c; } 
+.class-c { background-color: #3498db; } 
+.class-d { background-color: #f1c40f; color: #333; } 
+.class-k { background-color: #2c3e50; } 
+
+/* Responsive */
+@media (max-width: 768px) {
+    body, .app-container { flex-direction: column; height: auto; overflow: visible; }
+    .sidebar, .sidebar-left { width: 100%; height: auto; box-shadow: none; }
+    .sidebar-menu { display: flex; overflow-x: auto; white-space: nowrap; padding: 0; }
+    .sidebar-menu li a { padding: 10px 15px; border-left: none; border-bottom: 3px solid transparent; }
+    .sidebar-menu li a:hover, .sidebar-menu li a.active { border-bottom-color: var(--secondary-color); background: #34495e; }
+    .has-submenu .submenu { position: absolute; width: 100%; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.1); left: 0; }
+    .top-header, .main-header { flex-direction: column; gap: 15px; align-items: stretch; text-align: center; }
+    .search-container { width: 100%; }
+    .modal-content { width: 95%; margin: 10% auto; }
+    .form-layout-container { padding: 15px; }
+    .form-section { padding: 20px; }
+    .checklist-options { flex-direction: column; gap: 10px; }
+}
+/* =========================================
+   🌟 โค้ดพิเศษ: ระบบสไลด์ Sidebar อัตโนมัติ 🌟 
+   ========================================= */
+.sidebar {
+    position: fixed !important;
+    top: 0;
+    left: -250px !important; 
+    width: 250px !important; 
+    height: 100vh !important;
+    transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important; 
+    z-index: 9999 !important; 
+    box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+}
+
+/* กำแพงล่องหนรับเมาส์ */
+.sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -25px; 
+    width: 25px;
+    height: 100vh; 
+    background: transparent; 
+    z-index: -1;
+}
+
+/* ติ่งลูกศร */
+.sidebar::after {
+    content: '❯'; 
+    position: absolute;
+    top: 50%;
+    right: -25px;
+    width: 25px;
+    height: 70px;
+    background-color: #34495e; 
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0 8px 8px 0;
+    transform: translateY(-50%);
+    cursor: pointer;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.15);
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+/* 🌟 จุดที่เพิ่มเข้ามา: ให้กางออกเมื่อ hover หรือมีคลาส keep-open */
+.sidebar:hover, .sidebar.keep-open {
+    left: 0 !important;
+}
+
+.sidebar:hover::after, .sidebar.keep-open::after {
+    content: '❮'; 
+    background-color: #27ae60; 
+}
+
+.main-content {
+    margin-left: 20px !important; 
+    width: calc(100% - 20px) !important;
+    transition: margin-left 0.4s, width 0.4s !important;
+}
+

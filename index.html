@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบงานจราจรและป้องกันอัคคีภัย</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .form-group input[type="text"],
+        .form-group input[type="date"],
+        .form-group input[type="number"],
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ccd1d9;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+            outline: none;
+            background-color: #fcfcfc;
+            font-family: 'Kanit', sans-serif;
+            margin-top: 5px;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #27ae60;
+            background-color: #fff;
+        }
+        /* ตกแต่ง Dropdown เลือกปีให้สวยงาม */
+        .year-select-container {
+            display: none; 
+            align-items: center; 
+            padding-left: 15px; 
+            border-left: 3px solid #f39c12; 
+            margin-top: 10px; 
+            margin-bottom: 15px;
+        }
+        .year-select-dropdown {
+            padding: 8px 15px; 
+            border-radius: 6px; 
+            border: 1px solid #ccd1d9; 
+            font-family: 'Kanit', sans-serif; 
+            font-size: 15px; 
+            outline: none; 
+            cursor: pointer;
+            background-color: #fff;
+            color: #2c3e50;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .year-select-dropdown:hover, .year-select-dropdown:focus {
+            border-color: #f39c12;
+            box-shadow: 0 0 5px rgba(243, 156, 18, 0.3);
+        }        
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            ระบบงานจราจร
+        </div>
+        <ul class="sidebar-menu">
+            <li class="has-submenu">
+                <a href="index.html?main=staff" id="menu-staff">บุคลากร/พนักงาน</a>
+                <ul class="submenu" id="submenu-staff">
+                    <li><a href="index.html?main=staff&unit=ยุทธศาสตร์" id="menu-staff-strat">หน่วยยุทธศาสตร์ฯ</a></li>
+                    <li><a href="index.html?main=staff&unit=ปฏิบัติการ" id="menu-staff-op">หน่วยปฏิบัติการฯ</a></li>
+                </ul>
+            </li>
+
+            <li class="has-submenu">
+                <a href="index.html?main=mission" id="menu-mission">การดูแลพื้นที่ส่วนกลาง</a>
+                <ul class="submenu" id="submenu-mission">
+                    <li><a href="index.html?main=mission&unit=ตรวจพื้นที่" id="menu-mission-inspect">ตรวจพื้นที่</a></li>
+                    <li><a href="index.html?main=mission&unit=ช่วยเหลือ" id="menu-mission-help">ให้ความช่วยเหลือ</a></li>
+                    <li><a href="index.html?main=mission&unit=การจราจร" id="menu-mission-traffic">งานจราจร</a></li>
+                    <li><a href="index.html?main=mission&unit=ตารางเวร" id="menu-mission-schedule">ตารางเวร</a></li>
+                </ul>
+            </li>
+            
+            <li><a href="index.html?main=vehicle" id="menu-vehicle">ยานพาหนะทั้งหมด</a></li>
+            
+            <li class="has-submenu">
+                <a href="index.html?main=fire" id="menu-fire">อุปกรณ์ดับเพลิง</a>
+                <ul class="submenu" id="submenu-fire">
+                    <li><a href="index.html?main=fire&unit=ถังดับเพลิง" id="menu-fire-extinguisher">ถังดับเพลิง</a></li>
+                    <li><a href="index.html?main=fire&unit=สายส่งน้ำดับเพลิง" id="menu-fire-hose">สายส่งน้ำ</a></li>
+                    <li><a href="index.html?main=fire&unit=หัวฉีด" id="menu-fire-nozzle">หัวฉีด</a></li>
+                    <li><a href="index.html?main=fire&unit=ปั๊มน้ำ" id="menu-fire-pump">ปั๊มน้ำ</a></li>
+                    <li><a href="index.html?main=fire&unit=ตู้เก็บอุปกรณ์" id="menu-fire-cabinet">ตู้เก็บอุปกรณ์</a></li>
+                    <li><a href="index.html?main=fire&unit=หัวรับน้ำ" id="menu-fire-hydrant">หัวรับน้ำ</a></li>
+                    <li><a href="index.html?main=fire&unit=ชุด ppe" id="menu-fire-ppe">ชุด PPE</a></li>
+                </ul>              
+            </li>          
+            <li><a href="index.html?main=form" id="menu-form">แบบฟอร์มต่างๆ</a></li>
+            
+            <li style="margin-top: 20px; border-top: 1px solid #34495e;">
+                <a href="report.html" id="menu-report" style="color: #f1c40f; font-weight: 500;">
+                    📊 รายงานประจำเดือน
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="top-header">
+            <div class="page-title" id="page-title">กำลังโหลด...</div>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="ค้นหาชื่อ, ขนาด, ทะเบียน...">
+            </div>
+        </div>
+
+        <div class="content-area">
+            
+            <div class="filter-buttons" id="filter-group-vehicle" style="display: none;">
+                <button class="filter-btn active" data-filter="all">ทั้งหมด (พาหนะ) <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="รถยนต์">รถยนต์ <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="รถตู้">รถตู้ <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="รถกระบะ">รถกระบะ <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="รถกอล์ฟ">รถกอล์ฟ <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="รถจักรยานยนต์">รถจักรยานยนต์ <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="รถจักรยานไฟฟ้า">รถจักรยานไฟฟ้า <span class="badge">0</span></button>
+            </div>
+
+            <div class="filter-buttons" id="sub-filter-extinguisher" style="display: none; padding-left: 15px; border-left: 3px solid #27ae60; margin-top: -10px;"></div>
+            <div class="filter-buttons" id="sub-filter-nozzle" style="display: none; padding-left: 15px; border-left: 3px solid #2980b9; margin-top: -10px;"></div>
+
+            <div class="filter-buttons" id="filter-group-staff" style="display: none;">
+                <button class="filter-btn active" data-filter="all">พนักงานทั้งหมด <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="หัวหน้า">หัวหน้างาน <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="แอดมิน">แอดมิน <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="สายตรวจ1">สายตรวจ 1 <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="สายตรวจ2">สายตรวจ 2 <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="สายตรวจ3">สายตรวจ 3 <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="จราจร">จราจร <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="วิทยุสื่อสาร">วิทยุสื่อสาร <span class="badge">0</span></button>
+            </div>
+
+            <div class="filter-buttons" id="filter-group-mission" style="display: none;">
+                <button class="filter-btn active" data-filter="all">ทั้งหมด <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="สายตรวจ 1">สายตรวจ 1 <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="สายตรวจ 2">สายตรวจ 2 <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="สายตรวจ 3">สายตรวจ 3 <span class="badge">0</span></button>
+            </div>
+            
+            <div class="year-select-container" id="sub-filter-mission-year-container">
+                <label style="font-weight: 600; color: #34495e; margin-right: 10px;">📌 ค้นหาจากปี:</label>
+                <select id="sub-filter-mission-year-select" class="year-select-dropdown">
+                    </select>
+            </div>
+
+            <div class="gallery-grid" id="vehicleGallery">
+                <p class="loading">กำลังโหลดข้อมูลล่าสุด...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="vehicleModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="modal-image-container">
+                <img id="modalImage" src="" alt="ภาพขยาย">
+                <button class="slide-btn" id="prevImageBtn">❮</button>
+                <button class="slide-btn" id="nextImageBtn">❯</button>
+                <div class="image-counter" id="imageNumber"></div>
+            </div>
+            <div id="modalDetails"></div>
+        </div>
+    </div>
+
+    <div id="refillHistoryModal" class="modal" style="z-index: 1050;">
+        <div class="modal-content" style="max-width: 550px;">
+            <span class="close" onclick="document.getElementById('refillHistoryModal').style.display='none'">&times;</span>
+            <div style="padding: 25px;">
+                <h2 style="color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">🕒 ประวัติการเติมสาร</h2>
+                <div id="refillDetailsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="refillFormModal" class="modal" style="z-index: 1050;">
+        <div class="modal-content" style="max-width: 600px; overflow-y: auto; max-height: 90vh;">
+            <span class="close" onclick="document.getElementById('refillFormModal').style.display='none'">&times;</span>
+            <div style="padding: 25px;">
+                <h2 style="color: #2c3e50; border-bottom: 2px solid #27ae60; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">➕ บันทึกการเติมสารถังดับเพลิง</h2>
+                
+                <form id="refillForm">
+                    <input type="hidden" name="sheet_name" value="ประวัติการเติมสารถังดับเพลิง">
+                    <input type="hidden" name="Data_category" value="ประวัติการเติม">
+                    
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #34495e;">รหัส/ถังที่ (ทะเบียน):</label>
+                        <input type="text" id="rf_plate" name="ทะเบียน" readonly style="background:#f8f9fa; color:#7f8c8d; cursor:not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #34495e;">หมายเลขครุภัณฑ์:</label>
+                        <input type="text" id="rf_equip" name="หมายเลขครุภัณฑ์" readonly style="background:#f8f9fa; color:#7f8c8d; cursor:not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #34495e;">วันที่เติมสาร: <span style="color:red">*</span></label>
+                        <input type="date" name="วันที่เติม" id="rf_date" required>
+                    </div>
+                    <div style="display:flex; gap:15px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex:1; min-width: 150px;">
+                            <label style="font-weight: 600; color: #34495e;">น้ำหนักก่อนเติม (Kg.): <span style="color:red">*</span></label>
+                            <input type="number" step="0.01" name="น้ำหนักก่อนเติม" required placeholder="เช่น 15.5">
+                        </div>
+                        <div class="form-group" style="flex:1; min-width: 150px;">
+                            <label style="font-weight: 600; color: #34495e;">น้ำหนักหลังเติม (Kg.): <span style="color:red">*</span></label>
+                            <input type="number" step="0.01" name="น้ำหนักหลังเติม" required placeholder="เช่น 20.0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #34495e;">สารเคมีที่เติม: <span style="color:red">*</span></label>
+                        <input type="text" name="สารเคมีที่เติม" required placeholder="เช่น เคมีแห้ง, CO2">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #34495e;">บริษัทที่ดำเนินการ: <span style="color:red">*</span></label>
+                        <input type="text" name="บริษัทที่เติม" required placeholder="ระบุชื่อบริษัทที่รับเติม">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #34495e;">แนบรูปใบสั่งซื้อ (PO) / ใบเสร็จ (รูปภาพ/PDF):</label>
+                        <div class="file-upload-wrapper" onclick="document.getElementById('rf_poFile').click()" style="border: 2px dashed #bdc3c7; padding: 20px; text-align: center; border-radius: 8px; background-color: #f9fbfd; cursor: pointer; margin-bottom: 10px; transition: 0.3s;">
+                            <span style="color: #2980b9; font-weight: 500; font-size: 16px;">📁 คลิกเพื่อเลือกไฟล์รูปภาพ หรือ PDF</span>
+                            <input type="file" id="rf_poFile" accept="image/*, application/pdf, .pdf" style="display: none;">
+                            <div id="rf_fileNameDisplay" style="margin-top: 10px; font-size: 14px; color: #27ae60; font-weight: bold;"></div>
+                        </div>
+                        <input type="hidden" name="เอกสารการเติม" id="rf_poFileBase64">
+                        <input type="hidden" name="poFileName" id="rf_poFileName">
+                        <input type="hidden" name="poFileMimeType" id="rf_poFileMimeType">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #34495e;">หมายเหตุ:</label>
+                        <textarea name="หมายเหตุ" rows="3" placeholder="ระบุรายละเอียดเพิ่มเติม (ถ้ามี)"></textarea>
+                    </div>
+                    <button type="submit" id="rf_submitBtn" style="width: 100%; padding: 15px; background-color: #27ae60; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; box-shadow: 0 4px 6px rgba(39, 174, 96, 0.2);">
+                        💾 บันทึกข้อมูลการเติมสาร
+                    </button>
+                    <div id="rf_message" style="text-align:center; margin-top:15px; font-weight:bold; font-size: 16px;"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="landing_script.js"></script>
+</body>
+</html>

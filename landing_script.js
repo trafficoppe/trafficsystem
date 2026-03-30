@@ -1,0 +1,1142 @@
+// 🌟 สำคัญมาก: ใส่ลิงก์ Web App ของคุณที่นี่ 🌟
+const scriptURL = "https://script.google.com/macros/s/AKfycbyf7XhpsA0_C9F98o1PEU96DkweO96Bv7bfsc_PiYFI5f8JZyX3UWNO87eU0f3uqTvM/exec"; 
+
+let allVehicles = []; 
+let currentVehicleIndex = 0; 
+let currentImageIndex = 0; 
+let mainCategory = 'vehicle'; // 🌟 เริ่มต้นที่หน้ายานพาหนะ
+let currentSubFilter = 'all';
+let currentExtinguisherType = 'all';
+let currentNozzleType = 'all'; 
+let currentUnit = 'all';
+
+let currentMissionYear = 'all'; 
+
+let currentRefillHistory = [];
+let currentRefillHistoryPage = 1;
+const REFILL_HISTORY_PER_PAGE = 2; 
+let currentRefillVehicle = null;
+
+const getSearchText = (v) => {
+    return `${v.ประเภท || ''} ${v['ยี่ห้อ/รุ่น'] || ''} ${v.สี || ''} ${v.ทะเบียน || ''} ${v.หมายเลขครุภัณฑ์ || ''} ${v['ขนาด'] || ''} ${v['ชื่อแบบฟอร์ม'] || ''}`.toLowerCase();
+};
+
+const getUnit = (v) => (v['หน่วย'] || v['หน่วยงาน'] || v['Column 1'] || v['สังกัด'] || '').toLowerCase();
+
+const fireKeywords = ['อุปกรณ์ดับเพลิง', 'ถังดับเพลิง', 'สายส่งน้ำดับเพลิง', 'สายฉีด', 'หัวฉีด', 'ปั๊มน้ำ', 'ตู้เก็บอุปกรณ์', 'หัวรับน้ำ', 'ppe', 'pee', 'ชุดดับเพลิง'];
+const isFireEquip = (v) => fireKeywords.some(keyword => getSearchText(v).includes(keyword.toLowerCase()));
+
+function getFireExtinguisherClasses(modelName) {
+    let classes = [];
+    let name = (modelName || '').toLowerCase();
+
+    if (name.includes('impact') || name.includes('fast-tech') || name.includes('fast tech')) {
+        classes = ['A', 'B', 'C', 'K'];
+    } else if (name.includes('fireade') || name.includes('fire ade')) {
+        classes = ['A', 'B', 'C', 'D', 'K'];
+    } else if (name.includes('เคมีแห้ง')) {
+        classes = ['A', 'B', 'C'];
+    } else if (name.includes('co2') || name.includes('คาร์บอน')) {
+        classes = ['B', 'C'];
+    } else if (name.includes('น้ำยาเคมี') || name.includes('เหลวระเหย') || name.includes('สูตรน้ำ')) {
+        classes = ['A', 'B', 'C', 'D', 'K']; 
+    } else if (name.includes('โฟม')) {
+        classes = ['A', 'B'];
+    } else if (name.includes('น้ำ')) {
+        classes = ['A'];
+    }
+    return classes;
+}
+
+function getDirectImageUrl(url) {
+    if (!url) return "";
+    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+        return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+    }
+    return url;
+}
+
+function parseCustomDate(dateStr) {
+    if (!dateStr) return null;
+    let str = String(dateStr).trim();
+    let parts = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (parts) {
+        let day = parseInt(parts[1]);
+        let month = parseInt(parts[2]) - 1; 
+        let year = parseInt(parts[3]);
+        if (year > 2500) year -= 543; 
+        let hr = parseInt(parts[4] || 0);
+        let min = parseInt(parts[5] || 0);
+        let sec = parseInt(parts[6] || 0);
+        return new Date(year, month, day, hr, min, sec);
+    }
+    let d = new Date(str);
+    if (!isNaN(d)) return d;
+    return null;
+}
+
+function extractYear(dateStr) {
+    let d = parseCustomDate(dateStr);
+    if (d) {
+        let y = d.getFullYear() + 543; 
+        return y.toString();
+    }
+    return 'ไม่ระบุปี';
+}
+
+// 🌟 สร้างฟังก์ชันอัปเดตหน้าตา UI แทนการรีโหลดเว็บ 🌟
+function initPageUI() {
+    // 1. ซ่อนเมนูย่อยและตัวกรองทั้งหมดก่อน
+    document.querySelectorAll('.sidebar-menu a').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.submenu').forEach(el => el.classList.remove('show-submenu'));
+    document.querySelectorAll('.filter-buttons').forEach(el => el.style.display = 'none');
+    
+    const galleryElement = document.getElementById('vehicleGallery');
+    if(galleryElement) galleryElement.classList.remove('form-list-mode'); 
+
+    // 2. เปิดเมนูและตัวกรองตามหมวดหมู่ที่เลือก
+    if(mainCategory === 'fire') {
+        const menuFire = document.getElementById('menu-fire');
+        if(menuFire) menuFire.classList.add('active');
+        const submenuFire = document.getElementById('submenu-fire');
+        if(submenuFire) submenuFire.classList.add('show-submenu');
+
+        if (currentUnit === 'all' || currentUnit === '') {
+            document.getElementById('page-title').innerText = 'อุปกรณ์ป้องกันอัคคีภัยทั้งหมด';
+        } else {
+            if (currentUnit === 'ถังดับเพลิง') {
+                const item = document.getElementById('menu-fire-extinguisher');
+                if(item) item.classList.add('active');
+                document.getElementById('page-title').innerText = 'อุปกรณ์ดับเพลิง: ถังดับเพลิง';
+                const subFilterExt = document.getElementById('sub-filter-extinguisher');
+                if (subFilterExt) subFilterExt.style.display = 'flex';
+            } else if (currentUnit === 'สายส่งน้ำดับเพลิง' || currentUnit === 'สายส่งน้ำ') {
+                const item = document.getElementById('menu-fire-hose');
+                if(item) item.classList.add('active');
+                document.getElementById('page-title').innerText = 'อุปกรณ์ดับเพลิง: สายส่งน้ำดับเพลิง';
+            } else if (currentUnit === 'หัวฉีด') {
+                const item = document.getElementById('menu-fire-nozzle');
+                if(item) item.classList.add('active');
+                document.getElementById('page-title').innerText = 'อุปกรณ์ดับเพลิง: หัวฉีด';
+                const subFilterNoz = document.getElementById('sub-filter-nozzle');
+                if (subFilterNoz) subFilterNoz.style.display = 'flex';
+            } else if (currentUnit === 'ปั๊มน้ำ') {
+                const item = document.getElementById('menu-fire-pump');
+                if(item) item.classList.add('active');
+                document.getElementById('page-title').innerText = 'อุปกรณ์ดับเพลิง: ปั๊มน้ำ';
+            } else if (currentUnit === 'ตู้เก็บอุปกรณ์') {
+                const item = document.getElementById('menu-fire-cabinet');
+                if(item) item.classList.add('active');
+                document.getElementById('page-title').innerText = 'อุปกรณ์ดับเพลิง: ตู้เก็บอุปกรณ์';
+            } else if (currentUnit === 'หัวรับน้ำ') {
+                const item = document.getElementById('menu-fire-hydrant');
+                if(item) item.classList.add('active');
+                document.getElementById('page-title').innerText = 'อุปกรณ์ดับเพลิง: หัวรับน้ำดับเพลิง';
+            } else if (currentUnit === 'ชุด ppe') {
+                const item = document.getElementById('menu-fire-ppe');
+                if(item) item.classList.add('active');
+                document.getElementById('page-title').innerText = 'อุปกรณ์ดับเพลิง: ชุด PPE';
+            }
+        }
+    } else if (mainCategory === 'vehicle') {
+        const item = document.getElementById('menu-vehicle');
+        if(item) item.classList.add('active');
+        document.getElementById('page-title').innerText = 'ยานพาหนะงานจราจรทั้งหมด';
+        const fg = document.getElementById('filter-group-vehicle');
+        if(fg) fg.style.display = 'flex';
+    } else if (mainCategory === 'form') { 
+        const item = document.getElementById('menu-form');
+        if(item) item.classList.add('active');
+        document.getElementById('page-title').innerText = 'รวมแบบฟอร์มรายงานและคำร้องต่างๆ';
+        if(galleryElement) galleryElement.classList.add('form-list-mode');
+    } else if (mainCategory === 'mission') { 
+        const item = document.getElementById('menu-mission');
+        if(item) item.classList.add('active');
+        const submenuMission = document.getElementById('submenu-mission');
+        if(submenuMission) submenuMission.classList.add('show-submenu');
+
+        if (currentUnit.includes('ตารางเวร')) { 
+            const subItem = document.getElementById('menu-mission-schedule');
+            if(subItem) subItem.classList.add('active');
+            document.getElementById('page-title').innerText = 'ตารางเวรปฏิบัติงาน';
+        } else {
+            const fg = document.getElementById('filter-group-mission');
+            if(fg) fg.style.display = 'flex';
+            const subFilterYearContainer = document.getElementById('sub-filter-mission-year-container');
+            if (subFilterYearContainer) subFilterYearContainer.style.display = 'flex';
+
+            if(currentUnit.includes('ตรวจพื้นที่')) {
+                const subItem = document.getElementById('menu-mission-inspect');
+                if(subItem) subItem.classList.add('active');
+                document.getElementById('page-title').innerText = 'การดูแลพื้นที่ส่วนกลาง: ผลการตรวจพื้นที่';
+            } else if (currentUnit.includes('ช่วยเหลือ')) {
+                const subItem = document.getElementById('menu-mission-help');
+                if(subItem) subItem.classList.add('active');
+                document.getElementById('page-title').innerText = 'การดูแลพื้นที่ส่วนกลาง: การให้ความช่วยเหลือ';
+            } else if (currentUnit.includes('การจราจร')) {
+                const subItem = document.getElementById('menu-mission-traffic');
+                if(subItem) subItem.classList.add('active');
+                document.getElementById('page-title').innerText = 'การดูแลพื้นที่ส่วนกลาง: งานจราจร';
+            } else {
+                document.getElementById('page-title').innerText = 'การดูแลพื้นที่ส่วนกลางทั้งหมด';
+            }
+        }
+    } else { 
+        const item = document.getElementById('menu-staff');
+        if(item) item.classList.add('active');
+        const submenuStaff = document.getElementById('submenu-staff');
+        if(submenuStaff) submenuStaff.classList.add('show-submenu');
+
+        if(currentUnit.includes('ยุทธศาสตร์')) {
+            const subItem = document.getElementById('menu-staff-strat');
+            if(subItem) subItem.classList.add('active');
+            document.getElementById('page-title').innerText = 'บุคลากร: หน่วยยุทธศาสตร์และพัฒนาระบบความปลอดภัย';
+        } else if (currentUnit.includes('ปฏิบัติการ')) {
+            const subItem = document.getElementById('menu-staff-op');
+            if(subItem) subItem.classList.add('active');
+            document.getElementById('page-title').innerText = 'บุคลากร: หน่วยปฏิบัติการจราจรและรักษาความปลอดภัย';
+        } else {
+            document.getElementById('page-title').innerText = 'รายชื่อบุคลากรและพนักงานจราจรทั้งหมด';
+        }
+        const fg = document.getElementById('filter-group-staff');
+        if(fg) fg.style.display = 'flex';
+    }
+
+    // 3. รีเซ็ตปุ่มตัวกรองให้กลับมาเป็น 'ทั้งหมด'
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    if(currentSubFilter === 'all') {
+        let activeGroup = null;
+        if(mainCategory === 'vehicle') activeGroup = document.getElementById('filter-group-vehicle');
+        if(mainCategory === 'staff') activeGroup = document.getElementById('filter-group-staff');
+        if(mainCategory === 'mission' && !currentUnit.includes('ตารางเวร')) activeGroup = document.getElementById('filter-group-mission');
+        
+        if (activeGroup) {
+            const allBtn = activeGroup.querySelector('[data-filter="all"]');
+            if(allBtn) allBtn.classList.add('active');
+        }
+    }
+    
+    // ล้างช่องค้นหา
+    const searchInput = document.getElementById('searchInput');
+    if(searchInput) searchInput.value = '';
+}
+
+// 🌟 ระบบดักจับการกดเมนู (ป้องกันการรีโหลดหน้าเว็บ) 🌟
+function setupSeamlessNavigation() {
+    document.querySelectorAll('.sidebar-menu a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            
+            // ถ้าตั้งใจกดไปหน้า "รายงาน" หรือ "ฟอร์ม" ก็ปล่อยให้เว็บโหลดใหม่ตามปกติ
+            if(href.includes('report.html') || href.includes('form.html') || !href.includes('index.html')) {
+                return; 
+            }
+            
+            e.preventDefault(); // สั่งห้ามเบราว์เซอร์โหลดหน้าเว็บใหม่ (นี่คือหัวใจสำคัญ!)
+            
+            // ดึงคำสั่งจากลิงก์ว่ากดหมวดไหน
+            const url = new URL(this.href, window.location.origin);
+            mainCategory = url.searchParams.get('main') || 'vehicle';
+            currentUnit = url.searchParams.get('unit') || 'all';
+            if(currentUnit !== 'all') currentUnit = currentUnit.toLowerCase();
+            
+            // รีเซ็ตฟิลเตอร์
+            currentSubFilter = 'all';
+            currentExtinguisherType = 'all';
+            currentNozzleType = 'all';
+            currentMissionYear = 'all';
+            
+            // เปลี่ยนลิงก์ด้านบนเบราว์เซอร์ให้ถูกต้อง
+            window.history.pushState({}, '', href);
+            
+            // อัปเดตหน้าตา และข้อมูลรถ แบบไวแสง
+            initPageUI();
+            if(allVehicles.length > 0) {
+                updateFilterCounts(); 
+                generateExtinguisherSubFilters(); 
+                generateNozzleSubFilters(); 
+                generateMissionYearSubFilters(); 
+                applyFilters(); 
+            }
+        });
+    });
+
+    // ให้ปุ่ม Back/Forward ของเบราว์เซอร์ทำงานได้เนียนๆ
+    window.addEventListener('popstate', function(e) {
+        const urlParams = new URLSearchParams(window.location.search);
+        mainCategory = urlParams.get('main') || 'vehicle';
+        let u = urlParams.get('unit');
+        currentUnit = u ? u.toLowerCase() : 'all';
+        currentSubFilter = 'all';
+        currentExtinguisherType = 'all';
+        currentNozzleType = 'all';
+        currentMissionYear = 'all';
+        
+        initPageUI();
+        if(allVehicles.length > 0) {
+            updateFilterCounts(); 
+            generateExtinguisherSubFilters(); 
+            generateNozzleSubFilters(); 
+            generateMissionYearSubFilters(); 
+            applyFilters(); 
+        }
+    });
+}
+
+window.onload = function() { 
+    const urlParams = new URLSearchParams(window.location.search);
+    if(urlParams.has('main')) mainCategory = urlParams.get('main');
+    if(urlParams.has('unit')) currentUnit = urlParams.get('unit').toLowerCase();
+
+    initPageUI();               // เรียกจัดหน้าจอครั้งแรก
+    setupSeamlessNavigation();  // เปิดใช้งานโหมดกดแล้ว Sidebar ไม่หาย
+    fetchVehicles();            // ดึงข้อมูลชีท
+};
+
+function fetchVehicles() {
+    const gallery = document.getElementById('vehicleGallery');
+    gallery.innerHTML = '<p class="loading">กำลังโหลดข้อมูลล่าสุด...</p>';
+
+    const fetchURL = scriptURL + "?t=" + new Date().getTime();
+
+    fetch(fetchURL)
+        .then(response => response.json())
+        .then(data => {
+            allVehicles = data;
+            updateFilterCounts(); 
+            generateExtinguisherSubFilters(); 
+            generateNozzleSubFilters(); 
+            generateMissionYearSubFilters(); 
+            applyFilters(); 
+        })
+        .catch(error => { 
+            gallery.innerHTML = '<p class="loading" style="color:red;">เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาตรวจสอบลิงก์ Web App และสิทธิ์การเข้าถึง (Anyone)</p>'; 
+            console.error("Error fetching data: ", error);
+        });
+}
+
+function updateFilterCounts() {
+    const vehicleData = allVehicles.filter(v => v.Data_Category === 'Asset' && !isFireEquip(v));
+    document.querySelectorAll('#filter-group-vehicle .filter-btn').forEach(btn => {
+        const f = btn.getAttribute('data-filter');
+        const count = (f === 'all') ? vehicleData.length : vehicleData.filter(v => getSearchText(v).includes(f.toLowerCase())).length;
+        const badge = btn.querySelector('.badge');
+        if(badge) badge.innerText = count;
+        btn.style.display = (count === 0 && f !== 'all') ? 'none' : 'inline-flex';
+    });
+
+    let staffData = allVehicles.filter(v => v.Data_Category === 'Staff');
+    if (currentUnit.includes('ยุทธศาสตร์')) {
+        staffData = staffData.filter(v => getUnit(v).includes('ยุทธศาสตร์') || (v.ประเภท && v.ประเภท.includes('หัวหน้างาน')));
+    }
+    if (currentUnit.includes('ปฏิบัติการ')) {
+        staffData = staffData.filter(v => getUnit(v).includes('ปฏิบัติการ') || (v.ประเภท && v.ประเภท.includes('หัวหน้างาน')));
+    }
+
+    document.querySelectorAll('#filter-group-staff .filter-btn').forEach(btn => {
+        const f = btn.getAttribute('data-filter');
+        let count = 0;
+        if (f === 'all') { count = staffData.length; } 
+        else if (f === 'จราจร') { count = staffData.filter(v => v.ประเภท && v.ประเภท.includes('จราจร') && !v.ประเภท.includes('หัวหน้า')).length; } 
+        else { count = staffData.filter(v => v.ประเภท && v.ประเภท.includes(f)).length; }
+        const badge = btn.querySelector('.badge');
+        if(badge) badge.innerText = count;
+        btn.style.display = (count === 0 && f !== 'all') ? 'none' : 'inline-flex';
+    });
+
+    let missionData = allVehicles.filter(v => v.Data_Category === 'Mission');
+    if (currentUnit.includes('ตรวจพื้นที่')) {
+        missionData = missionData.filter(v => v.ประเภท && v.ประเภท.includes('ตรวจพื้นที่'));
+    } else if (currentUnit.includes('ช่วยเหลือ')) {
+        missionData = missionData.filter(v => v.ประเภท && v.ประเภท.includes('ช่วยเหลือ'));
+    } else if (currentUnit.includes('การจราจร')) {
+        missionData = missionData.filter(v => v.ประเภท && v.ประเภท.includes('การจราจร'));
+    }
+    
+    document.querySelectorAll('#filter-group-mission .filter-btn').forEach(btn => {
+        const f = btn.getAttribute('data-filter');
+        const count = (f === 'all') ? missionData.length : missionData.filter(v => getSearchText(v).includes(f.toLowerCase())).length;
+        const badge = btn.querySelector('.badge');
+        if(badge) badge.innerText = count;
+        btn.style.display = (count === 0 && f !== 'all') ? 'none' : 'inline-flex';
+    });
+}
+
+function generateMissionYearSubFilters() {
+    const selectEl = document.getElementById('sub-filter-mission-year-select');
+    const container = document.getElementById('sub-filter-mission-year-container');
+    if (!selectEl || !container) return;
+
+    const missions = allVehicles.filter(v => v.Data_Category === 'Mission');
+    
+    let years = missions.map(v => extractYear(v.สี)).filter(y => y !== '' && y !== 'ไม่ระบุปี');
+    years = [...new Set(years)].sort((a, b) => parseInt(b) - parseInt(a));
+
+    if (years.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    let html = `<option value="all">แสดงทุกปี</option>`;
+    years.forEach(year => {
+        html += `<option value="${year}">ปี พ.ศ. ${year}</option>`;
+    });
+
+    selectEl.innerHTML = html;
+
+    selectEl.onchange = function() {
+        currentMissionYear = this.value;
+        applyFilters();
+    };
+}
+
+function generateExtinguisherSubFilters() {
+    const subFilterContainer = document.getElementById('sub-filter-extinguisher');
+    if (!subFilterContainer) return;
+
+    const extinguishers = allVehicles.filter(v => {
+        if (v.Data_Category !== 'Asset' || !isFireEquip(v)) return false;
+        const t = getSearchText(v);
+        return t.includes('ถัง') || t.includes('co2') || t.includes('เคมี') || t.includes('โฟม');
+    });
+    
+    const uniqueModels = [...new Set(extinguishers.map(v => v['ยี่ห้อ/รุ่น'] ? v['ยี่ห้อ/รุ่น'].trim() : '').filter(m => m !== '' && m !== '-'))];
+
+    if (uniqueModels.length === 0) {
+        subFilterContainer.innerHTML = '';
+        return;
+    }
+
+    let html = `<button class="sub-filter-btn active" data-subfilter="all">ทุกชนิด <span class="badge">${extinguishers.length}</span></button>`;
+    
+    uniqueModels.forEach(model => {
+        const count = extinguishers.filter(v => v['ยี่ห้อ/รุ่น'] && v['ยี่ห้อ/รุ่น'].trim() === model).length;
+        html += `<button class="sub-filter-btn" data-subfilter="${model}">${model} <span class="badge">${count}</span></button>`;
+    });
+
+    subFilterContainer.innerHTML = html;
+
+    subFilterContainer.querySelectorAll('.sub-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            subFilterContainer.querySelectorAll('.sub-filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentExtinguisherType = this.getAttribute('data-subfilter');
+            applyFilters();
+        });
+    });
+}
+
+function generateNozzleSubFilters() {
+    const subFilterContainer = document.getElementById('sub-filter-nozzle');
+    if (!subFilterContainer) return;
+
+    const nozzles = allVehicles.filter(v => {
+        if (v.Data_Category !== 'Asset' || !isFireEquip(v)) return false;
+        return getSearchText(v).includes('หัวฉีด');
+    });
+    
+    const uniqueModels = [...new Set(nozzles.map(v => v['ยี่ห้อ/รุ่น'] ? v['ยี่ห้อ/รุ่น'].trim() : '').filter(m => m !== '' && m !== '-'))];
+
+    if (uniqueModels.length === 0) {
+        subFilterContainer.innerHTML = '';
+        return;
+    }
+
+    let html = `<button class="sub-filter-btn active" data-subfilter="all">ทุกชนิด <span class="badge">${nozzles.length}</span></button>`;
+    
+    uniqueModels.forEach(model => {
+        const count = nozzles.filter(v => v['ยี่ห้อ/รุ่น'] && v['ยี่ห้อ/รุ่น'].trim() === model).length;
+        html += `<button class="sub-filter-btn" data-subfilter="${model}">${model} <span class="badge">${count}</span></button>`;
+    });
+
+    subFilterContainer.innerHTML = html;
+
+    subFilterContainer.querySelectorAll('.sub-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            subFilterContainer.querySelectorAll('.sub-filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentNozzleType = this.getAttribute('data-subfilter');
+            applyFilters();
+        });
+    });
+}
+
+function applyFilters() {
+    const searchInput = document.getElementById('searchInput');
+    const searchText = searchInput ? searchInput.value.toLowerCase() : '';
+    let filteredData = allVehicles;
+
+    if (mainCategory === 'staff') {
+        filteredData = filteredData.filter(v => v.Data_Category === 'Staff');
+        if (currentUnit.includes('ยุทธศาสตร์')) {
+            filteredData = filteredData.filter(v => getUnit(v).includes('ยุทธศาสตร์') || (v.ประเภท && v.ประเภท.includes('หัวหน้างาน')));
+        }
+        if (currentUnit.includes('ปฏิบัติการ')) {
+            filteredData = filteredData.filter(v => getUnit(v).includes('ปฏิบัติการ') || (v.ประเภท && v.ประเภท.includes('หัวหน้างาน')));
+        }
+    }
+    else if (mainCategory === 'fire') filteredData = filteredData.filter(v => v.Data_Category === 'Asset' && isFireEquip(v));
+    else if (mainCategory === 'form') filteredData = filteredData.filter(v => v.Data_Category === 'Form');
+    else if (mainCategory === 'mission') {
+        if (currentUnit.includes('ตารางเวร')) {
+            filteredData = filteredData.filter(v => v.Data_Category === 'Schedule'); 
+        } else {
+            filteredData = filteredData.filter(v => v.Data_Category === 'Mission');
+            
+            if (currentUnit.includes('ตรวจพื้นที่')) {
+                filteredData = filteredData.filter(v => v.ประเภท && v.ประเภท.includes('ตรวจพื้นที่'));
+            } else if (currentUnit.includes('ช่วยเหลือ')) {
+                filteredData = filteredData.filter(v => v.ประเภท && v.ประเภท.includes('ช่วยเหลือ'));
+            } else if (currentUnit.includes('การจราจร')) {
+                filteredData = filteredData.filter(v => v.ประเภท && v.ประเภท.includes('การจราจร'));
+            }
+
+            if (currentMissionYear !== 'all') {
+                filteredData = filteredData.filter(v => extractYear(v.สี) === currentMissionYear);
+            }
+            
+            filteredData.sort((a, b) => {
+                let dA = parseCustomDate(a.สี);
+                let dB = parseCustomDate(b.สี);
+                let timeA = dA ? dA.getTime() : 0;
+                let timeB = dB ? dB.getTime() : 0;
+                return timeB - timeA; 
+            });
+        }
+    } 
+    else filteredData = filteredData.filter(v => v.Data_Category === 'Asset' && !isFireEquip(v));
+
+    if (currentSubFilter !== 'all' && mainCategory !== 'form' && mainCategory !== 'mission') {
+        if (currentSubFilter === 'ถังดับเพลิง') {
+            filteredData = filteredData.filter(v => { const t = getSearchText(v); return t.includes('ถัง') || t.includes('co2') || t.includes('เคมี') || t.includes('โฟม'); });
+        } else if (currentSubFilter === 'สายส่งน้ำดับเพลิง') {
+            filteredData = filteredData.filter(v => getSearchText(v).includes('สายส่งน้ำ') || getSearchText(v).includes('สายฉีด'));
+        } else if (currentSubFilter === 'ชุด ppe') {
+            filteredData = filteredData.filter(v => {
+                const t = getSearchText(v);
+                return t.includes('ppe') || t.includes('pee') || t.includes('ชุดดับเพลิง');
+            });
+        } else if (mainCategory === 'staff') {
+            if (currentSubFilter === 'จราจร') {
+                filteredData = filteredData.filter(v => v.ประเภท && v.ประเภท.includes('จราจร') && !v.ประเภท.includes('หัวหน้า'));
+            } else {
+                filteredData = filteredData.filter(v => v.ประเภท && v.ประเภท.includes(currentSubFilter));
+            }
+        } else {
+            filteredData = filteredData.filter(v => getSearchText(v).includes(currentSubFilter.toLowerCase()));
+        }
+    }
+
+    if (mainCategory === 'fire' && currentSubFilter === 'ถังดับเพลิง' && currentExtinguisherType !== 'all') {
+        filteredData = filteredData.filter(v => v['ยี่ห้อ/รุ่น'] && v['ยี่ห้อ/รุ่น'].trim() === currentExtinguisherType);
+    }
+    
+    if (mainCategory === 'fire' && currentSubFilter === 'หัวฉีด' && currentNozzleType !== 'all') {
+        filteredData = filteredData.filter(v => v['ยี่ห้อ/รุ่น'] && v['ยี่ห้อ/รุ่น'].trim() === currentNozzleType);
+    }
+
+    if (searchText.trim() !== '') filteredData = filteredData.filter(v => getSearchText(v).includes(searchText));
+    
+    displayGallery(filteredData); 
+}
+
+const searchInputEl = document.getElementById('searchInput');
+if(searchInputEl) searchInputEl.addEventListener('input', applyFilters);
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        this.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentSubFilter = this.getAttribute('data-filter');
+        
+        const subFilterExt = document.getElementById('sub-filter-extinguisher');
+        const subFilterNoz = document.getElementById('sub-filter-nozzle'); 
+        
+        if(currentSubFilter === 'ถังดับเพลิง' && subFilterExt) {
+            subFilterExt.style.display = 'flex';
+        } else if (subFilterExt) {
+            subFilterExt.style.display = 'none';
+            currentExtinguisherType = 'all'; 
+            subFilterExt.querySelectorAll('.sub-filter-btn').forEach(b => b.classList.remove('active'));
+            const allSubBtn = subFilterExt.querySelector('.sub-filter-btn[data-subfilter="all"]');
+            if(allSubBtn) allSubBtn.classList.add('active');
+        }
+
+        if(currentSubFilter === 'หัวฉีด' && subFilterNoz) {
+            subFilterNoz.style.display = 'flex';
+        } else if (subFilterNoz) {
+            subFilterNoz.style.display = 'none';
+            currentNozzleType = 'all'; 
+            subFilterNoz.querySelectorAll('.sub-filter-btn').forEach(b => b.classList.remove('active'));
+            const allSubBtn = subFilterNoz.querySelector('.sub-filter-btn[data-subfilter="all"]');
+            if(allSubBtn) allSubBtn.classList.add('active');
+        }
+
+        applyFilters();
+    });
+});
+
+function displayGallery(dataToDisplay) {
+    const gallery = document.getElementById('vehicleGallery');
+    if(!gallery) return;
+    
+    gallery.innerHTML = ''; 
+    gallery.className = 'gallery-grid'; 
+
+    if (dataToDisplay.length === 0) {
+        gallery.innerHTML = '<p class="loading" style="grid-column: 1 / -1;">ไม่มีข้อมูลที่ตรงกับการค้นหา</p>';
+        return;
+    }
+
+    if (dataToDisplay[0].Data_Category === 'Schedule') {
+        gallery.className = ''; 
+        
+        const tableContainer = document.createElement('div');
+        tableContainer.className = 'schedule-table-container';
+
+        const scheduleMonth = dataToDisplay[0].Schedule_Month || 'ตารางเวรปฏิบัติงาน';
+        const dateHeader = document.createElement('div');
+        dateHeader.className = 'schedule-date-header';
+        dateHeader.innerText = scheduleMonth; 
+        tableContainer.appendChild(dateHeader);
+
+        const table = document.createElement('table');
+        table.className = 'schedule-table';
+        
+        const headers = Object.keys(dataToDisplay[0]).filter(k => k !== 'Data_Category' && k !== 'Schedule_Month');
+        
+        let topHeaderRow = '<tr class="shift-header">';
+        let shiftCount = 1;
+        headers.forEach(h => {
+            if (h === 'วันที่') {
+                topHeaderRow += `<th>วันที่</th>`;
+            } else {
+                topHeaderRow += `<th>ผลัด ${shiftCount}</th>`;
+                shiftCount++;
+            }
+        });
+        topHeaderRow += '</tr>';
+        
+        let nameHeaderRow = '<tr class="name-header">';
+        headers.forEach(h => {
+            if (h === 'วันที่') {
+                nameHeaderRow += `<th></th>`; 
+            } else {
+                nameHeaderRow += `<th>${h}</th>`; 
+            }
+        });
+        nameHeaderRow += '</tr>';
+        
+        let thead = `<thead>${topHeaderRow}${nameHeaderRow}</thead>`;
+        
+        let tbody = '<tbody>';
+        dataToDisplay.forEach(item => {
+            tbody += '<tr>';
+            headers.forEach(h => {
+                let cellValue = item[h] || '-';
+                if(cellValue.trim() === 'พักกะ') {
+                     tbody += `<td class="cell-rest">${cellValue}</td>`;
+                } else {
+                     tbody += `<td>${cellValue}</td>`;
+                }
+            });
+            tbody += '</tr>';
+        });
+        tbody += '</tbody>';
+        
+        table.innerHTML = thead + tbody;
+        tableContainer.appendChild(table);
+        gallery.appendChild(tableContainer);
+        return; 
+    }
+
+    if (dataToDisplay[0].Data_Category === 'Form') {
+        gallery.className = 'form-list-mode'; 
+        const fragment = document.createDocumentFragment();
+        dataToDisplay.forEach((item) => {
+            const formBar = document.createElement('a');
+            formBar.className = 'form-bar'; 
+            formBar.href = item['ลิงก์'] && item['ลิงก์'].trim() !== "" ? item['ลิงก์'] : "#";
+            formBar.target = "_blank"; 
+            formBar.rel = "noopener noreferrer"; 
+            formBar.innerHTML = `<div class="form-name">${item['ชื่อแบบฟอร์ม'] || 'แบบฟอร์มไม่มีชื่อ'}</div>`;
+            fragment.appendChild(formBar);
+        });
+        gallery.appendChild(fragment);
+        return; 
+    }
+
+    const fragment = document.createDocumentFragment();
+    dataToDisplay.forEach((item) => {
+        const originalIndex = allVehicles.indexOf(item);
+        const card = document.createElement('div'); 
+        card.className = 'vehicle-card';
+
+        const images = [item.URL_รูปภาพ_1, item.URL_รูปภาพ_2, item.URL_รูปภาพ_3, item.URL_รูปภาพ_4, item.URL_รูปภาพ_5].filter(url => url && url !== "");
+        const imageWrapper = document.createElement('div'); imageWrapper.className = 'card-image-wrapper';
+        const track = document.createElement('div'); track.className = 'image-slide-track';
+        
+        if(images.length === 0) images.push('placeholder.png');
+        
+        images.forEach(url => {
+            const img = document.createElement('img'); 
+            img.src = getDirectImageUrl(url); 
+            img.setAttribute('loading', 'lazy'); 
+            img.onerror = function() { this.src = 'placeholder.png'; };
+            track.appendChild(img);
+        });
+        imageWrapper.appendChild(track);
+        
+        const contentContainer = document.createElement('div'); contentContainer.className = 'card-content';
+        
+        let subtitle = item.สี; 
+        if (item.Data_Category === 'Staff') {
+            subtitle = item['หัวหน้าหน่วย'] ? item['หัวหน้าหน่วย'] : item.ประเภท;
+        } else if (item.Data_Category === 'Mission') {
+            let dateObj = parseCustomDate(item.สี);
+            if(dateObj) {
+                subtitle = dateObj.toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+        }
+
+        let sizeHtml = '';
+        if (item['ขนาด'] && item['ขนาด'].toString().trim() !== '' && item['ขนาด'].toString().trim() !== '-') {
+            sizeHtml = `<div style="font-size: 14px; color: #2980b9; margin-bottom: 5px; font-weight: 500;">ขนาด: ${item['ขนาด']}</div>`;
+        }
+
+        let fireClassHtml = '';
+        if (isFireEquip(item) && item['ยี่ห้อ/รุ่น'] && item['ยี่ห้อ/รุ่น'].includes('ถังดับเพลิง')) {
+            let classes = getFireExtinguisherClasses(item['ยี่ห้อ/รุ่น']);
+            if(classes.length > 0) {
+                 let badgesHtml = classes.map(c => `<div class="fire-class-badge class-${c.toLowerCase()}">${c}</div>`).join('');
+                 fireClassHtml = `<div class="fire-class-container">${badgesHtml}</div>`;
+            }
+        }
+
+        let plateHtml = '';
+        if (item.ทะเบียน && item.ทะเบียน.trim() !== '' && item.ทะเบียน.trim() !== '-') {
+            let plateDisplay = '';
+            let isLarge = false; 
+            
+            if (item.Data_Category === 'Staff') {
+                plateDisplay = `รหัสพนักงาน: ${item.ทะเบียน}`;
+            } else if (isFireEquip(item)) {
+                isLarge = true; 
+                let t = getSearchText(item);
+                let sameModelCount = allVehicles.filter(v => v['ยี่ห้อ/รุ่น'] === item['ยี่ห้อ/รุ่น']).length;
+                
+                if (t.includes('สายส่งน้ำ') || t.includes('สายฉีด')) {
+                    plateDisplay = `สายที่ ${item.ทะเบียน}`;
+                } else if (t.includes('หัวฉีด')) {
+                    plateDisplay = sameModelCount === 1 ? `1 อัน` : `อันที่ ${item.ทะเบียน}`;
+                } else if (t.includes('ตู้')) {
+                    plateDisplay = sameModelCount === 1 ? `1 ตู้` : `ตู้ที่ ${item.ทะเบียน}`;
+                } else if (t.includes('ถัง')) {
+                    plateDisplay = `ถังที่ ${item.ทะเบียน}`;
+                } else if (t.includes('หัวรับน้ำ')) { 
+                    plateDisplay = `จุดที่ ${item.ทะเบียน}`;
+                } else if (t.includes('ppe') || t.includes('pee')) { 
+                    plateDisplay = `ชุดที่ ${item.ทะเบียน}`;
+                } else {
+                    plateDisplay = `ลำดับที่ ${item.ทะเบียน}`;
+                }
+            } else if (item.Data_Category === 'Asset') {
+                plateDisplay = `ทะเบียน: ${item.ทะเบียน}`; 
+            } else {
+                plateDisplay = `รหัส/ทะเบียน: ${item.ทะเบียน}`;
+            }
+
+            let plateClass = isLarge ? 'card-plate large' : 'card-plate';
+            plateHtml = `<div class="${plateClass}">${plateDisplay}</div>`;
+        }
+
+        let statusHtml = '';
+        if (item.Data_Category === 'Asset') {
+            if (item.RequiresRepair) {
+                statusHtml = `<span class="status-badge status-bad">ใช้งานไม่ได้</span>`;
+            } else {
+                statusHtml = `<span class="status-badge status-good">ใช้งานได้</span>`;
+            }
+        }
+
+        let cardHTML = '';
+        if (isFireEquip(item)) {
+            cardHTML = `
+                ${plateHtml}
+                <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}">${item['ยี่ห้อ/รุ่น']}</h3>
+                ${sizeHtml}
+                ${statusHtml}
+                ${fireClassHtml}
+                <div class="card-subtitle">(${subtitle})</div>
+            `;
+        } else if (item.Data_Category === 'Asset') {
+            cardHTML = `
+                <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}">${item['ยี่ห้อ/รุ่น']}</h3>
+                ${sizeHtml}
+                ${plateHtml}
+                <div style="margin-top: 8px;">${statusHtml}</div>
+            `;
+        } else {
+            cardHTML = `
+                <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}">${item['ยี่ห้อ/รุ่น']}</h3>
+                ${sizeHtml}
+                ${plateHtml}
+                <div class="card-subtitle">(${subtitle})</div>
+            `;
+        }
+        
+        contentContainer.innerHTML = cardHTML;
+        
+        contentContainer.onclick = () => openModal(originalIndex); 
+        imageWrapper.onclick = () => openModal(originalIndex);
+        
+        card.appendChild(imageWrapper); 
+        card.appendChild(contentContainer); 
+        fragment.appendChild(card);
+    });
+
+    gallery.appendChild(fragment);
+}
+
+function openModal(index) {
+    currentVehicleIndex = index; currentImageIndex = 0; 
+    const vehicle = allVehicles[index];
+    const images = [vehicle.URL_รูปภาพ_1, vehicle.URL_รูปภาพ_2, vehicle.URL_รูปภาพ_3, vehicle.URL_รูปภาพ_4, vehicle.URL_รูปภาพ_5].filter(url => url && url !== "");
+    
+    // 🌟 ชี้ไปที่ form.html
+    let autoFillURL = `form.html?type=${encodeURIComponent(vehicle.ประเภท)}&detail=${encodeURIComponent(vehicle['ยี่ห้อ/รุ่น'])}&color=${encodeURIComponent(vehicle.สี)}&plate=${encodeURIComponent(vehicle.ทะเบียน)}&equip=${encodeURIComponent(vehicle.หมายเลขครุภัณฑ์)}`;
+    
+    let detailText = '';
+
+    let modalSizeHtml = (vehicle['ขนาด'] && vehicle['ขนาด'].toString().trim() !== '' && vehicle['ขนาด'].toString().trim() !== '-') 
+        ? `<p><strong>ขนาด:</strong> ${vehicle['ขนาด']}</p>` : '';
+
+    let purchaseYearHtml = (vehicle['ปีที่ซื้อ'] && vehicle['ปีที่ซื้อ'].toString().trim() !== '' && vehicle['ปีที่ซื้อ'].toString().trim() !== '-') 
+        ? `<p><strong>ปีที่ซื้อ:</strong> ${vehicle['ปีที่ซื้อ']}</p>` : '';
+        
+    let companyHtml = (vehicle['บริษัทที่ซื้อ'] && vehicle['บริษัทที่ซื้อ'].toString().trim() !== '' && vehicle['บริษัทที่ซื้อ'].toString().trim() !== '-') 
+        ? `<p><strong>ซื้อจากบริษัท:</strong> ${vehicle['บริษัทที่ซื้อ']}</p>` : '';
+
+    let showInspectBtn = false;
+    let showRefillBtn = false;
+    
+    if (vehicle.Data_Category === 'Asset') {
+        if (!isFireEquip(vehicle)) {
+            showInspectBtn = true; 
+        } else {
+            let t = getSearchText(vehicle);
+            if (t.includes('ถัง') || t.includes('co2') || t.includes('เคมี') || t.includes('โฟม') || t.includes('fireade') || t.includes('impact') || t.includes('fast')) {
+                showInspectBtn = true; 
+                showRefillBtn = true; 
+            }
+        }
+    }
+    
+    let actionButtonsHtml = '';
+    if (showInspectBtn || showRefillBtn) {
+        actionButtonsHtml += `<div class="action-buttons" style="flex-direction: column; gap: 10px; margin-top: 20px;">`;
+        if (showInspectBtn) {
+            actionButtonsHtml += `<a href="${autoFillURL}" class="action-btn btn-inspect" style="width: 100%;">ตรวจสอบสภาพ</a>`;
+        }
+        if (showRefillBtn) {
+            actionButtonsHtml += `<button onclick="openRefillHistoryModal(${index})" class="action-btn" style="width: 100%; background-color: #f39c12; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">🕒 ดูประวัติการเติมสาร</button>`;
+            actionButtonsHtml += `<button onclick="openRefillFormModal(${index})" class="action-btn" style="width: 100%; background-color: #27ae60; border: none; cursor: pointer; text-align: center; text-decoration: none; padding: 10px; border-radius: 4px; color: white; font-family: 'Kanit', sans-serif; font-size: 16px;">➕ บันทึกการเติมสารใหม่</button>`;
+        }
+        actionButtonsHtml += `</div>`;
+    }
+    
+    if (vehicle.Data_Category === 'Staff') {
+        let unitText = getUnit(vehicle) ? `<p><strong>สังกัดหน่วย:</strong> ${vehicle['หน่วย'] || vehicle['หน่วยงาน']}</p>` : '';
+        let headText = vehicle['หัวหน้าหน่วย'] ? `<p><strong>หน้าที่รับผิดชอบ:</strong> ${vehicle['หัวหน้าหน่วย']}</p>` : '';
+        
+        detailText = `<h2>${vehicle['ยี่ห้อ/รุ่น']}</h2>
+         <p><strong>ตำแหน่ง:</strong> ${vehicle.ประเภท}</p>
+         ${headText}
+         ${unitText}
+         <p><strong>เบอร์โทรศัพท์:</strong> ${vehicle.สี}</p>
+         <p><strong>รหัสพนักงาน:</strong> ${vehicle.ทะเบียน}</p>`;
+         document.getElementById('modalDetails').innerHTML = `${detailText}`; 
+         
+    } else if (vehicle.Data_Category === 'Mission') {
+        let dateObj = parseCustomDate(vehicle.สี);
+        let timeString = dateObj ? dateObj.toLocaleString('th-TH', { dateStyle: 'full', timeStyle: 'medium' }) : vehicle.สี;
+        
+        detailText = `<h2>${vehicle['ยี่ห้อ/รุ่น']}</h2>
+         <p><strong>วัน/เวลาที่บันทึก:</strong> ${timeString}</p>
+         <p><strong>หมวดหมู่:</strong> ${vehicle.ประเภท || 'การดูแลพื้นที่ส่วนกลาง'}</p>`;
+         document.getElementById('modalDetails').innerHTML = `${detailText}`; 
+         
+    } else if (isFireEquip(vehicle)) {
+        let t = getSearchText(vehicle);
+        let sameModelCount = allVehicles.filter(v => v['ยี่ห้อ/รุ่น'] === vehicle['ยี่ห้อ/รุ่น']).length;
+        let equipLabel = '';
+        let equipValue = vehicle.ทะเบียน;
+
+        if (t.includes('สายส่งน้ำ') || t.includes('สายฉีด')) {
+            equipLabel = 'สายที่:';
+        } else if (t.includes('หัวฉีด')) {
+            if (sameModelCount === 1) { equipLabel = 'จำนวน:'; equipValue = '1 อัน'; }
+            else { equipLabel = 'อันที่:'; }
+        } else if (t.includes('ตู้')) {
+            if (sameModelCount === 1) { equipLabel = 'จำนวน:'; equipValue = '1 ตู้'; }
+            else { equipLabel = 'ตู้ที่:'; }
+        } else if (t.includes('ถัง')) {
+            equipLabel = 'ถังที่:';
+        } else if (t.includes('หัวรับน้ำ')) { 
+            equipLabel = 'จุดที่:';
+        } else if (t.includes('ppe') || t.includes('pee')) { 
+            equipLabel = 'ชุดที่:';
+        } else {
+            equipLabel = 'ลำดับที่:';
+        }
+
+        let modalFireClassHtml = '';
+        if (t.includes('ถัง')) {
+            let classes = getFireExtinguisherClasses(vehicle['ยี่ห้อ/รุ่น']);
+            if(classes.length > 0) {
+                let badgesHtml = classes.map(c => `<span class="fire-class-badge class-${c.toLowerCase()}" style="display:inline-flex; margin-right:6px;">${c}</span>`).join('');
+                modalFireClassHtml = `<div style="display: flex; align-items: center; margin-bottom: 10px;"><strong>ประเภทไฟที่ดับได้:</strong> <div style="margin-left: 10px;">${badgesHtml}</div></div>`;
+            }
+        }
+
+        detailText = `<h2>${vehicle['ยี่ห้อ/รุ่น']}</h2>
+         ${modalFireClassHtml}
+         <p><strong>ประเภท:</strong> ${vehicle.ประเภท}</p>
+         ${modalSizeHtml}
+         <p><strong>ตำแหน่งที่ตั้ง:</strong> ${vehicle.สี}</p>
+         <p><strong>${equipLabel}</strong> ${equipValue}</p>
+         <p><strong>หมายเลขครุภัณฑ์:</strong> ${vehicle.หมายเลขครุภัณฑ์}</p>
+         ${purchaseYearHtml}
+         ${companyHtml}`;
+         
+         document.getElementById('modalDetails').innerHTML = `${detailText}${actionButtonsHtml}`;
+         
+    } else {
+        detailText = `<h2>${vehicle['ยี่ห้อ/รุ่น']}</h2>
+         <p><strong>ประเภท:</strong> ${vehicle.ประเภท}</p>
+         <p><strong>สี:</strong> ${vehicle.สี}</p>
+         <p><strong>ทะเบียน:</strong> ${vehicle.ทะเบียน}</p>
+         <p><strong>หมายเลขครุภัณฑ์:</strong> ${vehicle.หมายเลขครุภัณฑ์}</p>
+         ${purchaseYearHtml}
+         ${companyHtml}`;
+         
+         document.getElementById('modalDetails').innerHTML = `${detailText}${actionButtonsHtml}`;
+    }
+
+    const prevBtn = document.getElementById('prevImageBtn');
+    const nextBtn = document.getElementById('nextImageBtn');
+    if(prevBtn) prevBtn.style.display = images.length > 1 ? "block" : "none";
+    if(nextBtn) nextBtn.style.display = images.length > 1 ? "block" : "none";
+    
+    const modal = document.getElementById('vehicleModal');
+    if(modal) modal.style.display = "block"; 
+    
+    changeImage(); 
+}
+
+window.openRefillHistoryModal = function(index) {
+    const vehicle = allVehicles[index];
+    currentRefillVehicle = vehicle;
+    const equipNumber = vehicle.หมายเลขครุภัณฑ์;
+    const plate = vehicle.ทะเบียน;
+
+    currentRefillHistory = allVehicles.filter(v => 
+        (v.Data_Category === 'Refill' || v.Data_Category === 'ประวัติการเติม' || v.Data_Category === 'ประวัติการเติมสารถังดับเพลิง') && 
+        ((equipNumber && equipNumber !== '-' && v.หมายเลขครุภัณฑ์ === equipNumber) || 
+         (plate && plate !== '-' && v.ทะเบียน === plate))
+    );
+
+    currentRefillHistory.reverse();
+
+    currentRefillHistoryPage = 1;
+
+    renderRefillHistoryPage();
+    document.getElementById('refillHistoryModal').style.display = 'block';
+};
+
+function renderRefillHistoryPage() {
+    const vehicle = currentRefillVehicle;
+    const equipNumber = vehicle.หมายเลขครุภัณฑ์;
+    const plate = vehicle.ทะเบียน;
+
+    let html = `<p style="margin-bottom: 5px;"><strong>ถังดับเพลิง:</strong> <span style="color: #2980b9;">${vehicle['ยี่ห้อ/รุ่น']}</span></p>
+                <p style="margin-bottom: 5px;"><strong>หมายเลขครุภัณฑ์:</strong> ${equipNumber || '-'}</p>
+                <p style="margin-bottom: 5px;"><strong>รหัส/ถังที่:</strong> ${plate || '-'}</p>
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">`;
+
+    if (currentRefillHistory.length === 0) {
+        html += `<p style="text-align:center; color:#7f8c8d; padding: 20px 0; font-size: 15px;">
+                    ไม่มีประวัติการเติมสารสำหรับถังนี้
+                 </p>`;
+    } else {
+        const start = (currentRefillHistoryPage - 1) * REFILL_HISTORY_PER_PAGE;
+        const end = start + REFILL_HISTORY_PER_PAGE;
+        const itemsToShow = currentRefillHistory.slice(start, end);
+
+        html += `<div style="min-height: 230px;">`; 
+        itemsToShow.forEach(record => {
+            let dateStr = record['วันที่เติม'] || record['วันที่'] || record.สี || '-';
+            let company = record['บริษัทที่เติม'] || record['บริษัท'] || record['ผู้ดำเนินการ'] || record.ประเภท || '-';
+            let chemical = record['สารเคมีที่เติม'] || '-';
+            
+            let weightBefore = record['น้ำหนักก่อนเติม'] || '-';
+            let weightAfter = record['น้ำหนักหลังเติม'] || '-';
+            
+            let note = record['หมายเหตุ'] || record['รายละเอียด'] || '-';
+            let docLink = record['เอกสารการเติม'] || '';
+            
+            let dateObj = new Date(dateStr);
+            if (!isNaN(dateObj)) {
+                dateStr = dateObj.toLocaleString('th-TH', { dateStyle: 'long' });
+            }
+
+            let docHtml = docLink ? `<div style="margin-top: 8px;"><a href="${docLink}" target="_blank" style="color: #2980b9; text-decoration: underline; font-size: 15px;">📄 เปิดดูใบ PO / ใบเสร็จ</a></div>` : '';
+
+            html += `
+            <div style="background: #fdfaf3; border-left: 5px solid #f39c12; padding: 12px 15px; margin-bottom: 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="font-size: 15px; color: #444; margin-bottom: 4px;"><strong>วันที่เติม:</strong> <span style="color: #d35400; font-weight: bold;">${dateStr}</span></div>
+                <div style="font-size: 15px; color: #444; margin-bottom: 4px;"><strong>น้ำหนักก่อนเติม:</strong> <span style="color: #c0392b;">${weightBefore}</span> Kg. | <strong>หลังเติม:</strong> <span style="color: #27ae60;">${weightAfter}</span> Kg.</div>
+                <div style="font-size: 15px; color: #444; margin-bottom: 4px;"><strong>สารเคมีที่เติม:</strong> ${chemical}</div>
+                <div style="font-size: 15px; color: #444; margin-bottom: 4px;"><strong>บริษัทที่รับเติม:</strong> ${company}</div>
+                <div style="font-size: 15px; color: #7f8c8d;"><strong>หมายเหตุ:</strong> ${note}</div>
+                ${docHtml}
+            </div>`;
+        });
+        html += `</div>`;
+
+        const totalPages = Math.ceil(currentRefillHistory.length / REFILL_HISTORY_PER_PAGE);
+        if (totalPages > 1) {
+            html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+                <button onclick="changeRefillHistoryPage(-1)" ${currentRefillHistoryPage === 1 ? 'disabled style="opacity:0.5; cursor:not-allowed; padding:8px 16px; border:none; border-radius:6px; background:#bdc3c7; color:#fff; font-family:\'Kanit\'; font-weight:bold;"' : 'style="cursor:pointer; padding:8px 16px; border:none; border-radius:6px; background:#34495e; color:#fff; font-family:\'Kanit\'; font-weight:bold; transition:0.3s;"'}>❮ ก่อนหน้า</button>
+                <span style="font-size: 15px; color: #34495e; font-weight: 600;">หน้า ${currentRefillHistoryPage} / ${totalPages}</span>
+                <button onclick="changeRefillHistoryPage(1)" ${currentRefillHistoryPage === totalPages ? 'disabled style="opacity:0.5; cursor:not-allowed; padding:8px 16px; border:none; border-radius:6px; background:#bdc3c7; color:#fff; font-family:\'Kanit\'; font-weight:bold;"' : 'style="cursor:pointer; padding:8px 16px; border:none; border-radius:6px; background:#f39c12; color:#fff; font-family:\'Kanit\'; font-weight:bold; transition:0.3s;"'}>ถัดไป ❯</button>
+            </div>`;
+        }
+    }
+
+    document.getElementById('refillDetailsContent').innerHTML = html;
+}
+
+window.changeRefillHistoryPage = function(dir) {
+    const totalPages = Math.ceil(currentRefillHistory.length / REFILL_HISTORY_PER_PAGE);
+    if (currentRefillHistoryPage + dir >= 1 && currentRefillHistoryPage + dir <= totalPages) {
+        currentRefillHistoryPage += dir;
+        renderRefillHistoryPage();
+    }
+};
+
+window.openRefillFormModal = function(index) {
+    const vehicle = allVehicles[index];
+    
+    document.getElementById('rf_plate').value = vehicle.ทะเบียน || '-';
+    document.getElementById('rf_equip').value = vehicle.หมายเลขครุภัณฑ์ || '-';
+    document.getElementById('rf_date').value = new Date().toISOString().split('T')[0];
+    
+    document.getElementById('vehicleModal').style.display = 'none';
+    document.getElementById('refillFormModal').style.display = 'block';
+};
+
+document.getElementById('rf_poFile').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        document.getElementById('rf_fileNameDisplay').innerText = "ไฟล์ที่เลือก: " + file.name;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Data = e.target.result.split(',')[1]; 
+            document.getElementById('rf_poFileBase64').value = base64Data;
+            document.getElementById('rf_poFileName').value = file.name;
+            document.getElementById('rf_poFileMimeType').value = file.type;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('rf_fileNameDisplay').innerText = "";
+        document.getElementById('rf_poFileBase64').value = "";
+        document.getElementById('rf_poFileName').value = "";
+        document.getElementById('rf_poFileMimeType').value = "";
+    }
+});
+
+document.getElementById('refillForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const btn = document.getElementById('rf_submitBtn'); 
+    const msg = document.getElementById('rf_message');
+    btn.innerText = "กำลังบันทึกข้อมูล..."; 
+    btn.disabled = true;
+
+    const form = document.getElementById('refillForm');
+    const formData = new FormData(form);
+
+    fetch(scriptURL, { method: 'POST', body: formData })
+        .then(response => {
+            msg.innerText = "✅ บันทึกประวัติสำเร็จ! กำลังรีเฟรชข้อมูล..."; 
+            msg.style.color = "green";
+            form.reset(); 
+            document.getElementById('rf_fileNameDisplay').innerText = '';
+            
+            fetchVehicles(); 
+            setTimeout(() => { 
+                document.getElementById('refillFormModal').style.display = 'none';
+                msg.innerText = "";
+                btn.innerText = "💾 บันทึกข้อมูลการเติมสาร";
+                btn.disabled = false;
+            }, 2000); 
+        })
+        .catch(error => {
+            console.error('Fetch Error:', error);
+            msg.innerText = "❌ เกิดปัญหาการเชื่อมต่อ กรุณาลองส่งใหม่อีกครั้ง"; 
+            msg.style.color = "#e74c3c";
+            btn.innerText = "💾 บันทึกข้อมูลการเติมสาร";
+            btn.disabled = false;
+        });
+});
+
+function changeImage() {
+    const vehicle = allVehicles[currentVehicleIndex];
+    const images = [vehicle.URL_รูปภาพ_1, vehicle.URL_รูปภาพ_2, vehicle.URL_รูปภาพ_3, vehicle.URL_รูปภาพ_4, vehicle.URL_รูปภาพ_5].filter(url => url && url !== "");
+    const modalImage = document.getElementById('modalImage');
+    const imageNumber = document.getElementById('imageNumber');
+    
+    if(modalImage) {
+        modalImage.src = getDirectImageUrl(images[currentImageIndex]); 
+        modalImage.onerror = function() { this.src = 'placeholder.png'; }; 
+    }
+    if(imageNumber) {
+        imageNumber.innerText = images.length > 1 ? `รูปที่ ${currentImageIndex + 1}/${images.length}` : "";
+    }
+}
+
+const modal = document.getElementById('vehicleModal');
+const closeBtn = document.getElementsByClassName("close")[0];
+if(closeBtn) closeBtn.onclick = () => modal.style.display = "none";
+
+window.onclick = (e) => { 
+    if (e.target == modal) modal.style.display = "none"; 
+    
+    const refillHistoryModal = document.getElementById('refillHistoryModal');
+    if (refillHistoryModal && e.target == refillHistoryModal) refillHistoryModal.style.display = "none";
+
+    const refillFormModal = document.getElementById('refillFormModal');
+    if (refillFormModal && e.target == refillFormModal) refillFormModal.style.display = "none";
+}
+
+const prevBtn = document.getElementById('prevImageBtn');
+if(prevBtn) {
+    prevBtn.onclick = () => {
+        const vehicle = allVehicles[currentVehicleIndex];
+        const images = [vehicle.URL_รูปภาพ_1, vehicle.URL_รูปภาพ_2, vehicle.URL_รูปภาพ_3, vehicle.URL_รูปภาพ_4, vehicle.URL_รูปภาพ_5].filter(url => url && url !== ""); 
+        currentImageIndex = (currentImageIndex > 0) ? currentImageIndex - 1 : images.length - 1; 
+        changeImage(); 
+    };
+}
+
+const nextBtn = document.getElementById('nextImageBtn');
+if(nextBtn) {
+    nextBtn.onclick = () => {
+        const vehicle = allVehicles[currentVehicleIndex];
+        const images = [vehicle.URL_รูปภาพ_1, vehicle.URL_รูปภาพ_2, vehicle.URL_รูปภาพ_3, vehicle.URL_รูปภาพ_4, vehicle.URL_รูปภาพ_5].filter(url => url && url !== ""); 
+        currentImageIndex = (currentImageIndex < images.length - 1) ? currentImageIndex + 1 : 0; 
+        changeImage(); 
+    };
+}
