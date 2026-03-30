@@ -4,7 +4,7 @@ const scriptURL = "https://script.google.com/macros/s/AKfycbyf7XhpsA0_C9F98o1PEU
 let allVehicles = []; 
 let currentVehicleIndex = 0; 
 let currentImageIndex = 0; 
-let mainCategory = 'vehicle'; // 🌟 เริ่มต้นที่หน้ายานพาหนะ
+let mainCategory = 'vehicle'; 
 let currentSubFilter = 'all';
 let currentExtinguisherType = 'all';
 let currentNozzleType = 'all'; 
@@ -85,12 +85,14 @@ function extractYear(dateStr) {
     return 'ไม่ระบุปี';
 }
 
-// 🌟 สร้างฟังก์ชันอัปเดตหน้าตา UI แทนการรีโหลดเว็บ 🌟
 function initPageUI() {
     // 1. ซ่อนเมนูย่อยและตัวกรองทั้งหมดก่อน
     document.querySelectorAll('.sidebar-menu a').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.submenu').forEach(el => el.classList.remove('show-submenu'));
     document.querySelectorAll('.filter-buttons').forEach(el => el.style.display = 'none');
+    
+    const yearSelectContainer = document.getElementById('sub-filter-mission-year-container');
+    if(yearSelectContainer) yearSelectContainer.style.display = 'none';
     
     const galleryElement = document.getElementById('vehicleGallery');
     if(galleryElement) galleryElement.classList.remove('form-list-mode'); 
@@ -163,8 +165,7 @@ function initPageUI() {
         } else {
             const fg = document.getElementById('filter-group-mission');
             if(fg) fg.style.display = 'flex';
-            const subFilterYearContainer = document.getElementById('sub-filter-mission-year-container');
-            if (subFilterYearContainer) subFilterYearContainer.style.display = 'flex';
+            if (yearSelectContainer) yearSelectContainer.style.display = 'flex'; 
 
             if(currentUnit.includes('ตรวจพื้นที่')) {
                 const subItem = document.getElementById('menu-mission-inspect');
@@ -203,54 +204,44 @@ function initPageUI() {
         if(fg) fg.style.display = 'flex';
     }
 
-    // 3. รีเซ็ตปุ่มตัวกรองให้กลับมาเป็น 'ทั้งหมด'
+    // 3. รีเซ็ตปุ่มตัวกรอง
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    if(currentSubFilter === 'all') {
-        let activeGroup = null;
-        if(mainCategory === 'vehicle') activeGroup = document.getElementById('filter-group-vehicle');
-        if(mainCategory === 'staff') activeGroup = document.getElementById('filter-group-staff');
-        if(mainCategory === 'mission' && !currentUnit.includes('ตารางเวร')) activeGroup = document.getElementById('filter-group-mission');
-        
-        if (activeGroup) {
-            const allBtn = activeGroup.querySelector('[data-filter="all"]');
-            if(allBtn) allBtn.classList.add('active');
-        }
+    let activeGroup = null;
+    if(mainCategory === 'vehicle') activeGroup = document.getElementById('filter-group-vehicle');
+    if(mainCategory === 'staff') activeGroup = document.getElementById('filter-group-staff');
+    if(mainCategory === 'mission' && !currentUnit.includes('ตารางเวร')) activeGroup = document.getElementById('filter-group-mission');
+    
+    if (activeGroup) {
+        const targetBtn = activeGroup.querySelector(`[data-filter="${currentSubFilter}"]`) || activeGroup.querySelector('[data-filter="all"]');
+        if(targetBtn) targetBtn.classList.add('active');
     }
     
-    // ล้างช่องค้นหา
     const searchInput = document.getElementById('searchInput');
     if(searchInput) searchInput.value = '';
 }
 
-// 🌟 ระบบดักจับการกดเมนู (ป้องกันการรีโหลดหน้าเว็บ) 🌟
 function setupSeamlessNavigation() {
     document.querySelectorAll('.sidebar-menu a').forEach(link => {
         link.addEventListener('click', function(e) {
             const href = this.getAttribute('href');
             
-            // ถ้าตั้งใจกดไปหน้า "รายงาน" หรือ "ฟอร์ม" ก็ปล่อยให้เว็บโหลดใหม่ตามปกติ
             if(href.includes('report.html') || href.includes('form.html') || !href.includes('index.html')) {
                 return; 
             }
             
-            e.preventDefault(); // สั่งห้ามเบราว์เซอร์โหลดหน้าเว็บใหม่ (นี่คือหัวใจสำคัญ!)
+            e.preventDefault(); 
             
-            // ดึงคำสั่งจากลิงก์ว่ากดหมวดไหน
             const url = new URL(this.href, window.location.origin);
             mainCategory = url.searchParams.get('main') || 'vehicle';
             currentUnit = url.searchParams.get('unit') || 'all';
-            if(currentUnit !== 'all') currentUnit = currentUnit.toLowerCase();
             
-            // รีเซ็ตฟิลเตอร์
-            currentSubFilter = 'all';
+            currentSubFilter = currentUnit; 
             currentExtinguisherType = 'all';
             currentNozzleType = 'all';
             currentMissionYear = 'all';
             
-            // เปลี่ยนลิงก์ด้านบนเบราว์เซอร์ให้ถูกต้อง
             window.history.pushState({}, '', href);
             
-            // อัปเดตหน้าตา และข้อมูลรถ แบบไวแสง
             initPageUI();
             if(allVehicles.length > 0) {
                 updateFilterCounts(); 
@@ -262,13 +253,12 @@ function setupSeamlessNavigation() {
         });
     });
 
-    // ให้ปุ่ม Back/Forward ของเบราว์เซอร์ทำงานได้เนียนๆ
     window.addEventListener('popstate', function(e) {
         const urlParams = new URLSearchParams(window.location.search);
         mainCategory = urlParams.get('main') || 'vehicle';
         let u = urlParams.get('unit');
-        currentUnit = u ? u.toLowerCase() : 'all';
-        currentSubFilter = 'all';
+        currentUnit = u ? u : 'all';
+        currentSubFilter = currentUnit; 
         currentExtinguisherType = 'all';
         currentNozzleType = 'all';
         currentMissionYear = 'all';
@@ -288,10 +278,12 @@ window.onload = function() {
     const urlParams = new URLSearchParams(window.location.search);
     if(urlParams.has('main')) mainCategory = urlParams.get('main');
     if(urlParams.has('unit')) currentUnit = urlParams.get('unit').toLowerCase();
+    
+    if (currentUnit !== 'all') currentSubFilter = currentUnit; 
 
-    initPageUI();               // เรียกจัดหน้าจอครั้งแรก
-    setupSeamlessNavigation();  // เปิดใช้งานโหมดกดแล้ว Sidebar ไม่หาย
-    fetchVehicles();            // ดึงข้อมูลชีท
+    initPageUI();               
+    setupSeamlessNavigation();  
+    fetchVehicles();            
 };
 
 function fetchVehicles() {
@@ -1140,3 +1132,28 @@ if(nextBtn) {
         changeImage(); 
     };
 }
+
+// ========================================================
+// 🌟 โค้ดพิเศษ: ระบบจำสถานะ Sidebar (ไม่ให้กระพริบตอนเปลี่ยนหน้า) 🌟
+// ========================================================
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    // 1. เช็คว่าก่อนหน้านี้เมนูเปิดอยู่หรือไม่ (ถ้าเปิดอยู่ ให้ใส่คลาส keep-open ค้างไว้)
+    if (sessionStorage.getItem('sidebarOpen') === 'true') {
+        sidebar.classList.add('keep-open');
+    }
+
+    // 2. เมื่อเอาเมาส์เข้าพื้นที่เมนู ให้จำค่าไว้ว่าเปิดอยู่
+    sidebar.addEventListener('mouseenter', () => {
+        sessionStorage.setItem('sidebarOpen', 'true');
+        sidebar.classList.add('keep-open');
+    });
+
+    // 3. เมื่อเอาเมาส์ออก ให้ล้างค่าความจำและซ่อนเมนู
+    sidebar.addEventListener('mouseleave', () => {
+        sessionStorage.setItem('sidebarOpen', 'false');
+        sidebar.classList.remove('keep-open');
+    });
+});
