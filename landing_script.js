@@ -1,7 +1,12 @@
 // 🌟 สำคัญมาก: ใส่ลิงก์ Web App ของคุณที่นี่ 🌟
 const scriptURL = "https://script.google.com/macros/s/AKfycbyf7XhpsA0_C9F98o1PEU96DkweO96Bv7bfsc_PiYFI5f8JZyX3UWNO87eU0f3uqTvM/exec"; 
 
+// 🌟 ลิงก์สำหรับดึงข้อมูล Lost & Found (ไม่ต้องแก้ครับ ดึงจากชีทของคุณลูกพี่โดยตรง) 🌟
+const lfSheetUrl = `https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=out:json&gid=751456190`;
+
 let allVehicles = []; 
+let allLostFound = []; // เก็บข้อมูล L&F
+
 let currentVehicleIndex = 0; 
 let currentImageIndex = 0; 
 let mainCategory = 'vehicle'; 
@@ -86,7 +91,6 @@ function extractYear(dateStr) {
 }
 
 function initPageUI() {
-    // 1. ซ่อนเมนูย่อยและตัวกรองทั้งหมดก่อน
     document.querySelectorAll('.sidebar-menu a').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.submenu').forEach(el => el.classList.remove('show-submenu'));
     document.querySelectorAll('.filter-buttons').forEach(el => el.style.display = 'none');
@@ -97,7 +101,6 @@ function initPageUI() {
     const galleryElement = document.getElementById('vehicleGallery');
     if(galleryElement) galleryElement.classList.remove('form-list-mode'); 
 
-    // 2. เปิดเมนูและตัวกรองตามหมวดหมู่ที่เลือก
     if(mainCategory === 'fire') {
         const menuFire = document.getElementById('menu-fire');
         if(menuFire) menuFire.classList.add('active');
@@ -183,6 +186,13 @@ function initPageUI() {
                 document.getElementById('page-title').innerText = 'การดูแลพื้นที่ส่วนกลางทั้งหมด';
             }
         }
+    } else if (mainCategory === 'lostfound') { 
+        // 🌟 โหมด Lost & Found 🌟
+        const item = document.getElementById('menu-lostfound');
+        if(item) item.classList.add('active');
+        document.getElementById('page-title').innerText = 'ระบบแจ้งของหาย / เก็บของได้';
+        const fg = document.getElementById('filter-group-lostfound');
+        if(fg) fg.style.display = 'flex';
     } else { 
         const item = document.getElementById('menu-staff');
         if(item) item.classList.add('active');
@@ -204,12 +214,12 @@ function initPageUI() {
         if(fg) fg.style.display = 'flex';
     }
 
-    // 3. รีเซ็ตปุ่มตัวกรอง
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     let activeGroup = null;
     if(mainCategory === 'vehicle') activeGroup = document.getElementById('filter-group-vehicle');
     if(mainCategory === 'staff') activeGroup = document.getElementById('filter-group-staff');
     if(mainCategory === 'mission' && !currentUnit.includes('ตารางเวร')) activeGroup = document.getElementById('filter-group-mission');
+    if(mainCategory === 'lostfound') activeGroup = document.getElementById('filter-group-lostfound');
     
     if (activeGroup) {
         const targetBtn = activeGroup.querySelector(`[data-filter="${currentSubFilter}"]`) || activeGroup.querySelector('[data-filter="all"]');
@@ -243,7 +253,7 @@ function setupSeamlessNavigation() {
             window.history.pushState({}, '', href);
             
             initPageUI();
-            if(allVehicles.length > 0) {
+            if(allVehicles.length > 0 || allLostFound.length > 0) {
                 updateFilterCounts(); 
                 generateExtinguisherSubFilters(); 
                 generateNozzleSubFilters(); 
@@ -264,7 +274,7 @@ function setupSeamlessNavigation() {
         currentMissionYear = 'all';
         
         initPageUI();
-        if(allVehicles.length > 0) {
+        if(allVehicles.length > 0 || allLostFound.length > 0) {
             updateFilterCounts(); 
             generateExtinguisherSubFilters(); 
             generateNozzleSubFilters(); 
@@ -284,11 +294,13 @@ window.onload = function() {
     initPageUI();               
     setupSeamlessNavigation();  
     fetchVehicles();            
+    fetchLostFound(); // 🌟 ดึงข้อมูล L&F มาเตรียมไว้ด้วย
 };
 
 function fetchVehicles() {
-    const gallery = document.getElementById('vehicleGallery');
-    gallery.innerHTML = '<p class="loading">กำลังโหลดข้อมูลล่าสุด...</p>';
+    if(mainCategory !== 'lostfound') {
+        document.getElementById('vehicleGallery').innerHTML = '<p class="loading">กำลังโหลดข้อมูลล่าสุด...</p>';
+    }
 
     const fetchURL = scriptURL + "?t=" + new Date().getTime();
 
@@ -296,16 +308,77 @@ function fetchVehicles() {
         .then(response => response.json())
         .then(data => {
             allVehicles = data;
-            updateFilterCounts(); 
-            generateExtinguisherSubFilters(); 
-            generateNozzleSubFilters(); 
-            generateMissionYearSubFilters(); 
-            applyFilters(); 
+            if(mainCategory !== 'lostfound') {
+                updateFilterCounts(); 
+                generateExtinguisherSubFilters(); 
+                generateNozzleSubFilters(); 
+                generateMissionYearSubFilters(); 
+                applyFilters(); 
+            }
         })
         .catch(error => { 
-            gallery.innerHTML = '<p class="loading" style="color:red;">เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาตรวจสอบลิงก์ Web App และสิทธิ์การเข้าถึง (Anyone)</p>'; 
             console.error("Error fetching data: ", error);
         });
+}
+
+// 🌟 ฟังก์ชันโหลดข้อมูลจากระบบ Lost & Found ของคุณลูกพี่ 🌟
+function fetchLostFound() {
+    if(mainCategory === 'lostfound') {
+        document.getElementById('vehicleGallery').innerHTML = '<p class="loading">กำลังเชื่อมต่อฐานข้อมูล L&F...</p>';
+    }
+
+    fetch(lfSheetUrl)
+        .then(res => res.text())
+        .then(text => {
+            const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S\w]+)\);/);
+            if (match && match[1]) {
+                const data = JSON.parse(match[1]);
+                processLostFoundData(data.table.rows);
+            }
+        })
+        .catch(err => console.error("LF Fetch Error:", err));
+}
+
+function processLostFoundData(rows) {
+    allLostFound = rows.map(row => {
+        if (!row || !row.c) return null;
+        let type = '', title = '', location = '', imgUrl = '', actionText = '', status = '';
+        let dateVal = row.c[0] ? (row.c[0].f || row.c[0].v) : '';
+        let otherTexts = [];
+
+        row.c.forEach((cell, colIndex) => {
+            if (!cell || cell.v === null || cell.v === undefined) return;
+            let valStr = (cell.f || cell.v).toString().trim();
+            if (valStr === '') return;
+
+            if (colIndex === 16) { actionText = valStr; return; }
+            if (colIndex === 17) { status = valStr; return; }
+
+            if (valStr.includes('drive.google.com')) {
+                if (!imgUrl) imgUrl = valStr;
+            } else if (valStr.includes('สูญหาย')) type = 'สิ่งของสูญหาย';
+            else if (valStr.includes('พบสิ่งของ')) type = 'พบสิ่งของ';
+            else if (valStr.includes('รับของคืน')) type = 'รับของคืน';
+            else if (colIndex > 5 && valStr.length > 1) otherTexts.push(valStr);
+        });
+
+        if (!type) return null;
+        if (otherTexts.length > 0) title = otherTexts[0];
+        if (otherTexts.length > 1) location = otherTexts[1];
+
+        if (imgUrl) {
+            let firstLink = imgUrl.split(',')[0].trim();
+            let matchId = firstLink.match(/id=([a-zA-Z0-9_-]+)/) || firstLink.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            if (matchId && matchId[1]) imgUrl = `https://drive.google.com/thumbnail?id=${matchId[1]}&sz=w500`;
+        }
+
+        return { type, title, location, dateVal, imgUrl, status, actionText };
+    }).filter(item => item !== null).reverse();
+    
+    if (mainCategory === 'lostfound') {
+        updateFilterCounts();
+        applyFilters();
+    }
 }
 
 function updateFilterCounts() {
@@ -353,6 +426,16 @@ function updateFilterCounts() {
         if(badge) badge.innerText = count;
         btn.style.display = (count === 0 && f !== 'all') ? 'none' : 'inline-flex';
     });
+
+    // 🌟 นับจำนวน Badge ของ L&F
+    if (allLostFound.length > 0) {
+        document.querySelectorAll('#filter-group-lostfound .filter-btn').forEach(btn => {
+            const f = btn.getAttribute('data-filter');
+            const count = (f === 'all') ? allLostFound.length : allLostFound.filter(v => v.type === f).length;
+            const badge = btn.querySelector('.badge');
+            if (badge) badge.innerText = count;
+        });
+    }
 }
 
 function generateMissionYearSubFilters() {
@@ -457,6 +540,23 @@ function generateNozzleSubFilters() {
 function applyFilters() {
     const searchInput = document.getElementById('searchInput');
     const searchText = searchInput ? searchInput.value.toLowerCase() : '';
+    
+    // 🌟 แยกระบบประมวลผลสำหรับ L&F 🌟
+    if (mainCategory === 'lostfound') {
+        let filteredData = allLostFound;
+        if (currentSubFilter !== 'all') {
+            filteredData = filteredData.filter(v => v.type === currentSubFilter);
+        }
+        if (searchText.trim() !== '') {
+            filteredData = filteredData.filter(v => 
+                (v.title && v.title.toLowerCase().includes(searchText)) || 
+                (v.location && v.location.toLowerCase().includes(searchText))
+            );
+        }
+        displayLostFoundGallery(filteredData);
+        return; 
+    }
+
     let filteredData = allVehicles;
 
     if (mainCategory === 'staff') {
@@ -568,6 +668,78 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
         applyFilters();
     });
 });
+
+// 🌟 ฟังก์ชันวาดการ์ดเฉพาะของ Lost & Found 🌟
+function displayLostFoundGallery(dataToDisplay) {
+    const gallery = document.getElementById('vehicleGallery');
+    if(!gallery) return;
+    gallery.innerHTML = ''; 
+    gallery.className = 'gallery-grid'; 
+
+    if (dataToDisplay.length === 0) {
+        gallery.innerHTML = '<p class="loading" style="grid-column: 1 / -1;">ไม่มีข้อมูลที่ตรงกับการค้นหา</p>';
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    dataToDisplay.forEach((item) => {
+        const card = document.createElement('div'); 
+        card.className = 'vehicle-card';
+        
+        let borderColor = "rgba(0,0,0,0.1)";
+        let bgColor = "#fff";
+        let statusColor = "#333";
+        let finalStatusText = item.status || 'รอดำเนินการ';
+        
+        if (finalStatusText.includes("รับของคืนแล้ว")) {
+            borderColor = "#27ae60"; bgColor = "#f0faf4"; statusColor = "#27ae60";
+            finalStatusText += " ✔";
+        } else if (item.status) {
+            borderColor = "#f39c12"; bgColor = "#fffdf5"; statusColor = "#e74c3c";
+        }
+
+        card.style.border = `2px solid ${borderColor}`;
+        card.style.backgroundColor = bgColor;
+        card.style.cursor = 'pointer';
+
+        let badgeColor = "#95a5a6";
+        if(item.type === "สิ่งของสูญหาย") badgeColor = "#e74c3c";
+        else if (item.type === "พบสิ่งของ") badgeColor = "#27ae60";
+        
+        let imgHtml = item.imgUrl 
+            ? `<img src="${item.imgUrl}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='placeholder.png';">` 
+            : `<div style="height:200px; display:flex; align-items:center; justify-content:center; background:#f4f6f9; color:#7f8c8d; font-weight:bold;">ไม่มีภาพประกอบ</div>`;
+
+        card.innerHTML = `
+            <div class="card-image-wrapper" style="position: relative; height: 200px;">
+                <span style="position: absolute; top: 10px; right: 10px; background: ${badgeColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${item.type}</span>
+                ${imgHtml}
+            </div>
+            <div class="card-content">
+                <h3 class="card-title" title="${item.title || 'ไม่มีระบุ'}">${item.title || 'ไม่มีระบุ'}</h3>
+                <div style="font-size: 14px; color: #7f8c8d; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📍 ${item.location || 'ไม่ระบุสถานที่'}</div>
+                <div style="font-size: 13px; color: #bdc3c7; margin-bottom: 10px;">🕒 ${item.dateVal || '-'}</div>
+                <div style="border-top: 1px solid rgba(0,0,0,0.05); padding-top: 8px; font-weight: bold; color: ${statusColor}; text-align: center;">${finalStatusText}</div>
+            </div>
+        `;
+        
+        // กดการ์ดแล้วเปิดหน้าต่างแจ้งรายละเอียด L&F
+        card.onclick = () => openLFModal(item.actionText);
+        fragment.appendChild(card);
+    });
+    gallery.appendChild(fragment);
+}
+
+// ฟังก์ชันเปิดหน้าต่างรายละเอียด L&F
+window.openLFModal = function(actionText) {
+    const modalText = document.getElementById('lfModalText');
+    if (!actionText || actionText.trim() === '') {
+        modalText.innerHTML = '<span style="color: #7f8c8d; font-weight: bold;">ยังไม่ได้ดำเนินการ</span>';
+    } else {
+        modalText.innerHTML = `<span style="color: #2980b9; font-weight: bold;">${actionText.replace(/"/g, '')}</span>`;
+    }
+    document.getElementById('lfActionModal').style.display = 'block';
+};
 
 function displayGallery(dataToDisplay) {
     const gallery = document.getElementById('vehicleGallery');
@@ -796,7 +968,6 @@ function openModal(index) {
     const vehicle = allVehicles[index];
     const images = [vehicle.URL_รูปภาพ_1, vehicle.URL_รูปภาพ_2, vehicle.URL_รูปภาพ_3, vehicle.URL_รูปภาพ_4, vehicle.URL_รูปภาพ_5].filter(url => url && url !== "");
     
-    // 🌟 ชี้ไปที่ form.html
     let autoFillURL = `form.html?type=${encodeURIComponent(vehicle.ประเภท)}&detail=${encodeURIComponent(vehicle['ยี่ห้อ/รุ่น'])}&color=${encodeURIComponent(vehicle.สี)}&plate=${encodeURIComponent(vehicle.ทะเบียน)}&equip=${encodeURIComponent(vehicle.หมายเลขครุภัณฑ์)}`;
     
     let detailText = '';
@@ -1111,6 +1282,10 @@ window.onclick = (e) => {
 
     const refillFormModal = document.getElementById('refillFormModal');
     if (refillFormModal && e.target == refillFormModal) refillFormModal.style.display = "none";
+
+    // 🌟 ดักการปิดหน้าต่างแจ้งเตือน L&F
+    const lfActionModal = document.getElementById('lfActionModal');
+    if (lfActionModal && e.target == lfActionModal) lfActionModal.style.display = "none";
 }
 
 const prevBtn = document.getElementById('prevImageBtn');
@@ -1133,25 +1308,19 @@ if(nextBtn) {
     };
 }
 
-// ========================================================
-// 🌟 โค้ดพิเศษ: ระบบจำสถานะ Sidebar (ไม่ให้กระพริบตอนเปลี่ยนหน้า) 🌟
-// ========================================================
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
 
-    // 1. เช็คว่าก่อนหน้านี้เมนูเปิดอยู่หรือไม่ (ถ้าเปิดอยู่ ให้ใส่คลาส keep-open ค้างไว้)
     if (sessionStorage.getItem('sidebarOpen') === 'true') {
         sidebar.classList.add('keep-open');
     }
 
-    // 2. เมื่อเอาเมาส์เข้าพื้นที่เมนู ให้จำค่าไว้ว่าเปิดอยู่
     sidebar.addEventListener('mouseenter', () => {
         sessionStorage.setItem('sidebarOpen', 'true');
         sidebar.classList.add('keep-open');
     });
 
-    // 3. เมื่อเอาเมาส์ออก ให้ล้างค่าความจำและซ่อนเมนู
     sidebar.addEventListener('mouseleave', () => {
         sessionStorage.setItem('sidebarOpen', 'false');
         sidebar.classList.remove('keep-open');
