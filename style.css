@@ -59,7 +59,12 @@ body {
     list-style: none;
     flex-grow: 1;
     overflow-y: auto;
-    padding-top: 10px;
+    padding-top: 0; /* 🌟 เอา padding ออกเพื่อให้เส้นชิดขอบ */
+}
+
+/* 🌟 เพิ่มเส้นคั่นด้านล่างให้เมนูหลักทุกอัน 🌟 */
+.sidebar-menu > li {
+    border-bottom: 1px solid #34495e;
 }
 
 .sidebar-menu li a {
@@ -196,7 +201,6 @@ body {
     color: var(--secondary-color);
 }
 
-/* 🚀 ปรับขนาดความกว้างของการ์ดให้ใหญ่ขึ้น (จาก 280px เป็น 320px) */
 .gallery-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -256,10 +260,9 @@ body {
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    width: 100%; /* สำคัญสำหรับการตัดคำ */
+    width: 100%; 
 }
 
-/* 🚀 บังคับชื่อให้อยู่บรรทัดเดียว ถ้ายาวเกินให้เป็น ... */
 .card-title {
     font-size: 18px;
     color: var(--primary-color);
@@ -771,6 +774,7 @@ body {
     .form-section { padding: 20px; }
     .checklist-options { flex-direction: column; gap: 10px; }
 }
+
 /* =========================================
    🌟 โค้ดพิเศษ: ระบบสไลด์ Sidebar อัตโนมัติ 🌟 
    ========================================= */
@@ -785,7 +789,6 @@ body {
     box-shadow: 4px 0 15px rgba(0,0,0,0.1);
 }
 
-/* กำแพงล่องหนรับเมาส์ */
 .sidebar::before {
     content: '';
     position: absolute;
@@ -797,7 +800,6 @@ body {
     z-index: -1;
 }
 
-/* ติ่งลูกศร */
 .sidebar::after {
     content: '❯'; 
     position: absolute;
@@ -818,7 +820,6 @@ body {
     transition: background-color 0.3s;
 }
 
-/* 🌟 จุดที่เพิ่มเข้ามา: ให้กางออกเมื่อ hover หรือมีคลาส keep-open */
 .sidebar:hover, .sidebar.keep-open {
     left: 0 !important;
 }
@@ -833,4 +834,3 @@ body {
     width: calc(100% - 20px) !important;
     transition: margin-left 0.4s, width 0.4s !important;
 }
-
