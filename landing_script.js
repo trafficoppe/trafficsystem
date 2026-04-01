@@ -1,4 +1,4 @@
-// สำคัญมาก: ใส่ลิงก์ Web App ของคุณที่นี่
+// 🌟 สำคัญมาก: ใส่ลิงก์ Web App อันใหม่ล่าสุดที่อัปเดตโค้ด Code.gs แล้ว 🌟
 const scriptURL = "https://script.google.com/macros/s/AKfycbyf7XhpsA0_C9F98o1PEU96DkweO96Bv7bfsc_PiYFI5f8JZyX3UWNO87eU0f3uqTvM/exec"; 
 
 const lfSheetUrl = `https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=out:json&gid=751456190`;
@@ -342,21 +342,26 @@ function processLostFoundData(rows) {
         let type = '', title = '', location = '', imgUrl = '', actionText = '', status = '';
         let dateVal = row.c[0] ? (row.c[0].f || row.c[0].v) : '';
         let otherTexts = [];
+        let isReturned = false;
 
         row.c.forEach((cell, colIndex) => {
             if (!cell || cell.v === null || cell.v === undefined) return;
             let valStr = (cell.f || cell.v).toString().trim();
             if (valStr === '') return;
 
-            if (colIndex === 16) { actionText = valStr; return; }
-            if (colIndex === 17) { status = valStr; return; }
+            if (valStr.includes("รับของคืน") || valStr.includes("รับคืน")) isReturned = true;
 
-            if (valStr.includes('drive.google.com')) {
+            if (colIndex === 17) { 
+                actionText = valStr; 
+            } else if (colIndex === 18) { 
+                status = valStr; 
+            } else if (valStr.includes('drive.google.com')) {
                 if (!imgUrl) imgUrl = valStr;
-            } else if (valStr.includes('สูญหาย')) type = 'สิ่งของสูญหาย';
-            else if (valStr.includes('พบสิ่งของ')) type = 'พบสิ่งของ';
-            else if (valStr.includes('รับของคืน')) type = 'รับของคืน';
-            else if (colIndex > 5 && valStr.length > 1) otherTexts.push(valStr);
+            } else if (valStr === 'สิ่งของสูญหาย' || valStr === 'พบสิ่งของ' || valStr === 'รับของคืน') {
+                type = valStr;
+            } else if (colIndex > 5 && colIndex < 17 && valStr.length > 1) {
+                otherTexts.push(valStr);
+            }
         });
 
         if (!type) return null;
@@ -369,7 +374,7 @@ function processLostFoundData(rows) {
             if (matchId && matchId[1]) imgUrl = `https://drive.google.com/thumbnail?id=${matchId[1]}&sz=w500`;
         }
 
-        return { type, title, location, dateVal, imgUrl, status, actionText };
+        return { type, title, location, dateVal, imgUrl, status, actionText, isReturned };
     }).filter(item => item !== null).reverse();
     
     if (mainCategory === 'lostfound') {
@@ -671,7 +676,7 @@ function displayLostFoundGallery(dataToDisplay) {
     gallery.className = 'gallery-grid'; 
 
     if (dataToDisplay.length === 0) {
-        gallery.innerHTML = '<p class="loading" style="grid-column: 1 / -1;">ไม่มีข้อมูลที่ตรงกับการค้นหา</p>';
+        gallery.innerHTML = '<p class="loading" style="grid-column: 1 / -1; color: #000;">ไม่มีข้อมูลที่ตรงกับการค้นหา</p>';
         return;
     }
 
@@ -680,15 +685,18 @@ function displayLostFoundGallery(dataToDisplay) {
         const card = document.createElement('div'); 
         card.className = 'vehicle-card';
         
-        let borderColor = "rgba(0,0,0,0.1)";
+        let borderColor = "rgba(0,0,0,0.15)";
         let bgColor = "#fff";
         let statusColor = "#333";
-        let finalStatusText = item.status || 'รอดำเนินการ';
+        let finalStatusText = (item.status && item.status.trim() !== '') ? item.status.trim() : 'รอดำเนินการ';
         
-        if (finalStatusText.includes("รับของคืนแล้ว")) {
-            borderColor = "#27ae60"; bgColor = "#f0faf4"; statusColor = "#27ae60";
-        } else if (item.status) {
-            borderColor = "#f39c12"; bgColor = "#fffdf5"; statusColor = "#e74c3c";
+        if (finalStatusText === 'รอดำเนินการ') {
+            borderColor = "#bdc3c7"; bgColor = "#fff"; statusColor = "#333";
+        } else if (finalStatusText.includes("รับของคืนแล้ว") || finalStatusText.includes("รับคืนแล้ว")) {
+            borderColor = "#15803d"; bgColor = "#f0faf4"; statusColor = "#27ae60";
+            if (!finalStatusText.includes("✔")) finalStatusText += " ✔";
+        } else {
+            borderColor = "#d35400"; bgColor = "#fffdf5"; statusColor = "#d35400";
         }
 
         card.style.border = `2px solid ${borderColor}`;
@@ -700,20 +708,19 @@ function displayLostFoundGallery(dataToDisplay) {
         else if (item.type === "พบสิ่งของ") badgeColor = "#27ae60";
         
         let imgHtml = item.imgUrl 
-            ? `<img src="${item.imgUrl}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='placeholder.png';">` 
-            : `<div style="height:200px; display:flex; align-items:center; justify-content:center; background:#f4f6f9; color:#7f8c8d; font-weight:bold;">ไม่มีภาพประกอบ</div>`;
+            ? `<img src="${item.imgUrl}" loading="lazy" style="width: 100%; height: 100%; object-fit: contain; padding: 5px;" onerror="this.src='placeholder.png';">` 
+            : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#000; font-size: 15px;">ไม่มีภาพประกอบ</div>`;
 
-        // 🌟 แก้ไข: จัดข้อความชิดซ้ายและเอาอีโมจิออก 🌟
         card.innerHTML = `
-            <div class="card-image-wrapper" style="position: relative; height: 200px;">
+            <div class="card-image-wrapper" style="position: relative; height: 160px; background-color: #f8f9fa;">
                 <span style="position: absolute; top: 10px; right: 10px; background: ${badgeColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${item.type}</span>
                 ${imgHtml}
             </div>
-            <div class="card-content">
-                <h3 class="card-title" title="${item.title || 'ไม่มีระบุ'}">${item.title || 'ไม่มีระบุ'}</h3>
-                <div style="font-size: 14px; color: #7f8c8d; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: left;">${item.location || 'ไม่ระบุสถานที่'}</div>
-                <div style="font-size: 13px; color: #bdc3c7; margin-bottom: 10px; width: 100%; text-align: left;">${item.dateVal || '-'}</div>
-                <div style="border-top: 1px solid rgba(0,0,0,0.05); padding-top: 8px; font-weight: bold; color: ${statusColor}; text-align: left; width: 100%;">${finalStatusText}</div>
+            <div class="card-content" style="padding: 15px; color: #000;">
+                <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: left;" title="${item.title || 'ไม่มีระบุ'}">${item.title || 'ไม่มีระบุ'}</div>
+                <div style="font-size: 15px; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: left;">📍 ${item.location || 'ไม่ระบุสถานที่'}</div>
+                <div style="font-size: 15px; margin-bottom: 10px; width: 100%; text-align: left;">🕒 ${item.dateVal || '-'}</div>
+                <div style="border-top: 1px solid rgba(0,0,0,0.1); padding-top: 8px; font-weight: bold; font-size: 15px; text-align: left; width: 100%;">${finalStatusText}</div>
             </div>
         `;
         
@@ -813,10 +820,52 @@ function displayGallery(dataToDisplay) {
         dataToDisplay.forEach((item) => {
             const formBar = document.createElement('a');
             formBar.className = 'form-bar'; 
-            formBar.href = item['ลิงก์'] && item['ลิงก์'].trim() !== "" ? item['ลิงก์'] : "#";
-            formBar.target = "_blank"; 
-            formBar.rel = "noopener noreferrer"; 
-            formBar.innerHTML = `<div class="form-name">${item['ชื่อแบบฟอร์ม'] || 'แบบฟอร์มไม่มีชื่อ'}</div>`;
+            
+            let formName = item['ชื่อแบบฟอร์ม'] || 'แบบฟอร์มไม่มีชื่อ';
+
+            if (formName.includes('ยานพาหนะ') || formName.includes('รถ')) {
+                formBar.href = "?main=vehicle";
+                formBar.onclick = (e) => {
+                    e.preventDefault();
+                    mainCategory = 'vehicle';
+                    currentUnit = 'all';
+                    currentSubFilter = 'all';
+                    currentExtinguisherType = 'all';
+                    currentNozzleType = 'all';
+                    currentMissionYear = 'all';
+                    window.history.pushState({}, '', '?main=vehicle');
+                    initPageUI();
+                    updateFilterCounts(); 
+                    generateExtinguisherSubFilters(); 
+                    generateNozzleSubFilters(); 
+                    generateMissionYearSubFilters(); 
+                    applyFilters(); 
+                };
+            } else if (formName.includes('ถังดับเพลิง') || formName.includes('อุปกรณ์ดับเพลิง') || formName.includes('ดับเพลิง')) {
+                formBar.href = "?main=fire&unit=" + encodeURIComponent("ถังดับเพลิง");
+                formBar.onclick = (e) => {
+                    e.preventDefault();
+                    mainCategory = 'fire';
+                    currentUnit = 'ถังดับเพลิง';
+                    currentSubFilter = 'ถังดับเพลิง';
+                    currentExtinguisherType = 'all';
+                    currentNozzleType = 'all';
+                    currentMissionYear = 'all';
+                    window.history.pushState({}, '', '?main=fire&unit=' + encodeURIComponent('ถังดับเพลิง'));
+                    initPageUI();
+                    updateFilterCounts(); 
+                    generateExtinguisherSubFilters(); 
+                    generateNozzleSubFilters(); 
+                    generateMissionYearSubFilters(); 
+                    applyFilters(); 
+                };
+            } else {
+                formBar.href = item['ลิงก์'] && item['ลิงก์'].trim() !== "" ? item['ลิงก์'] : "#";
+                formBar.target = "_blank"; 
+                formBar.rel = "noopener noreferrer"; 
+            }
+
+            formBar.innerHTML = `<div class="form-name">${formName}</div>`;
             fragment.appendChild(formBar);
         });
         gallery.appendChild(fragment);
@@ -975,10 +1024,13 @@ function openModal(index) {
 
     let showInspectBtn = false;
     let showRefillBtn = false;
+    let showCleanBtn = false; 
     
     if (vehicle.Data_Category === 'Asset') {
         if (!isFireEquip(vehicle)) {
             showInspectBtn = true; 
+            // 🌟 🌟 แสดงปุ่มทำความสะอาดเฉพาะยานพาหนะ
+            showCleanBtn = true; 
         } else {
             let t = getSearchText(vehicle);
             if (t.includes('ถัง') || t.includes('co2') || t.includes('เคมี') || t.includes('โฟม') || t.includes('fireade') || t.includes('impact') || t.includes('fast')) {
@@ -989,10 +1041,14 @@ function openModal(index) {
     }
     
     let actionButtonsHtml = '';
-    if (showInspectBtn || showRefillBtn) {
+    if (showInspectBtn || showRefillBtn || showCleanBtn) {
         actionButtonsHtml += `<div class="action-buttons" style="flex-direction: column; gap: 10px; margin-top: 20px;">`;
         if (showInspectBtn) {
             actionButtonsHtml += `<a href="${autoFillURL}" class="action-btn btn-inspect" style="width: 100%;">ตรวจสอบสภาพ</a>`;
+        }
+        if (showCleanBtn) {
+            // 🌟 🌟 ปุ่มเปิด Modal ล้างรถ 🌟 🌟
+            actionButtonsHtml += `<button onclick="openCleanFormModal(${index})" class="action-btn" style="width: 100%; background-color: #3498db; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">💦 ทำความสะอาดยานพาหนะ</button>`;
         }
         if (showRefillBtn) {
             actionButtonsHtml += `<button onclick="openRefillHistoryModal(${index})" class="action-btn" style="width: 100%; background-color: #f39c12; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">ดูประวัติการเติมสาร</button>`;
@@ -1193,6 +1249,88 @@ window.openRefillFormModal = function(index) {
     document.getElementById('refillFormModal').style.display = 'block';
 };
 
+// 🌟🌟 ฟังก์ชันเปิดหน้าบันทึกการทำความสะอาด 🌟🌟
+window.openCleanFormModal = function(index) {
+    const vehicle = allVehicles[index];
+    
+    document.getElementById('cl_plate').value = vehicle.ทะเบียน || '-';
+    document.getElementById('cl_equip').value = vehicle.หมายเลขครุภัณฑ์ || '-';
+    document.getElementById('cl_model').value = vehicle['ยี่ห้อ/รุ่น'] || '-';
+    document.getElementById('cl_date').value = new Date().toISOString().split('T')[0];
+    
+    document.getElementById('vehicleModal').style.display = 'none';
+    document.getElementById('cleanFormModal').style.display = 'block';
+};
+
+// 🌟🌟 ฟังก์ชันเตรียมรูปถ่าย 5 รูป 🌟🌟
+document.getElementById('cl_images').addEventListener('change', function(event) {
+    const files = event.target.files;
+    const preview = document.getElementById('cl_file_preview');
+    preview.innerHTML = '';
+    
+    for(let i=1; i<=5; i++) {
+        const b64 = document.getElementById(`cl_b64_${i}`);
+        const m = document.getElementById(`cl_m_${i}`);
+        const n = document.getElementById(`cl_n_${i}`);
+        if(b64) b64.value = '';
+        if(m) m.value = '';
+        if(n) n.value = '';
+    }
+
+    let fileCount = Math.min(files.length, 5);
+    if(files.length > 5) {
+        alert("ระบบจำกัดให้ส่งรูปได้สูงสุด 5 รูป ระบบจะใช้แค่ 5 รูปแรกเท่านั้นครับ");
+    }
+
+    for (let i = 0; i < fileCount; i++) {
+        let file = files[i];
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let base64Data = e.target.result.split(',')[1];
+            document.getElementById(`cl_b64_${i+1}`).value = base64Data;
+            document.getElementById(`cl_m_${i+1}`).value = file.type;
+            document.getElementById(`cl_n_${i+1}`).value = file.name;
+            
+            preview.innerHTML += `<div style="font-size:14px; color:#27ae60; margin-top:5px;">✅ รูปที่ ${i+1}: ${file.name}</div>`;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// 🌟🌟 ฟังก์ชันส่งข้อมูลการทำความสะอาด 🌟🌟
+document.getElementById('cleanForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const btn = document.getElementById('cl_submitBtn'); 
+    const msg = document.getElementById('cl_message');
+    btn.innerText = "กำลังบันทึกและอัปโหลดรูป..."; 
+    btn.disabled = true;
+
+    const form = document.getElementById('cleanForm');
+    const formData = new FormData(form);
+
+    fetch(scriptURL, { method: 'POST', body: formData })
+        .then(response => {
+            msg.innerText = "✅ บันทึกการทำความสะอาดสำเร็จ!"; 
+            msg.style.color = "green";
+            form.reset(); 
+            document.getElementById('cl_file_preview').innerHTML = '';
+            
+            setTimeout(() => { 
+                document.getElementById('cleanFormModal').style.display = 'none';
+                msg.innerText = "";
+                btn.innerText = "บันทึกข้อมูลการทำความสะอาด";
+                btn.disabled = false;
+            }, 2000); 
+        })
+        .catch(error => {
+            console.error('Fetch Error:', error);
+            msg.innerText = "❌ เกิดปัญหาการเชื่อมต่อ กรุณาลองส่งใหม่อีกครั้ง"; 
+            msg.style.color = "#e74c3c";
+            btn.innerText = "บันทึกข้อมูลการทำความสะอาด";
+            btn.disabled = false;
+        });
+});
+
 document.getElementById('rf_poFile').addEventListener('change', function(event) {
     const file = event.target.files[0];
     if (file) {
@@ -1277,6 +1415,9 @@ window.onclick = (e) => {
 
     const lfActionModal = document.getElementById('lfActionModal');
     if (lfActionModal && e.target == lfActionModal) lfActionModal.style.display = "none";
+
+    const cleanFormModal = document.getElementById('cleanFormModal');
+    if (cleanFormModal && e.target == cleanFormModal) cleanFormModal.style.display = "none";
 }
 
 const prevBtn = document.getElementById('prevImageBtn');
