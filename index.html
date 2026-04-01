@@ -6,53 +6,6 @@
     <title>ระบบงานจราจรและป้องกันอัคคีภัย</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <style>
-        .form-group input[type="text"],
-        .form-group input[type="date"],
-        .form-group input[type="number"],
-        .form-group textarea {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ccd1d9;
-            border-radius: 8px;
-            font-size: 15px;
-            transition: border-color 0.3s;
-            outline: none;
-            background-color: #fcfcfc;
-            font-family: 'Kanit', sans-serif;
-            margin-top: 5px;
-        }
-        .form-group input:focus,
-        .form-group textarea:focus {
-            border-color: #27ae60;
-            background-color: #fff;
-        }
-        .year-select-container {
-            display: none; 
-            align-items: center; 
-            padding-left: 15px; 
-            border-left: 3px solid #f39c12; 
-            margin-top: 10px; 
-            margin-bottom: 15px;
-        }
-        .year-select-dropdown {
-            padding: 8px 15px; 
-            border-radius: 6px; 
-            border: 1px solid #ccd1d9; 
-            font-family: 'Kanit', sans-serif; 
-            font-size: 15px; 
-            outline: none; 
-            cursor: pointer;
-            background-color: #fff;
-            color: #2c3e50;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        .year-select-dropdown:hover, .year-select-dropdown:focus {
-            border-color: #f39c12;
-            box-shadow: 0 0 5px rgba(243, 156, 18, 0.3);
-        }
-    </style>
 </head>
 <body>
 
@@ -184,17 +137,9 @@
     <div id="lfActionModal" class="modal" style="z-index: 1050;">
         <div class="modal-content" style="max-width: 800px; width: 90%; padding: 40px; text-align: center; border-radius: 16px; box-shadow: 0 15px 30px rgba(0,0,0,0.3);">
             <span class="close" onclick="document.getElementById('lfActionModal').style.display='none'" style="font-size: 40px; top: 15px; right: 25px; color: #95a5a6; text-shadow: none;">&times;</span>
-            
-            <h2 style="color: #2c3e50; border-bottom: 3px solid #f39c12; padding-bottom: 15px; margin-bottom: 20px; font-size: 32px; font-weight: bold;">
-                รายละเอียดการดำเนินการ
-            </h2>
-            
-            <div id="lfModalText" style="font-size: 24px; line-height: 1.6; color: #34495e; white-space: pre-wrap; padding: 40px 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 10px;">
-            </div>
-            
-            <button onclick="document.getElementById('lfActionModal').style.display='none'" style="margin-top: 25px; padding: 12px 45px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 22px; font-weight: bold; box-shadow: 0 4px 6px rgba(231, 76, 60, 0.3); transition: 0.3s;">
-                ปิดหน้าต่าง
-            </button>
+            <h2 style="color: #2c3e50; border-bottom: 3px solid #f39c12; padding-bottom: 15px; margin-bottom: 20px; font-size: 32px; font-weight: bold;">รายละเอียดการดำเนินการ</h2>
+            <div id="lfModalText" style="font-size: 24px; line-height: 1.6; color: #34495e; white-space: pre-wrap; padding: 40px 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 10px;"></div>
+            <button onclick="document.getElementById('lfActionModal').style.display='none'" style="margin-top: 25px; padding: 12px 45px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 22px; font-weight: bold; box-shadow: 0 4px 6px rgba(231, 76, 60, 0.3); transition: 0.3s;">ปิดหน้าต่าง</button>
         </div>
     </div>
 
@@ -213,60 +158,81 @@
             <span class="close" onclick="document.getElementById('refillFormModal').style.display='none'">&times;</span>
             <div style="padding: 25px;">
                 <h2 style="color: #2c3e50; border-bottom: 2px solid #27ae60; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">บันทึกการเติมสารถังดับเพลิง</h2>
-                
                 <form id="refillForm">
                     <input type="hidden" name="sheet_name" value="ประวัติการเติมสารถังดับเพลิง">
                     <input type="hidden" name="Data_category" value="ประวัติการเติม">
+                    <div class="form-group"><label style="font-weight: 600;">รหัส/ถังที่ (ทะเบียน):</label><input type="text" id="rf_plate" name="ทะเบียน" readonly style="background:#f8f9fa;"></div>
+                    <div class="form-group"><label style="font-weight: 600;">หมายเลขครุภัณฑ์:</label><input type="text" id="rf_equip" name="หมายเลขครุภัณฑ์" readonly style="background:#f8f9fa;"></div>
+                    <div class="form-group"><label style="font-weight: 600;">วันที่เติมสาร: <span style="color:red">*</span></label><input type="date" name="วันที่เติม" id="rf_date" required></div>
+                    <div style="display:flex; gap:15px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex:1;"><label style="font-weight: 600;">น้ำหนักก่อนเติม (Kg.): <span style="color:red">*</span></label><input type="number" step="0.01" name="น้ำหนักก่อนเติม" required></div>
+                        <div class="form-group" style="flex:1;"><label style="font-weight: 600;">น้ำหนักหลังเติม (Kg.): <span style="color:red">*</span></label><input type="number" step="0.01" name="น้ำหนักหลังเติม" required></div>
+                    </div>
+                    <div class="form-group"><label style="font-weight: 600;">สารเคมีที่เติม: <span style="color:red">*</span></label><input type="text" name="สารเคมีที่เติม" required></div>
+                    <div class="form-group"><label style="font-weight: 600;">บริษัทที่ดำเนินการ: <span style="color:red">*</span></label><input type="text" name="บริษัทที่เติม" required></div>
+                    <div class="form-group"><label style="font-weight: 600;">แนบรูปใบสั่งซื้อ (PO):</label>
+                        <div class="file-upload-wrapper" onclick="document.getElementById('rf_poFile').click()" style="border: 2px dashed #bdc3c7; padding: 20px; text-align: center; border-radius: 8px; background-color: #f9fbfd; cursor: pointer; margin-bottom: 10px;"><span style="color: #2980b9; font-weight: 500;">คลิกเพื่อเลือกไฟล์</span><input type="file" id="rf_poFile" accept="image/*, application/pdf, .pdf" style="display: none;"><div id="rf_fileNameDisplay" style="margin-top: 10px; color: #27ae60; font-weight: bold;"></div></div>
+                        <input type="hidden" name="เอกสารการเติม" id="rf_poFileBase64"><input type="hidden" name="poFileName" id="rf_poFileName"><input type="hidden" name="poFileMimeType" id="rf_poFileMimeType">
+                    </div>
+                    <div class="form-group"><label style="font-weight: 600;">หมายเหตุ:</label><textarea name="หมายเหตุ" rows="3"></textarea></div>
+                    <button type="submit" id="rf_submitBtn" style="width: 100%; padding: 15px; background-color: #27ae60; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer;">บันทึกข้อมูลการเติมสาร</button>
+                    <div id="rf_message" style="text-align:center; margin-top:15px; font-weight:bold; font-size: 16px;"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="cleanFormModal" class="modal" style="z-index: 1050;">
+        <div class="modal-content" style="max-width: 600px; overflow-y: auto; max-height: 90vh;">
+            <span class="close" onclick="document.getElementById('cleanFormModal').style.display='none'">&times;</span>
+            <div style="padding: 25px;">
+                <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">💦 บันทึกการทำความสะอาดยานพาหนะ</h2>
+                
+                <form id="cleanForm">
+                    <input type="hidden" name="sheet_name" value="การทำความสะอาดยานพาหนะ">
+                    <input type="hidden" name="Data_category" value="Cleaning">
+                    <input type="hidden" name="รุ่นรถ" id="cl_model">
                     
                     <div class="form-group">
-                        <label style="font-weight: 600; color: #34495e;">รหัส/ถังที่ (ทะเบียน):</label>
-                        <input type="text" id="rf_plate" name="ทะเบียน" readonly style="background:#f8f9fa; color:#7f8c8d; cursor:not-allowed;">
+                        <label style="font-weight: 600; color: #34495e;">รหัส/ทะเบียนรถ:</label>
+                        <input type="text" id="cl_plate" name="ทะเบียน" readonly style="background:#f8f9fa; color:#7f8c8d; cursor:not-allowed;">
                     </div>
                     <div class="form-group">
                         <label style="font-weight: 600; color: #34495e;">หมายเลขครุภัณฑ์:</label>
-                        <input type="text" id="rf_equip" name="หมายเลขครุภัณฑ์" readonly style="background:#f8f9fa; color:#7f8c8d; cursor:not-allowed;">
+                        <input type="text" id="cl_equip" name="หมายเลขครุภัณฑ์" readonly style="background:#f8f9fa; color:#7f8c8d; cursor:not-allowed;">
                     </div>
                     <div class="form-group">
-                        <label style="font-weight: 600; color: #34495e;">วันที่เติมสาร: <span style="color:red">*</span></label>
-                        <input type="date" name="วันที่เติม" id="rf_date" required>
+                        <label style="font-weight: 600; color: #34495e;">วันที่ทำความสะอาด: <span style="color:red">*</span></label>
+                        <input type="date" name="วันที่" id="cl_date" required>
                     </div>
-                    <div style="display:flex; gap:15px; flex-wrap: wrap;">
-                        <div class="form-group" style="flex:1; min-width: 150px;">
-                            <label style="font-weight: 600; color: #34495e;">น้ำหนักก่อนเติม (Kg.): <span style="color:red">*</span></label>
-                            <input type="number" step="0.01" name="น้ำหนักก่อนเติม" required placeholder="เช่น 15.5">
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #34495e;">ผู้ดำเนินการล้างรถ: <span style="color:red">*</span></label>
+                        <input type="text" name="ผู้ดำเนินการ" placeholder="ระบุชื่อผู้รับผิดชอบ" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #34495e;">แนบรูปถ่าย (เลือกได้ 1-5 รูป):</label>
+                        <div class="file-upload-wrapper" onclick="document.getElementById('cl_images').click()" style="border: 2px dashed #3498db; padding: 20px; text-align: center; border-radius: 8px; background-color: #ebf5fb; cursor: pointer; margin-bottom: 10px; transition: 0.3s;">
+                            <span style="color: #2980b9; font-weight: 500; font-size: 16px;">📸 คลิกลากคลุมเพื่อเลือกภาพ (Max 5 รูป)</span>
+                            <input type="file" id="cl_images" accept="image/*" multiple style="display: none;">
+                            <div id="cl_file_preview" style="margin-top: 10px; font-weight: bold; text-align: left; padding: 0 10px;"></div>
                         </div>
-                        <div class="form-group" style="flex:1; min-width: 150px;">
-                            <label style="font-weight: 600; color: #34495e;">น้ำหนักหลังเติม (Kg.): <span style="color:red">*</span></label>
-                            <input type="number" step="0.01" name="น้ำหนักหลังเติม" required placeholder="เช่น 20.0">
-                        </div>
+                        
+                        <input type="hidden" name="imageB64_1" id="cl_b64_1"><input type="hidden" name="imageMime_1" id="cl_m_1"><input type="hidden" name="imageName_1" id="cl_n_1">
+                        <input type="hidden" name="imageB64_2" id="cl_b64_2"><input type="hidden" name="imageMime_2" id="cl_m_2"><input type="hidden" name="imageName_2" id="cl_n_2">
+                        <input type="hidden" name="imageB64_3" id="cl_b64_3"><input type="hidden" name="imageMime_3" id="cl_m_3"><input type="hidden" name="imageName_3" id="cl_n_3">
+                        <input type="hidden" name="imageB64_4" id="cl_b64_4"><input type="hidden" name="imageMime_4" id="cl_m_4"><input type="hidden" name="imageName_4" id="cl_n_4">
+                        <input type="hidden" name="imageB64_5" id="cl_b64_5"><input type="hidden" name="imageMime_5" id="cl_m_5"><input type="hidden" name="imageName_5" id="cl_n_5">
                     </div>
+                    
                     <div class="form-group">
-                        <label style="font-weight: 600; color: #34495e;">สารเคมีที่เติม: <span style="color:red">*</span></label>
-                        <input type="text" name="สารเคมีที่เติม" required placeholder="เช่น เคมีแห้ง, CO2">
+                        <label style="font-weight: 600; color: #34495e;">หมายเหตุ (ถ้ามี):</label>
+                        <textarea name="หมายเหตุ" rows="2" placeholder="ระบุรายละเอียดเพิ่มเติม"></textarea>
                     </div>
-                    <div class="form-group">
-                        <label style="font-weight: 600; color: #34495e;">บริษัทที่ดำเนินการ: <span style="color:red">*</span></label>
-                        <input type="text" name="บริษัทที่เติม" required placeholder="ระบุชื่อบริษัทที่รับเติม">
-                    </div>
-                    <div class="form-group">
-                        <label style="font-weight: 600; color: #34495e;">แนบรูปใบสั่งซื้อ (PO) / ใบเสร็จ (รูปภาพ/PDF):</label>
-                        <div class="file-upload-wrapper" onclick="document.getElementById('rf_poFile').click()" style="border: 2px dashed #bdc3c7; padding: 20px; text-align: center; border-radius: 8px; background-color: #f9fbfd; cursor: pointer; margin-bottom: 10px; transition: 0.3s;">
-                            <span style="color: #2980b9; font-weight: 500; font-size: 16px;">คลิกเพื่อเลือกไฟล์รูปภาพ หรือ PDF</span>
-                            <input type="file" id="rf_poFile" accept="image/*, application/pdf, .pdf" style="display: none;">
-                            <div id="rf_fileNameDisplay" style="margin-top: 10px; font-size: 14px; color: #27ae60; font-weight: bold;"></div>
-                        </div>
-                        <input type="hidden" name="เอกสารการเติม" id="rf_poFileBase64">
-                        <input type="hidden" name="poFileName" id="rf_poFileName">
-                        <input type="hidden" name="poFileMimeType" id="rf_poFileMimeType">
-                    </div>
-                    <div class="form-group">
-                        <label style="font-weight: 600; color: #34495e;">หมายเหตุ:</label>
-                        <textarea name="หมายเหตุ" rows="3" placeholder="ระบุรายละเอียดเพิ่มเติม (ถ้ามี)"></textarea>
-                    </div>
-                    <button type="submit" id="rf_submitBtn" style="width: 100%; padding: 15px; background-color: #27ae60; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; box-shadow: 0 4px 6px rgba(39, 174, 96, 0.2);">
-                        บันทึกข้อมูลการเติมสาร
+                    <button type="submit" id="cl_submitBtn" style="width: 100%; padding: 15px; background-color: #3498db; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2);">
+                        บันทึกข้อมูลการทำความสะอาด
                     </button>
-                    <div id="rf_message" style="text-align:center; margin-top:15px; font-weight:bold; font-size: 16px;"></div>
+                    <div id="cl_message" style="text-align:center; margin-top:15px; font-weight:bold; font-size: 16px;"></div>
                 </form>
             </div>
         </div>
