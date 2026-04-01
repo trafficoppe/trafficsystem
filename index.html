@@ -93,13 +93,14 @@
                     <li><a href="index.html?main=fire&unit=ชุด ppe" id="menu-fire-ppe">ชุด PPE</a></li>
                 </ul>              
             </li>          
+            
             <li><a href="index.html?main=form" id="menu-form">แบบฟอร์มต่างๆ</a></li>
 
-            <li style="margin-top: 10px; border-top: 1px solid #34495e;">
+            <li>
                 <a href="index.html?main=lostfound" id="menu-lostfound">🔎 แจ้งของหาย/เก็บของได้</a>
             </li>
             
-            <li style="margin-top: 10px; border-top: 1px solid #34495e;">
+            <li>
                 <a href="report.html" id="menu-report" style="color: #f1c40f; font-weight: 500;">
                     📊 รายงานประจำเดือน
                 </a>
@@ -181,11 +182,19 @@
     </div>
 
     <div id="lfActionModal" class="modal" style="z-index: 1050;">
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
-            <span class="close" onclick="document.getElementById('lfActionModal').style.display='none'">&times;</span>
-            <h3 style="color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">รายละเอียดการดำเนินการ</h3>
-            <div id="lfModalText" style="font-size: 16px; color: #34495e; white-space: pre-wrap; padding: 20px 0;"></div>
-            <button onclick="document.getElementById('lfActionModal').style.display='none'" style="margin-top: 15px; padding: 8px 20px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: 'Kanit';">ปิดหน้าต่าง</button>
+        <div class="modal-content" style="max-width: 800px; width: 90%; padding: 40px; text-align: center; border-radius: 16px; box-shadow: 0 15px 30px rgba(0,0,0,0.3);">
+            <span class="close" onclick="document.getElementById('lfActionModal').style.display='none'" style="font-size: 40px; top: 15px; right: 25px; color: #95a5a6; text-shadow: none;">&times;</span>
+            
+            <h2 style="color: #2c3e50; border-bottom: 3px solid #f39c12; padding-bottom: 15px; margin-bottom: 20px; font-size: 32px; font-weight: bold;">
+                📌 รายละเอียดการดำเนินการ
+            </h2>
+            
+            <div id="lfModalText" style="font-size: 24px; line-height: 1.6; color: #34495e; white-space: pre-wrap; padding: 40px 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 10px;">
+                </div>
+            
+            <button onclick="document.getElementById('lfActionModal').style.display='none'" style="margin-top: 25px; padding: 12px 45px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 22px; font-weight: bold; box-shadow: 0 4px 6px rgba(231, 76, 60, 0.3); transition: 0.3s;">
+                ปิดหน้าต่าง
+            </button>
         </div>
     </div>
 
