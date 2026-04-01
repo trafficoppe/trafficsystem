@@ -1,11 +1,10 @@
-// 🌟 สำคัญมาก: ใส่ลิงก์ Web App ของคุณที่นี่ 🌟
+// สำคัญมาก: ใส่ลิงก์ Web App ของคุณที่นี่
 const scriptURL = "https://script.google.com/macros/s/AKfycbyf7XhpsA0_C9F98o1PEU96DkweO96Bv7bfsc_PiYFI5f8JZyX3UWNO87eU0f3uqTvM/exec"; 
 
-// 🌟 ลิงก์สำหรับดึงข้อมูล Lost & Found (ไม่ต้องแก้ครับ ดึงจากชีทของคุณลูกพี่โดยตรง) 🌟
 const lfSheetUrl = `https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=out:json&gid=751456190`;
 
 let allVehicles = []; 
-let allLostFound = []; // เก็บข้อมูล L&F
+let allLostFound = []; 
 
 let currentVehicleIndex = 0; 
 let currentImageIndex = 0; 
@@ -187,7 +186,6 @@ function initPageUI() {
             }
         }
     } else if (mainCategory === 'lostfound') { 
-        // 🌟 โหมด Lost & Found 🌟
         const item = document.getElementById('menu-lostfound');
         if(item) item.classList.add('active');
         document.getElementById('page-title').innerText = 'ระบบแจ้งของหาย / เก็บของได้';
@@ -294,7 +292,7 @@ window.onload = function() {
     initPageUI();               
     setupSeamlessNavigation();  
     fetchVehicles();            
-    fetchLostFound(); // 🌟 ดึงข้อมูล L&F มาเตรียมไว้ด้วย
+    fetchLostFound(); 
 };
 
 function fetchVehicles() {
@@ -321,7 +319,6 @@ function fetchVehicles() {
         });
 }
 
-// 🌟 ฟังก์ชันโหลดข้อมูลจากระบบ Lost & Found ของคุณลูกพี่ 🌟
 function fetchLostFound() {
     if(mainCategory === 'lostfound') {
         document.getElementById('vehicleGallery').innerHTML = '<p class="loading">กำลังเชื่อมต่อฐานข้อมูล L&F...</p>';
@@ -427,7 +424,6 @@ function updateFilterCounts() {
         btn.style.display = (count === 0 && f !== 'all') ? 'none' : 'inline-flex';
     });
 
-    // 🌟 นับจำนวน Badge ของ L&F
     if (allLostFound.length > 0) {
         document.querySelectorAll('#filter-group-lostfound .filter-btn').forEach(btn => {
             const f = btn.getAttribute('data-filter');
@@ -541,7 +537,6 @@ function applyFilters() {
     const searchInput = document.getElementById('searchInput');
     const searchText = searchInput ? searchInput.value.toLowerCase() : '';
     
-    // 🌟 แยกระบบประมวลผลสำหรับ L&F 🌟
     if (mainCategory === 'lostfound') {
         let filteredData = allLostFound;
         if (currentSubFilter !== 'all') {
@@ -669,7 +664,6 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
 });
 
-// 🌟 ฟังก์ชันวาดการ์ดเฉพาะของ Lost & Found 🌟
 function displayLostFoundGallery(dataToDisplay) {
     const gallery = document.getElementById('vehicleGallery');
     if(!gallery) return;
@@ -693,7 +687,6 @@ function displayLostFoundGallery(dataToDisplay) {
         
         if (finalStatusText.includes("รับของคืนแล้ว")) {
             borderColor = "#27ae60"; bgColor = "#f0faf4"; statusColor = "#27ae60";
-            finalStatusText += " ✔";
         } else if (item.status) {
             borderColor = "#f39c12"; bgColor = "#fffdf5"; statusColor = "#e74c3c";
         }
@@ -710,6 +703,7 @@ function displayLostFoundGallery(dataToDisplay) {
             ? `<img src="${item.imgUrl}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='placeholder.png';">` 
             : `<div style="height:200px; display:flex; align-items:center; justify-content:center; background:#f4f6f9; color:#7f8c8d; font-weight:bold;">ไม่มีภาพประกอบ</div>`;
 
+        // 🌟 แก้ไข: จัดข้อความชิดซ้ายและเอาอีโมจิออก 🌟
         card.innerHTML = `
             <div class="card-image-wrapper" style="position: relative; height: 200px;">
                 <span style="position: absolute; top: 10px; right: 10px; background: ${badgeColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${item.type}</span>
@@ -717,20 +711,18 @@ function displayLostFoundGallery(dataToDisplay) {
             </div>
             <div class="card-content">
                 <h3 class="card-title" title="${item.title || 'ไม่มีระบุ'}">${item.title || 'ไม่มีระบุ'}</h3>
-                <div style="font-size: 14px; color: #7f8c8d; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📍 ${item.location || 'ไม่ระบุสถานที่'}</div>
-                <div style="font-size: 13px; color: #bdc3c7; margin-bottom: 10px;">🕒 ${item.dateVal || '-'}</div>
-                <div style="border-top: 1px solid rgba(0,0,0,0.05); padding-top: 8px; font-weight: bold; color: ${statusColor}; text-align: center;">${finalStatusText}</div>
+                <div style="font-size: 14px; color: #7f8c8d; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: left;">${item.location || 'ไม่ระบุสถานที่'}</div>
+                <div style="font-size: 13px; color: #bdc3c7; margin-bottom: 10px; width: 100%; text-align: left;">${item.dateVal || '-'}</div>
+                <div style="border-top: 1px solid rgba(0,0,0,0.05); padding-top: 8px; font-weight: bold; color: ${statusColor}; text-align: left; width: 100%;">${finalStatusText}</div>
             </div>
         `;
         
-        // กดการ์ดแล้วเปิดหน้าต่างแจ้งรายละเอียด L&F
         card.onclick = () => openLFModal(item.actionText);
         fragment.appendChild(card);
     });
     gallery.appendChild(fragment);
 }
 
-// ฟังก์ชันเปิดหน้าต่างรายละเอียด L&F
 window.openLFModal = function(actionText) {
     const modalText = document.getElementById('lfModalText');
     if (!actionText || actionText.trim() === '') {
@@ -866,7 +858,7 @@ function displayGallery(dataToDisplay) {
 
         let sizeHtml = '';
         if (item['ขนาด'] && item['ขนาด'].toString().trim() !== '' && item['ขนาด'].toString().trim() !== '-') {
-            sizeHtml = `<div style="font-size: 14px; color: #2980b9; margin-bottom: 5px; font-weight: 500;">ขนาด: ${item['ขนาด']}</div>`;
+            sizeHtml = `<div style="font-size: 14px; color: #2980b9; margin-bottom: 5px; font-weight: 500; text-align: left; width: 100%;">ขนาด: ${item['ขนาด']}</div>`;
         }
 
         let fireClassHtml = '';
@@ -930,23 +922,23 @@ function displayGallery(dataToDisplay) {
                 ${plateHtml}
                 <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}">${item['ยี่ห้อ/รุ่น']}</h3>
                 ${sizeHtml}
-                ${statusHtml}
+                <div style="margin-top: 8px; width: 100%; text-align: left;">${statusHtml}</div>
                 ${fireClassHtml}
-                <div class="card-subtitle">(${subtitle})</div>
+                <div class="card-subtitle" style="width: 100%; text-align: left;">${subtitle}</div>
             `;
         } else if (item.Data_Category === 'Asset') {
             cardHTML = `
                 <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}">${item['ยี่ห้อ/รุ่น']}</h3>
                 ${sizeHtml}
                 ${plateHtml}
-                <div style="margin-top: 8px;">${statusHtml}</div>
+                <div style="margin-top: 8px; width: 100%; text-align: left;">${statusHtml}</div>
             `;
         } else {
             cardHTML = `
                 <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}">${item['ยี่ห้อ/รุ่น']}</h3>
                 ${sizeHtml}
                 ${plateHtml}
-                <div class="card-subtitle">(${subtitle})</div>
+                <div class="card-subtitle" style="width: 100%; text-align: left;">${subtitle}</div>
             `;
         }
         
@@ -1003,8 +995,8 @@ function openModal(index) {
             actionButtonsHtml += `<a href="${autoFillURL}" class="action-btn btn-inspect" style="width: 100%;">ตรวจสอบสภาพ</a>`;
         }
         if (showRefillBtn) {
-            actionButtonsHtml += `<button onclick="openRefillHistoryModal(${index})" class="action-btn" style="width: 100%; background-color: #f39c12; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">🕒 ดูประวัติการเติมสาร</button>`;
-            actionButtonsHtml += `<button onclick="openRefillFormModal(${index})" class="action-btn" style="width: 100%; background-color: #27ae60; border: none; cursor: pointer; text-align: center; text-decoration: none; padding: 10px; border-radius: 4px; color: white; font-family: 'Kanit', sans-serif; font-size: 16px;">➕ บันทึกการเติมสารใหม่</button>`;
+            actionButtonsHtml += `<button onclick="openRefillHistoryModal(${index})" class="action-btn" style="width: 100%; background-color: #f39c12; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">ดูประวัติการเติมสาร</button>`;
+            actionButtonsHtml += `<button onclick="openRefillFormModal(${index})" class="action-btn" style="width: 100%; background-color: #27ae60; border: none; cursor: pointer; text-align: center; text-decoration: none; padding: 10px; border-radius: 4px; color: white; font-family: 'Kanit', sans-serif; font-size: 16px;">บันทึกการเติมสารใหม่</button>`;
         }
         actionButtonsHtml += `</div>`;
     }
@@ -1154,7 +1146,7 @@ function renderRefillHistoryPage() {
                 dateStr = dateObj.toLocaleString('th-TH', { dateStyle: 'long' });
             }
 
-            let docHtml = docLink ? `<div style="margin-top: 8px;"><a href="${docLink}" target="_blank" style="color: #2980b9; text-decoration: underline; font-size: 15px;">📄 เปิดดูใบ PO / ใบเสร็จ</a></div>` : '';
+            let docHtml = docLink ? `<div style="margin-top: 8px;"><a href="${docLink}" target="_blank" style="color: #2980b9; text-decoration: underline; font-size: 15px;">เปิดดูใบ PO / ใบเสร็จ</a></div>` : '';
 
             html += `
             <div style="background: #fdfaf3; border-left: 5px solid #f39c12; padding: 12px 15px; margin-bottom: 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
@@ -1172,9 +1164,9 @@ function renderRefillHistoryPage() {
         if (totalPages > 1) {
             html += `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
-                <button onclick="changeRefillHistoryPage(-1)" ${currentRefillHistoryPage === 1 ? 'disabled style="opacity:0.5; cursor:not-allowed; padding:8px 16px; border:none; border-radius:6px; background:#bdc3c7; color:#fff; font-family:\'Kanit\'; font-weight:bold;"' : 'style="cursor:pointer; padding:8px 16px; border:none; border-radius:6px; background:#34495e; color:#fff; font-family:\'Kanit\'; font-weight:bold; transition:0.3s;"'}>❮ ก่อนหน้า</button>
+                <button onclick="changeRefillHistoryPage(-1)" ${currentRefillHistoryPage === 1 ? 'disabled style="opacity:0.5; cursor:not-allowed; padding:8px 16px; border:none; border-radius:6px; background:#bdc3c7; color:#fff; font-family:\'Kanit\'; font-weight:bold;"' : 'style="cursor:pointer; padding:8px 16px; border:none; border-radius:6px; background:#34495e; color:#fff; font-family:\'Kanit\'; font-weight:bold; transition:0.3s;"'}>ก่อนหน้า</button>
                 <span style="font-size: 15px; color: #34495e; font-weight: 600;">หน้า ${currentRefillHistoryPage} / ${totalPages}</span>
-                <button onclick="changeRefillHistoryPage(1)" ${currentRefillHistoryPage === totalPages ? 'disabled style="opacity:0.5; cursor:not-allowed; padding:8px 16px; border:none; border-radius:6px; background:#bdc3c7; color:#fff; font-family:\'Kanit\'; font-weight:bold;"' : 'style="cursor:pointer; padding:8px 16px; border:none; border-radius:6px; background:#f39c12; color:#fff; font-family:\'Kanit\'; font-weight:bold; transition:0.3s;"'}>ถัดไป ❯</button>
+                <button onclick="changeRefillHistoryPage(1)" ${currentRefillHistoryPage === totalPages ? 'disabled style="opacity:0.5; cursor:not-allowed; padding:8px 16px; border:none; border-radius:6px; background:#bdc3c7; color:#fff; font-family:\'Kanit\'; font-weight:bold;"' : 'style="cursor:pointer; padding:8px 16px; border:none; border-radius:6px; background:#f39c12; color:#fff; font-family:\'Kanit\'; font-weight:bold; transition:0.3s;"'}>ถัดไป</button>
             </div>`;
         }
     }
@@ -1233,7 +1225,7 @@ document.getElementById('refillForm').addEventListener('submit', e => {
 
     fetch(scriptURL, { method: 'POST', body: formData })
         .then(response => {
-            msg.innerText = "✅ บันทึกประวัติสำเร็จ! กำลังรีเฟรชข้อมูล..."; 
+            msg.innerText = "บันทึกประวัติสำเร็จ! กำลังรีเฟรชข้อมูล..."; 
             msg.style.color = "green";
             form.reset(); 
             document.getElementById('rf_fileNameDisplay').innerText = '';
@@ -1242,15 +1234,15 @@ document.getElementById('refillForm').addEventListener('submit', e => {
             setTimeout(() => { 
                 document.getElementById('refillFormModal').style.display = 'none';
                 msg.innerText = "";
-                btn.innerText = "💾 บันทึกข้อมูลการเติมสาร";
+                btn.innerText = "บันทึกข้อมูลการเติมสาร";
                 btn.disabled = false;
             }, 2000); 
         })
         .catch(error => {
             console.error('Fetch Error:', error);
-            msg.innerText = "❌ เกิดปัญหาการเชื่อมต่อ กรุณาลองส่งใหม่อีกครั้ง"; 
+            msg.innerText = "เกิดปัญหาการเชื่อมต่อ กรุณาลองส่งใหม่อีกครั้ง"; 
             msg.style.color = "#e74c3c";
-            btn.innerText = "💾 บันทึกข้อมูลการเติมสาร";
+            btn.innerText = "บันทึกข้อมูลการเติมสาร";
             btn.disabled = false;
         });
 });
@@ -1283,7 +1275,6 @@ window.onclick = (e) => {
     const refillFormModal = document.getElementById('refillFormModal');
     if (refillFormModal && e.target == refillFormModal) refillFormModal.style.display = "none";
 
-    // 🌟 ดักการปิดหน้าต่างแจ้งเตือน L&F
     const lfActionModal = document.getElementById('lfActionModal');
     if (lfActionModal && e.target == lfActionModal) lfActionModal.style.display = "none";
 }
