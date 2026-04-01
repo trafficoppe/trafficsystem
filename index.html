@@ -27,7 +27,6 @@
             border-color: #27ae60;
             background-color: #fff;
         }
-        /* ตกแต่ง Dropdown เลือกปีให้สวยงาม */
         .year-select-container {
             display: none; 
             align-items: center; 
@@ -52,7 +51,7 @@
         .year-select-dropdown:hover, .year-select-dropdown:focus {
             border-color: #f39c12;
             box-shadow: 0 0 5px rgba(243, 156, 18, 0.3);
-        }        
+        }
     </style>
 </head>
 <body>
@@ -95,8 +94,12 @@
                 </ul>              
             </li>          
             <li><a href="index.html?main=form" id="menu-form">แบบฟอร์มต่างๆ</a></li>
+
+            <li style="margin-top: 10px; border-top: 1px solid #34495e;">
+                <a href="index.html?main=lostfound" id="menu-lostfound">🔎 แจ้งของหาย/เก็บของได้</a>
+            </li>
             
-            <li style="margin-top: 20px; border-top: 1px solid #34495e;">
+            <li style="margin-top: 10px; border-top: 1px solid #34495e;">
                 <a href="report.html" id="menu-report" style="color: #f1c40f; font-weight: 500;">
                     📊 รายงานประจำเดือน
                 </a>
@@ -144,11 +147,18 @@
                 <button class="filter-btn" data-filter="สายตรวจ 2">สายตรวจ 2 <span class="badge">0</span></button>
                 <button class="filter-btn" data-filter="สายตรวจ 3">สายตรวจ 3 <span class="badge">0</span></button>
             </div>
+
+            <div class="filter-buttons" id="filter-group-lostfound" style="display: none;">
+                <button class="filter-btn active" data-filter="all">ทั้งหมด <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="สิ่งของสูญหาย">แจ้งสูญหาย <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="พบสิ่งของ">เก็บของได้ <span class="badge">0</span></button>
+                <button class="filter-btn" data-filter="รับของคืน">รับคืนแล้ว <span class="badge">0</span></button>
+            </div>
             
             <div class="year-select-container" id="sub-filter-mission-year-container">
                 <label style="font-weight: 600; color: #34495e; margin-right: 10px;">📌 ค้นหาจากปี:</label>
                 <select id="sub-filter-mission-year-select" class="year-select-dropdown">
-                    </select>
+                </select>
             </div>
 
             <div class="gallery-grid" id="vehicleGallery">
@@ -167,6 +177,15 @@
                 <div class="image-counter" id="imageNumber"></div>
             </div>
             <div id="modalDetails"></div>
+        </div>
+    </div>
+
+    <div id="lfActionModal" class="modal" style="z-index: 1050;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <span class="close" onclick="document.getElementById('lfActionModal').style.display='none'">&times;</span>
+            <h3 style="color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">รายละเอียดการดำเนินการ</h3>
+            <div id="lfModalText" style="font-size: 16px; color: #34495e; white-space: pre-wrap; padding: 20px 0;"></div>
+            <button onclick="document.getElementById('lfActionModal').style.display='none'" style="margin-top: 15px; padding: 8px 20px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: 'Kanit';">ปิดหน้าต่าง</button>
         </div>
     </div>
 
