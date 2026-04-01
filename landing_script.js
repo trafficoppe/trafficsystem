@@ -1,4 +1,4 @@
-// 🌟 สำคัญมาก: ใส่ลิงก์ Web App ของคุณที่นี่ 🌟
+// สำคัญมาก: ใส่ลิงก์ Web App ของคุณที่นี่
 const scriptURL = "https://script.google.com/macros/s/AKfycbzV-v1NVmlhC6UjWebttiuuCJcPPPB5nW0Rat_rvKdo0wiHdncgcV8VHEpPewFtYpnh/exec"; 
 
 const lfSheetUrl = `https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=out:json&gid=751456190`;
@@ -327,10 +327,19 @@ function fetchLostFound() {
     fetch(lfSheetUrl)
         .then(res => res.text())
         .then(text => {
-            const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S\w]+)\);/);
-            if (match && match[1]) {
-                const data = JSON.parse(match[1]);
+            let data;
+            try {
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S\w]+)\);/);
+                if (match && match[1]) {
+                    data = JSON.parse(match[1]);
+                } else {
+                    const jsonString = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+                    data = JSON.parse(jsonString);
+                }
                 processLostFoundData(data.table.rows);
+            } catch (err) {
+                console.error("JSON Parse Error:", err);
+                document.getElementById('vehicleGallery').innerHTML = '<p class="loading" style="color: red;">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
             }
         })
         .catch(err => console.error("LF Fetch Error:", err));
@@ -339,39 +348,51 @@ function fetchLostFound() {
 function processLostFoundData(rows) {
     allLostFound = rows.map(row => {
         if (!row || !row.c) return null;
-        let type = '', title = '', location = '', imgUrl = '', actionText = '', status = '';
-        let dateVal = row.c[0] ? (row.c[0].f || row.c[0].v) : '';
-        let otherTexts = [];
+        
+        const getV = (i) => (row.c[i] && (row.c[i].f || row.c[i].v)) ? (row.c[i].f || row.c[i].v).toString().trim() : '';
+
+        let dateVal = getV(0) || getV(1); 
+        
         let isReturned = false;
+        let fullText = row.c.map(c => c ? (c.f || c.v || '') : '').join(' ');
+        if (fullText.includes('รับของคืน') || fullText.includes('รับคืนแล้ว')) isReturned = true;
 
-        row.c.forEach((cell, colIndex) => {
-            if (!cell || cell.v === null || cell.v === undefined) return;
-            let valStr = (cell.f || cell.v).toString().trim();
-            if (valStr === '') return;
+        let type = '';
+        let colG = getV(6); 
+        if (colG.includes('สูญหาย') || colG.includes('หาย')) type = 'สิ่งของสูญหาย';
+        else if (colG.includes('พบ') || colG.includes('เก็บ')) type = 'พบสิ่งของ';
+        else if (colG.includes('คืน')) type = 'รับของคืน';
+        
+        if (!type) {
+            if (isReturned) type = 'รับของคืน';
+            else if (fullText.includes('สูญหาย') || fullText.includes('หาย')) type = 'สิ่งของสูญหาย';
+            else if (fullText.includes('พบสิ่งของ') || fullText.includes('เก็บ')) type = 'พบสิ่งของ';
+            else return null; 
+        }
 
-            if (valStr.includes("รับของคืน") || valStr.includes("รับคืน")) isReturned = true;
-
-            if (colIndex === 17) { 
-                actionText = valStr; 
-            } else if (colIndex === 18) { 
-                status = valStr; 
-            } else if (valStr.includes('drive.google.com')) {
-                if (!imgUrl) imgUrl = valStr;
-            } else if (valStr === 'สิ่งของสูญหาย' || valStr === 'พบสิ่งของ' || valStr === 'รับของคืน') {
-                type = valStr;
-            } else if (colIndex > 5 && colIndex < 17 && valStr.length > 1) {
-                otherTexts.push(valStr);
+        let imgUrl = '';
+        for (let i = 3; i <= 19; i++) {
+            let v = getV(i);
+            if (v.includes('drive.google.com')) {
+                imgUrl = v; break;
             }
-        });
+        }
 
-        if (!type) return null;
-        if (otherTexts.length > 0) title = otherTexts[0];
-        if (otherTexts.length > 1) location = otherTexts[1];
+        let titleCandidates = [getV(7), getV(6), getV(5)].filter(v => v && !v.includes('drive.google.com') && !['สิ่งของสูญหาย','พบสิ่งของ','รับของคืน'].includes(v));
+        let title = titleCandidates.length > 0 ? titleCandidates[0] : 'ไม่มีระบุ';
+
+        let locCandidates = [getV(8), getV(9), getV(10)].filter(v => v && !v.includes('drive.google.com') && v !== title);
+        let location = locCandidates.length > 0 ? locCandidates[0] : 'ไม่ระบุสถานที่';
+
+        let actionText = getV(17); 
+        let status = getV(18); 
 
         if (imgUrl) {
             let firstLink = imgUrl.split(',')[0].trim();
             let matchId = firstLink.match(/id=([a-zA-Z0-9_-]+)/) || firstLink.match(/\/d\/([a-zA-Z0-9_-]+)/);
-            if (matchId && matchId[1]) imgUrl = `https://drive.google.com/thumbnail?id=${matchId[1]}&sz=w500`;
+            if (matchId && matchId[1]) {
+                imgUrl = `https://drive.google.com/thumbnail?id=${matchId[1]}&sz=w320`;
+            }
         }
 
         return { type, title, location, dateVal, imgUrl, status, actionText, isReturned };
@@ -669,95 +690,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
 });
 
-// 🌟 ฟังก์ชันวาดการ์ด L&F 🌟
-function displayLostFoundGallery(dataToDisplay) {
-    const gallery = document.getElementById('vehicleGallery');
-    if(!gallery) return;
-    gallery.innerHTML = ''; 
-    gallery.className = 'gallery-grid'; 
-
-    if (dataToDisplay.length === 0) {
-        gallery.innerHTML = '<p class="loading" style="grid-column: 1 / -1; color: #000;">ไม่มีข้อมูลที่ตรงกับการค้นหา</p>';
-        return;
-    }
-
-    const fragment = document.createDocumentFragment();
-    dataToDisplay.forEach((item) => {
-        const card = document.createElement('div'); 
-        card.className = 'vehicle-card';
-        
-        let borderColor = "rgba(0,0,0,0.15)";
-        let bgColor = "#fff";
-        
-        let finalStatusText = (item.status && item.status.trim() !== '') ? item.status.trim() : 'รอดำเนินการ';
-        
-        if (finalStatusText === 'รอดำเนินการ') {
-            borderColor = "#bdc3c7"; 
-            bgColor = "#fff"; 
-        } else if (finalStatusText.includes("รับของคืนแล้ว") || finalStatusText.includes("รับคืนแล้ว")) {
-            borderColor = "#15803d"; 
-            bgColor = "#f0faf4"; 
-            if (!finalStatusText.includes("✔")) finalStatusText += " ✔";
-        } else {
-            borderColor = "#d35400"; 
-            bgColor = "#fffdf5"; 
-        }
-
-        card.style.border = `2px solid ${borderColor}`;
-        card.style.backgroundColor = bgColor;
-        card.style.cursor = 'pointer';
-
-        let badgeColor = "#95a5a6";
-        if(item.type === "สิ่งของสูญหาย") badgeColor = "#e74c3c";
-        else if (item.type === "พบสิ่งของ") badgeColor = "#27ae60";
-        
-        let imgHtml = item.imgUrl 
-            ? `<img src="${item.imgUrl}" loading="lazy" style="width: 100%; height: 100%; object-fit: contain; border-bottom: 1px solid #eee;" onerror="this.src='placeholder.png';">` 
-            : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#000; font-size: 15px; border-bottom: 1px solid #eee;">ไม่มีภาพประกอบ</div>`;
-
-        // 🌟 ไม่มีอีโมจิ 📍 และ 🕒
-        card.innerHTML = `
-            <div class="card-image-wrapper" style="position: relative; height: 260px; background-color: #f1f2f6;">
-                <span style="position: absolute; top: 10px; right: 10px; background: ${badgeColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${item.type}</span>
-                ${imgHtml}
-            </div>
-            <div class="card-content" style="padding: 15px; color: #000;">
-                <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: left;" title="${item.title || 'ไม่มีระบุ'}">${item.title || 'ไม่มีระบุ'}</div>
-                <div style="font-size: 15px; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: left;">${item.location || 'ไม่ระบุสถานที่'}</div>
-                <div style="font-size: 15px; margin-bottom: 10px; width: 100%; text-align: left;">${item.dateVal || '-'}</div>
-                <div style="border-top: 1px solid rgba(0,0,0,0.1); padding-top: 8px; font-weight: bold; font-size: 15px; text-align: left; width: 100%; color: ${borderColor};">${finalStatusText}</div>
-            </div>
-        `;
-        
-        card.onclick = () => openLFModal(item.actionText, item.imgUrl);
-        fragment.appendChild(card);
-    });
-    gallery.appendChild(fragment);
-}
-
-window.openLFModal = function(actionText, imgUrl) {
-    const modalText = document.getElementById('lfModalText');
-    const modalImgContainer = document.getElementById('lfModalImageContainer');
-    const modalImg = document.getElementById('lfModalImage');
-
-    if (!actionText || actionText.trim() === '') {
-        modalText.innerHTML = '<span style="color: #7f8c8d; font-weight: bold;">ยังไม่ได้ดำเนินการ</span>';
-    } else {
-        modalText.innerHTML = `<span style="color: #2980b9; font-weight: bold;">${actionText.replace(/"/g, '')}</span>`;
-    }
-
-    if (imgUrl && imgUrl.trim() !== '') {
-        let highResUrl = imgUrl.replace('sz=w500', 'sz=w1000');
-        modalImg.src = highResUrl;
-        modalImgContainer.style.display = 'block';
-    } else {
-        modalImg.src = '';
-        modalImgContainer.style.display = 'none';
-    }
-
-    document.getElementById('lfActionModal').style.display = 'block';
-};
-
+// 🌟 ฟังก์ชันวาดการ์ดของส่วนต่างๆ จัดกึ่งกลาง 🌟
 function displayGallery(dataToDisplay) {
     const gallery = document.getElementById('vehicleGallery');
     if(!gallery) return;
@@ -911,7 +844,23 @@ function displayGallery(dataToDisplay) {
         });
         imageWrapper.appendChild(track);
         
-        const contentContainer = document.createElement('div'); contentContainer.className = 'card-content';
+        // 🌟 ป้ายสถานะสำหรับอุปกรณ์ Asset ทั้งหมด ไปอยู่มุมขวาบน
+        if (item.Data_Category === 'Asset') {
+            let statusText = item.RequiresRepair ? 'ใช้งานไม่ได้' : 'ใช้งานได้';
+            let statusBg = item.RequiresRepair ? '#e74c3c' : '#27ae60';
+            let statusBadge = document.createElement('span');
+            statusBadge.style.cssText = `position: absolute; top: 10px; right: 10px; background: ${statusBg}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2);`;
+            statusBadge.innerText = statusText;
+            imageWrapper.appendChild(statusBadge);
+        }
+
+        const contentContainer = document.createElement('div'); 
+        contentContainer.className = 'card-content';
+        
+        // จัดตัวหนังสือทุกอย่างให้อยู่ตรงกลาง (Center)
+        const alignStyle = 'center';
+        contentContainer.style.alignItems = 'center';
+        contentContainer.style.textAlign = alignStyle;
         
         let subtitle = item.สี; 
         if (item.Data_Category === 'Staff') {
@@ -925,15 +874,15 @@ function displayGallery(dataToDisplay) {
 
         let sizeHtml = '';
         if (item['ขนาด'] && item['ขนาด'].toString().trim() !== '' && item['ขนาด'].toString().trim() !== '-') {
-            sizeHtml = `<div style="font-size: 14px; color: #2980b9; margin-bottom: 5px; font-weight: 500; text-align: left; width: 100%;">ขนาด: ${item['ขนาด']}</div>`;
+            sizeHtml = `<div style="font-size: 14px; color: #2980b9; margin-bottom: 5px; font-weight: 500; text-align: ${alignStyle}; width: 100%;">ขนาด: ${item['ขนาด']}</div>`;
         }
 
         let fireClassHtml = '';
         if (isFireEquip(item) && item['ยี่ห้อ/รุ่น'] && item['ยี่ห้อ/รุ่น'].includes('ถังดับเพลิง')) {
             let classes = getFireExtinguisherClasses(item['ยี่ห้อ/รุ่น']);
             if(classes.length > 0) {
-                 let badgesHtml = classes.map(c => `<span class="fire-class-badge class-${c.toLowerCase()}" style="display:inline-flex; margin-right:6px;">${c}</span>`).join('');
-                 fireClassHtml = `<div class="fire-class-container">${badgesHtml}</div>`;
+                 let badgesHtml = classes.map(c => `<span class="fire-class-badge class-${c.toLowerCase()}" style="display:inline-flex; margin-right:4px;">${c}</span>`).join('');
+                 fireClassHtml = `<div style="display: flex; align-items: center; margin-bottom: 8px; justify-content: center;">${badgesHtml}</div>`;
             }
         }
 
@@ -971,41 +920,29 @@ function displayGallery(dataToDisplay) {
             }
 
             let plateClass = isLarge ? 'card-plate large' : 'card-plate';
-            plateHtml = `<div class="${plateClass}">${plateDisplay}</div>`;
-        }
-
-        let statusHtml = '';
-        if (item.Data_Category === 'Asset') {
-            if (item.RequiresRepair) {
-                statusHtml = `<span class="status-badge status-bad">ใช้งานไม่ได้</span>`;
-            } else {
-                statusHtml = `<span class="status-badge status-good">ใช้งานได้</span>`;
-            }
+            plateHtml = `<div class="${plateClass}" style="text-align: ${alignStyle}; width: 100%; margin-bottom: 6px;">${plateDisplay}</div>`;
         }
 
         let cardHTML = '';
         if (isFireEquip(item)) {
             cardHTML = `
                 ${plateHtml}
-                <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}">${item['ยี่ห้อ/รุ่น']}</h3>
+                <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}" style="text-align: ${alignStyle}; width: 100%; margin-bottom: 8px;">${item['ยี่ห้อ/รุ่น']}</h3>
                 ${sizeHtml}
-                <div style="margin-top: 8px; width: 100%; text-align: left;">${statusHtml}</div>
                 ${fireClassHtml}
-                <div class="card-subtitle" style="width: 100%; text-align: left;">${subtitle}</div>
             `;
         } else if (item.Data_Category === 'Asset') {
             cardHTML = `
-                <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}">${item['ยี่ห้อ/รุ่น']}</h3>
+                <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}" style="text-align: ${alignStyle}; width: 100%;">${item['ยี่ห้อ/รุ่น']}</h3>
                 ${sizeHtml}
                 ${plateHtml}
-                <div style="margin-top: 8px; width: 100%; text-align: left;">${statusHtml}</div>
             `;
         } else {
             cardHTML = `
-                <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}">${item['ยี่ห้อ/รุ่น']}</h3>
+                <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}" style="text-align: ${alignStyle}; width: 100%;">${item['ยี่ห้อ/รุ่น']}</h3>
                 ${sizeHtml}
                 ${plateHtml}
-                <div class="card-subtitle" style="width: 100%; text-align: left;">${subtitle}</div>
+                <div class="card-subtitle" style="width: 100%; text-align: ${alignStyle}; margin-top: 8px;">${subtitle}</div>
             `;
         }
         
@@ -1021,6 +958,96 @@ function displayGallery(dataToDisplay) {
 
     gallery.appendChild(fragment);
 }
+
+// 🌟 ฟังก์ชันวาดการ์ด L&F ชิดซ้ายอ่านง่าย (ไม่มีอีโมจิ) 🌟
+function displayLostFoundGallery(dataToDisplay) {
+    const gallery = document.getElementById('vehicleGallery');
+    if(!gallery) return;
+    gallery.innerHTML = ''; 
+    gallery.className = 'gallery-grid'; 
+
+    if (dataToDisplay.length === 0) {
+        gallery.innerHTML = '<p class="loading" style="grid-column: 1 / -1; color: #000;">ไม่มีข้อมูลที่ตรงกับการค้นหา</p>';
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    dataToDisplay.forEach((item) => {
+        const card = document.createElement('div'); 
+        card.className = 'vehicle-card';
+        
+        let borderColor = "rgba(0,0,0,0.15)";
+        let bgColor = "#fff";
+        
+        let finalStatusText = (item.status && item.status.trim() !== '') ? item.status.trim() : 'รอดำเนินการ';
+        
+        // 🌟 ถอดเครื่องหมายเช็คถูกออกทั้งหมด
+        if (finalStatusText === 'รอดำเนินการ') {
+            borderColor = "#bdc3c7"; 
+            bgColor = "#fff"; 
+        } else if (finalStatusText.includes("รับของคืนแล้ว") || finalStatusText.includes("รับคืนแล้ว")) {
+            borderColor = "#15803d"; 
+            bgColor = "#f0faf4"; 
+            finalStatusText = "รับของคืนแล้ว";
+        } else {
+            borderColor = "#d35400"; 
+            bgColor = "#fffdf5"; 
+        }
+
+        card.style.border = `2px solid ${borderColor}`;
+        card.style.backgroundColor = bgColor;
+        card.style.cursor = 'pointer';
+
+        let badgeColor = "#95a5a6";
+        if(item.type === "สิ่งของสูญหาย") badgeColor = "#e74c3c";
+        else if (item.type === "พบสิ่งของ") badgeColor = "#27ae60";
+        
+        let imgHtml = item.imgUrl 
+            ? `<img src="${item.imgUrl}" loading="lazy" style="width: 100%; height: 100%; object-fit: contain; border-bottom: 1px solid #eee;" onerror="this.src='placeholder.png';">` 
+            : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#000; font-size: 15px; border-bottom: 1px solid #eee;">ไม่มีภาพประกอบ</div>`;
+
+        // 🌟 ชิดซ้าย และ ไม่มีอีโมจิ 🌟
+        card.innerHTML = `
+            <div class="card-image-wrapper" style="position: relative; height: 260px; background-color: #f1f2f6;">
+                <span style="position: absolute; top: 10px; right: 10px; background: ${badgeColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${item.type}</span>
+                ${imgHtml}
+            </div>
+            <div class="card-content" style="padding: 15px; color: #000; text-align: left;">
+                <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: left;" title="${item.title || 'ไม่มีระบุ'}">${item.title || 'ไม่มีระบุ'}</div>
+                <div style="font-size: 15px; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: left;">${item.location || 'ไม่ระบุสถานที่'}</div>
+                <div style="font-size: 15px; margin-bottom: 10px; width: 100%; text-align: left;">${item.dateVal || '-'}</div>
+                <div style="border-top: 1px solid rgba(0,0,0,0.1); padding-top: 8px; font-weight: bold; font-size: 15px; text-align: left; width: 100%; color: ${borderColor};">${finalStatusText}</div>
+            </div>
+        `;
+        
+        card.onclick = () => openLFModal(item.actionText, item.imgUrl);
+        fragment.appendChild(card);
+    });
+    gallery.appendChild(fragment);
+}
+
+window.openLFModal = function(actionText, imgUrl) {
+    const modalText = document.getElementById('lfModalText');
+    const modalImgContainer = document.getElementById('lfModalImageContainer');
+    const modalImg = document.getElementById('lfModalImage');
+
+    if (!actionText || actionText.trim() === '') {
+        modalText.innerHTML = '<span style="color: #7f8c8d; font-weight: bold;">ยังไม่ได้ดำเนินการ</span>';
+    } else {
+        modalText.innerHTML = `<span style="color: #2980b9; font-weight: bold;">${actionText.replace(/"/g, '')}</span>`;
+    }
+
+    if (imgUrl && imgUrl.trim() !== '') {
+        let highResUrl = imgUrl.replace('sz=w320', 'sz=w1000').replace('sz=w500', 'sz=w1000');
+        modalImg.src = highResUrl;
+        modalImgContainer.style.display = 'block';
+    } else {
+        modalImg.src = '';
+        modalImgContainer.style.display = 'none';
+    }
+
+    document.getElementById('lfActionModal').style.display = 'block';
+};
 
 function openModal(index) {
     currentVehicleIndex = index; currentImageIndex = 0; 
@@ -1064,7 +1091,8 @@ function openModal(index) {
             actionButtonsHtml += `<a href="${autoFillURL}" class="action-btn btn-inspect" style="width: 100%;">ตรวจสอบสภาพ</a>`;
         }
         if (showCleanBtn) {
-            actionButtonsHtml += `<button onclick="openCleanFormModal(${index})" class="action-btn" style="width: 100%; background-color: #3498db; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">💦 ทำความสะอาดยานพาหนะ</button>`;
+            // ไม่มีอีโมจิ
+            actionButtonsHtml += `<button onclick="openCleanFormModal(${index})" class="action-btn" style="width: 100%; background-color: #3498db; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">ทำความสะอาดยานพาหนะ</button>`;
         }
         if (showRefillBtn) {
             actionButtonsHtml += `<button onclick="openRefillHistoryModal(${index})" class="action-btn" style="width: 100%; background-color: #f39c12; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">ดูประวัติการเติมสาร</button>`;
@@ -1305,7 +1333,8 @@ document.getElementById('cl_images').addEventListener('change', function(event) 
             document.getElementById(`cl_m_${i+1}`).value = file.type;
             document.getElementById(`cl_n_${i+1}`).value = file.name;
             
-            preview.innerHTML += `<div style="font-size:14px; color:#27ae60; margin-top:5px;">✅ รูปที่ ${i+1}: ${file.name}</div>`;
+            // ไม่มีอีโมจิ
+            preview.innerHTML += `<div style="font-size:14px; color:#27ae60; margin-top:5px;">รูปที่ ${i+1}: ${file.name}</div>`;
         };
         reader.readAsDataURL(file);
     }
@@ -1323,7 +1352,8 @@ document.getElementById('cleanForm').addEventListener('submit', e => {
 
     fetch(scriptURL, { method: 'POST', body: formData })
         .then(response => {
-            msg.innerText = "✅ บันทึกการทำความสะอาดสำเร็จ!"; 
+            // ไม่มีอีโมจิ
+            msg.innerText = "บันทึกการทำความสะอาดสำเร็จ!"; 
             msg.style.color = "green";
             form.reset(); 
             document.getElementById('cl_file_preview').innerHTML = '';
@@ -1337,7 +1367,8 @@ document.getElementById('cleanForm').addEventListener('submit', e => {
         })
         .catch(error => {
             console.error('Fetch Error:', error);
-            msg.innerText = "❌ เกิดปัญหาการเชื่อมต่อ กรุณาลองส่งใหม่อีกครั้ง"; 
+            // ไม่มีอีโมจิ
+            msg.innerText = "เกิดปัญหาการเชื่อมต่อ กรุณาลองส่งใหม่อีกครั้ง"; 
             msg.style.color = "#e74c3c";
             btn.innerText = "บันทึกข้อมูลการทำความสะอาด";
             btn.disabled = false;
