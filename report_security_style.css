@@ -83,3 +83,7 @@ select.custom-dropdown {
     -moz-appearance: none;
     appearance: none;
 }
+/* ✅ ใส่แบบนี้แทนครับ (ย่อเฉพาะเนื้อหาด้านใน ไม่ย่อแถบเลื่อน) ✅ */
+.security-dashboard-wrapper {
+    zoom: 0.75;
+}
