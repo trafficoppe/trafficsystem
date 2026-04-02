@@ -1,0 +1,85 @@
+/* การตั้งค่า Font ของเนื้อหาภายใน Dashboard ฝั่งขวา */
+.security-dashboard-wrapper { 
+    font-family: 'Prompt', sans-serif; 
+    font-size: 18px; 
+}
+
+/* ✨ BOUNCY ANIMATION CLASS ✨ */
+.bouncy {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.bouncy:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+.bouncy:active {
+    transform: scale(0.95);
+    box-shadow: 0 5px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Interactive Card */
+.interactive-card {
+    background: white;
+    border: 3px solid #e2e8f0;
+    border-radius: 1.5rem;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.interactive-card:hover {
+    border-color: #818cf8;
+}
+
+.static-card {
+    background: white;
+    border: 3px solid #e2e8f0;
+    border-radius: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Filter Buttons */
+.filter-btn {
+    padding: 8px 18px;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 14px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.filter-btn.active { background-color: #4f46e5; color: white; box-shadow: 0 8px 15px -3px rgba(79, 70, 229, 0.4); }
+.filter-btn.inactive { background-color: #fff; color: #64748b; border-color: #e2e8f0; }
+.filter-btn.inactive:hover { background-color: #f1f5f9; border-color: #cbd5e1; }
+
+/* Pagination Buttons */
+.page-btn {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.page-btn:not(:disabled):hover { transform: translateY(-2px); }
+.page-btn:not(:disabled):active { transform: scale(0.90); }
+
+.fade-in { animation: fadeIn 0.8s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.text-gradient {
+    background: linear-gradient(to right, #4f46e5, #ec4899);
+    -webkit-background-clip: text;
+    background-clip: text; /* 🌟 เพิ่มบรรทัดนี้เข้าไปครับ 🌟 */
+    -webkit-text-fill-color: transparent;
+}
+
+tr.comment-row { cursor: default; user-select: none; transition: background-color 0.15s; }
+tr.comment-row:hover { background-color: #f8fafc; }
+tr.comment-row:active { background-color: #f1f5f9; transform: scale(0.99); } 
+
+/* Custom Select */
+select.custom-dropdown {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 1rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 3rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}

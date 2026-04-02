@@ -1,5 +1,5 @@
-// สำคัญมาก: ใส่ลิงก์ Web App ของคุณที่นี่
-const scriptURL = "https://script.google.com/macros/s/AKfycbzV-v1NVmlhC6UjWebttiuuCJcPPPB5nW0Rat_rvKdo0wiHdncgcV8VHEpPewFtYpnh/exec"; 
+// 🌟 สำคัญมาก: ใส่ลิงก์ Web App ของคุณที่นี่ 🌟
+const scriptURL = "https://script.google.com/macros/s/AKfycbzWc03wzCkfUHs3pIucqNs_tz7BguxUlODGOihfiMgHgkQFx5Kc1DRlITg_SDR9lu4/exec"; 
 
 const lfSheetUrl = `https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=out:json&gid=751456190`;
 
@@ -228,57 +228,25 @@ function initPageUI() {
     if(searchInput) searchInput.value = '';
 }
 
+// 🌟 ระบบนำทางฉบับ Classic โหลดหน้าปกติ ป้องกัน 404 บน GitHub 🌟
 function setupSeamlessNavigation() {
     document.querySelectorAll('.sidebar-menu a').forEach(link => {
         link.addEventListener('click', function(e) {
             const href = this.getAttribute('href');
-            
-            if(href.includes('report.html') || href.includes('form.html') || !href.includes('index.html')) {
-                return; 
-            }
-            
-            e.preventDefault(); 
-            
-            const url = new URL(this.href, window.location.origin);
-            mainCategory = url.searchParams.get('main') || 'vehicle';
-            currentUnit = url.searchParams.get('unit') || 'all';
-            
-            currentSubFilter = currentUnit; 
-            currentExtinguisherType = 'all';
-            currentNozzleType = 'all';
-            currentMissionYear = 'all';
-            
-            window.history.pushState({}, '', href);
-            
-            initPageUI();
-            if(allVehicles.length > 0 || allLostFound.length > 0) {
-                updateFilterCounts(); 
-                generateExtinguisherSubFilters(); 
-                generateNozzleSubFilters(); 
-                generateMissionYearSubFilters(); 
-                applyFilters(); 
-            }
-        });
-    });
 
-    window.addEventListener('popstate', function(e) {
-        const urlParams = new URLSearchParams(window.location.search);
-        mainCategory = urlParams.get('main') || 'vehicle';
-        let u = urlParams.get('unit');
-        currentUnit = u ? u : 'all';
-        currentSubFilter = currentUnit; 
-        currentExtinguisherType = 'all';
-        currentNozzleType = 'all';
-        currentMissionYear = 'all';
-        
-        initPageUI();
-        if(allVehicles.length > 0 || allLostFound.length > 0) {
-            updateFilterCounts(); 
-            generateExtinguisherSubFilters(); 
-            generateNozzleSubFilters(); 
-            generateMissionYearSubFilters(); 
-            applyFilters(); 
-        }
+            // ถ้าเป็นการกดเพื่อเปิด-ปิดเมนูย่อย (has-submenu) ให้ทำงานตรงนี้
+            if (this.parentElement.classList.contains('has-submenu') && (!href || href === '#' || !href.includes('?'))) {
+                e.preventDefault();
+                const submenu = this.nextElementSibling;
+                if (submenu && submenu.classList.contains('submenu')) {
+                    submenu.classList.toggle('show-submenu');
+                }
+                return;
+            }
+
+            // นอกเหนือจากนั้น "ปล่อยให้ลิงก์ทำงานโหลดหน้าปกติเลยครับ" (ลบ e.preventDefault() ออก)
+            // เบราว์เซอร์จะพาไปที่ index.html?main=staff แบบโหลดหน้าใหม่หมดจด รับรองว่าไม่เกิด 404 แน่นอนครับ!
+        });
     });
 }
 
@@ -690,13 +658,44 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
 });
 
-// 🌟 ฟังก์ชันวาดการ์ดของส่วนต่างๆ จัดกึ่งกลาง 🌟
 function displayGallery(dataToDisplay) {
     const gallery = document.getElementById('vehicleGallery');
     if(!gallery) return;
     
     gallery.innerHTML = ''; 
     gallery.className = 'gallery-grid'; 
+
+    if (mainCategory === 'form') {
+        gallery.className = 'form-list-mode'; 
+        const fragment = document.createDocumentFragment();
+
+        dataToDisplay.forEach((item) => {
+            const formBar = document.createElement('a');
+            formBar.className = 'form-bar'; 
+            let formName = item['ชื่อแบบฟอร์ม'] || 'แบบฟอร์มไม่มีชื่อ';
+
+            if (formName.includes('ยานพาหนะ') || formName.includes('รถ')) {
+                formBar.href = "index.html?main=vehicle";
+            } else if (formName.includes('ถังดับเพลิง') || formName.includes('อุปกรณ์ดับเพลิง')) {
+                formBar.href = "index.html?main=fire&unit=" + encodeURIComponent("ถังดับเพลิง");
+            } else {
+                formBar.href = item['ลิงก์'] && item['ลิงก์'].trim() !== "" ? item['ลิงก์'] : "#";
+                formBar.target = "_blank"; 
+            }
+
+            formBar.innerHTML = `<div class="form-name">${formName}</div>`;
+            fragment.appendChild(formBar);
+        });
+
+        const wasteFormBar = document.createElement('a');
+        wasteFormBar.className = 'form-bar'; 
+        wasteFormBar.href = "waste_form.html"; 
+        wasteFormBar.innerHTML = `<div class="form-name">แบบฟอร์มบันทึกการคัดแยกขยะ</div>`;
+        fragment.appendChild(wasteFormBar);
+
+        gallery.appendChild(fragment);
+        return; 
+    }
 
     if (dataToDisplay.length === 0) {
         gallery.innerHTML = '<p class="loading" style="grid-column: 1 / -1;">ไม่มีข้อมูลที่ตรงกับการค้นหา</p>';
@@ -765,64 +764,6 @@ function displayGallery(dataToDisplay) {
         return; 
     }
 
-    if (dataToDisplay[0].Data_Category === 'Form') {
-        gallery.className = 'form-list-mode'; 
-        const fragment = document.createDocumentFragment();
-        dataToDisplay.forEach((item) => {
-            const formBar = document.createElement('a');
-            formBar.className = 'form-bar'; 
-            
-            let formName = item['ชื่อแบบฟอร์ม'] || 'แบบฟอร์มไม่มีชื่อ';
-
-            if (formName.includes('ยานพาหนะ') || formName.includes('รถ')) {
-                formBar.href = "?main=vehicle";
-                formBar.onclick = (e) => {
-                    e.preventDefault();
-                    mainCategory = 'vehicle';
-                    currentUnit = 'all';
-                    currentSubFilter = 'all';
-                    currentExtinguisherType = 'all';
-                    currentNozzleType = 'all';
-                    currentMissionYear = 'all';
-                    window.history.pushState({}, '', '?main=vehicle');
-                    initPageUI();
-                    updateFilterCounts(); 
-                    generateExtinguisherSubFilters(); 
-                    generateNozzleSubFilters(); 
-                    generateMissionYearSubFilters(); 
-                    applyFilters(); 
-                };
-            } else if (formName.includes('ถังดับเพลิง') || formName.includes('อุปกรณ์ดับเพลิง') || formName.includes('ดับเพลิง')) {
-                formBar.href = "?main=fire&unit=" + encodeURIComponent("ถังดับเพลิง");
-                formBar.onclick = (e) => {
-                    e.preventDefault();
-                    mainCategory = 'fire';
-                    currentUnit = 'ถังดับเพลิง';
-                    currentSubFilter = 'ถังดับเพลิง';
-                    currentExtinguisherType = 'all';
-                    currentNozzleType = 'all';
-                    currentMissionYear = 'all';
-                    window.history.pushState({}, '', '?main=fire&unit=' + encodeURIComponent('ถังดับเพลิง'));
-                    initPageUI();
-                    updateFilterCounts(); 
-                    generateExtinguisherSubFilters(); 
-                    generateNozzleSubFilters(); 
-                    generateMissionYearSubFilters(); 
-                    applyFilters(); 
-                };
-            } else {
-                formBar.href = item['ลิงก์'] && item['ลิงก์'].trim() !== "" ? item['ลิงก์'] : "#";
-                formBar.target = "_blank"; 
-                formBar.rel = "noopener noreferrer"; 
-            }
-
-            formBar.innerHTML = `<div class="form-name">${formName}</div>`;
-            fragment.appendChild(formBar);
-        });
-        gallery.appendChild(fragment);
-        return; 
-    }
-
     const fragment = document.createDocumentFragment();
     dataToDisplay.forEach((item) => {
         const originalIndex = allVehicles.indexOf(item);
@@ -844,7 +785,6 @@ function displayGallery(dataToDisplay) {
         });
         imageWrapper.appendChild(track);
         
-        // 🌟 ป้ายสถานะสำหรับอุปกรณ์ Asset ทั้งหมด ไปอยู่มุมขวาบน
         if (item.Data_Category === 'Asset') {
             let statusText = item.RequiresRepair ? 'ใช้งานไม่ได้' : 'ใช้งานได้';
             let statusBg = item.RequiresRepair ? '#e74c3c' : '#27ae60';
@@ -857,7 +797,6 @@ function displayGallery(dataToDisplay) {
         const contentContainer = document.createElement('div'); 
         contentContainer.className = 'card-content';
         
-        // จัดตัวหนังสือทุกอย่างให้อยู่ตรงกลาง (Center)
         const alignStyle = 'center';
         contentContainer.style.alignItems = 'center';
         contentContainer.style.textAlign = alignStyle;
@@ -959,7 +898,6 @@ function displayGallery(dataToDisplay) {
     gallery.appendChild(fragment);
 }
 
-// 🌟 ฟังก์ชันวาดการ์ด L&F ชิดซ้ายอ่านง่าย (ไม่มีอีโมจิ) 🌟
 function displayLostFoundGallery(dataToDisplay) {
     const gallery = document.getElementById('vehicleGallery');
     if(!gallery) return;
@@ -981,7 +919,6 @@ function displayLostFoundGallery(dataToDisplay) {
         
         let finalStatusText = (item.status && item.status.trim() !== '') ? item.status.trim() : 'รอดำเนินการ';
         
-        // 🌟 ถอดเครื่องหมายเช็คถูกออกทั้งหมด
         if (finalStatusText === 'รอดำเนินการ') {
             borderColor = "#bdc3c7"; 
             bgColor = "#fff"; 
@@ -1006,13 +943,12 @@ function displayLostFoundGallery(dataToDisplay) {
             ? `<img src="${item.imgUrl}" loading="lazy" style="width: 100%; height: 100%; object-fit: contain; border-bottom: 1px solid #eee;" onerror="this.src='placeholder.png';">` 
             : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#000; font-size: 15px; border-bottom: 1px solid #eee;">ไม่มีภาพประกอบ</div>`;
 
-        // 🌟 ชิดซ้าย และ ไม่มีอีโมจิ 🌟
         card.innerHTML = `
             <div class="card-image-wrapper" style="position: relative; height: 260px; background-color: #f1f2f6;">
                 <span style="position: absolute; top: 10px; right: 10px; background: ${badgeColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${item.type}</span>
                 ${imgHtml}
             </div>
-            <div class="card-content" style="padding: 15px; color: #000; text-align: left;">
+            <div class="card-content" style="padding: 15px; color: #000; text-align: left; align-items: flex-start;">
                 <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: left;" title="${item.title || 'ไม่มีระบุ'}">${item.title || 'ไม่มีระบุ'}</div>
                 <div style="font-size: 15px; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: left;">${item.location || 'ไม่ระบุสถานที่'}</div>
                 <div style="font-size: 15px; margin-bottom: 10px; width: 100%; text-align: left;">${item.dateVal || '-'}</div>
@@ -1091,7 +1027,6 @@ function openModal(index) {
             actionButtonsHtml += `<a href="${autoFillURL}" class="action-btn btn-inspect" style="width: 100%;">ตรวจสอบสภาพ</a>`;
         }
         if (showCleanBtn) {
-            // ไม่มีอีโมจิ
             actionButtonsHtml += `<button onclick="openCleanFormModal(${index})" class="action-btn" style="width: 100%; background-color: #3498db; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">ทำความสะอาดยานพาหนะ</button>`;
         }
         if (showRefillBtn) {
@@ -1333,7 +1268,6 @@ document.getElementById('cl_images').addEventListener('change', function(event) 
             document.getElementById(`cl_m_${i+1}`).value = file.type;
             document.getElementById(`cl_n_${i+1}`).value = file.name;
             
-            // ไม่มีอีโมจิ
             preview.innerHTML += `<div style="font-size:14px; color:#27ae60; margin-top:5px;">รูปที่ ${i+1}: ${file.name}</div>`;
         };
         reader.readAsDataURL(file);
@@ -1352,7 +1286,6 @@ document.getElementById('cleanForm').addEventListener('submit', e => {
 
     fetch(scriptURL, { method: 'POST', body: formData })
         .then(response => {
-            // ไม่มีอีโมจิ
             msg.innerText = "บันทึกการทำความสะอาดสำเร็จ!"; 
             msg.style.color = "green";
             form.reset(); 
@@ -1367,7 +1300,6 @@ document.getElementById('cleanForm').addEventListener('submit', e => {
         })
         .catch(error => {
             console.error('Fetch Error:', error);
-            // ไม่มีอีโมจิ
             msg.innerText = "เกิดปัญหาการเชื่อมต่อ กรุณาลองส่งใหม่อีกครั้ง"; 
             msg.style.color = "#e74c3c";
             btn.innerText = "บันทึกข้อมูลการทำความสะอาด";

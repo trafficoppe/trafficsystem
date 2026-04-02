@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>แบบฟอร์มบันทึกการคัดแยกขยะ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .waste-container { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea; max-width: 800px; margin: 0 auto 50px auto; }
+        .section-title { margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #27ae60; padding-bottom: 5px; color: #2c3e50; font-size: 20px; font-weight: bold; }
+        .summary-box { border: 2px solid #27ae60; background-color: #e8f8f5; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        
+        <div class="sidebar">
+            <div class="sidebar-header">ระบบงานจราจร</div>
+            <ul class="sidebar-menu">
+                <li><a href="index.html?main=staff">บุคลากร/พนักงาน</a></li>
+                <li><a href="index.html?main=mission">การดูแลพื้นที่ส่วนกลาง</a></li>
+                <li><a href="index.html?main=vehicle">ยานพาหนะทั้งหมด</a></li>
+                <li><a href="index.html?main=fire&unit=ถังดับเพลิง">อุปกรณ์ดับเพลิง</a></li>
+                <li><a href="index.html?main=form" class="active">แบบฟอร์มต่างๆ</a></li>
+                <li style="margin-top: 20px; border-top: 1px solid #34495e;">
+                    <a href="report.html" style="color: #f1c40f; font-weight: 500;">รายงานประจำเดือน</a>
+                </li>
+                <li style="margin-top: 20px; border-top: 1px solid #34495e;">
+                    <a href="#" onclick="window.history.back();" style="color: #e74c3c; font-weight: 500;">กลับหน้าหลัก</a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="main-content" style="overflow-y: auto;">
+            <div class="top-header">
+                <div class="page-title">แบบฟอร์มบันทึกการคัดแยกขยะ</div>
+            </div>
+            
+            <div style="padding: 30px;">
+                <div class="waste-container">
+                    <p style="text-align: center; color: #7f8c8d; margin-bottom: 20px;">งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม</p>
+                    
+                    <form id="wasteForm">
+                        <div class="section-title">ข้อมูลผู้รายงาน</div>
+                        <div class="form-group">
+                            <label>ชื่อ-สกุล ผู้รายงาน *</label>
+                            <input type="text" id="reporterName" name="reporterName" value="ปราณี คำมี" required>
+                        </div>
+                        <div class="form-group">
+                            <label>ตำแหน่ง *</label>
+                            <input type="text" id="position" name="position" value="พนักงานทำความสะอาด" required>
+                        </div>
+
+                        <div class="section-title">ปริมาณขยะ (กิโลกรัม)</div>
+                        <p style="font-size: 14px; color: #e74c3c; margin-bottom: 15px;">* กรอกเฉพาะตัวเลข หากไม่มีให้เว้นว่างไว้ หรือใส่ 0</p>
+                        
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
+                                <label>ขยะทั่วไป</label>
+                                <input type="number" step="0.01" class="waste-input" name="wasteGeneral" placeholder="0">
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
+                                <label>ขยะรีไซเคิล</label>
+                                <input type="number" step="0.01" class="waste-input" name="wasteRecycle" placeholder="0">
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
+                                <label>ขยะกำพร้า</label>
+                                <input type="number" step="0.01" class="waste-input" name="wasteOrphan" placeholder="0">
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
+                                <label>ขยะอินทรีย์/ขยะเปียก</label>
+                                <input type="number" step="0.01" class="waste-input" name="wasteOrganic" placeholder="0">
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
+                                <label>ขยะอันตราย</label>
+                                <input type="number" step="0.01" class="waste-input" name="wasteHazard" placeholder="0">
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
+                                <label>ขยะติดเชื้อ (ถ้ามี)</label>
+                                <input type="number" step="0.01" class="waste-input" name="wasteInfect" placeholder="0">
+                            </div>
+                        </div>
+
+                        <div class="summary-box">
+                            <strong style="font-size: 18px; color: #2c3e50;">รวมน้ำหนักทั้งหมด:</strong>
+                            <span style="font-size: 24px; font-weight: bold; color: #27ae60;"><span id="totalDisplay">0.00</span> กก.</span>
+                        </div>
+
+                        <div class="section-title">อัปโหลดรูปภาพประกอบ</div>
+                        <p style="font-size: 14px; color: #7f8c8d; margin-bottom: 15px;">รองรับไฟล์รูปภาพ (สูงสุด 5 รูป)</p>
+                        <div class="form-group">
+                            <input type="file" name="img1" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
+                            <input type="file" name="img2" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
+                            <input type="file" name="img3" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
+                            <input type="file" name="img4" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
+                            <input type="file" name="img5" accept="image/*" style="border: 1px solid #ddd; padding: 5px; width: 100%;">
+                        </div>
+
+                        <button type="submit" id="submitBtn" style="width: 100%; padding: 16px; background-color: #27ae60; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 20px;">
+                            บันทึกข้อมูล
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🌟 เปลี่ยนเป็นลิงก์ Web App ใหม่ของคุณ 🌟
+        const scriptURL = "https://script.google.com/macros/s/AKfycbzWc03wzCkfUHs3pIucqNs_tz7BguxUlODGOihfiMgHgkQFx5Kc1DRlITg_SDR9lu4/exec";
+
+        const inputs = document.querySelectorAll('.waste-input');
+        const totalDisplay = document.getElementById('totalDisplay');
+
+        inputs.forEach(input => {
+            input.addEventListener('input', calculateTotal);
+        });
+
+        function calculateTotal() {
+            let sum = 0;
+            inputs.forEach(input => {
+                const val = parseFloat(input.value);
+                if (!isNaN(val)) sum += val;
+            });
+            totalDisplay.innerText = sum.toFixed(2);
+        }
+
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        document.getElementById('wasteForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = document.getElementById('wasteForm');
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = 'กำลังบันทึกและอัปโหลดรูป...';
+            btn.disabled = true;
+
+            const formData = new FormData(form);
+            formData.append('Data_category', 'Waste'); 
+
+            for (let i = 1; i <= 5; i++) {
+                const fileInput = form.querySelector(`input[name="img${i}"]`);
+                if (fileInput && fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const base64 = await toBase64(file);
+                    formData.append(`imgB64_${i}`, base64.split(',')[1]);
+                    formData.append(`imgMime_${i}`, file.type);
+                    formData.append(`imgName_${i}`, file.name);
+                }
+            }
+
+            fetch(scriptURL, { method: 'POST', body: formData })
+                .then(res => res.text())
+                .then(txt => {
+                    Swal.fire({ title: 'สำเร็จ!', text: 'บันทึกข้อมูลเรียบร้อยแล้ว', icon: 'success', confirmButtonColor: '#27ae60' });
+                    form.reset();
+                    document.getElementById('reporterName').value = "ปราณี คำมี";
+                    document.getElementById('position').value = "พนักงานทำความสะอาด";
+                    totalDisplay.innerText = "0.00";
+                    btn.innerText = 'บันทึกข้อมูล';
+                    btn.disabled = false;
+                })
+                .catch(err => {
+                    Swal.fire({ title: 'ผิดพลาด!', text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', icon: 'error', confirmButtonColor: '#e74c3c' });
+                    btn.innerText = 'บันทึกข้อมูล';
+                    btn.disabled = false;
+                });
+        });
+    </script>
+</body>
+</html>

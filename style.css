@@ -317,7 +317,6 @@ body {
     transition: transform 0.3s ease;
 }
 
-/* 🌟 แก้รูปโดนตัด กลับไปใช้ contain 🌟 */
 .image-slide-track img {
     width: 100%;
     height: 100%;

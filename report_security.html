@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานตรวจรับ รปภ. - Monthly Dashboard</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <link rel="stylesheet" href="report_security_style.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // ป้องกัน Tailwind ไปล้างค่า CSS เดิมของ Sidebar
+        tailwind.config = { corePlugins: { preflight: false } }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">ระบบงานจราจร</div>
+        <ul class="sidebar-menu">
+            <li><a href="index.html?main=staff">บุคลากร/พนักงาน</a></li>
+            <li><a href="index.html?main=mission">การดูแลพื้นที่ส่วนกลาง</a></li>
+            <li><a href="index.html?main=vehicle">ยานพาหนะทั้งหมด</a></li>
+            <li><a href="index.html?main=fire&unit=ถังดับเพลิง">อุปกรณ์ดับเพลิง</a></li>
+            <li><a href="index.html?main=form">แบบฟอร์มต่างๆ</a></li>
+            <li><a href="index.html?main=lostfound">แจ้งของหาย/เก็บของได้</a></li>
+            
+            <li class="has-submenu" style="margin-top: 20px; border-top: 1px solid #34495e; padding-top: 10px;">
+                <a href="#" onclick="document.getElementById('submenu-report').classList.toggle('show-submenu'); return false;" id="menu-report" style="color: #f1c40f; font-weight: 500;">
+                    รายงานประจำเดือน ▾
+                </a>
+                <ul class="submenu show-submenu" id="submenu-report">
+                    <li><a href="report.html" style="color: #bdc3c7;">ภาพรวมส่วนกลาง</a></li>
+                    <li><a href="report_security.html" style="color: #fff; font-weight: bold;">รายงานตรวจรับ รปภ.</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <div class="main-content" style="padding: 0; overflow-y: auto; height: 100vh; background-color: #f8fafc;">
+        <div class="security-dashboard-wrapper p-6 md:p-10 pb-20">
+            
+            <div class="max-w-7xl mx-auto mb-10 text-center fade-in">
+                <h1 class="text-4xl md:text-6xl font-extrabold text-gray-900 mb-6">พื้นที่ส่วนกลาง</h1>
+                
+                <div class="flex justify-center items-center gap-4 flex-wrap">
+                    <select id="monthSelect" onchange="handleDateChange()" class="custom-dropdown bouncy bg-white border-2 border-gray-200 text-gray-700 hover:border-indigo-400 text-xl font-bold py-3 px-6 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"></select>
+                    
+                    <select id="yearSelect" onchange="handleDateChange()" class="custom-dropdown bouncy bg-white border-2 border-gray-200 text-gray-700 hover:border-indigo-400 text-xl font-bold py-3 px-6 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"></select>
+                </div>
+
+                <p class="text-gray-500 mt-6 text-xl">รายงานสรุปผลการดำเนินงานประจำเดือน</p>
+            </div>
+
+            <main class="max-w-7xl mx-auto space-y-12 fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="interactive-card bouncy p-8 flex flex-col justify-center items-center md:col-span-1">
+                        <div class="p-6 bg-indigo-50 rounded-2xl text-indigo-600 mb-4">
+                            <i class="ph ph-users-three text-6xl"></i>
+                        </div>
+                        <p class="text-gray-500 text-lg font-bold uppercase tracking-wider">ผู้ตอบแบบสอบถาม</p>
+                        <h2 class="text-8xl font-extrabold text-indigo-600 mt-2" id="totalCount">...</h2>
+                        <p class="text-xl text-gray-400 mt-1 font-medium">คน</p>
+                    </div>
+                    
+                    <div class="interactive-card bouncy flex flex-col items-center justify-center p-6">
+                        <h3 class="text-xl font-bold text-gray-700 mb-4">สัดส่วนผู้ตอบ (%)</h3>
+                        <div class="w-full relative" style="height: 250px;"><canvas id="typeChart"></canvas></div>
+                    </div>
+                    
+                    <div class="interactive-card bouncy flex flex-col items-center justify-center p-6">
+                        <h3 class="text-xl font-bold text-gray-700 mb-4">อันดับผู้ตอบ (คน)</h3>
+                        <div class="w-full relative" style="height: 250px;"><canvas id="barChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="space-y-8">
+                    <h3 class="text-3xl font-bold text-gray-800 flex items-center gap-3 pl-4 border-l-8 border-yellow-400">สรุปคะแนนความพึงพอใจ</h3>
+                    
+                    <div class="interactive-card bouncy p-10 text-center bg-gradient-to-br from-white to-indigo-50 border-indigo-200">
+                        <p class="text-gray-500 text-xl font-bold uppercase tracking-widest mb-2">คะแนนเฉลี่ยรวมทุกด้าน</p>
+                        <div class="relative inline-block">
+                            <h2 class="text-[10rem] font-black text-gradient leading-none" id="scoreOverall">0.00</h2>
+                            <span class="absolute -right-14 top-4 text-4xl text-gray-400 font-bold">/5</span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        <div class="interactive-card bouncy p-8 text-center"><div class="text-gray-500 text-xl font-bold mb-2">ด้านการจราจร</div><div class="text-6xl font-extrabold text-indigo-600" id="scoreTraffic">0.00</div></div>
+                        <div class="interactive-card bouncy p-8 text-center"><div class="text-gray-500 text-xl font-bold mb-2">ด้านความปลอดภัย</div><div class="text-6xl font-extrabold text-emerald-500" id="scoreSecurity">0.00</div></div>
+                        <div class="interactive-card bouncy p-8 text-center"><div class="text-gray-500 text-xl font-bold mb-2">ด้านการให้บริการ</div><div class="text-6xl font-extrabold text-blue-500" id="scoreService">0.00</div></div>
+                        <div class="interactive-card bouncy p-8 text-center"><div class="text-gray-500 text-xl font-bold mb-2">ด้านการแต่งกาย</div><div class="text-6xl font-extrabold text-purple-500" id="scoreDress">0.00</div></div>
+                        <div class="interactive-card bouncy p-8 text-center"><div class="text-gray-500 text-xl font-bold mb-2">ความสุภาพ/อัธยาศัย</div><div class="text-6xl font-extrabold text-pink-500" id="scorePolite">0.00</div></div>
+                        <div class="interactive-card bouncy p-8 text-center"><div class="text-gray-500 text-xl font-bold mb-2">ความกระตือรือร้น</div><div class="text-6xl font-extrabold text-orange-500" id="scoreEnthusiasm">0.00</div></div>
+                        <div class="interactive-card bouncy p-8 text-center"><div class="text-gray-500 text-xl font-bold mb-2">ความชัดเจนให้ข้อมูล</div><div class="text-6xl font-extrabold text-cyan-500" id="scoreClarity">0.00</div></div>
+                        <div class="interactive-card bouncy p-8 text-center"><div class="text-gray-500 text-xl font-bold mb-2">ความรวดเร็วบริการ</div><div class="text-6xl font-extrabold text-teal-500" id="scoreSpeed">0.00</div></div>
+                        <div class="interactive-card bouncy p-8 text-center"><div class="text-gray-500 text-xl font-bold mb-2">ความเข้มงวด (รปภ.)</div><div class="text-6xl font-extrabold text-slate-600" id="scoreStrict">0.00</div></div>
+                    </div>
+                </div>
+
+                <div class="static-card p-10 w-full transition-all duration-300">
+                    <div class="flex flex-wrap justify-between items-center mb-8 gap-4">
+                        <div class="flex items-center gap-4">
+                            <h3 class="text-3xl font-bold text-gray-700">ข้อเสนอแนะ</h3>
+                            <button onclick="restoreHidden()" id="restoreBtn" class="bouncy text-base bg-white hover:bg-gray-50 text-gray-500 hover:text-indigo-600 px-5 py-2 rounded-full flex items-center gap-2 border-2 border-gray-200 shadow-sm">
+                                <i class="ph ph-arrows-clockwise text-xl"></i> รีเฟรช
+                            </button>
+                        </div>
+                        <div class="flex flex-wrap gap-2 justify-end mt-4 lg:mt-0">
+                            <button onclick="filterComments('all')" class="filter-btn bouncy active" id="btn-all">ทั้งหมด</button>
+                            <button onclick="filterComments('จราจร')" class="filter-btn bouncy inactive" id="btn-traffic">จราจร</button>
+                            <button onclick="filterComments('ความปลอดภัย')" class="filter-btn bouncy inactive" id="btn-secure">ปลอดภัย</button>
+                            <button onclick="filterComments('บริการ')" class="filter-btn bouncy inactive" id="btn-service">บริการ</button>
+                            <button onclick="filterComments('แต่งกาย')" class="filter-btn bouncy inactive" id="btn-dress">แต่งกาย</button>
+                            <button onclick="filterComments('สุภาพ/อัธยาศัย')" class="filter-btn bouncy inactive" id="btn-polite">สุภาพ</button>
+                            <button onclick="filterComments('กระตือรือร้น')" class="filter-btn bouncy inactive" id="btn-enthusiasm">กระตือรือร้น</button>
+                            <button onclick="filterComments('การให้ข้อมูล')" class="filter-btn bouncy inactive" id="btn-clarity">ข้อมูล</button>
+                            <button onclick="filterComments('ความรวดเร็ว')" class="filter-btn bouncy inactive" id="btn-speed">รวดเร็ว</button>
+                            <button onclick="filterComments('ความเข้มงวด')" class="filter-btn bouncy inactive" id="btn-strict">เข้มงวด</button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-hidden rounded-xl border-2 border-gray-100">
+                        <table class="w-full text-xl text-left text-gray-600">
+                            <thead class="text-base text-gray-700 uppercase bg-gray-50 font-bold">
+                                <tr><th class="px-8 py-5 w-40">วันที่</th><th class="px-8 py-5 w-48">หมวดหมู่</th><th class="px-8 py-5">ข้อความ</th></tr>
+                            </thead>
+                            <tbody id="commentsList" class="bg-white divide-y-2 divide-gray-50 font-normal"></tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="paginationControls" class="flex items-center justify-between mt-8 pt-6 border-t-2 border-gray-100">
+                        <button onclick="changePage(-1)" id="btnPrev" class="page-btn px-6 py-3 text-lg font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:transform-none">ก่อนหน้า</button>
+                        <span class="text-xl font-bold text-gray-500">หน้า <span class="text-indigo-600 text-2xl" id="pageIndicator">1</span></span>
+                        <button onclick="changePage(1)" id="btnNext" class="page-btn px-6 py-3 text-lg font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:transform-none">ถัดไป</button>
+                    </div>
+                </div>
+
+                <div class="static-card overflow-hidden">
+                    <div class="p-10 border-b-4 border-gray-100 bg-red-50/30">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div>
+                                <p class="text-gray-600 text-2xl font-bold uppercase tracking-wider flex items-center gap-3">
+                                    <i class="ph ph-warning-octagon text-red-500 text-4xl"></i> ค่าปรับ รปภ.
+                                </p>
+                                <h2 class="text-8xl font-extrabold text-red-500 mt-4" id="totalFine">...</h2>
+                            </div>
+                            <div class="bg-white border-2 border-red-200 p-6 rounded-3xl shadow-md flex items-center gap-6 min-w-[250px]">
+                                <div class="p-4 bg-red-100 text-red-600 rounded-2xl"><i class="ph ph-scales text-4xl"></i></div>
+                                <div>
+                                    <p class="text-gray-400 text-sm font-bold uppercase">จำนวนทั้งหมด</p>
+                                    <p class="text-4xl font-black text-gray-800" id="fineCountBadge">0 เคส</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-10">
+                        <h3 class="text-3xl font-bold text-gray-700 mb-8">รายละเอียดการปรับ</h3>
+                        <div class="overflow-x-auto rounded-2xl border-2 border-gray-200 shadow-sm">
+                            <table class="w-full text-lg text-left text-gray-700 min-w-[1000px]">
+                                <thead class="text-base text-gray-800 uppercase bg-gray-100 font-extrabold border-b-2 border-gray-200">
+                                    <tr>
+                                        <th class="px-8 py-6 w-40">วันที่</th>
+                                        <th class="px-8 py-6 w-56">หน่วยงาน</th>
+                                        <th class="px-8 py-6 w-40">จุด</th>
+                                        <th class="px-8 py-6 w-64">ชื่อ-นามสกุล</th>
+                                        <th class="px-8 py-6">สาเหตุการปรับ</th>
+                                        <th class="px-8 py-6 w-36 text-right">เงินปรับ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fineDetailsList" class="bg-white divide-y-2 divide-gray-100 font-normal">
+                                </tbody>
+                                <tfoot class="bg-gray-50 font-black text-gray-900 border-t-4 border-gray-200">
+                                    <tr>
+                                        <td colspan="5" class="px-8 py-8 text-right text-2xl">ยอดรวมค่าปรับเดือนนี้</td>
+                                        <td class="px-8 py-8 text-right text-red-600 text-4xl font-black" id="footerTotalFine">0</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="report_security_script.js"></script>
+</body>
+</html>
