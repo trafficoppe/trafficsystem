@@ -333,3 +333,9 @@ input[type="date"]:active, #yearSelect:active {
 @media(max-width:1300px){ .grid{grid-template-columns:1fr 1fr} }
 @media(max-width:700px){ .grid{grid-template-columns:1fr} .vehicles{grid-template-columns:1fr 1fr;} }
 .card-hover:hover { transform: translateY(-5px); transition: all 0.3s ease; }
+/* ==========================================
+   ย่อขนาดเนื้อหาหน้ารีพอร์ตให้เหลือ 75%
+========================================== */
+.main-content {
+    zoom: 0.65;
+}
