@@ -1,7 +1,6 @@
 const MAIN_SHEET_ID = '1PQe6MO2gnfCtpf_ksbPnLTAXJZ2UoPTr-AQuQ1mYKqo'; 
 const MAIN_GID = '1966627960'; 
 
-// โครงสร้างคอลัมน์ใน Google Sheets
 const MAIN_COLS = { 
     DATE: 0, 
     TYPE: 1, 
@@ -156,12 +155,26 @@ function processData(mainRows, fineRows) {
             const junk = ["-", "ไม่มี", "ปกติ", "เหตุการณ์ปกติ", "เรียบร้อย", "ทั่วไป", "", " ", "."];
             
             if (!junk.includes(reason)) {
+                let imgUrl = '';
+                for (let i = 0; i < row.c.length; i++) {
+                    let cellVal = row.c[i] ? (row.c[i].f || row.c[i].v) : '';
+                    if (typeof cellVal === 'string' && cellVal.includes('drive.google.com')) {
+                        let firstLink = cellVal.split(',')[0].trim();
+                        let matchId = firstLink.match(/id=([a-zA-Z0-9_-]+)/) || firstLink.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                        if (matchId && matchId[1]) {
+                            imgUrl = `https://drive.google.com/thumbnail?id=${matchId[1]}&sz=w1000`;
+                        }
+                        break;
+                    }
+                }
+
                 globalFineDetails.push({
                     date: d.toLocaleDateString('th-TH'),
                     dept: row.c[FINE_COLS.DEPT]?.v || "-",
                     point: row.c[FINE_COLS.POINT]?.v || "-",
                     name: row.c[FINE_COLS.NAME]?.v || "-",
-                    reason: reason
+                    reason: reason,
+                    imgUrl: imgUrl
                 });
             }
         }
@@ -195,6 +208,21 @@ function updateUI(count, fineTotal, scores, types) {
     const valid = [a1,a2,a3,a4,a5,a6,a7,a8,a9].filter(v=>v>0);
     document.getElementById('scoreOverall').innerText = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length).toFixed(2) : "0.00";
 
+    // 🌟 เปิดระบบดับเบิลคลิกเพื่อซ่อนกล่องคะแนน 🌟
+    const scoreIds = ['scoreTraffic', 'scoreSecurity', 'scoreService', 'scoreDress', 'scorePolite', 'scoreEnthusiasm', 'scoreClarity', 'scoreSpeed', 'scoreStrict'];
+    scoreIds.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            const card = el.closest('.interactive-card');
+            if(card) {
+                card.style.display = ''; // รีเซ็ตการแสดงผลเผื่อกรณีเปลี่ยนเดือน
+                card.ondblclick = function() { 
+                    this.style.display = 'none'; 
+                };
+            }
+        }
+    });
+
     renderCharts(types, count);
     filterComments('all');
     renderFineDetails();
@@ -203,9 +231,10 @@ function updateUI(count, fineTotal, scores, types) {
 function renderFineDetails() {
     const tbody = document.getElementById('fineDetailsList');
     tbody.innerHTML = globalFineDetails.length ? '' : '<tr><td colspan="6" class="px-8 py-10 text-center text-gray-400 italic text-2xl">ไม่มีรายการปรับในเดือนนี้</td></tr>';
-    globalFineDetails.forEach(item => {
+    globalFineDetails.forEach((item, index) => {
+        // 🌟 เอา Badge คำว่า "มีรูป" ออกตามที่คุณลูกพี่สั่ง 🌟
         tbody.innerHTML += `
-            <tr class="hover:bg-red-50/50 transition border-b border-gray-100">
+            <tr class="hover:bg-red-50/80 transition border-b border-gray-100 cursor-pointer" onclick="openFineImageModal(${index})">
                 <td class="px-8 py-6 text-gray-700 whitespace-nowrap">${item.date}</td>
                 <td class="px-8 py-6 text-gray-600">${item.dept}</td>
                 <td class="px-8 py-6 text-gray-600">${item.point}</td>
@@ -215,6 +244,50 @@ function renderFineDetails() {
             </tr>`;
     });
 }
+
+window.openFineImageModal = function(index) {
+    const item = globalFineDetails[index];
+    if (!item) return;
+
+    const modal = document.getElementById('fineImageModal');
+    const img = document.getElementById('fineModalImage');
+    const noImg = document.getElementById('fineModalNoImage');
+    const details = document.getElementById('fineModalDetails');
+
+    if (item.imgUrl) {
+        img.src = item.imgUrl;
+        img.style.display = 'block';
+        noImg.style.display = 'none';
+    } else {
+        img.src = '';
+        img.style.display = 'none';
+        noImg.style.display = 'flex';
+    }
+
+    details.innerHTML = `
+        <div class="grid grid-cols-2 gap-4">
+            <div><span class="text-gray-500 text-sm">วันที่:</span><br><span class="font-bold text-lg">${item.date}</span></div>
+            <div><span class="text-gray-500 text-sm">ชื่อ-สกุล:</span><br><span class="font-bold text-lg">${item.name}</span></div>
+            <div><span class="text-gray-500 text-sm">จุด/สถานที่:</span><br><span class="font-bold text-lg">${item.point}</span></div>
+            <div><span class="text-gray-500 text-sm">สาเหตุการปรับ:</span><br><span class="font-bold text-red-600 text-lg">${item.reason}</span></div>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+window.closeFineImageModal = function() {
+    document.getElementById('fineImageModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('fineImageModal');
+    if (e.target === modal) {
+        closeFineImageModal();
+    }
+});
 
 function stealthHide(indexOnPage) {
     const visible = filteredComments.filter(c => !c.hidden);
@@ -305,7 +378,6 @@ function renderCharts(types, total) {
     }
 }
 
-// 🌟 โค้ดพิเศษ: ควบคุม Sidebar เมนูให้เปิดค้างไว้ตามที่ผู้ใช้เลือก 🌟
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;

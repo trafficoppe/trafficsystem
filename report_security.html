@@ -7,13 +7,11 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    
     <link rel="stylesheet" href="report_security_style.css">
 
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // ป้องกัน Tailwind ไปล้างค่า CSS เดิมของ Sidebar
         tailwind.config = { corePlugins: { preflight: false } }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -162,7 +160,7 @@
                     </div>
                     
                     <div class="p-10">
-                        <h3 class="text-3xl font-bold text-gray-700 mb-8">รายละเอียดการปรับ</h3>
+                        <h3 class="text-3xl font-bold text-gray-700 mb-8">รายละเอียดการปรับ <span class="text-sm text-gray-400 font-normal ml-2">(คลิกที่แถวเพื่อดูรูปภาพหลักฐาน)</span></h3>
                         <div class="overflow-x-auto rounded-2xl border-2 border-gray-200 shadow-sm">
                             <table class="w-full text-lg text-left text-gray-700 min-w-[1000px]">
                                 <thead class="text-base text-gray-800 uppercase bg-gray-100 font-extrabold border-b-2 border-gray-200">
@@ -189,6 +187,26 @@
                 </div>
 
             </main>
+        </div>
+    </div>
+
+    <div id="fineImageModal" style="z-index: 9999; display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(4px); font-family: 'Prompt', sans-serif;">
+        <div style="background: white; border-radius: 1.5rem; padding: 30px; max-width: 600px; width: 90%; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); animation: fadeIn 0.3s;">
+            <button onclick="closeFineImageModal()" style="position: absolute; top: 15px; right: 20px; background: #f1f5f9; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;">&times;</button>
+            
+            <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-4">
+                <i class="ph ph-image text-blue-500 text-3xl"></i> หลักฐานการปรับ
+            </h3>
+            
+            <div id="fineModalImageContainer" class="bg-gray-50 rounded-xl mb-6 flex justify-center items-center overflow-hidden" style="min-height: 250px; border: 2px dashed #e2e8f0;">
+                <img id="fineModalImage" src="" style="max-width: 100%; max-height: 400px; object-fit: contain; display: none;">
+                <div id="fineModalNoImage" class="text-gray-400 text-lg font-medium flex flex-col items-center gap-2" style="display: none;">
+                    <i class="ph ph-image-slash text-4xl"></i> ไม่มีรูปภาพประกอบ
+                </div>
+            </div>
+            
+            <div id="fineModalDetails" class="bg-blue-50 p-5 rounded-xl border border-blue-100">
+                </div>
         </div>
     </div>
 
