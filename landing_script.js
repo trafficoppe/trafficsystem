@@ -228,13 +228,13 @@ function initPageUI() {
     if(searchInput) searchInput.value = '';
 }
 
-// 🌟 ระบบนำทางฉบับ Classic โหลดหน้าปกติ ป้องกัน 404 บน GitHub 🌟
+// 🌟 ระบบนำทางฉบับ SPA เปลี่ยนหน้าทันที (แก้ไขบั๊กหน่วยยุทธศาสตร์) 🌟
 function setupSeamlessNavigation() {
     document.querySelectorAll('.sidebar-menu a').forEach(link => {
         link.addEventListener('click', function(e) {
             const href = this.getAttribute('href');
 
-            // ถ้าเป็นการกดเพื่อเปิด-ปิดเมนูย่อย (has-submenu) ให้ทำงานตรงนี้
+            // 1. จัดการการคลิกเปิด-ปิดเมนูย่อย (Dropdown)
             if (this.parentElement.classList.contains('has-submenu') && (!href || href === '#' || !href.includes('?'))) {
                 e.preventDefault();
                 const submenu = this.nextElementSibling;
@@ -244,9 +244,56 @@ function setupSeamlessNavigation() {
                 return;
             }
 
-            // นอกเหนือจากนั้น "ปล่อยให้ลิงก์ทำงานโหลดหน้าปกติเลยครับ" (ลบ e.preventDefault() ออก)
-            // เบราว์เซอร์จะพาไปที่ index.html?main=staff แบบโหลดหน้าใหม่หมดจด รับรองว่าไม่เกิด 404 แน่นอนครับ!
+            // 2. โหมด SPA (เปลี่ยนแท็บรวดเร็ว ไม่ต้องรีเฟรชหน้า)
+            const isCurrentIndex = window.location.pathname.endsWith('/') || window.location.pathname.includes('index.html');
+            
+            if (href && href.includes('index.html') && isCurrentIndex) {
+                e.preventDefault();
+
+                const urlObj = new URL(href, window.location.href);
+                window.history.pushState({ path: href }, '', href);
+
+                const urlParams = urlObj.searchParams;
+                mainCategory = urlParams.has('main') ? urlParams.get('main') : 'staff';
+                currentUnit = urlParams.has('unit') ? urlParams.get('unit').toLowerCase() : 'all';
+
+                // 🌟 FIX BUG: ป้องกันไม่ให้เอาชื่อหน่วยงาน (ยุทธศาสตร์) ไปค้นหาในประเภทพนักงาน
+                if (mainCategory === 'staff') {
+                    currentSubFilter = 'all'; // รีเซ็ตฟิลเตอร์พนักงานเป็นทั้งหมดเสมอ
+                } else {
+                    currentSubFilter = currentUnit !== 'all' ? currentUnit : 'all';
+                }
+
+                currentExtinguisherType = 'all';
+                currentNozzleType = 'all';
+                currentMissionYear = 'all';
+
+                initPageUI();
+                updateFilterCounts();
+                applyFilters();
+
+                document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
         });
+    });
+
+    window.addEventListener('popstate', function(e) {
+        if (window.location.pathname.endsWith('/') || window.location.pathname.includes('index.html')) {
+            const urlParams = new URLSearchParams(window.location.search);
+            mainCategory = urlParams.has('main') ? urlParams.get('main') : 'staff';
+            currentUnit = urlParams.has('unit') ? urlParams.get('unit').toLowerCase() : 'all';
+            
+            if (mainCategory === 'staff') {
+                currentSubFilter = 'all';
+            } else {
+                currentSubFilter = currentUnit !== 'all' ? currentUnit : 'all';
+            }
+            
+            initPageUI();
+            updateFilterCounts();
+            applyFilters();
+        }
     });
 }
 
@@ -255,7 +302,12 @@ window.onload = function() {
     if(urlParams.has('main')) mainCategory = urlParams.get('main');
     if(urlParams.has('unit')) currentUnit = urlParams.get('unit').toLowerCase();
     
-    if (currentUnit !== 'all') currentSubFilter = currentUnit; 
+    // 🌟 FIX BUG: ป้องกันไม่ให้เอาชื่อหน่วยงาน (ยุทธศาสตร์) ไปค้นหาตอนโหลดหน้าแรกครั้งแรกด้วย
+    if (mainCategory === 'staff') {
+        currentSubFilter = 'all';
+    } else if (currentUnit !== 'all') {
+        currentSubFilter = currentUnit;
+    }
 
     initPageUI();               
     setupSeamlessNavigation();  
