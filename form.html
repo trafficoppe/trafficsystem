@@ -21,20 +21,16 @@
                 <li><a href="index.html?main=fire&unit=ถังดับเพลิง">อุปกรณ์ดับเพลิง</a></li>
                 <li><a href="index.html?main=form">แบบฟอร์มต่างๆ</a></li>
                 
-                <li class="has-submenu" style="margin-top: 20px; border-top: 1px solid #34495e;">
-                    <a href="report.html" style="color: #f1c40f; font-weight: 500;">
-                        📊 รายงาน
-                    </a>
-                    <ul class="submenu" id="submenu-report">
-                        <li><a href="report.html">รายงานประจำเดือน</a></li>
-                    </ul>
-                </li>
-                
-                <li style="margin-top: 20px; border-top: 1px solid #34495e;">
-                    <a href="#" onclick="window.history.back();" style="color: #e74c3c; font-weight: 500;">
-                        กลับหน้าหลัก
-                    </a>
-                </li>
+                <li class="has-submenu" style="margin-top: 20px; border-top: 1px solid #34495e; padding-top: 10px;">
+                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-report').classList.toggle('show-submenu');" id="menu-report-main" style="color: #f1c40f; font-weight: 500;">
+                    รายงานและสถิติ ▾
+                </a>
+                <ul class="submenu" id="submenu-report">
+                    <li><a href="report.html?tab=daily" style="color: #bdc3c7; transition: 0.3s;">รายงานประจำวัน</a></li>
+                    <li><a href="report.html?tab=monthly" style="color: #bdc3c7; transition: 0.3s;">รายงานประจำเดือน</a></li>
+                    <li><a href="report.html?tab=security" style="color: #bdc3c7; transition: 0.3s;">รายงานตรวจรับ รปภ.</a></li>
+                </ul>
+            </li>
             </ul>
         </div>
         

@@ -3,452 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="referrer" content="no-referrer">
-    
-    <title>รายงานประจำเดือน - ระบบงานจราจร</title>
+    <title>รายงานและสถิติ - ระบบงานจราจร</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;800&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { corePlugins: { preflight: false } }
-    </script>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.min.js"></script>
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="report_style.css">
+    
+    <style>
+        body { overflow: hidden; margin: 0; padding: 0; background: #f6f7fb; } 
+        
+        /* นำคำสั่งที่ดัน 250px ออก เพื่อให้หน้าเว็บกลับมาชิดซ้ายเหมือนเดิม */
+        .frame-container { position: relative; width: 100%; height: 100vh; flex-grow: 1; overflow: hidden; }
+        .report-frame { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            border: none; opacity: 0; z-index: -1; pointer-events: none; 
+            transition: opacity 0.2s ease-in-out; 
+            background: #f6f7fb;
+        }
+        .report-frame.active { opacity: 1; z-index: 10; pointer-events: auto; }
+        
+        /* Loading Spinner */
+        .hub-loader {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            display: flex; flex-direction: column; align-items: center;
+            color: #64748b; font-size: 18px; z-index: 1; font-weight: bold;
+        }
+        .spinner {
+            border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; 
+            border-radius: 50%; width: 45px; height: 45px; 
+            animation: spin 1s linear infinite; margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
-<body class="sidebar-hidden">
+<body>
 
     <div class="sidebar">
-        <div class="sidebar-header">
-            ระบบงานจราจร
-        </div>
+        <div class="sidebar-header">ระบบงานจราจร</div>
         <ul class="sidebar-menu">
             <li class="has-submenu">
-                <a href="index.html?main=staff" id="menu-staff">บุคลากร/พนักงาน</a>
-                <ul class="submenu" id="submenu-staff">
-                    <li><a href="index.html?main=staff&unit=ยุทธศาสตร์" id="menu-staff-strat">หน่วยยุทธศาสตร์ฯ</a></li>
-                    <li><a href="index.html?main=staff&unit=ปฏิบัติการ" id="menu-staff-op">หน่วยปฏิบัติการฯ</a></li>
+                <a href="index.html?main=staff">บุคลากร/พนักงาน</a>
+                <ul class="submenu">
+                    <li><a href="index.html?main=staff&unit=ยุทธศาสตร์">หน่วยยุทธศาสตร์ฯ</a></li>
+                    <li><a href="index.html?main=staff&unit=ปฏิบัติการ">หน่วยปฏิบัติการฯ</a></li>
                 </ul>
             </li>
 
             <li class="has-submenu">
-                <a href="index.html?main=mission" id="menu-mission">การดูแลพื้นที่ส่วนกลาง</a>
-                <ul class="submenu" id="submenu-mission">
-                    <li><a href="index.html?main=mission&unit=ตรวจพื้นที่" id="menu-mission-inspect">ตรวจพื้นที่</a></li>
-                    <li><a href="index.html?main=mission&unit=ช่วยเหลือ" id="menu-mission-help">ให้ความช่วยเหลือ</a></li>
-                    <li><a href="index.html?main=mission&unit=การจราจร" id="menu-mission-traffic">งานจราจร</a></li>
-                    <li><a href="index.html?main=mission&unit=ตารางเวร" id="menu-mission-schedule">ตารางเวร</a></li>
+                <a href="index.html?main=mission">การดูแลพื้นที่ส่วนกลาง</a>
+                <ul class="submenu">
+                    <li><a href="index.html?main=mission&unit=ตรวจพื้นที่">ตรวจพื้นที่</a></li>
+                    <li><a href="index.html?main=mission&unit=ช่วยเหลือ">ให้ความช่วยเหลือ</a></li>
+                    <li><a href="index.html?main=mission&unit=การจราจร">งานจราจร</a></li>
+                    <li><a href="index.html?main=mission&unit=ตารางเวร">ตารางเวร</a></li>
                 </ul>
             </li>
             
-            <li><a href="index.html?main=vehicle" id="menu-vehicle">ยานพาหนะทั้งหมด</a></li>
+            <li><a href="index.html?main=vehicle">ยานพาหนะทั้งหมด</a></li>
             
             <li class="has-submenu">
-                <a href="index.html?main=fire&unit=ถังดับเพลิง" id="menu-fire">อุปกรณ์ดับเพลิง</a>
-                <ul class="submenu" id="submenu-fire">
-                    <li><a href="index.html?main=fire&unit=ถังดับเพลิง" id="menu-fire-extinguisher">ถังดับเพลิง</a></li>
-                    <li><a href="index.html?main=fire&unit=สายส่งน้ำดับเพลิง" id="menu-fire-hose">สายส่งน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=หัวฉีด" id="menu-fire-nozzle">หัวฉีด</a></li>
-                    <li><a href="index.html?main=fire&unit=ปั๊มน้ำ" id="menu-fire-pump">ปั๊มน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=ตู้เก็บอุปกรณ์" id="menu-fire-cabinet">ตู้เก็บอุปกรณ์</a></li>
-                    <li><a href="index.html?main=fire&unit=หัวรับน้ำ" id="menu-fire-hydrant">หัวรับน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=ชุด ppe" id="menu-fire-ppe">ชุด PPE</a></li>
+                <a href="index.html?main=fire">อุปกรณ์ดับเพลิง</a>
+                <ul class="submenu">
+                    <li><a href="index.html?main=fire&unit=ถังดับเพลิง">ถังดับเพลิง</a></li>
+                    <li><a href="index.html?main=fire&unit=สายส่งน้ำดับเพลิง">สายส่งน้ำ</a></li>
+                    <li><a href="index.html?main=fire&unit=หัวฉีด">หัวฉีด</a></li>
+                    <li><a href="index.html?main=fire&unit=ปั๊มน้ำ">ปั๊มน้ำ</a></li>
+                    <li><a href="index.html?main=fire&unit=ตู้เก็บอุปกรณ์">ตู้เก็บอุปกรณ์</a></li>
+                    <li><a href="index.html?main=fire&unit=หัวรับน้ำ">หัวรับน้ำ</a></li>
+                    <li><a href="index.html?main=fire&unit=ชุด ppe">ชุด PPE</a></li>
                 </ul>              
             </li>          
 
-            <li><a href="index.html?main=form" id="menu-form">แบบฟอร์มต่างๆ</a></li>
+            <li><a href="index.html?main=form">แบบฟอร์มต่างๆ</a></li>
             <li><a href="index.html?main=lostfound">แจ้งของหาย/เก็บของได้</a></li>
             
-            <li class="has-submenu" style="margin-top: 20px; border-top: 1px solid #34495e;">
-                <a href="report.html" id="menu-report" class="active" style="color: #f1c40f; font-weight: 500;">
-                    รายงานประจำเดือน ▾
+            <li class="has-submenu" style="margin-top: 20px; border-top: 1px solid #34495e; padding-top: 10px;">
+                <a href="#" id="menu-report-main" style="color: #f1c40f; font-weight: 500;">
+                    รายงานและสถิติ ▾
                 </a>
                 <ul class="submenu show-submenu" id="submenu-report">
-                    <li><a href="report.html" id="menu-report-monthly" class="active" style="color: #fff; font-weight: bold;">ภาพรวมส่วนกลาง</a></li>
-                    <li><a href="report_security.html" style="color: #bdc3c7;">รายงานตรวจรับ รปภ.</a></li>
+                    <li><a href="#" id="link-daily" onclick="switchReport('daily', this); return false;" class="report-link" style="color: #bdc3c7; transition: 0.3s;">รายงานประจำวัน</a></li>
+                    <li><a href="#" id="link-monthly" onclick="switchReport('monthly', this); return false;" class="report-link" style="color: #fff; font-weight: bold; transition: 0.3s;">รายงานประจำเดือน</a></li>
+                    <li><a href="#" id="link-security" onclick="switchReport('security', this); return false;" class="report-link" style="color: #bdc3c7; transition: 0.3s;">รายงานตรวจรับ รปภ.</a></li>
                 </ul>
             </li>
         </ul>
     </div>
 
-    <div class="main-content" style="overflow-y: auto; overflow-x: hidden; background: #f6f7fb;">
+    <!-- ใช้คลาส main-content ดั้งเดิม เพื่อให้ขอบซ้ายขวาเป๊ะเหมือนหน้าอื่น -->
+    <div class="main-content" style="padding: 0; height: 100vh; overflow: hidden;">
         
-        <div class="dashboard-section">
-            <h1 class="section-header" onclick="toggleSection('safety-content', 'icon-safety')">
-                📊 รายงานเหตุการณ์<br>ประจำเดือน <span id="incMonthLabel"></span>
-                <i id="icon-safety" class="fa fa-chevron-up toggle-icon"></i>
-            </h1>
+        <div class="hub-loader" id="hub-loader">
+            <div class="spinner"></div>
+            <div id="hub-loading-text">กำลังโหลดข้อมูล...</div>
+        </div>
+
+        <div class="frame-container">
+            <iframe id="frame-monthly" src="report_monthly.html" class="report-frame active"></iframe>
+            <iframe id="frame-daily" data-src="report_daily.html" class="report-frame"></iframe>
+            <iframe id="frame-security" data-src="report_security.html" class="report-frame"></iframe>
+        </div>
+    </div>
+
+    <script>
+        function switchReport(type, clickedEl) {
+            document.querySelectorAll('.report-frame').forEach(f => f.classList.remove('active'));
+            document.querySelectorAll('.report-link').forEach(l => {
+                l.style.color = '#bdc3c7';
+                l.style.fontWeight = 'normal';
+            });
             
-            <div id="safety-content" class="section-content">
-                <div class="controls">
-                    <label>ช่วงวันที่:</label>
-                    <input type="date" id="incStart"><label>ถึง</label><input type="date" id="incEnd">
-                    <button id="incFilterBtn">กรองข้อมูล</button>
-                </div>
-                <table id="incTable" class="dash-table">
-                    <thead><tr><th>เหตุการณ์</th><th>จำนวนครั้ง</th></tr></thead>
-                    <tbody><tr><td colspan="2">กำลังโหลดข้อมูล...</td></tr></tbody>
-                </table>
+            const targetFrame = document.getElementById('frame-' + type);
+            if (!targetFrame.src || targetFrame.src === window.location.href) {
+                targetFrame.src = targetFrame.getAttribute('data-src');
+            }
+            targetFrame.classList.add('active');
+            
+            if(clickedEl) {
+                clickedEl.style.color = '#fff';
+                clickedEl.style.fontWeight = 'bold';
+            }
 
-                <h2 id="accTitle" style="margin-top: 30px;">สรุปอุบัติเหตุเดือน ...</h2>
+            window.history.replaceState(null, '', '?tab=' + type);
+        }
 
-                <div class="vehicles" style="margin-top: 30px; margin-bottom: 80px;">
-                    <div class="veh-card" onclick="filterAccident('veh_bicycle')"><div class="sign"><div class="emoji">🚲</div></div><div class="veh-label">จักรยาน</div><div class="veh-num" id="vehBicycle">–</div></div>
-                    <div class="veh-card" onclick="filterAccident('veh_motorcycle')"><div class="sign"><div class="emoji">🏍️</div></div><div class="veh-label">จักรยานยนต์</div><div class="veh-num" id="vehMotorcycle">–</div></div>
-                    <div class="veh-card" onclick="filterAccident('veh_car')"><div class="sign"><div class="emoji">🚗</div></div><div class="veh-label">รถยนต์</div><div class="veh-num" id="vehCar">–</div></div>
-                    <div class="veh-card" onclick="filterAccident('veh_bus')"><div class="sign"><div class="emoji">🚌</div></div><div class="veh-label">รถบัส</div><div class="veh-num" id="vehBus">–</div></div>
-                </div>
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeTab = urlParams.get('tab') || 'monthly';
+            
+            const activeLink = document.getElementById('link-' + activeTab);
+            if(activeLink) switchReport(activeTab, activeLink);
+
+            setTimeout(() => {
+                ['daily', 'monthly', 'security'].forEach(type => {
+                    const frame = document.getElementById('frame-' + type);
+                    if (!frame.src || frame.src === window.location.href) {
+                        frame.src = frame.getAttribute('data-src');
+                    }
+                });
                 
-                <div class="grid">
-                    <table class="dash-table acc-table">
-                        <tr><th colspan="3" class="clickable-header" onclick="updateChartMode('accidents')" title="คลิกเพื่อดูกราฟสถิติอุบัติเหตุทั้งหมด">อุบัติเหตุทั้งหมด <span id="totalCount">–</span> ครั้ง</th></tr>
-                        <tr>
-                            <td onclick="filterAccident('road')"><span class="cell-label">บนถนน</span><span class="cell-value" id="roadN">–</span></td>
-                            <td onclick="filterAccident('general')"><span class="cell-label">ทั่วไป</span><span class="cell-value" id="generalN">–</span></td>
-                            <td onclick="filterAccident('work')"><span class="cell-label">ทำงาน</span><span class="cell-value" id="workN">–</span></td>
-                        </tr>
-                    </table>
-                    <table class="dash-table acc-table">
-                        <tr><th colspan="3" class="clickable-header" onclick="updateChartMode('injuries')" title="คลิกเพื่อดูกราฟสถิติผู้ได้รับบาดเจ็บ">ผู้ได้รับบาดเจ็บทั้งหมด <span id="injTotal">–</span> คน</th></tr>
-                        <tr>
-                            <td onclick="filterAccident('inj_road')"><span class="cell-label">บนถนน</span><span class="cell-value" id="injRoad">–</span></td>
-                            <td onclick="filterAccident('inj_general')"><span class="cell-label">ทั่วไป</span><span class="cell-value" id="injGeneral">–</span></td>
-                            <td onclick="filterAccident('inj_work')"><span class="cell-label">ทำงาน</span><span class="cell-value" id="injWork">–</span></td>
-                        </tr>
-                    </table>
-                    <table class="dash-table acc-table">
-                        <tr><th colspan="4" class="clickable-header" onclick="updateChartMode('person_types')" title="คลิกเพื่อดูกราฟสถิติประเภทบุคคลที่บาดเจ็บ">ประเภทผู้ได้รับบาดเจ็บ <span id="injPersonTotal">–</span> คน</th></tr>
-                        <tr>
-                            <td onclick="filterAccident('ps_student')"><span class="cell-label">นักศึกษา</span><span class="cell-value" id="injStudent">–</span></td>
-                            <td onclick="filterAccident('ps_staff')"><span class="cell-label">บุคลากร</span><span class="cell-value" id="injStaff">–</span></td>
-                            <td onclick="filterAccident('ps_external')"><span class="cell-label">ภายนอก</span><span class="cell-value" id="injExternal">–</span></td>
-                            <td onclick="filterAccident('ps_outsource')"><span class="cell-label">Outs..</span><span class="cell-value" id="injOutsource">–</span></td>
-                        </tr>
-                    </table>
-                    <table class="dash-table acc-table">
-                        <tr><th class="clickable-header" onclick="updateChartMode('deaths')" title="คลิกเพื่อดูกราฟสถิติผู้เสียชีวิต">ผู้เสียชีวิต</th></tr>
-                        <tr><td onclick="filterAccident('death')"><span class="cell-label">จำนวน (คน)</span><span class="cell-value" id="deathTotal">–</span></td></tr>
-                    </table>
-                </div>
+                document.getElementById('hub-loading-text').innerText = 'พร้อมใช้งานแล้ว!';
+                document.getElementById('hub-loader').querySelector('.spinner').style.display = 'none';
+                setTimeout(() => { document.getElementById('hub-loader').style.display = 'none'; }, 800);
+            }, 1500); 
+        });
 
-                <div style="margin-top: 60px; margin-bottom: 20px; position: relative;">
-                    <div id="chart-content" class="section-content" style="position: relative;">
-                        <div class="controls" style="position: absolute; top: 15px; right: 30px; z-index: 10; margin-bottom: 0;">
-                            <label style="font-size: 22px; background: rgba(255,255,255,0.8); padding: 5px 10px; border-radius: 8px;">📅 เลือกปี พ.ศ.: </label>
-                            <select id="yearSelect" class="map-form-control" style="width: auto; display: inline-block; padding: 6px 20px; font-size: 22px; cursor: pointer;">
-                                <option value="" disabled selected>กำลังโหลด...</option>
-                            </select>
-                        </div>
-                        <div id="chart_monthly_W40"></div>
-                    </div>
-                </div>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.querySelector('.sidebar');
+            if (sessionStorage.getItem('sidebarOpen') === 'true') sidebar.classList.add('keep-open');
 
-                <div class="lf-section-container">
-                    <h2 class="lf-title">Lost & Found ประจำเดือน <span id="lfMonthLabel" style="color: #2563eb;">...</span></h2>
-                    <div class="vehicles">
-                        <div class="veh-card lf-card"><div class="veh-label">รายการทั้งหมด</div><div class="veh-num" id="lf_totalCount">-</div></div>
-                        <div class="veh-card lf-card"><div class="veh-label">ของหาย (Lost)</div><div class="veh-num" style="color: #ea4335;" id="lf_lostCount">-</div></div>
-                        <div class="veh-card lf-card"><div class="veh-label">เก็บได้ (Found)</div><div class="veh-num" style="color: #fbbc04;" id="lf_foundCount">-</div></div>
-                        <div class="veh-card lf-card"><div class="veh-label">รับคืนแล้ว</div><div class="veh-num" style="color: #188038;" id="lf_returnedCount">-</div></div>
-                    </div>
+            sidebar.addEventListener('mouseenter', () => {
+                sessionStorage.setItem('sidebarOpen', 'true');
+                sidebar.classList.add('keep-open');
+            });
 
-                    <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 mt-8 text-left" style="font-family: 'Sarabun', sans-serif;">
-                        <div class="bg-blue-600 px-6 py-3 relative flex justify-center items-center">
-                            <h3 class="text-lg font-bold text-white" style="font-size:18px; color:white; margin:0;"><i class="fa-solid fa-list-ul"></i> สถิติย้อนหลังรายเดือน (Lost & Found)</h3>
-                            <div class="text-gray-100 text-sm absolute right-6" id="lf_pageInfo">หน้า 1</div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full text-left fixed-row-height">
-                                <thead class="bg-gray-100 border-b">
-                                    <tr>
-                                        <th class="px-6 py-3 font-semibold text-center text-gray-700">เดือน</th>
-                                        <th class="px-6 py-3 font-semibold text-center text-red-600">ของหาย (Lost)</th>
-                                        <th class="px-6 py-3 font-semibold text-center text-yellow-600">เก็บได้ (Found)</th>
-                                        <th class="px-6 py-3 font-semibold text-center text-green-600">รับคืนแล้ว</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="lf_tableBody" class="divide-y divide-gray-200">
-                                    <tr><td colspan="4" class="text-center py-4">กำลังโหลดข้อมูล...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="bg-gray-50 px-6 py-3 border-t flex justify-center gap-4">
-                            <button onclick="changePageLF(-1)" id="lf_prevBtn" class="btn-pagination"> < ก่อนหน้า </button>
-                            <span id="lf_pageNumbers" class="flex gap-2"></span>
-                            <button onclick="changePageLF(1)" id="lf_nextBtn" class="btn-pagination"> ถัดไป > </button>
-                        </div>
-                    </div>
-                </div>
-
-                <hr style="border: 0; border-top: 2px dashed #cbd5e1; margin: 40px 0;">
-
-                <div id="car-section" style="font-family: 'Sarabun', sans-serif;">
-                    <h2 class="section-header" style="margin-top:0; margin-bottom:20px;" onclick="toggleSection('car-content', 'icon-car')">
-                        🚗 รายงานจำนวนรถเข้าออก <i id="icon-car" class="fa fa-chevron-up toggle-icon"></i>
-                    </h2>
+            sidebar.addEventListener('mouseleave', () => {
+                sessionStorage.setItem('sidebarOpen', 'false');
+                sidebar.classList.remove('keep-open');
+            });
             
-                    <div id="car-content" class="section-content">
-                        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-                            <div class="bg-blue-600 px-6 py-3 relative flex justify-center items-center">
-                                <h3 class="text-lg font-bold text-white" style="font-size:18px; color:white; margin:0;"><i class="fa-solid fa-list-ul"></i> ข้อมูลรถเข้าออกรายวัน</h3>
-                                <div class="text-gray-100 text-sm absolute right-6" id="car_pageInfo">หน้า 1</div>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full text-left fixed-row-height">
-                                    <thead class="bg-gray-100 border-b">
-                                        <tr>
-                                            <th class="px-6 py-3 font-semibold text-center text-gray-700">วันที่</th>
-                                            <th class="px-6 py-3 font-semibold text-center text-blue-600">ประตู 1</th>
-                                            <th class="px-6 py-3 font-semibold text-center text-blue-600">ประตู 3</th>
-                                            <th class="px-6 py-3 font-semibold text-center text-blue-600">ประตู 4</th>
-                                            <th class="px-6 py-3 font-semibold text-center text-blue-600">ประตู 5</th>
-                                            <th class="px-6 py-3 font-semibold text-center text-blue-600">ประตู 6</th>
-                                            <th class="px-6 py-3 font-semibold text-center text-blue-600">รวมทั้งหมด</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="carBody" class="divide-y divide-gray-200">
-                                        <tr><td colspan="7" class="text-center py-4">กำลังโหลดข้อมูลรถ...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="bg-gray-50 px-6 py-3 border-t flex justify-center gap-4">
-                                <button onclick="changePageCar(-1)" id="car_prevBtn" class="btn-pagination"> < ก่อนหน้า </button>
-                                <span id="car_pageNumbers" class="flex gap-2"></span>
-                                <button onclick="changePageCar(1)" id="car_nextBtn" class="btn-pagination"> ถัดไป > </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <div class="dashboard-section" style="padding-bottom:0; background:transparent;">
-            <h2 class="section-header" style="margin-top:0;" onclick="toggleSection('map-wrapper', 'icon-map')">
-                🗺️ ระบบจัดการแผนที่ (เชื่อมต่อกับ Sheets) <i id="icon-map" class="fa fa-chevron-up toggle-icon"></i>
-            </h2>
-        </div>
-
-        <div id="map-wrapper" class="section-content">
-            <div id="map-section">
-                <div id="map-loading-overlay">
-                    <div class="spinner"></div>
-                    <div id="loading-text">กำลังโหลดข้อมูล...</div>
-                </div>
-                <div id="map-container">
-                    <button id="toggle-view-btn" onclick="toggleViewMode()" title="เปลี่ยนมุมมองหมุด">👁️</button>
-                    <button id="toggle-btn" title="Toggle Menu" onclick="document.getElementById('map-wrapper').classList.toggle('map-sidebar-hidden')"><i class="fa fa-bars"></i></button>
-                    
-                    <div id="map-sidebar">
-                        <div class="sidebar-header">
-                            <h2>Map Manager</h2>
-                            <div id="status-text" class="status-indicator"><i class="fa fa-circle-o-notch fa-spin"></i> เชื่อมต่อ...</div>
-                        </div>
-                        <div class="action-bar">
-                            <button id="addMarkerBtn" class="btn-main btn-primary"><i class="fa fa-map-marker"></i> เพิ่มหมุด</button>
-                            <button id="addLayerBtn" class="btn-main btn-outline"><i class="fa fa-folder-open"></i> สร้าง Layer</button>
-                        </div>
-                        <div id="layerList"></div>
-                        <div id="paginationControls" class="pagination" style="display:none;"></div>
-                    </div>
-                    <div id="map"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="dashboard-section" style="margin-top: 40px; border-top: 5px solid #e2e8f0; padding-top: 40px;">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-8" style="font-family: 'Sarabun', sans-serif;">
-                <div class="text-center md:text-left">
-                    <h1 class="text-2xl font-bold text-gray-800" style="margin:0; font-size:24px;">📊 ข้อมูลการใช้รถรางและจักรยาน Anywheel</h1>
-                    <p class="text-gray-500 text-sm">รวมข้อมูล Anywheel และ รถราง (Tram)</p>
-                </div>
-                <div class="controls" style="margin:0; justify-content: flex-end;">
-                    <label>ช่วงวันที่:</label><input type="date" id="awStart"><label>ถึง</label><input type="date" id="awEnd">
-                    <button id="awFilterBtn">กรองข้อมูล</button>
-                </div>
-            </div>
-        
-            <div id="anywheel-section" style="font-family: 'Sarabun', sans-serif;">
-                <div class="flex items-center gap-2 mb-6 section-header" onclick="toggleSection('anywheel-content', 'icon-aw')">
-                    <span class="w-2 h-8 bg-green-600 rounded-full"></span>
-                    <h2 class="text-2xl font-bold text-gray-800" style="margin:0; text-align:left; font-size:24px;">🚲 สรุปการใช้รถ Anywheel <i id="icon-aw" class="fa fa-chevron-up toggle-icon"></i></h2>
-                </div>
-        
-                <div id="anywheel-content" class="section-content">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="stat-card-shadow border-l-8 border-green-500">
-                            <p class="aw-stat-label">จำนวนครั้งการใช้งาน</p>
-                            <div class="flex justify-center items-baseline"><p class="aw-stat-value" id="aw_cardTrips">-</p><span class="aw-stat-unit">ครั้ง</span></div>
-                        </div>
-                        <div class="stat-card-shadow border-l-8 border-green-500">
-                            <p class="aw-stat-label">ระยะทางรวม</p>
-                            <div class="flex justify-center items-baseline"><p class="aw-stat-value" id="aw_cardDistance">-</p><span class="aw-stat-unit">กม.</span></div>
-                        </div>
-                        <div class="stat-card-shadow border-l-8 border-green-500">
-                            <p class="aw-stat-label">ระยะเวลาใช้งาน</p>
-                            <div class="flex justify-center items-baseline"><p class="aw-stat-value" id="aw_cardDuration">-</p></div>
-                        </div>
-                    </div>
-            
-                    <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-                        <div class="bg-green-600 px-6 py-3 relative flex justify-center items-center">
-                            <h3 class="text-lg font-bold text-white" style="font-size:18px; color:white; margin:0;"><i class="fa-solid fa-list-ul"></i> รายละเอียดรายวัน (Anywheel)</h3>
-                            <div class="text-gray-100 text-sm absolute right-6" id="aw_pageInfo">หน้า 1</div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full text-left fixed-row-height">
-                                <thead class="bg-gray-100 border-b">
-                                    <tr>
-                                        <th class="px-6 py-3 font-semibold text-gray-700 text-center">วันที่</th>
-                                        <th class="px-6 py-3 font-semibold text-green-600 text-center">จำนวนครั้ง</th>
-                                        <th class="px-6 py-3 font-semibold text-green-600 text-center">ระยะทาง (กม.)</th>
-                                        <th class="px-6 py-3 font-semibold text-green-600 text-center">เวลาใช้งาน</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="aw_tableBody" class="divide-y divide-gray-200"></tbody>
-                            </table>
-                        </div>
-                        <div class="bg-gray-50 px-6 py-3 border-t flex justify-center gap-4">
-                            <button onclick="changePageAW(-1)" id="aw_prevBtn" class="btn-pagination"> < ก่อนหน้า </button>
-                            <span id="aw_pageNumbers" class="flex gap-2"></span>
-                            <button onclick="changePageAW(1)" id="aw_nextBtn" class="btn-pagination"> ถัดไป > </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        
-            <hr class="border-t-2 border-dashed border-gray-300 my-12">
-        
-            <div id="tram-section" style="font-family: 'Sarabun', sans-serif;">
-                <div class="flex items-center gap-2 mb-6 section-header" onclick="toggleSection('tram-content', 'icon-tram')">
-                    <span class="w-2 h-8 bg-blue-600 rounded-full"></span>
-                    <h2 class="text-2xl font-bold text-gray-800" style="margin:0; text-align:left; font-size:24px;">🚃 สรุปยอดเดินรถราง (Tram) <i id="icon-tram" class="fa fa-chevron-up toggle-icon"></i></h2>
-                </div>
-        
-                <div id="tram-content" class="section-content">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-                        <div class="stat-card-shadow border-l-4 border-blue-500">
-                            <p class="tram-stat-label">จำนวนงานทั้งหมด</p>
-                            <div class="flex justify-center items-baseline"><p class="tram-stat-value" id="tram_cardTrips">-</p><span class="tram-stat-unit">ครั้ง</span></div>
-                        </div>
-                        <div class="stat-card-shadow border-l-4 border-blue-500">
-                            <p class="tram-stat-label">จำนวนรอบรวม</p>
-                            <div class="flex justify-center items-baseline"><p class="tram-stat-value" id="tram_cardRounds">-</p><span class="tram-stat-unit">รอบ</span></div>
-                        </div>
-                        <div class="stat-card-shadow border-l-4 border-blue-500">
-                            <p class="tram-stat-label">ระยะทางรวม</p>
-                            <div class="flex justify-center items-baseline"><p class="tram-stat-value" id="tram_cardDistance">-</p><span class="tram-stat-unit">กม.</span></div>
-                        </div>
-                        <div class="stat-card-shadow border-l-4 border-blue-500">
-                            <p class="tram-stat-label">รถให้บริการ</p>
-                            <div class="flex justify-center items-baseline"><p class="tram-stat-value" id="tram_cardTrams">-</p><span class="tram-stat-unit">คัน</span></div>
-                        </div>
-                        <div class="stat-card-shadow border-l-4 border-blue-500">
-                            <p class="tram-stat-label">ระยะเวลาให้บริการ</p>
-                            <div class="flex justify-center items-baseline"><p class="tram-stat-value" id="tram_cardDuration">-</p></div>
-                        </div>
-                    </div>
-            
-                    <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-                        <div class="bg-blue-600 px-6 py-3 relative flex justify-center items-center">
-                            <h3 class="text-lg font-bold text-white" style="font-size:18px; color:white; margin:0;"><i class="fa-solid fa-list-ul"></i> รายละเอียดรายวัน (รถราง)</h3>
-                            <div class="text-gray-100 text-sm absolute right-6" id="tram_pageInfo">หน้า 1</div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full text-left fixed-row-height">
-                                <thead class="bg-gray-100 border-b">
-                                    <tr>
-                                        <th class="px-6 py-3 font-semibold text-center text-gray-700">วันที่</th>
-                                        <th class="px-6 py-3 font-semibold text-center text-gray-700">งาน</th>
-                                        <th class="px-6 py-3 font-semibold text-center text-blue-600">รอบ</th>
-                                        <th class="px-6 py-3 font-semibold text-center text-blue-600">ระยะ (กม.)</th>
-                                        <th class="px-6 py-3 font-semibold text-center text-blue-600">ระยะเวลา</th>
-                                        <th class="px-6 py-3 font-semibold text-center text-blue-600">รถ (คัน)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tram_tableBody" class="divide-y divide-gray-200"></tbody>
-                            </table>
-                        </div>
-                        <div class="bg-gray-50 px-6 py-3 border-t flex justify-center gap-4">
-                            <button onclick="changePageTram(-1)" id="tram_prevBtn" class="btn-pagination"> < ก่อนหน้า </button>
-                            <span id="tram_pageNumbers" class="flex gap-2"></span>
-                            <button onclick="changePageTram(1)" id="tram_nextBtn" class="btn-pagination"> ถัดไป > </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <hr class="border-t-2 border-dashed border-gray-300 my-12">
-        
-            <div id="tram-chart-section" style="font-family: 'Sarabun', sans-serif; margin-bottom: 40px; width: 100%;">
-                <div id="tram-chart-content" class="section-content" style="width: 100%;">
-                    <div id="chart_tram_dept" style="width: 100%; height: 750px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background: white; border: 1px solid #e2e8f0; padding: 20px; box-sizing: border-box;"></div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <div class="dash-modal-backdrop" id="dashModalBackdrop">
-        <div class="dash-modal" tabindex="-1">
-            <header><h3 id="dashModalTitle">รายละเอียด</h3><button class="close" id="dashModalClose">ปิด</button></header>
-            <div class="body"><div id="detailCard" class="detail-card"></div></div>
-            <footer>
-                <div class="nav-wrapper">
-                    <div class="count" id="caseCount">เคสที่ 0 / 0</div>
-                    <div class="nav-buttons"><button id="btnPrev">⬅ ก่อนหน้า</button><button id="btnNext">ถัดไป ➡</button></div>
-                </div>
-                <div style="text-align:center; margin-top: 10px;">
-                    <button id="markerDetailButton" style="display:none; padding: 8px 16px; border: 1px solid #1a73e8; background: #1a73e8; color: #fff; border-radius: 6px; cursor:pointer; font-weight:700;">แสดงรายละเอียด</button>
-                </div>
-            </footer>
-        </div>
-    </div>
-
-    <div id="mapEditModal" class="map-modal">
-        <div class="map-modal-content">
-            <div class="map-modal-header">
-                <h3 style="margin:0;">แก้ไขข้อมูลหมุด</h3><span class="modal-close" onclick="closeMapModal()" style="cursor:pointer; font-size:24px;">&times;</span>
-            </div>
-            <form id="markerEditForm">
-                <input type="hidden" id="modalLayerId"><input type="hidden" id="modalMarkerId">
-                <div class="map-search-box">
-                    <div style="flex-grow: 1;">
-                        <label class="map-form-group label">ค้นหาจากรหัส (Column BF)</label>
-                        <input type="text" id="mapSearchInput" class="map-form-control" placeholder="กรอกรหัส..." onkeypress="return handleSearchKey(event)">
-                    </div>
-                    <button type="button" class="map-btn-search" onclick="searchStudentDataMap()" id="mapBtnSearch"><i class="fa fa-search"></i> ค้นหา</button>
-                </div>
-                <div class="map-form-group" style="margin-bottom:10px;"><label>วันที่ (Col B)</label><input type="text" id="modalDate" class="map-form-control"></div>
-                <div class="map-form-grid">
-                    <div class="map-form-group"><label>ข้อมูล Col H</label><input type="text" id="inputColH" class="map-form-control"></div>
-                    <div class="map-form-group"><label>ข้อมูล Col G</label><input type="text" id="inputColG" class="map-form-control"></div>
-                </div>
-                <div class="map-form-grid">
-                    <div class="map-form-group"><label>ข้อมูล Col J</label><input type="text" id="inputColJ" class="map-form-control"></div>
-                    <div class="map-form-group"><label>ข้อมูล Col K</label><input type="text" id="inputColK" class="map-form-control"></div>
-                </div>
-                <div class="map-form-group" style="margin-bottom:10px;"><label>ข้อมูล Col AD</label><input type="text" id="inputColAD" class="map-form-control"></div>
-                <div class="map-form-group" style="margin-bottom:10px;"><label>ลิงก์รูปภาพ (Col AE)</label><input type="text" id="inputColAE" class="map-form-control" placeholder="https://..."></div>
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
-                <div class="map-form-group" style="display: flex; gap: 15px; margin-bottom:10px;">
-                    <div style="flex: 1;"><label>ไอคอน</label><select id="modalEventType" class="map-form-control"><option value="car">🚗 รถยนต์</option><option value="motorcycle">🏍️ มอเตอร์ไซค์</option><option value="bus">🚌 รถบัส</option><option value="bicycle">🚲 จักรยาน</option><option value="landmark">🏛️ สถานที่สำคัญ</option></select></div>
-                    <div><label>สี</label><div class="color-selector"><label class="color-choice red"><input type="radio" name="markerColor" value="red"><span></span></label><label class="color-choice blue"><input type="radio" name="markerColor" value="blue"><span></span></label></div></div>
-                </div>
-                <div class="map-modal-footer"><button type="button" class="btn-cancel" onclick="closeMapModal()">ยกเลิก</button><button type="submit" class="btn-save">บันทึก</button></div>
-            </form>
-        </div>
-    </div>
-
-    <script src="report_script.js"></script>
+            const submenuLinks = document.querySelectorAll('.has-submenu > a');
+            submenuLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const submenu = this.nextElementSibling;
+                    if (submenu && submenu.classList.contains('submenu')) {
+                        e.preventDefault(); e.stopImmediatePropagation(); 
+                        submenu.classList.toggle('show-submenu');
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

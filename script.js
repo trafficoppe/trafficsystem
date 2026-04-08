@@ -133,3 +133,27 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebar.classList.remove('keep-open');
     });
 });
+// ========================================================
+// 🌟 ระบบควบคุมเมนูย่อย (Dropdown Toggle) สำหรับ Sidebar 🌟
+// ========================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // หาเมนูหลักทุกอันที่มีเมนูย่อยซ่อนอยู่
+    const submenuLinks = document.querySelectorAll('.has-submenu > a');
+    
+    submenuLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            // 1. ป้องกันไม่ให้หน้าเว็บกระตุกเด้งกลับไปด้านบน
+            e.preventDefault(); 
+            // 2. ป้องกันคำสั่งซ้อนทับกัน
+            e.stopImmediatePropagation(); 
+            
+            // 3. หาเมนูย่อยที่อยู่ติดกับเมนูหลักที่เพิ่งถูกคลิก
+            const submenu = this.nextElementSibling;
+            
+            if (submenu && submenu.classList.contains('submenu')) {
+                // 4. สลับสถานะเปิด-ปิด (ถ้าปิดอยู่จะเปิด ถ้าเปิดอยู่จะปิด)
+                submenu.classList.toggle('show-submenu');
+            }
+        });
+    });
+});

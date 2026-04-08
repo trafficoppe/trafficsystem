@@ -9,58 +9,72 @@
 </head>
 <body>
 
-    <div class="sidebar">
+   <div class="sidebar">
         <div class="sidebar-header">
             ระบบงานจราจร
         </div>
         <ul class="sidebar-menu">
+           <ul class="sidebar-menu">
+            <!-- 1. เมนูบุคลากร/พนักงาน -->
             <li class="has-submenu">
-                <a href="index.html?main=staff" id="menu-staff">บุคลากร/พนักงาน</a>
+                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-staff').classList.toggle('show-submenu');" id="menu-staff">
+                    บุคลากร/พนักงาน ▾
+                </a>
                 <ul class="submenu" id="submenu-staff">
-                    <li><a href="index.html?main=staff&unit=ยุทธศาสตร์" id="menu-staff-strat">หน่วยยุทธศาสตร์ฯ</a></li>
-                    <li><a href="index.html?main=staff&unit=ปฏิบัติการ" id="menu-staff-op">หน่วยปฏิบัติการฯ</a></li>
+                    <li><a href="index.html?main=staff&unit=all">บุคลากรทั้งหมด</a></li>
+                    <li><a href="index.html?main=staff&unit=ยุทธศาสตร์">หน่วยยุทธศาสตร์ฯ</a></li>
+                    <li><a href="index.html?main=staff&unit=ปฏิบัติการ">หน่วยปฏิบัติการฯ</a></li>
                 </ul>
             </li>
 
+            <!-- 2. เมนูการดูแลพื้นที่ส่วนกลาง -->
             <li class="has-submenu">
-                <a href="index.html?main=mission" id="menu-mission">การดูแลพื้นที่ส่วนกลาง</a>
+                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-mission').classList.toggle('show-submenu');" id="menu-mission">
+                    การดูแลพื้นที่ส่วนกลาง ▾
+                </a>
                 <ul class="submenu" id="submenu-mission">
-                    <li><a href="index.html?main=mission&unit=ตรวจพื้นที่" id="menu-mission-inspect">ตรวจพื้นที่</a></li>
-                    <li><a href="index.html?main=mission&unit=ช่วยเหลือ" id="menu-mission-help">ให้ความช่วยเหลือ</a></li>
-                    <li><a href="index.html?main=mission&unit=การจราจร" id="menu-mission-traffic">งานจราจร</a></li>
-                    <li><a href="index.html?main=mission&unit=ตารางเวร" id="menu-mission-schedule">ตารางเวร</a></li>
+                    <li><a href="index.html?main=mission&unit=ตรวจพื้นที่">ตรวจพื้นที่</a></li>
+                    <li><a href="index.html?main=mission&unit=ช่วยเหลือ">ให้ความช่วยเหลือ</a></li>
+                    <li><a href="index.html?main=mission&unit=การจราจร">งานจราจร</a></li>
+                    <li><a href="index.html?main=mission&unit=ตารางเวร">ตารางเวร</a></li>
                 </ul>
             </li>
             
             <li><a href="index.html?main=vehicle" id="menu-vehicle">ยานพาหนะทั้งหมด</a></li>
             
+            <!-- 3. เมนูอุปกรณ์ดับเพลิง -->
             <li class="has-submenu">
-                <a href="index.html?main=fire" id="menu-fire">อุปกรณ์ดับเพลิง</a>
+                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-fire').classList.toggle('show-submenu');" id="menu-fire">
+                    อุปกรณ์ดับเพลิง ▾
+                </a>
                 <ul class="submenu" id="submenu-fire">
-                    <li><a href="index.html?main=fire&unit=ถังดับเพลิง" id="menu-fire-extinguisher">ถังดับเพลิง</a></li>
-                    <li><a href="index.html?main=fire&unit=สายส่งน้ำดับเพลิง" id="menu-fire-hose">สายส่งน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=หัวฉีด" id="menu-fire-nozzle">หัวฉีด</a></li>
-                    <li><a href="index.html?main=fire&unit=ปั๊มน้ำ" id="menu-fire-pump">ปั๊มน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=ตู้เก็บอุปกรณ์" id="menu-fire-cabinet">ตู้เก็บอุปกรณ์</a></li>
-                    <li><a href="index.html?main=fire&unit=หัวรับน้ำ" id="menu-fire-hydrant">หัวรับน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=ชุด ppe" id="menu-fire-ppe">ชุด PPE</a></li>
+                    <li><a href="index.html?main=fire&unit=ถังดับเพลิง">ถังดับเพลิง</a></li>
+                    <li><a href="index.html?main=fire&unit=สายส่งน้ำดับเพลิง">สายส่งน้ำ</a></li>
+                    <li><a href="index.html?main=fire&unit=หัวฉีด">หัวฉีด</a></li>
+                    <li><a href="index.html?main=fire&unit=ปั๊มน้ำ">ปั๊มน้ำ</a></li>
+                    <li><a href="index.html?main=fire&unit=ตู้เก็บอุปกรณ์">ตู้เก็บอุปกรณ์</a></li>
+                    <li><a href="index.html?main=fire&unit=หัวรับน้ำ">หัวรับน้ำ</a></li>
+                    <li><a href="index.html?main=fire&unit=ชุด ppe">ชุด PPE</a></li>
                 </ul>              
             </li>          
-            
-            <li><a href="index.html?main=form" id="menu-form">แบบฟอร์มต่างๆ</a></li>
 
-            <li>
-                <a href="index.html?main=lostfound" id="menu-lostfound">แจ้งของหาย/เก็บของได้</a>
-            </li>
+            <!-- เน้นสีที่แถบแบบฟอร์มต่างๆ เพราะกำลังอยู่ในหน้านี้ -->
+            <li><a href="index.html?main=form" id="menu-form" class="active">แบบฟอร์มต่างๆ</a></li>
             
-            <li class="has-submenu" style="margin-top: 20px; border-top: 1px solid #34495e;">
-                <a href="#" id="menu-report-main" style="color: #f1c40f; font-weight: 500;">
-                    รายงานและสถิติ
+            <li><a href="index.html?main=lostfound" id="menu-lostfound">แจ้งของหาย/เก็บของได้</a></li>
+            
+            <!-- 4. เมนูรายงานและสถิติ -->
+            <li class="has-submenu" style="margin-top: 20px; border-top: 1px solid #34495e; padding-top: 10px;">
+                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-report').classList.toggle('show-submenu');" id="menu-report-main" style="color: #f1c40f; font-weight: 500;">
+                    รายงานและสถิติ ▾
                 </a>
                 <ul class="submenu" id="submenu-report">
-                    <li><a href="report_daily.html" id="menu-report-daily" style="color: #f1c40f;">รายงานประจำวัน</a></li>
-                    <li><a href="report.html" id="menu-report-monthly" style="color: #f1c40f;">รายงานประจำเดือน</a></li>
+                    <li><a href="report.html?tab=daily" style="color: #bdc3c7; transition: 0.3s;">รายงานประจำวัน</a></li>
+                    <li><a href="report.html?tab=monthly" style="color: #bdc3c7; transition: 0.3s;">รายงานประจำเดือน</a></li>
+                    <li><a href="report.html?tab=security" style="color: #bdc3c7; transition: 0.3s;">รายงานตรวจรับ รปภ.</a></li>
                 </ul>
+            </li>
+                </a>
             </li>
         </ul>
     </div>

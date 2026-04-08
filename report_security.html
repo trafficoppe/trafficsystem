@@ -4,7 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>รายงานตรวจรับ รปภ. - Monthly Dashboard</title>
+    <script>
+        // โค้ดปรับหน้าจอให้เต็มกรอบ เพื่อแก้ปัญหาภาพเบี้ยวไปทางขวา
+        if (window.self !== window.top) {
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .sidebar { display: none !important; } 
+                body { margin: 0 !important; padding: 0 !important; overflow-x: hidden !important; }
+                .daily-wrapper, .main-content { 
+                    margin: 0 !important; 
+                    width: 100vw !important; 
+                    max-width: 100% !important; 
+                    padding: 0 !important; 
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    </script>
     
+    <script>
+        if (window.self !== window.top) {
+            const style = document.createElement('style');
+            style.innerHTML = '.sidebar { display: none !important; } .main-content { margin-left: 0 !important; width: 100% !important; padding-bottom: 0 !important; }';
+            document.head.appendChild(style);
+        }
+    </script>
+
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="report_security_style.css">
@@ -17,31 +42,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
-<body>
+<body style="background-color: #f8fafc;">
 
-    <div class="sidebar">
-        <div class="sidebar-header">ระบบงานจราจร</div>
-        <ul class="sidebar-menu">
-            <li><a href="index.html?main=staff">บุคลากร/พนักงาน</a></li>
-            <li><a href="index.html?main=mission">การดูแลพื้นที่ส่วนกลาง</a></li>
-            <li><a href="index.html?main=vehicle">ยานพาหนะทั้งหมด</a></li>
-            <li><a href="index.html?main=fire&unit=ถังดับเพลิง">อุปกรณ์ดับเพลิง</a></li>
-            <li><a href="index.html?main=form">แบบฟอร์มต่างๆ</a></li>
-            <li><a href="index.html?main=lostfound">แจ้งของหาย/เก็บของได้</a></li>
-            
-            <li class="has-submenu" style="margin-top: 20px; border-top: 1px solid #34495e; padding-top: 10px;">
-                <a href="#" onclick="document.getElementById('submenu-report').classList.toggle('show-submenu'); return false;" id="menu-report" style="color: #f1c40f; font-weight: 500;">
-                    รายงานประจำเดือน ▾
-                </a>
-                <ul class="submenu show-submenu" id="submenu-report">
-                    <li><a href="report.html" style="color: #bdc3c7;">ภาพรวมส่วนกลาง</a></li>
-                    <li><a href="report_security.html" style="color: #fff; font-weight: bold;">รายงานตรวจรับ รปภ.</a></li>
-                </ul>
-            </li>
-        </ul>
-    </div>
-
-    <div class="main-content" style="padding: 0; overflow-y: auto; height: 100vh; background-color: #f8fafc;">
+    <div class="main-content" style="padding: 0; overflow-y: auto; height: 100vh; background-color: #f8fafc; margin-left: 0; width: 100%;">
         <div class="security-dashboard-wrapper p-6 md:p-10 pb-20">
             
             <div class="max-w-7xl mx-auto mb-10 text-center fade-in">
@@ -49,7 +52,6 @@
                 
                 <div class="flex justify-center items-center gap-4 flex-wrap">
                     <select id="monthSelect" onchange="handleDateChange()" class="custom-dropdown bouncy bg-white border-2 border-gray-200 text-gray-700 hover:border-indigo-400 text-xl font-bold py-3 px-6 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"></select>
-                    
                     <select id="yearSelect" onchange="handleDateChange()" class="custom-dropdown bouncy bg-white border-2 border-gray-200 text-gray-700 hover:border-indigo-400 text-xl font-bold py-3 px-6 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"></select>
                 </div>
 
