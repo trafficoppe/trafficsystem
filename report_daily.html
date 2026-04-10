@@ -4,46 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Safety Dashboard - Official Daily Report</title>
-    <script>
-        // โค้ดปรับหน้าจอให้เต็มกรอบ เพื่อแก้ปัญหาภาพเบี้ยวไปทางขวา
-        if (window.self !== window.top) {
-            const style = document.createElement('style');
-            style.innerHTML = `
-                .sidebar { display: none !important; } 
-                body { margin: 0 !important; padding: 0 !important; overflow-x: hidden !important; }
-                .daily-wrapper, .main-content { 
-                    margin: 0 !important; 
-                    width: 100vw !important; 
-                    max-width: 100% !important; 
-                    padding: 0 !important; 
-                }
-            `;
-            document.head.appendChild(style);
-        }
-    </script>
     
-    <script>
-        if (window.self !== window.top) {
-            const style = document.createElement('style');
-            style.innerHTML = '.sidebar { display: none !important; } .daily-wrapper, .main-content { margin-left: 0 !important; width: 100% !important; padding-bottom: 0 !important; }';
-            document.head.appendChild(style);
-        }
-    </script>
-
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link href="https://fonts.cdnfonts.com/css/th-sarabun-new" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { corePlugins: { preflight: false } }</script>
-
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         :root { --bg: #f1f5f9; --ink: #0f172a; --line: #e2e8f0; --blue-600: #2563eb; }
-        
-        .daily-wrapper { background: var(--bg); color: var(--ink); font-family: 'TH Sarabun New', 'Sarabun', sans-serif; font-size: 16px; min-height: 100vh; }
+        body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: 'TH Sarabun New', 'Sarabun', sans-serif; font-size: 16px; }
         
         .dashboard-section { padding: 30px; max-width: 1050px; margin: 0 auto; }
         
@@ -58,142 +30,137 @@
 
         .section-header { text-align: center; font-size: 18px; margin: 0 0 20px 0; font-weight: 800; }
         
-        input[type="date"] { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 20; }
-        input[type="date"]::-webkit-calendar-picker-indicator { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        input[type="date"] {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; height: 100%;
+            opacity: 0; 
+            cursor: pointer;
+            z-index: 20;
+        }
         
-        .dash-table { width: 100%; height: 100%; border-collapse: separate; border-spacing: 0; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; table-layout: fixed; }
-        .dash-table thead th { background: #334155; color: #fff; padding: 12px; font-size: 16px; text-align: center; }
-        .dash-table td { font-size: 16px; padding: 10px; border-bottom: 1px solid #cbd5e1; text-align: center; }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; height: 100%;
+            opacity: 0; 
+            cursor: pointer;
+        }
+        
+        .dash-table { 
+            width: 100%; 
+            height: 100%; 
+            border-collapse: separate; 
+            border-spacing: 0; 
+            background: #fff; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            table-layout: fixed; 
+        }
+        
+        .dash-table thead th { 
+            background: #334155; 
+            color: #fff; 
+            padding: 12px; 
+            font-size: 16px; 
+            text-align: center; 
+        }
+        
+        .dash-table td { 
+            font-size: 16px; 
+            padding: 10px; 
+            border-bottom: 1px solid #cbd5e1; 
+            text-align: center; 
+        }
+
         .dash-table th:first-child { border-right: 1px solid #475569; }
         .dash-table td:first-child { border-right: 1px solid #cbd5e1; }
         
-        .thai-justify { text-align: left; line-height: 1.8; word-break: break-word; text-indent: 80px; }
+        .thai-justify {
+            text-align: justify;
+            text-justify: inter-word;
+            word-break: break-word;
+            text-indent: 80px;
+        }
 
         @media (max-width: 768px) {
             .main-card { padding: 20px; }
-            #exportBtn { position: relative; width: 100%; justify-content: center; margin-top: 15px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="main-content daily-wrapper" style="overflow-y: auto; padding: 0;">
-        <div class="dashboard-section" id="containerSection">
-            <div class="main-card relative" id="exportContent">
+    <div class="dashboard-section" id="containerSection">
+        <div class="main-card relative" id="pdfContent">
+            
+            <div class="flex justify-center items-center mb-10 relative flex-wrap gap-3" id="controlsContainer">
+                <button id="btnPrev" onclick="changeDate(-1)" class="flex-shrink-0 w-10 h-10 rounded-full bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 flex justify-center items-center transition shadow-sm border-2 border-slate-200 hover:border-blue-300 z-10">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
                 
-                <div class="flex justify-center items-center mb-10 relative flex-wrap gap-y-4" id="controlsContainer">
-                    <button id="btnPrev" onclick="changeDate(-1)" class="flex-shrink-0 w-10 h-10 rounded-full bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 flex justify-center items-center transition shadow-sm border-2 border-slate-200 hover:border-blue-300 z-10">
-                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
-                    </button>
-                    
-                    <div id="dateBox" class="relative flex justify-center items-center mx-4 bg-slate-50 border-2 border-slate-200 rounded-full px-8 py-2 cursor-pointer hover:border-blue-400 transition shadow-sm overflow-hidden group min-w-[320px]">
-                        <div id="customDateText" class="font-bold text-[18px] text-slate-700 pointer-events-none whitespace-nowrap text-center">
-                            รายงานเหตุการณ์ประจำ...
-                        </div>
-                        <input type="date" id="dateSelect" onchange="renderAllTables()">
+                <div id="dateBox" class="relative flex justify-center items-center bg-slate-50 border-2 border-slate-200 rounded-full px-8 py-2 cursor-pointer hover:border-blue-400 transition shadow-sm overflow-hidden group min-w-[320px]">
+                    <div id="customDateText" class="font-bold text-[18px] text-slate-700 pointer-events-none whitespace-nowrap text-center">
+                        รายงานเหตุการณ์ประจำ...
                     </div>
-
-                    <button id="btnNext" onclick="changeDate(1)" class="flex-shrink-0 w-10 h-10 rounded-full bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 flex justify-center items-center transition shadow-sm border-2 border-slate-200 hover:border-blue-300 z-10">
-                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                    </button>
-
-                    <button id="exportBtn" onclick="exportToJPG()" class="md:absolute right-0 top-1/2 md:transform md:-translate-y-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-full shadow-md flex items-center transition z-50">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        Save as JPG
-                    </button>
+                    <input type="date" id="dateSelect" onchange="renderAllTables()">
                 </div>
 
-                <div class="flex flex-col md:flex-row gap-8 mb-10 items-stretch">
-                    <div class="flex-1 flex flex-col">
-                        <h1 class="section-header">เหตุการณ์</h1>
-                        <div class="flex-1"> 
-                            <table class="dash-table">
-                                <thead>
-                                    <tr>
-                                        <th class="text-center" style="width:65%;">ประเภทเหตุการณ์</th>
-                                        <th class="text-center" style="width:35%;">จำนวน</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="incDailyBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="flex-1 flex flex-col">
-                        <h1 class="section-header">จำนวนรถเข้า</h1>
-                        <div class="flex-1"> 
-                            <table class="dash-table">
-                                <thead>
-                                    <tr>
-                                        <th class="text-center" style="width:65%;">ประตู</th>
-                                        <th class="text-center" style="width:35%;">จำนวนรถ (คัน)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="carDailyBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                <button id="btnNext" onclick="changeDate(1)" class="flex-shrink-0 w-10 h-10 rounded-full bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 flex justify-center items-center transition shadow-sm border-2 border-slate-200 hover:border-blue-300 z-10">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                </button>
 
-                <hr class="my-10 border-t-2 border-dashed border-gray-300">
-                <div id="pdfTitleContainer">
-                    <h2 class="text-[18px] font-bold text-center mb-8">รายละเอียดรายงานเหตุการณ์</h2>
-                </div>
-                <div id="incidentTextDetails"></div>
+                <button onclick="exportToJPEG()" class="flex-shrink-0 px-5 h-10 ml-2 rounded-full bg-green-500 hover:bg-green-600 text-white flex justify-center items-center transition shadow-sm font-bold text-[16px] gap-2">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    บันทึกเป็นภาพ
+                </button>
             </div>
+
+            <h1 id="printHeader" class="text-center font-extrabold text-[32px] text-gray-800 mb-8" style="display: none;">
+                รายงานเหตุการณ์ วันที่ ...
+            </h1>
+
+            <div class="flex flex-col md:flex-row gap-8 mb-10 items-stretch">
+                
+                <div class="flex-1 flex flex-col">
+                    <h1 class="section-header">เหตุการณ์</h1>
+                    <div class="flex-1"> <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width:65%;">ประเภทเหตุการณ์</th>
+                                    <th class="text-center" style="width:35%;">จำนวน</th>
+                                </tr>
+                            </thead>
+                            <tbody id="incDailyBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col">
+                    <h1 class="section-header">จำนวนรถเข้า</h1>
+                    <div class="flex-1"> <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width:65%;">ประตู</th>
+                                    <th class="text-center" style="width:35%;">จำนวนรถ (คัน)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="carDailyBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <hr class="my-10 border-t-2 border-dashed border-gray-300">
+            <h2 class="text-[18px] font-bold text-center mb-8">รายละเอียดรายงานเหตุการณ์</h2>
+            
+            <div id="incidentTextDetails"></div>
+            
         </div>
     </div>
 
     <script>
-        async function exportToJPG() {
-            window.scrollTo(0, 0); 
-            const element = document.getElementById('exportContent');
-            const controlsContainer = document.getElementById('controlsContainer');
-            const dateText = document.getElementById('customDateText').innerText;
-            const pdfTitleContainer = document.getElementById('pdfTitleContainer');
-
-            controlsContainer.style.display = 'none';
-            const dateHeader = document.createElement('h1');
-            dateHeader.id = 'tempDateHeader';
-            dateHeader.className = 'text-center font-bold text-[22px] text-blue-800 mb-8 mt-4';
-            dateHeader.innerText = dateText;
-            pdfTitleContainer.insertBefore(dateHeader, pdfTitleContainer.firstChild);
-
-            await new Promise(r => setTimeout(r, 100));
-
-            const images = element.getElementsByTagName('img');
-            const promises = Array.from(images).map(img => {
-                if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
-                return new Promise(resolve => {
-                    img.onload = resolve;
-                    img.onerror = resolve; 
-                });
-            });
-            await Promise.all(promises);
-
-            const selectedDate = document.getElementById('dateSelect').value;
-            const fileName = `รายงานเหตุการณ์_${selectedDate}.jpg`;
-
-            html2canvas(element, { scale: 2, useCORS: true, scrollY: 0, backgroundColor: '#ffffff' }).then(canvas => {
-                const imgData = canvas.toDataURL('image/jpeg', 1.0); 
-                const link = document.createElement('a');
-                link.download = fileName;
-                link.href = imgData;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                controlsContainer.style.display = 'flex';
-                const tempHeader = document.getElementById('tempDateHeader');
-                if (tempHeader) tempHeader.remove();
-            }).catch(err => {
-                console.error('เกิดข้อผิดพลาดในการสร้างรูปภาพ:', err);
-                alert('เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้ง');
-                controlsContainer.style.display = 'flex';
-                const tempHeader = document.getElementById('tempDateHeader');
-                if (tempHeader) tempHeader.remove();
-            });
-        }
-
         const thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
         function formatThaiDate(d){ return `วันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear() + 543}`; }
 
@@ -203,16 +170,20 @@
         const mm = String(yesterday.getMonth() + 1).padStart(2, '0');
         const dd = String(yesterday.getDate()).padStart(2, '0');
         document.getElementById('dateSelect').value = `${yyyy}-${mm}-${dd}`;
+        
         document.getElementById('customDateText').innerHTML = `รายงานเหตุการณ์ประจำ<span class="text-blue-600 ml-2">${formatThaiDate(yesterday)}</span>`;
 
         function changeDate(offset) {
             const dateInput = document.getElementById('dateSelect');
             if (!dateInput.value) return;
+            
             const currentDate = new Date(dateInput.value);
             currentDate.setDate(currentDate.getDate() + offset);
+            
             const y = currentDate.getFullYear();
             const m = String(currentDate.getMonth() + 1).padStart(2, '0');
             const d = String(currentDate.getDate()).padStart(2, '0');
+            
             dateInput.value = `${y}-${m}-${d}`;
             renderAllTables(); 
         }
@@ -247,6 +218,7 @@
         let flags = { accident: false, lf: false, car: false };
 
         function loadScript(url) { const s = document.createElement('script'); s.src = url; document.body.appendChild(s); }
+
         loadScript('https://docs.google.com/spreadsheets/d/1tj_BC_YkBBcin8FqqXB_OvOF5ku2Y24MTh04XmA9zTk/gviz/tq?tqx=responseHandler:handleAccidentData&gid=3452793');
         loadScript('https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=responseHandler:handleLFData&gid=751456190');
         loadScript('https://docs.google.com/spreadsheets/d/1hEFLf_CuzabHOIdCp_LWEU5M8Be_7bsx1aBZickoSXA/gviz/tq?tqx=responseHandler:handleCarData&gid=0');
@@ -256,13 +228,20 @@
                 accidentData = json.table.rows.map(r => {
                     const c = r.c; if(!c) return null;
                     let type = (c[5]?.v || "เหตุการณ์ทั่วไป").toString().trim();
-                    if (type === "ว.40") type = "อุบัติเหตุจากยานพาหนะ";
+                    
+                    if (type === "ว.40") {
+                        type = "อุบัติเหตุจากยานพาหนะ";
+                    }
+                    
                     const excludeWords = ["คืนของ", "รับของคืน", "เก็บของได้", "แจ้งเก็บของได้", "แจ้งของหาย", "ปลดบังคับล้อ"];
-                    if (excludeWords.some(word => type.includes(word))) return null; 
+                    if (excludeWords.some(word => type.includes(word))) {
+                        return null; 
+                    }
 
                     let narrative = (c[29]?.v || "").toString().trim(); 
                     if (!narrative) narrative = (c[13]?.v || "").toString().trim();
                     if (!narrative) narrative = "ไม่มีรายละเอียดเพิ่มเติม";
+
                     narrative = narrative.replace(/^\d{1,2}:\d{2}(:\d{2})?\s*(AM|PM)?/i, '').trim();
                     narrative = narrative.replace(/\s{2,}/g, ' '); 
 
@@ -271,10 +250,15 @@
                         const p = c[1].v.match(/\d+/g);
                         if(p) { let y = parseInt(p[0]); if(y>2400) y-=543; d = new Date(y, p[1], p[2]); }
                     }
+
                     let imgLink = "";
                     for (let i = c.length - 1; i >= 0; i--) {
-                        if (c[i] && c[i].v && typeof c[i].v === 'string' && c[i].v.includes('drive.google.com')) { imgLink = c[i].v; break; }
+                        if (c[i] && c[i].v && typeof c[i].v === 'string' && c[i].v.includes('drive.google.com')) {
+                            imgLink = c[i].v;
+                            break;
+                        }
                     }
+
                     return { date: d, type: type, detail: narrative, img: imgLink }; 
                 }).filter(x => x && x.date);
             }
@@ -285,41 +269,42 @@
             if(json && json.table && json.table.rows) {
                 lfData = json.table.rows.map(r => {
                     const c = r.c; if(!c) return null;
-                    const stampVal = c[0]?.v; if(!stampVal) return null;
-                    let reportDate = new Date(); 
-                    const rp = stampVal.toString().match(/\d+/g); 
-                    if(rp) { let y = parseInt(rp[0]); if(y > 2400) y -= 543; reportDate = new Date(y, rp[1], rp[2]); }
-
-                    const dVal = c[1]?.v; let d = new Date(); 
-                    if (dVal) { const p = dVal.toString().match(/\d+/g); if(p) { let y = parseInt(p[0]); if(y > 2400) y -= 543; d = new Date(y, p[1], p[2]); } }
+                    const dVal = c[1]?.v; if(!dVal) return null;
+                    let d = new Date(); const p = dVal.toString().match(/\d+/g); if(p) d = new Date(p[0], p[1], p[2]);
+                    if(d.getFullYear() > 2400) d.setFullYear(d.getFullYear()-543);
 
                     let name = (c[2]?.v || "ไม่ระบุชื่อ").toString().trim();
-                    if (!name.startsWith('คุณ') && !name.startsWith('นาย') && !name.startsWith('นาง') && !name.startsWith('นางสาว')) { name = 'คุณ' + name; }
+                    if (!name.startsWith('คุณ') && !name.startsWith('นาย') && !name.startsWith('นาง') && !name.startsWith('นางสาว')) {
+                        name = 'คุณ' + name;
+                    }
 
                     const status = (c[6]?.v || "").toString();
                     const item = (c[10]?.v || c[7]?.v || c[13]?.v || "สิ่งของ").toString().replace(/\n/g, ' ').trim();
                     const place = (c[11]?.v || c[8]?.v || "ไม่ระบุสถานที่").toString().trim();
-                    const time = formatThaiTime(c[15]?.f || c[15]?.v || "");
+                    const time = formatThaiTime(c[15]?.f || "");
 
-                    let type = "สิ่งของสูญหาย";
-                    if (status.includes("คืน")) type = "รับของคืน";
-                    else if (status.includes("พบ")) type = "พบสิ่งของ";
-
+                    let type = status.includes("คืน") ? "รับของคืน" : (status.includes("พบ") ? "แจ้งเก็บของได้" : "แจ้งของหาย");
                     let narrative = "";
+
                     if (type === "รับของคืน") {
-                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้มาติดต่อขอรับสิ่งของคืน ประกอบด้วย ${item} โดยทางเจ้าหน้าที่ได้ตรวจสอบและส่งมอบคืนเป็นที่เรียบร้อย`;
-                    } else if (type === "พบสิ่งของ") {
-                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้พบ ${item} ตกหล่นบริเวณ${place} และได้นำมามอบให้เจ้าหน้าที่เพื่อประกาศตามหาเจ้าของ`;
+                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้มาติดต่อขอรับสิ่งของคืน ประกอบด้วย ${item} โดยทางเจ้าหน้าที่ได้ตรวจสอบความถูกต้องและส่งมอบสิ่งของคืนให้แก่เจ้าของเป็นที่เรียบร้อยแล้ว`;
+                    } else if (type === "แจ้งเก็บของได้") {
+                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้พบสิ่งของตกหล่น คือ ${item} บริเวณ${place} และได้นำมามอบให้เจ้าหน้าที่เพื่อประกาศตามหาเจ้าของมารับคืนต่อไป`;
                     } else {
-                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้แจ้งเหตุสิ่งของสูญหาย คือ ${item} บริเวณ${place} ทางเจ้าหน้าที่ได้บันทึกข้อมูลเพื่อดำเนินการประสานงานต่อไป`;
+                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้แจ้งเหตุสิ่งของสูญหาย คือ ${item} คาดว่าหล่นหายบริเวณ${place} เจ้าหน้าที่ได้บันทึกข้อมูลเพื่อประสานงานติดตามต่อไป`;
                     }
+                    
                     narrative = narrative.replace(/\s{2,}/g, ' '); 
 
                     let imgLink = "";
                     for (let i = c.length - 1; i >= 0; i--) {
-                        if (c[i] && c[i].v && typeof c[i].v === 'string' && c[i].v.includes('drive.google.com')) { imgLink = c[i].v; break; }
+                        if (c[i] && c[i].v && typeof c[i].v === 'string' && c[i].v.includes('drive.google.com')) {
+                            imgLink = c[i].v;
+                            break;
+                        }
                     }
-                    return { date: reportDate, type: type, detail: narrative, img: imgLink };
+
+                    return { date: d, type: type, detail: narrative, img: imgLink };
                 }).filter(x => x);
             }
             flags.lf = true; checkSetupData();
@@ -344,53 +329,171 @@
             const targetDate = new Date(ds);
             const isSame = (d1, d2) => d1 && d2.getFullYear() === d1.getFullYear() && d2.getMonth() === d1.getMonth() && d2.getDate() === d1.getDate();
 
-            document.getElementById('customDateText').innerHTML = `รายงานเหตุการณ์ประจำ<span class="text-blue-600 ml-2">${formatThaiDate(targetDate)}</span>`;
+            const dateStr = formatThaiDate(targetDate);
+            document.getElementById('customDateText').innerHTML = `รายงานเหตุการณ์ประจำ<span class="text-blue-600 ml-2">${dateStr}</span>`;
+            document.getElementById('printHeader').innerText = `รายงานเหตุการณ์ วันที่ ${dateStr}`;
 
             const summary = {};
             let dailyAll = [];
             accidentData.concat(lfData).forEach(r => {
-                if(isSame(r.date, targetDate)) { summary[r.type] = (summary[r.type] || 0) + 1; dailyAll.push(r); }
+                if(isSame(r.date, targetDate)) {
+                    summary[r.type] = (summary[r.type] || 0) + 1;
+                    dailyAll.push(r);
+                }
             });
 
-            const incKeys = Object.keys(summary).sort();
+            const priorityOrder = [
+                "อุบัติเหตุจากยานพาหนะ",
+                "อุบัติเหตุทั่วไป",
+                "รับส่งผู้ป่วย",
+                "รับส่งผู้ได้รับบาดเจ็บ"
+            ];
+
+            const incKeys = Object.keys(summary).sort((a, b) => {
+                let indexA = priorityOrder.indexOf(a);
+                let indexB = priorityOrder.indexOf(b);
+                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                if (indexA !== -1) return -1;
+                if (indexB !== -1) return 1;
+                return a.localeCompare(b, 'th');
+            });
+
+            dailyAll.sort((a, b) => {
+                let indexA = priorityOrder.indexOf(a.type);
+                let indexB = priorityOrder.indexOf(b.type);
+                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                if (indexA !== -1) return -1;
+                if (indexB !== -1) return 1;
+                return a.type.localeCompare(b.type, 'th');
+            });
+
             const maxDataRows = Math.max(5, incKeys.length);
-            const incBody = document.getElementById('incDailyBody'); incBody.innerHTML = '';
+
+            const incBody = document.getElementById('incDailyBody'); 
+            incBody.innerHTML = '';
             let totalInc = 0;
             
             if(totalInc === 0 && incKeys.length === 0) {
                 incBody.innerHTML += `<tr><td class="text-center text-gray-400 text-[16px]">ไม่มีเหตุการณ์ในวันนี้</td><td class="text-center text-gray-400 text-[16px]">-</td></tr>`;
-                for(let i = 1; i < maxDataRows; i++) incBody.innerHTML += `<tr><td class="text-center text-[16px]">&nbsp;</td><td class="text-center text-[16px]">&nbsp;</td></tr>`;
+                for(let i = 1; i < maxDataRows; i++) {
+                    incBody.innerHTML += `<tr><td class="text-center text-[16px]">&nbsp;</td><td class="text-center text-[16px]">&nbsp;</td></tr>`;
+                }
             } else {
                 for(let i = 0; i < maxDataRows; i++) {
-                    if (i < incKeys.length) { let k = incKeys[i]; totalInc += summary[k]; incBody.innerHTML += `<tr><td class="text-center font-bold text-[16px]">${k}</td><td class="text-center text-[16px]">${summary[k]}</td></tr>`; } 
-                    else { incBody.innerHTML += `<tr><td class="text-center text-[16px]">&nbsp;</td><td class="text-center text-[16px]">&nbsp;</td></tr>`; }
+                    if (i < incKeys.length) {
+                        let k = incKeys[i];
+                        totalInc += summary[k];
+                        incBody.innerHTML += `<tr><td class="text-center font-bold text-[16px]">${k}</td><td class="text-center text-[16px]">${summary[k]}</td></tr>`;
+                    } else {
+                        incBody.innerHTML += `<tr><td class="text-center text-[16px]">&nbsp;</td><td class="text-center text-[16px]">&nbsp;</td></tr>`;
+                    }
                 }
             }
+            
             incBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[16px]">รวมยอดรวมทั้งหมด</td><td class="text-center text-blue-600 text-[16px]">${totalInc}</td></tr>`;
 
-            const carBody = document.getElementById('carDailyBody'); carBody.innerHTML = '';
+            const carBody = document.getElementById('carDailyBody'); 
+            carBody.innerHTML = '';
             let carRow = carData.find(r => isSame(r.date, targetDate));
             let gates = [{n:'ประตู 1', v:0}, {n:'ประตู 3', v:0}, {n:'ประตู 4', v:0}, {n:'ประตู 5', v:0}, {n:'ประตู 6', v:0}];
-            if(carRow) gates = [{n:'ประตู 1', v:carRow.g1}, {n:'ประตู 3', v:carRow.g3}, {n:'ประตู 4', v:carRow.g4}, {n:'ประตู 5', v:carRow.g5}, {n:'ประตู 6', v:carRow.g6}];
+            if(carRow) {
+                gates = [{n:'ประตู 1', v:carRow.g1}, {n:'ประตู 3', v:carRow.g3}, {n:'ประตู 4', v:carRow.g4}, {n:'ประตู 5', v:carRow.g5}, {n:'ประตู 6', v:carRow.g6}];
+            }
             let totalCar = 0;
             for(let i = 0; i < maxDataRows; i++) {
                 if (i < gates.length) {
-                    if (carRow) { let g = gates[i]; totalCar += g.v; carBody.innerHTML += `<tr><td class="text-center text-[16px]">${g.n}</td><td class="text-center text-[16px]">${g.v.toLocaleString()}</td></tr>`; } 
-                    else { carBody.innerHTML += `<tr><td class="text-center text-[16px]">${gates[i].n}</td><td class="text-center text-gray-400 text-[16px]">-</td></tr>`; }
-                } else { carBody.innerHTML += `<tr><td class="text-center text-[16px]">&nbsp;</td><td class="text-center text-[16px]">&nbsp;</td></tr>`; }
+                    if (carRow) {
+                        let g = gates[i]; totalCar += g.v;
+                        carBody.innerHTML += `<tr><td class="text-center text-[16px]">${g.n}</td><td class="text-center text-[16px]">${g.v.toLocaleString()}</td></tr>`;
+                    } else {
+                        carBody.innerHTML += `<tr><td class="text-center text-[16px]">${gates[i].n}</td><td class="text-center text-gray-400 text-[16px]">-</td></tr>`;
+                    }
+                } else {
+                    carBody.innerHTML += `<tr><td class="text-center text-[16px]">&nbsp;</td><td class="text-center text-[16px]">&nbsp;</td></tr>`;
+                }
             }
             carBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[16px]">รวมยอดรถเข้า</td><td class="text-center text-blue-600 text-[16px]">${carRow ? totalCar.toLocaleString() : '-'}</td></tr>`;
 
-            const detailContainer = document.getElementById('incidentTextDetails'); detailContainer.innerHTML = '';
+            const detailContainer = document.getElementById('incidentTextDetails');
+            detailContainer.innerHTML = '';
             if(dailyAll.length === 0) {
                 detailContainer.innerHTML = '<p class="text-center text-gray-400 text-[16px]">ไม่มีรายละเอียดสำหรับวันนี้</p>';
             } else {
-                dailyAll.forEach((item) => {
+                dailyAll.forEach((item, index) => {
                     let imgSrc = processImageLink(item.img);
-                    let imgHtml = imgSrc ? `<div class="mb-6 flex justify-center"><img src="${imgSrc}" class="max-w-full rounded-lg shadow-md max-h-[400px]" crossorigin="anonymous" referrerpolicy="no-referrer" alt="รูปภาพประกอบ"></div>` : '';
-                    detailContainer.innerHTML += `<div class="mb-10 border-b-2 border-gray-200 pb-8 last:border-0">${imgHtml}<div class="thai-justify text-[16px]"><span class="font-bold text-blue-700">รายละเอียด:</span> ${item.detail}</div></div>`;
+                    let imgHtml = '';
+                    
+                    if (imgSrc) {
+                        imgHtml = `
+                            <div class="w-full md:w-1/3 flex-shrink-0 flex justify-center bg-gray-50 rounded-xl p-2 border border-gray-200 shadow-sm overflow-hidden">
+                                <img src="${imgSrc}" class="w-full h-[250px] md:h-[300px] object-cover rounded-lg shadow-sm" crossorigin="anonymous" referrerpolicy="no-referrer" alt="รูปภาพประกอบ">
+                            </div>
+                        `;
+                    } else {
+                        imgHtml = `
+                            <div class="w-full md:w-1/3 flex-shrink-0 flex justify-center items-center bg-gray-50 rounded-xl p-2 border-2 border-dashed border-gray-300 shadow-sm overflow-hidden h-[250px] md:h-[300px]">
+                                <span class="text-gray-400 font-medium text-[16px]">ไม่มีรูปภาพประกอบ</span>
+                            </div>
+                        `;
+                    }
+                    
+                    let textWidthClass = 'w-full md:w-2/3';
+                    
+                    // 🌟 ถอดคลาส thai-justify ออกจากกล่องแม่ แล้วย้ายไปใส่แค่ในส่วนของ item.detail 🌟
+                    // 🌟 ทำให้ส่วนของหัวข้อไม่โดนย่อหน้า (Tab) เข้าไป 🌟
+                    detailContainer.innerHTML += `
+                        <div class="mb-10 border-b-2 border-gray-200 pb-8 last:border-0">
+                            <div class="flex flex-col md:flex-row gap-8 items-start">
+                                ${imgHtml}
+                                <div class="${textWidthClass} text-[18px] leading-relaxed">
+                                    <div class="font-bold text-blue-700 text-[20px] mb-3 border-b border-blue-100 pb-2 inline-block w-full">${index + 1}. ${item.type}</div>
+                                    <div class="thai-justify">${item.detail}</div>
+                                </div>
+                            </div>
+                        </div>`;
                 });
             }
+        }
+
+        // 🌟 ฟังก์ชันสำหรับแคปหน้าจอและดาวน์โหลดเป็น JPEG 🌟
+        function exportToJPEG() {
+            const captureArea = document.getElementById('pdfContent');
+            const controlsArea = document.getElementById('controlsContainer');
+            const printHeader = document.getElementById('printHeader');
+            
+            // 1. ซ่อนปุ่มควบคุม และโชว์หัวข้อรายงานแทน
+            controlsArea.style.display = 'none';
+            printHeader.style.display = 'block';
+
+            // 2. แคปภาพด้วย html2canvas
+            html2canvas(captureArea, {
+                scale: 2, // ความคมชัด 2 เท่า
+                useCORS: true, 
+                backgroundColor: '#ffffff' 
+            }).then(canvas => {
+                // 3. คืนค่าปุ่มควบคุมกลับมา ซ่อนหัวข้อชั่วคราว
+                controlsArea.style.display = 'flex';
+                printHeader.style.display = 'none';
+                
+                // 4. แปลงข้อมูล Canvas เป็น JPEG
+                const imgData = canvas.toDataURL('image/jpeg', 0.9); 
+                
+                // 5. ดึงวันที่ปัจจุบันมาตั้งเป็นชื่อไฟล์
+                const dateVal = document.getElementById('dateSelect').value;
+                const fileName = `Daily_Report_${dateVal}.jpg`;
+                
+                // 6. สร้างลิงก์ดาวน์โหลด
+                const link = document.createElement('a');
+                link.href = imgData;
+                link.download = fileName;
+                link.click();
+            }).catch(err => {
+                // ถ้ามี Error ก็คืนค่าหน้าจอกลับมา
+                controlsArea.style.display = 'flex';
+                printHeader.style.display = 'none';
+                console.error("Export Error: ", err);
+                alert("เกิดข้อผิดพลาดในการบันทึกภาพ");
+            });
         }
     </script>
 </body>
