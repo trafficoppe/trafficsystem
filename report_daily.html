@@ -14,10 +14,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        :root { --bg: #f1f5f9; --ink: #0f172a; --line: #e2e8f0; --blue-600: #2563eb; }
-        body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: 'TH Sarabun New', 'Sarabun', sans-serif; font-size: 16px; }
+        :root { 
+            --bg: #f1f5f9; 
+            --ink: #0f172a; 
+            --line: #e2e8f0; 
+            --blue-600: #2563eb; 
+        }
         
-        .dashboard-section { padding: 30px; max-width: 1050px; margin: 0 auto; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background: var(--bg); 
+            color: var(--ink); 
+            font-family: 'TH Sarabun New', 'Sarabun', sans-serif; 
+            font-size: 24px; 
+        }
+        
+        .dashboard-section { 
+            padding: 30px; 
+            max-width: 1050px; 
+            margin: 0 auto; 
+        }
         
         .main-card {
             background: #ffffff;
@@ -28,7 +45,12 @@
             margin: 0 auto;
         }
 
-        .section-header { text-align: center; font-size: 18px; margin: 0 0 20px 0; font-weight: 800; }
+        .section-header { 
+            text-align: center; 
+            font-size: 32px; 
+            margin: 0 0 20px 0; 
+            font-weight: 800; 
+        }
         
         input[type="date"] {
             position: absolute;
@@ -62,20 +84,25 @@
         .dash-table thead th { 
             background: #334155; 
             color: #fff; 
-            padding: 12px; 
-            font-size: 16px; 
+            padding: 16px; 
+            font-size: 28px; 
             text-align: center; 
         }
         
         .dash-table td { 
-            font-size: 16px; 
-            padding: 10px; 
+            font-size: 24px; 
+            padding: 14px; 
             border-bottom: 1px solid #cbd5e1; 
             text-align: center; 
         }
 
-        .dash-table th:first-child { border-right: 1px solid #475569; }
-        .dash-table td:first-child { border-right: 1px solid #cbd5e1; }
+        .dash-table th:first-child { 
+            border-right: 1px solid #475569; 
+        }
+        
+        .dash-table td:first-child { 
+            border-right: 1px solid #cbd5e1; 
+        }
         
         .thai-justify {
             text-align: justify;
@@ -94,37 +121,45 @@
     <div class="dashboard-section" id="containerSection">
         <div class="main-card relative" id="pdfContent">
             
-            <div class="flex justify-center items-center mb-10 relative flex-wrap gap-3" id="controlsContainer">
-                <button id="btnPrev" onclick="changeDate(-1)" class="flex-shrink-0 w-10 h-10 rounded-full bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 flex justify-center items-center transition shadow-sm border-2 border-slate-200 hover:border-blue-300 z-10">
-                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+            <button id="exportBtn" onclick="exportToJPEG()" title="บันทึกเป็นภาพ" class="absolute top-6 right-6 w-12 h-12 rounded-full bg-green-500 hover:bg-green-600 text-white flex justify-center items-center transition shadow-md z-50">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            </button>
+
+            <div class="flex justify-center items-center mb-10 relative flex-wrap gap-4" id="controlsContainer">
+                <button id="btnPrev" onclick="changeDate(-1)" class="flex-shrink-0 text-slate-400 hover:text-blue-600 flex justify-center items-center transition z-10 transform hover:scale-110 p-2">
+                    <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
                 
-                <div id="dateBox" class="relative flex justify-center items-center bg-slate-50 border-2 border-slate-200 rounded-full px-8 py-2 cursor-pointer hover:border-blue-400 transition shadow-sm overflow-hidden group min-w-[320px]">
-                    <div id="customDateText" class="font-bold text-[18px] text-slate-700 pointer-events-none whitespace-nowrap text-center">
+                <div id="dateBox" class="relative flex flex-col justify-center items-center bg-slate-50 border-2 border-slate-200 rounded-3xl px-10 py-3 cursor-pointer hover:border-blue-400 transition shadow-sm overflow-hidden group min-w-[380px]">
+                    <div id="customDateText" class="font-bold text-[34px] text-slate-700 pointer-events-none whitespace-nowrap text-center leading-none pb-1">
                         รายงานเหตุการณ์ประจำ...
+                    </div>
+                    <div class="font-bold text-[24px] text-gray-500 pointer-events-none whitespace-nowrap text-center leading-none pt-1">
+                        งานจราจรและความปลอดภัย
                     </div>
                     <input type="date" id="dateSelect" onchange="renderAllTables()">
                 </div>
 
-                <button id="btnNext" onclick="changeDate(1)" class="flex-shrink-0 w-10 h-10 rounded-full bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 flex justify-center items-center transition shadow-sm border-2 border-slate-200 hover:border-blue-300 z-10">
-                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-
-                <button onclick="exportToJPEG()" class="flex-shrink-0 px-5 h-10 ml-2 rounded-full bg-green-500 hover:bg-green-600 text-white flex justify-center items-center transition shadow-sm font-bold text-[16px] gap-2">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    บันทึกเป็นภาพ
+                <button id="btnNext" onclick="changeDate(1)" class="flex-shrink-0 text-slate-400 hover:text-blue-600 flex justify-center items-center transition z-10 transform hover:scale-110 p-2">
+                    <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
                 </button>
             </div>
 
-            <h1 id="printHeader" class="text-center font-extrabold text-[32px] text-gray-800 mb-8" style="display: none;">
-                รายงานเหตุการณ์ วันที่ ...
-            </h1>
+            <div id="printHeaderContainer" style="display: none; margin-bottom: 30px;">
+                <h1 id="printHeader" class="text-center font-extrabold text-[48px] text-gray-800 mb-2 leading-tight">
+                    รายงานเหตุการณ์ วันที่ ...
+                </h1>
+                <h2 class="text-center font-bold text-[32px] text-gray-600 m-0 leading-tight">
+                    งานจราจรและความปลอดภัย
+                </h2>
+            </div>
 
             <div class="flex flex-col md:flex-row gap-8 mb-10 items-stretch">
                 
                 <div class="flex-1 flex flex-col">
                     <h1 class="section-header">เหตุการณ์</h1>
-                    <div class="flex-1"> <table class="dash-table">
+                    <div class="flex-1"> 
+                        <table class="dash-table">
                             <thead>
                                 <tr>
                                     <th class="text-center" style="width:65%;">ประเภทเหตุการณ์</th>
@@ -138,7 +173,8 @@
 
                 <div class="flex-1 flex flex-col">
                     <h1 class="section-header">จำนวนรถเข้า</h1>
-                    <div class="flex-1"> <table class="dash-table">
+                    <div class="flex-1"> 
+                        <table class="dash-table">
                             <thead>
                                 <tr>
                                     <th class="text-center" style="width:65%;">ประตู</th>
@@ -153,7 +189,8 @@
             </div>
 
             <hr class="my-10 border-t-2 border-dashed border-gray-300">
-            <h2 class="text-[18px] font-bold text-center mb-8">รายละเอียดรายงานเหตุการณ์</h2>
+            
+            <h2 class="text-[32px] font-bold text-center mb-8">รายละเอียดรายงานเหตุการณ์</h2>
             
             <div id="incidentTextDetails"></div>
             
@@ -161,17 +198,22 @@
     </div>
 
     <script>
+        // ================= GLOBAL CONFIGURATION =================
         const thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-        function formatThaiDate(d){ return `วันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear() + 543}`; }
+        
+        function formatThaiDate(d){ 
+            return `วันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear() + 543}`; 
+        }
 
+        // ตั้งค่าวันที่เริ่มต้นเป็นเมื่อวาน
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yyyy = yesterday.getFullYear();
         const mm = String(yesterday.getMonth() + 1).padStart(2, '0');
         const dd = String(yesterday.getDate()).padStart(2, '0');
-        document.getElementById('dateSelect').value = `${yyyy}-${mm}-${dd}`;
         
-        document.getElementById('customDateText').innerHTML = `รายงานเหตุการณ์ประจำ<span class="text-blue-600 ml-2">${formatThaiDate(yesterday)}</span>`;
+        document.getElementById('dateSelect').value = `${yyyy}-${mm}-${dd}`;
+        document.getElementById('customDateText').innerHTML = `รายงานเหตุการณ์ประจำ <span class="text-blue-600 ml-2">${formatThaiDate(yesterday)}</span>`;
 
         function changeDate(offset) {
             const dateInput = document.getElementById('dateSelect');
@@ -214,21 +256,35 @@
             return str;
         }
 
-        let accidentData = [], lfData = [], carData = [];
-        let flags = { accident: false, lf: false, car: false };
+        // ================= DATA LOADING =================
+        let accidentData = [];
+        let lfData = [];
+        let carData = [];
+        let flags = { accident: false, lf: false, lfNew: false, car: false };
 
-        function loadScript(url) { const s = document.createElement('script'); s.src = url; document.body.appendChild(s); }
+        function loadScript(url) { 
+            const s = document.createElement('script'); 
+            s.src = url; 
+            document.body.appendChild(s); 
+        }
 
+        // 1. โหลดข้อมูลอุบัติเหตุ
         loadScript('https://docs.google.com/spreadsheets/d/1tj_BC_YkBBcin8FqqXB_OvOF5ku2Y24MTh04XmA9zTk/gviz/tq?tqx=responseHandler:handleAccidentData&gid=3452793');
+        // 2. โหลดข้อมูลของหาย (ชีทเก่า)
         loadScript('https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=responseHandler:handleLFData&gid=751456190');
+        // 3. โหลดข้อมูลของหาย (ชีทใหม่)
+        loadScript('https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=responseHandler:handleLFDataNew&gid=2074352966');
+        // 4. โหลดข้อมูลรถเข้า
         loadScript('https://docs.google.com/spreadsheets/d/1hEFLf_CuzabHOIdCp_LWEU5M8Be_7bsx1aBZickoSXA/gviz/tq?tqx=responseHandler:handleCarData&gid=0');
 
+        // ================= PARSING ACCIDENT DATA =================
         window.handleAccidentData = function(json) {
-            if(json && json.table && json.table.rows) {
+            if (json && json.table && json.table.rows) {
                 accidentData = json.table.rows.map(r => {
-                    const c = r.c; if(!c) return null;
-                    let type = (c[5]?.v || "เหตุการณ์ทั่วไป").toString().trim();
+                    const c = r.c; 
+                    if (!c) return null;
                     
+                    let type = (c[5]?.v || "เหตุการณ์ทั่วไป").toString().trim();
                     if (type === "ว.40") {
                         type = "อุบัติเหตุจากยานพาหนะ";
                     }
@@ -245,98 +301,291 @@
                     narrative = narrative.replace(/^\d{1,2}:\d{2}(:\d{2})?\s*(AM|PM)?/i, '').trim();
                     narrative = narrative.replace(/\s{2,}/g, ' '); 
 
-                    let d = null;
-                    if(c[1]?.v) {
-                        const p = c[1].v.match(/\d+/g);
-                        if(p) { let y = parseInt(p[0]); if(y>2400) y-=543; d = new Date(y, p[1], p[2]); }
+                    let dStr = String(c[1]?.f || c[1]?.v || "").trim();
+                    if (!dStr) return null;
+                    
+                    let d = new Date();
+                    if (dStr.includes('Date(')) {
+                        const p = dStr.match(/\d+/g);
+                        if (p) d = new Date(p[0], p[1], p[2]);
+                    } else if (dStr.includes('/')) {
+                        const p = dStr.split(/[ T/]/);
+                        if (p.length >= 3) {
+                            if (p[2].length === 4) d = new Date(p[2], p[1]-1, p[0]); 
+                            else d = new Date(p[0], p[1]-1, p[2]); 
+                        }
+                    } else if (dStr.includes('-')) {
+                        const p = dStr.split(/[ T-]/);
+                        if (p.length >= 3) {
+                            if (p[0].length === 4) d = new Date(p[0], p[1]-1, p[2]); 
+                            else d = new Date(p[2], p[1]-1, p[0]); 
+                        }
+                    } else {
+                        d = new Date(dStr);
                     }
+                    
+                    if (isNaN(d.getTime())) return null;
+                    if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear()-543);
 
                     let imgLink = "";
-                    for (let i = c.length - 1; i >= 0; i--) {
-                        if (c[i] && c[i].v && typeof c[i].v === 'string' && c[i].v.includes('drive.google.com')) {
-                            imgLink = c[i].v;
-                            break;
+                    
+                    // 🌟 เพิ่มเงื่อนไขพิเศษสำหรับ "บังคับล้อ" ให้ดึงรูปลิงก์จากคอลัมน์ AS (Index 44) 🌟
+                    if (type.includes("บังคับล้อ") && c[44] && (c[44].v || c[44].f)) {
+                        imgLink = String(c[44].v || c[44].f).trim();
+                    }
+
+                    // ถ้ายังไม่มีรูป ให้สแกนหาจากด้านหลังสุดเหมือนเดิม (รองรับ drive.google.com)
+                    if (!imgLink) {
+                        for (let i = c.length - 1; i >= 0; i--) {
+                            if (c[i] && (c[i].v || c[i].f) && typeof (c[i].v || c[i].f) === 'string' && (c[i].v || c[i].f).includes('drive.google.com')) {
+                                imgLink = c[i].v || c[i].f;
+                                break;
+                            }
                         }
                     }
 
                     return { date: d, type: type, detail: narrative, img: imgLink }; 
                 }).filter(x => x && x.date);
             }
-            flags.accident = true; checkSetupData();
+            flags.accident = true; 
+            checkSetupData();
         };
 
+        // ================= PARSING LOST & FOUND (OLD) =================
         window.handleLFData = function(json) {
-            if(json && json.table && json.table.rows) {
-                lfData = json.table.rows.map(r => {
-                    const c = r.c; if(!c) return null;
-                    const dVal = c[1]?.v; if(!dVal) return null;
-                    let d = new Date(); const p = dVal.toString().match(/\d+/g); if(p) d = new Date(p[0], p[1], p[2]);
-                    if(d.getFullYear() > 2400) d.setFullYear(d.getFullYear()-543);
+            if (json && json.table && json.table.rows) {
+                const oldRows = json.table.rows.map(r => {
+                    const c = r.c; 
+                    if (!c) return null;
+                    
+                    // 🌟 ดึงวันที่จาก Timestamp (Col A) เป็นหลัก 🌟
+                    let dStr = String(c[0]?.v || c[0]?.f || "").trim();
+                    if (!dStr) dStr = String(c[1]?.v || c[1]?.f || "").trim();
+                    
+                    if (!dStr) return null;
+                    
+                    let d = new Date();
+                    if (dStr.includes('Date(')) {
+                        const p = dStr.match(/\d+/g);
+                        if (p) d = new Date(p[0], p[1], p[2]);
+                    } else if (dStr.includes('/') || dStr.includes('-')) {
+                        const splitter = dStr.includes('/') ? /[ T/]/ : /[ T-]/;
+                        const p = dStr.split(splitter).filter(x => x.length > 0);
+                        if (p.length >= 3) {
+                            let y = parseInt(p[2]), m = parseInt(p[1]), day = parseInt(p[0]);
+                            if (p[0].length === 4) { y = parseInt(p[0]); m = parseInt(p[1]); day = parseInt(p[2]); }
+                            
+                            // สลับเดือนกับวัน ถ้าระบบจำผิด
+                            if (m > 12) { 
+                                let temp = m; 
+                                m = day; 
+                                day = temp; 
+                            }
+                            d = new Date(y, m - 1, day); 
+                        } else {
+                            d = new Date(dStr);
+                        }
+                    } else {
+                        d = new Date(dStr);
+                    }
+                    
+                    if (isNaN(d.getTime())) return null;
+                    if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear()-543);
 
-                    let name = (c[2]?.v || "ไม่ระบุชื่อ").toString().trim();
+                    let name = String(c[2]?.v || c[2]?.f || "ไม่ระบุชื่อ").trim();
                     if (!name.startsWith('คุณ') && !name.startsWith('นาย') && !name.startsWith('นาง') && !name.startsWith('นางสาว')) {
                         name = 'คุณ' + name;
                     }
 
-                    const status = (c[6]?.v || "").toString();
-                    const item = (c[10]?.v || c[7]?.v || c[13]?.v || "สิ่งของ").toString().replace(/\n/g, ' ').trim();
-                    const place = (c[11]?.v || c[8]?.v || "ไม่ระบุสถานที่").toString().trim();
-                    const time = formatThaiTime(c[15]?.f || "");
+                    const status = String(c[6]?.v || c[6]?.f || "");
+                    const item = String(c[10]?.v || c[7]?.v || c[13]?.v || "สิ่งของ").replace(/\n/g, ' ').trim();
+                    const place = String(c[11]?.v || c[8]?.v || "ไม่ระบุสถานที่").trim();
+                    const time = formatThaiTime(c[15]?.f || c[15]?.v || "");
 
-                    let type = status.includes("คืน") ? "รับของคืน" : (status.includes("พบ") ? "แจ้งเก็บของได้" : "แจ้งของหาย");
+                    const typeText = String(c[2]?.v || c[2]?.f || "");
+                    let type = "other";
                     let narrative = "";
 
-                    if (type === "รับของคืน") {
+                    if (status.includes("คืน") || typeText.includes("คืน")) {
+                        type = "รับของคืน";
                         narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้มาติดต่อขอรับสิ่งของคืน ประกอบด้วย ${item} โดยทางเจ้าหน้าที่ได้ตรวจสอบความถูกต้องและส่งมอบสิ่งของคืนให้แก่เจ้าของเป็นที่เรียบร้อยแล้ว`;
-                    } else if (type === "แจ้งเก็บของได้") {
-                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้พบสิ่งของตกหล่น คือ ${item} บริเวณ${place} และได้นำมามอบให้เจ้าหน้าที่เพื่อประกาศตามหาเจ้าของมารับคืนต่อไป`;
-                    } else {
+                    } else if (typeText.includes("หาย") || typeText.includes("สูญหาย") || typeText.includes("ลืม") || typeText.includes("ตามหา")) {
+                        type = "แจ้งของหาย";
                         narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้แจ้งเหตุสิ่งของสูญหาย คือ ${item} คาดว่าหล่นหายบริเวณ${place} เจ้าหน้าที่ได้บันทึกข้อมูลเพื่อประสานงานติดตามต่อไป`;
+                    } else {
+                        type = "แจ้งเก็บของได้";
+                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้พบสิ่งของตกหล่น คือ ${item} บริเวณ${place} และได้นำมามอบให้เจ้าหน้าที่เพื่อประกาศตามหาเจ้าของมารับคืนต่อไป`;
                     }
                     
                     narrative = narrative.replace(/\s{2,}/g, ' '); 
 
                     let imgLink = "";
                     for (let i = c.length - 1; i >= 0; i--) {
-                        if (c[i] && c[i].v && typeof c[i].v === 'string' && c[i].v.includes('drive.google.com')) {
-                            imgLink = c[i].v;
+                        if (c[i] && (c[i].v || c[i].f) && typeof (c[i].v || c[i].f) === 'string' && (c[i].v || c[i].f).includes('drive.google.com')) {
+                            imgLink = c[i].v || c[i].f;
                             break;
                         }
                     }
 
                     return { date: d, type: type, detail: narrative, img: imgLink };
                 }).filter(x => x);
+                
+                lfData = lfData.concat(oldRows);
             }
-            flags.lf = true; checkSetupData();
+            flags.lf = true; 
+            checkSetupData();
         };
 
+        // ================= PARSING LOST & FOUND (NEW) =================
+        window.handleLFDataNew = function(json) {
+            if (json && json.table && json.table.rows) {
+                const newRows = json.table.rows.map(r => {
+                    const c = r.c; 
+                    if (!c) return null;
+                    
+                    // 🌟 ดึงวันที่จาก Timestamp (Col A) เป็นหลัก 🌟
+                    let dStr = String(c[0]?.v || c[0]?.f || "").trim();
+                    if (!dStr) dStr = String(c[7]?.v || c[7]?.f || "").trim();
+                    
+                    if (!dStr) return null;
+                    
+                    let d = new Date();
+                    if (dStr.includes('Date(')) {
+                        const p = dStr.match(/\d+/g);
+                        if (p) d = new Date(p[0], p[1], p[2]);
+                    } else if (dStr.includes('/') || dStr.includes('-')) {
+                        const splitter = dStr.includes('/') ? /[ T/]/ : /[ T-]/;
+                        const p = dStr.split(splitter).filter(x => x.length > 0);
+                        if (p.length >= 3) {
+                            let y = parseInt(p[2]), m = parseInt(p[1]), day = parseInt(p[0]);
+                            if (p[0].length === 4) { y = parseInt(p[0]); m = parseInt(p[1]); day = parseInt(p[2]); }
+                            
+                            // สลับเดือนกับวัน ถ้าระบบจำผิด
+                            if (m > 12) { 
+                                let temp = m; 
+                                m = day; 
+                                day = temp; 
+                            }
+                            d = new Date(y, m - 1, day); 
+                        } else {
+                            d = new Date(dStr);
+                        }
+                    } else {
+                        d = new Date(dStr);
+                    }
+                    
+                    if (isNaN(d.getTime())) return null;
+                    if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear()-543);
+
+                    let name = String(c[3]?.v || c[3]?.f || "ไม่ระบุชื่อ").trim();
+                    if (!name.startsWith('คุณ') && !name.startsWith('นาย') && !name.startsWith('นาง') && !name.startsWith('นางสาว')) {
+                        name = 'คุณ' + name;
+                    }
+
+                    const status = String(c[12]?.v || c[12]?.f || "");
+                    const item = String(c[9]?.v || c[9]?.f || "สิ่งของ").replace(/\n/g, ' ').trim();
+                    const place = String(c[10]?.v || c[10]?.f || "ไม่ระบุสถานที่").trim();
+                    const time = formatThaiTime(c[8]?.f || c[8]?.v || "");
+
+                    const colCType = String(c[2]?.v || c[2]?.f || "");
+                    
+                    let type = "other";
+                    let narrative = "";
+
+                    if (status.includes("คืน") || colCType.includes("คืน")) {
+                        type = "รับของคืน";
+                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้มาติดต่อขอรับสิ่งของคืน ประกอบด้วย ${item} โดยทางเจ้าหน้าที่ได้ตรวจสอบความถูกต้องและส่งมอบสิ่งของคืนให้แก่เจ้าของเป็นที่เรียบร้อยแล้ว`;
+                    } else if (colCType.includes("หาย") || colCType.includes("สูญหาย") || colCType.includes("ลืม") || colCType.includes("ตามหา")) {
+                        type = "แจ้งของหาย";
+                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้แจ้งเหตุสิ่งของสูญหาย คือ ${item} คาดว่าหล่นหายบริเวณ${place} เจ้าหน้าที่ได้บันทึกข้อมูลเพื่อประสานงานติดตามต่อไป`;
+                    } else {
+                        type = "แจ้งเก็บของได้";
+                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้พบสิ่งของตกหล่น คือ ${item} บริเวณ${place} และได้นำมามอบให้เจ้าหน้าที่เพื่อประกาศตามหาเจ้าของมารับคืนต่อไป`;
+                    }
+                    
+                    narrative = narrative.replace(/\s{2,}/g, ' '); 
+
+                    let imgLink = "";
+                    for (let i = c.length - 1; i >= 0; i--) {
+                        if (c[i] && (c[i].v || c[i].f) && typeof (c[i].v || c[i].f) === 'string' && (c[i].v || c[i].f).includes('drive.google.com')) {
+                            imgLink = c[i].v || c[i].f;
+                            break;
+                        }
+                    }
+
+                    return { date: d, type: type, detail: narrative, img: imgLink };
+                }).filter(x => x);
+                
+                lfData = lfData.concat(newRows);
+            }
+            flags.lfNew = true; 
+            checkSetupData();
+        };
+
+        // ================= PARSING CAR GATES DATA =================
         window.handleCarData = function(json) {
-            if(json && json.table && json.table.rows) {
+            if (json && json.table && json.table.rows) {
                 carData = json.table.rows.map(r => {
-                    const c = r.c; if(!c || !c[0]?.v) return null;
-                    let d = new Date(); const p = c[0].v.toString().match(/\d+/g); if(p) d = new Date(p[0], p[1], p[2]);
-                    if(d.getFullYear() > 2400) d.setFullYear(d.getFullYear()-543);
+                    const c = r.c; 
+                    if (!c) return null; 
+                    
+                    let dStr = String(c[7]?.v || c[7]?.f || "").trim();
+                    if (!dStr) return null;
+                    
+                    let d = new Date();
+                    if (dStr.includes('Date(')) {
+                        const p = dStr.match(/\d+/g);
+                        if (p) d = new Date(p[0], p[1], p[2]);
+                    } else if (dStr.includes('/')) {
+                        const p = dStr.split(/[ T/]/);
+                        if (p.length >= 3) {
+                            if (p[2].length === 4) d = new Date(p[2], p[1]-1, p[0]); 
+                            else d = new Date(p[0], p[1]-1, p[2]); 
+                        }
+                    } else if (dStr.includes('-')) {
+                        const p = dStr.split(/[ T-]/);
+                        if (p.length >= 3) {
+                            if (p[0].length === 4) d = new Date(p[0], p[1]-1, p[2]); 
+                            else d = new Date(p[2], p[1]-1, p[0]); 
+                        }
+                    } else {
+                        d = new Date(dStr);
+                    }
+                    
+                    if (isNaN(d.getTime())) return null;
+                    if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear()-543);
+                    
                     return { date: d, g1: c[1]?.v||0, g3: c[2]?.v||0, g4: c[3]?.v||0, g5: c[4]?.v||0, g6: c[5]?.v||0 };
                 }).filter(x => x);
             }
-            flags.car = true; checkSetupData();
+            flags.car = true; 
+            checkSetupData();
         };
 
-        function checkSetupData() { if(flags.accident && flags.lf && flags.car) renderAllTables(); }
+        function checkSetupData() { 
+            // ตรวจสอบว่าโหลดครบ 4 แหล่งข้อมูลหรือยัง
+            if (flags.accident && flags.lf && flags.lfNew && flags.car) {
+                renderAllTables(); 
+            }
+        }
 
+        // ================= RENDERING TABLES & UI =================
         function renderAllTables() {
-            const ds = document.getElementById('dateSelect').value; if(!ds) return;
+            const ds = document.getElementById('dateSelect').value; 
+            if (!ds) return;
+            
             const targetDate = new Date(ds);
             const isSame = (d1, d2) => d1 && d2.getFullYear() === d1.getFullYear() && d2.getMonth() === d1.getMonth() && d2.getDate() === d1.getDate();
 
             const dateStr = formatThaiDate(targetDate);
-            document.getElementById('customDateText').innerHTML = `รายงานเหตุการณ์ประจำ<span class="text-blue-600 ml-2">${dateStr}</span>`;
+            document.getElementById('customDateText').innerHTML = `รายงานเหตุการณ์ประจำ <span class="text-blue-600 ml-2">${dateStr}</span>`;
             document.getElementById('printHeader').innerText = `รายงานเหตุการณ์ วันที่ ${dateStr}`;
 
             const summary = {};
             let dailyAll = [];
+            
             accidentData.concat(lfData).forEach(r => {
-                if(isSame(r.date, targetDate)) {
+                if (isSame(r.date, targetDate)) {
                     summary[r.type] = (summary[r.type] || 0) + 1;
                     dailyAll.push(r);
                 }
@@ -368,56 +617,73 @@
             });
 
             const maxDataRows = Math.max(5, incKeys.length);
-
             const incBody = document.getElementById('incDailyBody'); 
             incBody.innerHTML = '';
             let totalInc = 0;
             
-            if(totalInc === 0 && incKeys.length === 0) {
-                incBody.innerHTML += `<tr><td class="text-center text-gray-400 text-[16px]">ไม่มีเหตุการณ์ในวันนี้</td><td class="text-center text-gray-400 text-[16px]">-</td></tr>`;
+            if (totalInc === 0 && incKeys.length === 0) {
+                incBody.innerHTML += `<tr><td class="text-center text-gray-400 text-[24px]">ไม่มีเหตุการณ์ในวันนี้</td><td class="text-center text-gray-400 text-[24px]">-</td></tr>`;
                 for(let i = 1; i < maxDataRows; i++) {
-                    incBody.innerHTML += `<tr><td class="text-center text-[16px]">&nbsp;</td><td class="text-center text-[16px]">&nbsp;</td></tr>`;
+                    incBody.innerHTML += `<tr><td class="text-center text-[24px]">&nbsp;</td><td class="text-center text-[24px]">&nbsp;</td></tr>`;
                 }
             } else {
-                for(let i = 0; i < maxDataRows; i++) {
+                for (let i = 0; i < maxDataRows; i++) {
                     if (i < incKeys.length) {
                         let k = incKeys[i];
                         totalInc += summary[k];
-                        incBody.innerHTML += `<tr><td class="text-center font-bold text-[16px]">${k}</td><td class="text-center text-[16px]">${summary[k]}</td></tr>`;
+                        incBody.innerHTML += `<tr><td class="text-center font-bold text-[24px]">${k}</td><td class="text-center text-[24px]">${summary[k]}</td></tr>`;
                     } else {
-                        incBody.innerHTML += `<tr><td class="text-center text-[16px]">&nbsp;</td><td class="text-center text-[16px]">&nbsp;</td></tr>`;
+                        incBody.innerHTML += `<tr><td class="text-center text-[24px]">&nbsp;</td><td class="text-center text-[24px]">&nbsp;</td></tr>`;
                     }
                 }
             }
             
-            incBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[16px]">รวมยอดรวมทั้งหมด</td><td class="text-center text-blue-600 text-[16px]">${totalInc}</td></tr>`;
+            incBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[26px]">รวมยอดรวมทั้งหมด</td><td class="text-center text-blue-600 text-[26px]">${totalInc}</td></tr>`;
 
             const carBody = document.getElementById('carDailyBody'); 
             carBody.innerHTML = '';
             let carRow = carData.find(r => isSame(r.date, targetDate));
             let gates = [{n:'ประตู 1', v:0}, {n:'ประตู 3', v:0}, {n:'ประตู 4', v:0}, {n:'ประตู 5', v:0}, {n:'ประตู 6', v:0}];
-            if(carRow) {
-                gates = [{n:'ประตู 1', v:carRow.g1}, {n:'ประตู 3', v:carRow.g3}, {n:'ประตู 4', v:carRow.g4}, {n:'ประตู 5', v:carRow.g5}, {n:'ประตู 6', v:carRow.g6}];
+            
+            if (carRow) {
+                gates = [
+                    {n:'ประตู 1', v:carRow.g1}, 
+                    {n:'ประตู 3', v:carRow.g3}, 
+                    {n:'ประตู 4', v:carRow.g4}, 
+                    {n:'ประตู 5', v:carRow.g5}, 
+                    {n:'ประตู 6', v:carRow.g6}
+                ];
             }
+            
             let totalCar = 0;
-            for(let i = 0; i < maxDataRows; i++) {
+            for (let i = 0; i < maxDataRows; i++) {
                 if (i < gates.length) {
                     if (carRow) {
-                        let g = gates[i]; totalCar += g.v;
-                        carBody.innerHTML += `<tr><td class="text-center text-[16px]">${g.n}</td><td class="text-center text-[16px]">${g.v.toLocaleString()}</td></tr>`;
+                        let g = gates[i]; 
+                        totalCar += g.v;
+                        carBody.innerHTML += `<tr><td class="text-center text-[24px]">${g.n}</td><td class="text-center text-[24px]">${g.v.toLocaleString()}</td></tr>`;
                     } else {
-                        carBody.innerHTML += `<tr><td class="text-center text-[16px]">${gates[i].n}</td><td class="text-center text-gray-400 text-[16px]">-</td></tr>`;
+                        carBody.innerHTML += `<tr><td class="text-center text-[24px]">${gates[i].n}</td><td class="text-center text-gray-400 text-[24px]">-</td></tr>`;
                     }
                 } else {
-                    carBody.innerHTML += `<tr><td class="text-center text-[16px]">&nbsp;</td><td class="text-center text-[16px]">&nbsp;</td></tr>`;
+                    carBody.innerHTML += `<tr><td class="text-center text-[24px]">&nbsp;</td><td class="text-center text-[24px]">&nbsp;</td></tr>`;
                 }
             }
-            carBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[16px]">รวมยอดรถเข้า</td><td class="text-center text-blue-600 text-[16px]">${carRow ? totalCar.toLocaleString() : '-'}</td></tr>`;
+            carBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[26px]">รวมยอดรถเข้า</td><td class="text-center text-blue-600 text-[26px]">${carRow ? totalCar.toLocaleString() : '-'}</td></tr>`;
 
             const detailContainer = document.getElementById('incidentTextDetails');
             detailContainer.innerHTML = '';
-            if(dailyAll.length === 0) {
-                detailContainer.innerHTML = '<p class="text-center text-gray-400 text-[16px]">ไม่มีรายละเอียดสำหรับวันนี้</p>';
+            
+            if (dailyAll.length === 0) {
+                detailContainer.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="inline-block bg-green-50 border-2 border-green-200 rounded-2xl px-10 py-6 shadow-sm">
+                            <p class="text-green-600 font-extrabold text-[40px] m-0 flex items-center justify-center gap-3">
+                                <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                เหตุการณ์ปกติ ไม่มีเหตุการณ์ในวันนี้
+                            </p>
+                        </div>
+                    </div>`;
             } else {
                 dailyAll.forEach((item, index) => {
                     let imgSrc = processImageLink(item.img);
@@ -432,21 +698,19 @@
                     } else {
                         imgHtml = `
                             <div class="w-full md:w-1/3 flex-shrink-0 flex justify-center items-center bg-gray-50 rounded-xl p-2 border-2 border-dashed border-gray-300 shadow-sm overflow-hidden h-[250px] md:h-[300px]">
-                                <span class="text-gray-400 font-medium text-[16px]">ไม่มีรูปภาพประกอบ</span>
+                                <span class="text-gray-400 font-medium text-[22px]">ไม่มีรูปภาพประกอบ</span>
                             </div>
                         `;
                     }
                     
                     let textWidthClass = 'w-full md:w-2/3';
                     
-                    // 🌟 ถอดคลาส thai-justify ออกจากกล่องแม่ แล้วย้ายไปใส่แค่ในส่วนของ item.detail 🌟
-                    // 🌟 ทำให้ส่วนของหัวข้อไม่โดนย่อหน้า (Tab) เข้าไป 🌟
                     detailContainer.innerHTML += `
                         <div class="mb-10 border-b-2 border-gray-200 pb-8 last:border-0">
                             <div class="flex flex-col md:flex-row gap-8 items-start">
                                 ${imgHtml}
-                                <div class="${textWidthClass} text-[18px] leading-relaxed">
-                                    <div class="font-bold text-blue-700 text-[20px] mb-3 border-b border-blue-100 pb-2 inline-block w-full">${index + 1}. ${item.type}</div>
+                                <div class="${textWidthClass} text-[24px] leading-relaxed">
+                                    <div class="font-bold text-blue-700 text-[28px] mb-3 border-b border-blue-100 pb-2 inline-block w-full">${index + 1}. ${item.type}</div>
                                     <div class="thai-justify">${item.detail}</div>
                                 </div>
                             </div>
@@ -455,40 +719,33 @@
             }
         }
 
-        // 🌟 ฟังก์ชันสำหรับแคปหน้าจอและดาวน์โหลดเป็น JPEG 🌟
+        // ================= EXPORT TO JPEG =================
         function exportToJPEG() {
             const captureArea = document.getElementById('pdfContent');
             const controlsArea = document.getElementById('controlsContainer');
-            const printHeader = document.getElementById('printHeader');
+            const printHeader = document.getElementById('printHeaderContainer');
             
-            // 1. ซ่อนปุ่มควบคุม และโชว์หัวข้อรายงานแทน
             controlsArea.style.display = 'none';
             printHeader.style.display = 'block';
 
-            // 2. แคปภาพด้วย html2canvas
             html2canvas(captureArea, {
-                scale: 2, // ความคมชัด 2 เท่า
+                scale: 2, 
                 useCORS: true, 
                 backgroundColor: '#ffffff' 
             }).then(canvas => {
-                // 3. คืนค่าปุ่มควบคุมกลับมา ซ่อนหัวข้อชั่วคราว
                 controlsArea.style.display = 'flex';
                 printHeader.style.display = 'none';
                 
-                // 4. แปลงข้อมูล Canvas เป็น JPEG
                 const imgData = canvas.toDataURL('image/jpeg', 0.9); 
                 
-                // 5. ดึงวันที่ปัจจุบันมาตั้งเป็นชื่อไฟล์
                 const dateVal = document.getElementById('dateSelect').value;
                 const fileName = `Daily_Report_${dateVal}.jpg`;
                 
-                // 6. สร้างลิงก์ดาวน์โหลด
                 const link = document.createElement('a');
                 link.href = imgData;
                 link.download = fileName;
                 link.click();
             }).catch(err => {
-                // ถ้ามี Error ก็คืนค่าหน้าจอกลับมา
                 controlsArea.style.display = 'flex';
                 printHeader.style.display = 'none';
                 console.error("Export Error: ", err);

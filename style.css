@@ -2,691 +2,354 @@
    1. ตัวแปรสีและตั้งค่าเริ่มต้น (Root Variables)
    ========================================== */
 :root {
-    --primary-color: #2c3e50;
-    --secondary-color: #27ae60;
-    --bg-color: #f4f7f6;
-    --text-color: #333;
-    --sidebar-width: 250px;
-    --card-bg: #fff;
-    --hover-color: #1e8449;
-    --repair-color: #e74c3c; 
-    --lost-color: #e74c3c;
-    --found-color: #27ae60;
-    --returned-color: #95a5a6;
+    /* 🌟 ธีม: เขียวมรกต (Emerald) สบายตา สุภาพ และเป็นทางการ 🌟 */
+    --primary-color: #059669; 
+    --primary-dark: #047857; 
+    --sidebar-bg: #ffffff; 
+    --sidebar-text: #1e293b; 
+    --sidebar-hover: #ecfdf5; 
+    --bg-color: #f8fafc; 
+    --text-color: #334155; 
+    --sidebar-width: 230px; 
+    --card-bg: #ffffff;
+    --border-color: #cbd5e1; 
+    
+    --repair-color: #ef4444; 
+    --lost-color: #ef4444;
+    --found-color: #10b981; 
+    --returned-color: #94a3b8;
 }
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: 'Kanit', sans-serif;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
 
 body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    display: flex;
-    height: 100vh;
-    height: 100dvh; /* รองรับ Safari บนมือถือได้ดีกว่า */
-    overflow: hidden;
+    background-color: var(--bg-color); color: var(--text-color);
+    display: flex; min-height: 100vh; 
+    overflow-x: hidden; overflow-y: auto; 
 }
 
 /* ==========================================
-   2. เมนูด้านซ้าย (Sidebar & Navigation)
+   2. เมนูด้านซ้าย (Sidebar & Navigation) 
    ========================================== */
 .sidebar {
-    position: fixed !important;
-    top: 0;
-    left: -250px !important; 
+    position: fixed !important; top: 0; left: -230px !important; 
     width: var(--sidebar-width) !important; 
-    height: 100vh !important;
-    background-color: var(--primary-color);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important; 
-    z-index: 9999 !important; 
-    box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+    height: 100vh !important; background-color: var(--sidebar-bg); color: var(--sidebar-text);
+    display: flex; flex-direction: column; transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important; 
+    z-index: 9999 !important; box-shadow: 4px 0 15px rgba(0,0,0,0.05); border-right: 1px solid var(--border-color);
 }
-
-.sidebar::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: -25px; 
-    width: 25px;
-    height: 100vh; 
-    background: transparent; 
-    z-index: -1;
-}
-
+.sidebar::before { content: ''; position: absolute; top: 0; right: -20px; width: 20px; height: 100vh; background: transparent; z-index: -1; }
 .sidebar::after {
-    content: '❯'; 
-    position: absolute;
-    top: 50%;
-    right: -25px;
-    width: 25px;
-    height: 70px;
-    background-color: #34495e; 
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0 8px 8px 0;
-    transform: translateY(-50%);
-    cursor: pointer;
-    box-shadow: 4px 0 10px rgba(0,0,0,0.15);
-    font-size: 16px;
-    transition: background-color 0.3s;
+    content: '❯'; position: absolute; top: 50%; right: -20px; width: 20px; height: 65px; 
+    background-color: #ffffff; border: 1px solid var(--border-color); border-left: none;
+    color: var(--primary-color); display: flex; align-items: center; justify-content: center; 
+    border-radius: 0 10px 10px 0; transform: translateY(-50%); cursor: pointer; box-shadow: 4px 0 10px rgba(0,0,0,0.05); font-size: 16px; transition: 0.3s;
 }
+.sidebar:hover, .sidebar.keep-open { left: 0 !important; }
+.sidebar:hover::after, .sidebar.keep-open::after { content: '❮'; background-color: var(--primary-color); color: white; border-color: var(--primary-color); } 
 
-.sidebar:hover, .sidebar.keep-open {
-    left: 0 !important;
+.sidebar-header { 
+    padding: 20px 15px; 
+    background-color: var(--primary-color) !important; 
+    color: #ffffff !important; text-align: center; 
+    font-size: 20px; 
+    font-weight: 700; border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important; 
+    display: flex; align-items: center; justify-content: center; gap: 8px; text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
-
-.sidebar:hover::after, .sidebar.keep-open::after {
-    content: '❮'; 
-    background-color: var(--secondary-color); 
+.sidebar-menu { list-style: none; flex-grow: 1; overflow-y: auto; padding-top: 0; }
+.sidebar-menu > li { border-bottom: 1px solid #f1f5f9; } 
+.sidebar-menu li a { 
+    display: block; 
+    padding: 14px 20px; 
+    color: var(--sidebar-text); text-decoration: none; transition: 0.3s; 
+    font-size: 15px; 
+    font-weight: 500; border-left: 4px solid transparent; position: relative; 
 }
-
-.sidebar-header {
-    padding: 20px;
-    background-color: #1a252f;
-    text-align: center;
-    font-size: 18px;
-    font-weight: 600;
-    border-bottom: 1px solid #34495e;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+.sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: var(--sidebar-hover); color: var(--primary-dark) !important; border-left-color: var(--primary-color); }
+.submenu { list-style: none; background-color: #f8fafc; display: none; }
+.submenu.show-submenu { display: block; }
+.submenu li a { 
+    padding: 11px 16px 11px 36px; 
+    font-size: 13px; 
+    color: #475569; font-weight: 400; 
 }
-
-.sidebar-menu {
-    list-style: none;
-    flex-grow: 1;
-    overflow-y: auto;
-    padding-top: 0; 
-}
-
-.sidebar-menu > li {
-    border-bottom: 1px solid #34495e;
-}
-
-.sidebar-menu li a {
-    display: block;
-    padding: 15px 20px;
-    color: #bdc3c7;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    font-weight: 400;
-    border-left: 4px solid transparent;
-    position: relative;
-}
-
-.sidebar-menu li a:hover, .sidebar-menu li a.active {
-    background-color: #34495e;
-    color: white;
-    border-left-color: var(--secondary-color);
-}
-
-.submenu {
-    list-style: none;
-    background-color: #22313f;
-    display: none; 
-}
-
-.submenu.show-submenu {
-    display: block;
-}
-
-.submenu li a {
-    padding: 12px 20px 12px 40px;
-    font-size: 14px;
-}
+.submenu li a:hover { color: var(--primary-color); background-color: #ffffff; font-weight: 500; }
 
 /* ==========================================
-   3. พื้นที่หลัก (Main Content & Header)
+   3. พื้นที่หลัก (Main Content)
    ========================================== */
 .main-content {
-    margin-left: 20px !important; 
-    width: calc(100% - 20px) !important;
+    margin-left: 20px !important; width: calc(100% - 20px) !important;
     transition: margin-left 0.4s, width 0.4s !important;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    display: flex; flex-direction: column; min-height: 100vh;
+}
+.content-area { padding: 30px 40px; flex-grow: 1; }
+
+/* ==========================================
+   4. ระบบ Header (Dashboard และหน้า Form) 
+   ========================================== */
+.global-header {
+    background-color: var(--primary-color);
+    padding: 12px 30px;  
+    display: flex; flex-direction: column; gap: 10px; 
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); z-index: 1001;
 }
 
-.top-header, .main-header {
-    background-color: white;
-    padding: 15px 30px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    z-index: 90;
-}
+#dynamic-header-wrapper { position: sticky; top: 0; width: 100%; z-index: 1000; height: auto; }
+#dynamic-header-wrapper .header-grabber { display: none !important; }
+#dynamic-header-wrapper .global-header { position: relative; transform: none !important; }
 
-.page-title {
-    font-size: 22px;
-    color: var(--primary-color);
-    font-weight: 600;
+.header-dropdown-wrapper:not(#dynamic-header-wrapper) { position: sticky; top: 0; width: 100%; z-index: 1000; height: 12px; }
+.header-dropdown-wrapper:not(#dynamic-header-wrapper) .header-grabber {
+    display: flex !important; position: absolute; top: 0; left: 0; width: 100%; height: 12px;
+    background-color: var(--primary-color); justify-content: center; align-items: center; cursor: pointer; z-index: 1002;
+    transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
-
-.search-container {
-    display: flex;
-    align-items: center;
-    background-color: var(--bg-color);
-    border-radius: 20px;
-    padding: 5px 15px;
-    width: 300px;
-    border: 1px solid #ddd;
+.header-dropdown-wrapper:not(#dynamic-header-wrapper) .grabber-line { width: 50px; height: 3px; background: rgba(255, 255, 255, 0.8); border-radius: 4px; }
+.header-dropdown-wrapper:not(#dynamic-header-wrapper) .global-header {
+    position: absolute !important; top: 0; left: 0; width: 100%;
+    transform: translateY(-100%) !important; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
 }
+.header-dropdown-wrapper:not(#dynamic-header-wrapper):hover .global-header { transform: translateY(0) !important; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); }
+.header-dropdown-wrapper:not(#dynamic-header-wrapper):hover .header-grabber { opacity: 0; pointer-events: none; }
 
-.search-container input {
-    border: none;
-    background: transparent;
-    outline: none;
-    padding: 8px;
-    width: 100%;
-    font-size: 14px;
+.header-top-row { display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+.header-brand { display: flex; align-items: center; gap: 12px; }
+.brand-text { display: flex; flex-direction: column; }
+.brand-main { font-size: 21px; font-weight: 700; color: #ffffff; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.1); } 
+.brand-sub { font-size: 13px; color: rgba(255,255,255,0.95); font-weight: 400; }
+.header-right { text-align: right; }
+.dept-name { display: block; color: #ffffff; font-weight: 600; font-size: 16px; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+.header-action-row { display: flex; align-items: center; justify-content: flex-start; width: 100%; padding-top: 6px; gap: 15px; flex-wrap: wrap; }
+.header-action-row .page-title { font-size: 20px; font-weight: 600; color: #ffffff; white-space: nowrap; margin-right: 10px; text-shadow: 0 1px 2px rgba(0,0,0,0.1); } 
+
+.header-filters { display: flex; justify-content: flex-start; flex-wrap: wrap; gap: 10px; flex-grow: 1; }
+.filter-buttons { display: inline-flex; flex-wrap: wrap; gap: 4px; background: rgba(0, 0, 0, 0.1); padding: 4px; border-radius: 10px; margin-bottom: 0; justify-content: flex-start; align-items: center; }
+.filter-btn, .sub-filter-btn { 
+    min-width: 115px; justify-content: center; 
+    padding: 6px 16px; 
+    border: none !important; background: transparent !important; 
+    color: rgba(255,255,255,0.9) !important; font-family: 'Prompt', sans-serif; cursor: pointer; 
+    font-size: 13px; border-radius: 6px !important; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 6px; 
 }
+.filter-btn:hover, .sub-filter-btn:hover { background-color: rgba(255,255,255,0.2) !important; color: #ffffff !important; }
+.filter-btn.active, .sub-filter-btn.active { background-color: #ffffff !important; color: var(--primary-dark) !important; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: none !important; } 
 
-.content-area {
-    padding: 20px 30px;
-    flex-grow: 1;
-    overflow-y: auto;
+.badge { background-color: rgba(255,255,255,0.2) !important; color: #ffffff !important; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: bold; transition: all 0.3s ease; }
+.filter-btn.active .badge, .sub-filter-btn.active .badge { background-color: var(--primary-color) !important; color: #ffffff !important; } 
+
+.year-select-container { display: none; align-items: center; padding-left: 12px; border-left: 1px solid rgba(255,255,255,0.3); }
+.year-select-dropdown { padding: 6px 12px; border-radius: 6px; border: none; font-family: 'Prompt', sans-serif; font-size: 13px; outline: none; cursor: pointer; background-color: rgba(255,255,255,0.2); color: #fff; transition: 0.3s; }
+.year-select-dropdown option { color: #333; }
+
+/* 🌟 ซ่อนช่องค้นหาออกจากทุกหน้าแบบเด็ดขาด 🌟 */
+.global-header .search-container {
+    display: none !important; 
 }
 
 /* ==========================================
-   4. แถบปุ่มคัดกรอง (Filter Buttons)
+   5. ส่วนท้าย (Global Footer) 
    ========================================== */
-.filter-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 20px;
+.global-footer {
+    background: #ffffff; color: #475569; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center;
+    margin-top: auto; border-top: 1px solid var(--border-color); flex-shrink: 0; font-size: 15px;
 }
-
-.filter-btn, .sub-filter-btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 20px;
-    background-color: #e0e6ed;
-    color: #555;
-    cursor: pointer;
-    font-size: 14px;
-    transition: 0.3s;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.filter-btn:hover, .sub-filter-btn:hover {
-    background-color: #cbd4db;
-}
-
-.filter-btn.active, .sub-filter-btn.active {
-    background-color: var(--secondary-color);
-    color: white;
-    font-weight: 500;
-    box-shadow: 0 2px 4px rgba(39, 174, 96, 0.3);
-}
-
-.badge {
-    background-color: rgba(255,255,255,0.8);
-    color: var(--primary-color);
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.filter-btn.active .badge {
-    background-color: white;
-    color: var(--secondary-color);
-}
-
-.year-select-container {
-    display: none; 
-    align-items: center; 
-    padding-left: 15px; 
-    border-left: 3px solid #f39c12; 
-    margin-top: 10px; 
-    margin-bottom: 15px;
-}
-
-.year-select-dropdown {
-    padding: 8px 15px; 
-    border-radius: 6px; 
-    border: 1px solid #ccd1d9; 
-    font-family: 'Kanit', sans-serif; 
-    font-size: 15px; 
-    outline: none; 
-    cursor: pointer;
-    background-color: #fff;
-    color: #2c3e50;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
+.global-footer p { margin: 0; opacity: 1; }
 
 /* ==========================================
-   5. การ์ดแสดงผล (Cards & Gallery)
+   6. สไตล์ปุ่มแท็บรายงาน (หน้า Report) 
    ========================================== */
-.gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
-}
-
-.vehicle-card {
-    background-color: var(--card-bg);
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    transition: transform 0.3s, box-shadow 0.3s;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid #eee;
-    position: relative; 
-}
-
-.vehicle-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-}
-
-.card-image-wrapper {
-    width: 100%;
-    height: 220px;
-    overflow: hidden;
-    position: relative;
-    background-color: #f8f9fa;
-    cursor: pointer;
-    box-sizing: border-box; 
-}
-
-.image-slide-track {
-    display: flex;
-    height: 100%;
-    transition: transform 0.3s ease;
-}
-
-.image-slide-track img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain; 
-    flex-shrink: 0;
-}
-
-.card-image-wrapper:has(img:nth-child(2)):hover .image-slide-track {
-    transform: translateX(-100%);
-}
-
-.card-content {
-    padding: 15px;
-    text-align: left;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: flex-start;
-    cursor: pointer;
-    width: 100%; 
-}
-
-.card-title {
-    font-size: 18px;
-    color: var(--primary-color);
-    margin-bottom: 4px;
-    font-weight: 600;
-    width: 100%;
-    text-align: left;
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-}
-
-.card-plate {
-    font-size: 14px;
-    font-weight: 500;
-    color: #d35400; 
-    margin-bottom: 4px;
-    text-align: left;
-}
-
-.card-subtitle {
-    font-size: 13px;
-    font-weight: normal;
-    color: #666;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 13px;
-    font-weight: 500;
-    margin-bottom: 8px;
-    color: white;
-}
-
-.loading {
-    text-align: center;
-    font-size: 18px;
-    color: #7f8c8d;
-    padding: 40px;
-    grid-column: 1 / -1;
-}
+.report-tabs-container { display: inline-flex; background: rgba(0, 0, 0, 0.1); padding: 5px; border-radius: 12px; }
+.report-tab-btn { padding: 8px 20px; border: none; background: transparent; color: rgba(255,255,255,0.9); font-family: 'Prompt', sans-serif; font-size: 16px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; }
+.report-tab-btn:hover { color: #ffffff; background: rgba(255, 255, 255, 0.2); }
+.report-tab-btn.active { background: #ffffff; color: var(--primary-dark); font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
 /* ==========================================
-   6. ตารางเวรปฏิบัติงาน (Schedule Table)
+   7. การ์ดแสดงผล (Cards & Gallery) 
    ========================================== */
-.schedule-table-container {
-    width: 100%;
-    overflow-x: auto;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    padding: 20px;
-    border: 1px solid #ddd;
-}
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 25px; }
+.vehicle-card { background-color: var(--card-bg); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.04); border: 1px solid var(--border-color); transition: 0.3s; display: flex; flex-direction: column; position: relative; }
+.vehicle-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(5, 150, 105, 0.1); border-color: var(--primary-color); } 
+.card-image-wrapper { width: 100%; height: 240px; overflow: hidden; position: relative; background-color: #f8fafc; cursor: pointer; box-sizing: border-box; border-bottom: 1px solid #f1f5f9; }
+.image-slide-track { display: flex; height: 100%; transition: transform 0.3s ease; }
+.image-slide-track img { width: 100%; height: 100%; object-fit: contain; flex-shrink: 0; }
+.card-image-wrapper:has(img:nth-child(2)):hover .image-slide-track { transform: translateX(-100%); }
+.card-content { padding: 20px; text-align: left; flex-grow: 1; display: flex; flex-direction: column; align-items: flex-start; cursor: pointer; width: 100%; }
 
-.schedule-date-header {
-    text-align: center;
-    font-size: 22px;
-    font-weight: bold;
-    color: var(--primary-color);
-    margin-bottom: 20px;
-}
-
-.schedule-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 800px;
-    text-align: center;
-}
-
-.schedule-table th, .schedule-table td {
-    padding: 12px 10px;
-    border: 1px solid #bdc3c7; 
-    font-size: 15px;
-    vertical-align: middle;
-}
-
-.schedule-table thead .shift-header { background-color: #2980b9; color: white; font-size: 17px; font-weight: 600; }
-.schedule-table thead .name-header { background-color: #ffffff; color: #333; font-weight: 500; }
-.schedule-table tr:hover { background-color: #f1f2f6; }
-.cell-rest { background-color: #e74c3c !important; color: white !important; font-weight: bold; }
+.card-title { font-size: 20px; color: var(--sidebar-text); margin-bottom: 6px; font-weight: 600; width: 100%; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-plate { font-size: 16px; font-weight: 500; color: #d35400; margin-bottom: 6px; }
+.card-subtitle { font-size: 15px; font-weight: normal; color: #64748b; }
+.status-badge { display: inline-block; padding: 6px 14px; border-radius: 14px; font-size: 14px; font-weight: 500; margin-bottom: 10px; color: white; }
+.loading { text-align: center; font-size: 20px; color: #94a3b8; padding: 40px; grid-column: 1 / -1; }
 
 /* ==========================================
-   7. หมวดหมู่แบบฟอร์ม (Form List Mode)
+   8. ตารางเวรปฏิบัติงาน (Schedule Table)
    ========================================== */
-#vehicleGallery.form-list-mode {
-    display: flex;
-    flex-direction: column;
-    gap: 15px; 
-}
-
-.form-bar {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    background-color: #fff;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    text-decoration: none; 
-    color: #333;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.form-bar:hover {
-    transform: translateY(-3px); 
-    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
-    background-color: #fcfcfc; 
-}
-
-.form-name {
-    flex-grow: 1; 
-    font-size: 16px;
-    font-weight: 500;
-}
+.schedule-table-container { width: 100%; overflow-x: auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); padding: 20px; border: 1px solid var(--border-color); }
+.schedule-date-header { text-align: center; font-size: 24px; font-weight: bold; color: var(--primary-color); margin-bottom: 20px; }
+.schedule-table { width: 100%; border-collapse: collapse; min-width: 800px; text-align: center; }
+.schedule-table th, .schedule-table td { padding: 15px 12px; border: 1px solid var(--border-color); font-size: 16px; vertical-align: middle; }
+.schedule-table thead .shift-header { background-color: var(--primary-color); color: white; font-size: 18px; font-weight: 500; }
+.schedule-table thead .name-header { background-color: #f8fafc; color: var(--sidebar-text); font-weight: 500; }
+.schedule-table tr:hover { background-color: #f1f8f5; }
+.cell-rest { background-color: #ef4444 !important; color: white !important; font-weight: bold; }
 
 /* ==========================================
-   8. สัญลักษณ์ประเภทไฟ (Fire Classes)
+   9. หมวดหมู่แบบฟอร์ม (Form List Mode)
    ========================================== */
-.fire-class-container {
-    display: flex;
-    justify-content: flex-start;
-    gap: 6px;
-    margin-top: 8px;
-    margin-bottom: 6px;
-}
-
-.fire-class-badge { 
-    width: 24px; 
-    height: 24px; 
-    border-radius: 50%; 
-    display: inline-flex; 
-    align-items: center; 
-    justify-content: center; 
-    color: white; 
-    font-weight: bold; 
-    font-size: 12px; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15); 
-    font-family: Arial, Helvetica, sans-serif; 
-}
-
-.class-a { background-color: #27ae60; } 
-.class-b { background-color: #e74c3c; } 
-.class-c { background-color: #3498db; } 
-.class-d { background-color: #f1c40f; color: #333; } 
-.class-k { background-color: #2c3e50; } 
+#vehicleGallery.form-list-mode { display: flex; flex-direction: column; gap: 15px; }
+.form-bar { display: flex; align-items: center; width: 100%; background-color: #fff; padding: 20px; border: 1px solid var(--border-color); border-radius: 10px; text-decoration: none; color: var(--sidebar-text); cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+.form-bar:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(5, 150, 105, 0.1); background-color: #ffffff; border-color: var(--primary-color); } 
+.form-name { flex-grow: 1; font-size: 18px; font-weight: 500; }
 
 /* ==========================================
-   9. ฟอร์มและอินพุต (Forms & Inputs)
+   10. สัญลักษณ์ประเภทไฟ (Fire Classes)
    ========================================== */
-.app-container { 
-    display: flex; 
-    width: 100%; 
-    height: 100vh; 
-    height: 100dvh; 
-    overflow: hidden; 
-    background-color: var(--bg-color); 
-}
+.fire-class-container { display: flex; justify-content: flex-start; gap: 8px; margin-top: 8px; margin-bottom: 8px; }
+.fire-class-badge { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); font-family: Arial, Helvetica, sans-serif; }
+.class-a { background-color: var(--primary-color); } .class-b { background-color: #ef4444; } .class-c { background-color: #3b82f6; } .class-d { background-color: #f59e0b; color: #333; } .class-k { background-color: #334155; } 
 
-.form-layout-container { 
-    flex-grow: 1; 
-    padding: 30px; 
-    overflow-y: auto; 
-    display: flex; 
-    justify-content: center; 
-    align-items: flex-start; 
-}
+/* ==========================================
+   11. ฟอร์มและอินพุต (Forms & Inputs) 
+   ========================================== */
+.app-container { display: flex; width: 100%; background-color: var(--bg-color); }
+.form-layout-container { flex-grow: 1; padding: 30px; display: flex; justify-content: center; align-items: flex-start; }
+.form-section { background: #fff; width: 100%; max-width: 800px; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 50px; }
+.form-group { margin-bottom: 25px; }
+.form-group label { display: block; font-weight: 500; margin-bottom: 10px; color: var(--sidebar-text); font-size: 18px; } 
+.form-group input[type="text"], .form-group input[type="date"], .form-group input[type="number"], .form-group select, .form-group textarea { width: 100%; padding: 14px 18px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; transition: border-color 0.3s; outline: none; background-color: #ffffff; font-family: 'Prompt', sans-serif; margin-top: 5px; } 
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary-color); background-color: #fff; box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15); } 
 
-.form-section { 
-    background: #fff; 
-    width: 100%; 
-    max-width: 800px; 
-    padding: 40px; 
-    border-radius: 12px; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-    border: 1px solid #eaeaea; 
-    margin-bottom: 50px; 
-}
-
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; font-weight: 500; margin-bottom: 8px; color: var(--primary-color); font-size: 15px; }
-
-.form-group input[type="text"], 
-.form-group input[type="date"], 
-.form-group input[type="number"], 
-.form-group select, 
-.form-group textarea { 
-    width: 100%; 
-    padding: 12px 15px; 
-    border: 1px solid #ccd1d9; 
-    border-radius: 8px; 
-    font-size: 15px; 
-    transition: border-color 0.3s; 
-    outline: none; 
-    background-color: #fcfcfc; 
-    font-family: 'Kanit', sans-serif; 
-    margin-top: 5px;
-}
-
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus { 
-    border-color: var(--secondary-color); 
-    background-color: #fff; 
-}
-
-.checklist-container { background-color: #f8f9fa; padding: 25px; border-radius: 10px; border: 1px solid #e9ecef; margin-bottom: 25px; }
-.checklist-container h4 { color: var(--primary-color); margin-bottom: 15px; border-bottom: 2px solid #ddd; padding-bottom: 10px; font-size: 18px; }
-.checklist-item { background: #fff; padding: 15px 20px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #eee; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-.chk-label { font-weight: 500; color: #34495e; display: block; margin-bottom: 12px; font-size: 15px; }
+.checklist-container { background-color: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 30px; }
+.checklist-container h4 { color: var(--sidebar-text); margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; font-size: 20px; }
+.checklist-item { background: #fff; padding: 18px 25px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+.chk-label { font-weight: 500; color: var(--sidebar-text); display: block; margin-bottom: 15px; font-size: 18px; }
 .checklist-options { display: flex; gap: 15px; }
-.radio-label { display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 10px 20px; background: #f1f2f6; border-radius: 20px; transition: 0.2s; font-size: 14px; margin: 0; flex: 1; text-align: center; }
-.radio-label input[type="radio"] { margin: 0; cursor: pointer; transform: scale(1.2); }
-.radio-label:hover { background: #dfe4ea; }
-.check-fail:hover { background: #fdf3d8; color: #d35400; }
+.radio-label { display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px 20px; background: #f1f5f9; border-radius: 25px; transition: 0.2s; font-size: 16px; margin: 0; flex: 1; text-align: center; color: #475569; }
+.radio-label input[type="radio"] { margin: 0; cursor: pointer; transform: scale(1.3); }
+.radio-label:hover { background: #e2e8f0; } 
+.check-fail:hover { background: #fee2e2; color: #ef4444; }
 
-.reason-input { display: none; width: 100%; margin-top: 15px; padding: 12px; border: 1px solid #e74c3c; border-radius: 6px; background-color: #fffaf9; font-size: 14px; font-family: 'Kanit', sans-serif; }
+.reason-input { display: none; width: 100%; margin-top: 15px; padding: 14px; border: 1px solid #ef4444; border-radius: 8px; background-color: #fef2f2; font-size: 16px; font-family: 'Prompt', sans-serif; } 
 .reason-input.show { display: block; animation: fadeIn 0.3s; }
-.final-status-box { background-color: #e8f8f5; padding: 20px; border-radius: 8px; border-left: 5px solid var(--secondary-color); }
+.final-status-box { background-color: #ecfdf5; padding: 25px; border-radius: 12px; border-left: 6px solid var(--primary-color); } 
 
-#submitBtn, #rf_submitBtn, #cl_submitBtn, .btn-submit-waste { 
-    width: 100%; 
-    padding: 16px; 
-    background-color: var(--secondary-color); 
-    color: white; 
-    border: none; 
-    border-radius: 8px; 
-    font-size: 18px; 
-    font-weight: 600; 
-    cursor: pointer; 
-    transition: background-color 0.3s, transform 0.2s; 
-    margin-top: 15px; 
-    box-shadow: 0 4px 6px rgba(39, 174, 96, 0.2); 
-}
-#submitBtn:hover, #rf_submitBtn:hover, #cl_submitBtn:hover, .btn-submit-waste:hover { background-color: var(--hover-color); transform: translateY(-2px); }
-#cl_submitBtn { background-color: #3498db; box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2); }
-#cl_submitBtn:hover { background-color: #2980b9; }
+#submitBtn, #rf_submitBtn, #cl_submitBtn, .btn-submit-waste { width: 100%; padding: 18px; background-color: var(--primary-color); color: white; border: none; border-radius: 10px; font-size: 20px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 20px; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.2); }
+#submitBtn:hover, #rf_submitBtn:hover, #cl_submitBtn:hover, .btn-submit-waste:hover { background-color: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(5, 150, 105, 0.3); }
+#cl_submitBtn { background-color: #3b82f6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); }
+#cl_submitBtn:hover { background-color: #2563eb; box-shadow: 0 6px 15px rgba(59, 130, 246, 0.3); }
 
 /* ==========================================
-   10. ป๊อปอัพและหน้าต่าง (Modals)
+   12. ป๊อปอัพและหน้าต่าง (Modals)
    ========================================== */
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
-.modal-content { background-color: #fefefe; margin: 5% auto; border-radius: 12px; width: 90%; max-width: 600px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; animation: modalFadeIn 0.3s; }
-
-@keyframes modalFadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-
-.modal-image-container { position: relative; width: 100%; height: 350px; background-color: #e0e0e0; display: flex; align-items: center; justify-content: center; }
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(15, 23, 42, 0.8); backdrop-filter: blur(5px); }
+.modal-content { background-color: #ffffff; margin: 5% auto; border-radius: 16px; width: 90%; max-width: 700px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); position: relative; animation: modalFadeIn 0.3s; }
+@keyframes modalFadeIn { from { opacity: 0; transform: translateY(-20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.modal-image-container { position: relative; width: 100%; height: 400px; background-color: #f8fafc; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border-color); }
 .modal-image-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.close { color: white; position: absolute; top: 10px; right: 15px; font-size: 30px; font-weight: bold; cursor: pointer; z-index: 10; text-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: 0.2s; }
-.close:hover { color: #f1c40f; }
+.close { color: white; position: absolute; top: 15px; right: 20px; font-size: 35px; font-weight: bold; cursor: pointer; z-index: 10; text-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: 0.2s; background: rgba(0,0,0,0.2); width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; border-radius: 50%; line-height: 1; }
+.close:hover { background: var(--primary-color); }
 
-.slide-btn { position: absolute; top: 50%; transform: translateY(-50%); background-color: rgba(0,0,0,0.5); color: white; border: none; padding: 15px 10px; cursor: pointer; font-size: 18px; transition: 0.3s; border-radius: 5px; }
-.slide-btn:hover { background-color: rgba(0,0,0,0.8); }
-#prevImageBtn { left: 10px; }
-#nextImageBtn { right: 10px; }
-.image-counter { position: absolute; bottom: 10px; right: 10px; background-color: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 10px; font-size: 12px; }
+.slide-btn { 
+    position: absolute; top: 50%; transform: translateY(-50%); background-color: #000000; 
+    color: white; border: none; width: 50px; height: 50px; padding: 0; 
+    display: flex; align-items: center; justify-content: center; cursor: pointer; 
+    font-size: 22px; transition: 0.3s; border-radius: 50%; backdrop-filter: blur(2px); 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+}
+.slide-btn:hover { background-color: #333333; }
+#prevImageBtn { left: 15px; }
+#nextImageBtn { right: 15px; }
+.image-counter { position: absolute; bottom: 15px; right: 15px; background-color: rgba(0,0,0,0.6); color: white; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: 500; }
 
-#modalDetails { padding: 25px; }
-#modalDetails h2 { color: var(--primary-color); margin-bottom: 15px; font-size: 22px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-#modalDetails p { margin-bottom: 10px; font-size: 15px; color: #444; display: flex; }
-#modalDetails p strong { width: 130px; flex-shrink: 0; color: #666; }
+#modalDetails { padding: 30px; }
+#modalDetails h2 { color: var(--sidebar-text); margin-bottom: 15px; font-size: 26px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+#modalDetails p { margin-bottom: 12px; font-size: 18px; color: #475569; display: flex; }
+#modalDetails p strong { width: 140px; flex-shrink: 0; color: #94a3b8; }
 
-.action-buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
-.action-btn { padding: 10px 20px; border-radius: 5px; text-decoration: none; color: white; font-weight: bold; text-align: center; transition: 0.3s; }
-.btn-inspect { background-color: #27ae60; }
-.btn-inspect:hover { background-color: #1e8449; }
+.action-buttons { margin-top: 25px; display: flex; gap: 15px; justify-content: center; }
+.action-btn { padding: 14px 28px; border-radius: 8px; text-decoration: none; color: white; font-weight: bold; text-align: center; transition: 0.3s; font-size: 18px; }
+.btn-inspect { background-color: var(--primary-color); box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2); } 
+.btn-inspect:hover { background-color: var(--primary-dark); transform: translateY(-2px); }
 
 /* ==========================================
-   11. รองรับมือถือและหน้าจอเล็ก (Responsive) - อัปเดตแก้ปัญหาหน้าขาว/กดไม่ได้
+   13. 📱 รองรับมือถือและหน้าจอเล็ก (Mobile Responsive)
    ========================================== */
 @media (max-width: 768px) {
-    /* ปลดล็อกการล็อคหน้าจอ ให้เลื่อนขึ้นลงได้ตามปกติ */
-    body { 
-        flex-direction: column; 
-        height: auto !important; 
-        min-height: 100vh;
-        overflow-y: auto !important; 
-        overflow-x: hidden;
-    }
+    body { flex-direction: column; height: auto !important; min-height: 100vh; overflow-y: auto !important; overflow-x: hidden; }
+    .app-container { flex-direction: column; height: auto !important; min-height: 100vh; overflow: visible !important; }
     
-    .app-container { 
-        flex-direction: column; 
-        height: auto !important; 
-        min-height: 100vh;
-        overflow: visible !important; 
-    }
-    
-    /* จัดการเมนูด้านบนไม่ให้บังปุ่มกด */
-    .sidebar { 
-        position: relative !important; 
-        left: 0 !important; 
-        width: 100% !important; 
-        height: auto !important; 
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-        z-index: 10; 
-        flex-shrink: 0;
-        padding-bottom: 5px;
-    }
+    .sidebar { position: relative !important; left: 0 !important; width: 100% !important; height: auto !important; box-shadow: 0 2px 10px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; padding-bottom: 0; border-right: none; border-bottom: 1px solid var(--border-color); }
     .sidebar::before, .sidebar::after { display: none; } 
-    
-    .sidebar-menu { 
-        display: flex; 
-        overflow-x: auto; 
-        white-space: nowrap; 
-        padding: 0 10px; 
-        -webkit-overflow-scrolling: touch; 
-    }
+    .sidebar-header { display: none; } 
+    .sidebar-menu { display: flex; overflow-x: auto; white-space: nowrap; padding: 0 10px; -webkit-overflow-scrolling: touch; }
     .sidebar-menu > li { border-bottom: none; display: inline-block; }
+    .sidebar-menu li a { padding: 14px 18px; font-size: 16px; border-left: none; border-bottom: 3px solid transparent; }
+    .sidebar-menu li a:hover, .sidebar-menu li a.active { border-left-color: transparent; border-bottom-color: var(--primary-color); background-color: transparent; }
+    .has-submenu .submenu { position: absolute; width: 100%; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.1); left: 0; top: 100%; border-radius: 0 0 12px 12px; }
     
-    /* ซ่อน submenu ย่อยเมื่อเป็นแนวนอนบนมือถือเพื่อไม่ให้บังฟอร์ม */
-    .has-submenu .submenu { position: absolute; width: 100%; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.1); left: 0; top: 100%; }
+    .main-content { margin-left: 0 !important; width: 100% !important; height: auto !important; flex-grow: 1; overflow: visible !important; display: flex; flex-direction: column; }
+    .content-area { padding: 15px; }
     
-    /* ปลดล็อกพื้นที่ฟอร์ม */
-    .main-content { 
-        margin-left: 0 !important; 
-        width: 100% !important; 
-        height: auto !important;
-        flex-grow: 1; 
-        overflow: visible !important; 
-        display: flex; 
-        flex-direction: column; 
-    }
+    .global-header { padding: 20px 15px; position: relative !important; transform: none !important; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.15); }
+    .header-dropdown-wrapper, .header-dropdown-wrapper:not(#dynamic-header-wrapper) { position: relative !important; height: auto !important; left: 0 !important; width: 100% !important; }
+    .header-grabber, .header-dropdown-wrapper:not(#dynamic-header-wrapper) .header-grabber { display: none !important; } 
     
-    .top-header, .main-header { flex-direction: column; gap: 10px; align-items: stretch; text-align: center; padding: 15px; flex-shrink: 0; }
-    .search-container { width: 100%; }
+    .header-top-row { flex-direction: column; gap: 10px; text-align: center; justify-content: center; border-bottom: none; padding-bottom: 0; }
+    .header-brand { flex-direction: column; gap: 10px; }
+    .brand-main { font-size: 22px; } 
+    .header-right { text-align: center; }
     
-    .form-layout-container { 
-        padding: 15px; 
-        display: block; 
-        height: auto !important;
-        overflow: visible !important; 
-    }
+    .header-action-row { flex-direction: column; text-align: center; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px; margin-top: 10px; }
+    .header-action-row .page-title { margin-right: 0; margin-bottom: 12px; font-size: 22px; }
+    .header-filters { justify-content: center; }
     
-    .form-section, .waste-form-container { 
-        padding: 20px; 
-        margin: 10px auto; 
-        border-radius: 8px; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
-        width: 100%; 
-    }
+    .filter-buttons { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; width: 100%; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+    .filter-btn, .sub-filter-btn { min-width: auto; white-space: nowrap; flex-shrink: 0; font-size: 15px; }
     
-    /* จัดการช่องกรอกขยะให้แสดงผลพอดี */
+    .global-header .search-container { width: 100%; margin-top: 12px; padding: 8px 15px; }
+    .global-header .search-container input { font-size: 16px; }
+    
+    .global-footer { flex-direction: column; text-align: center; gap: 8px; padding: 15px; font-size: 14px; border-top: 1px solid var(--border-color); }
+    
+    .form-layout-container { padding: 0; display: block; height: auto !important; overflow: visible !important; }
+    .form-section, .waste-form-container { padding: 25px 20px; margin: 0 auto; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); width: 100%; border: 1px solid var(--border-color); }
+    
     .waste-grid { grid-template-columns: repeat(2, 1fr); }
-    .checklist-options { flex-direction: column; gap: 10px; }
-    .radio-label { width: 100%; justify-content: center; padding: 12px; }
-    .modal-content { width: 95%; margin: 10% auto; }
+    .checklist-options { flex-direction: column; gap: 12px; }
+    .radio-label { width: 100%; justify-content: center; padding: 14px; }
+    .modal-content { width: 95%; margin: 10% auto; border-radius: 12px; }
 }
 
 @media (max-width: 480px) {
     .waste-grid { grid-template-columns: 1fr; }
     .total-box { flex-direction: column; align-items: flex-start; gap: 10px; padding: 15px; }
+    .gallery-grid { grid-template-columns: 1fr; }
+}
+
+/* ==========================================
+   14. 🌟 ขยายตัวหนังสือเฉพาะหน้ารายงานประจำวันให้อ่านง่าย 🌟
+   (อย่าลืมใส่ class="daily-incident-wrapper" ครอบตารางใน HTML)
+   ========================================== */
+.daily-incident-wrapper table { 
+    width: 100% !important; 
+}
+.daily-incident-wrapper table th { 
+    font-size: 18px !important; 
+    padding: 15px !important; 
+    font-weight: 600 !important; 
+}
+.daily-incident-wrapper table td { 
+    font-size: 16px !important; 
+    padding: 12px !important; 
+}
+.daily-incident-wrapper p, .daily-incident-wrapper li { 
+    font-size: 16px !important; 
+    line-height: 1.8 !important; 
+}
+.daily-incident-wrapper h1, .daily-incident-wrapper h2, .daily-incident-wrapper h3, .daily-incident-wrapper h4 { 
+    font-size: 22px !important; 
+    font-weight: bold !important; 
+    margin-bottom: 20px !important; 
 }

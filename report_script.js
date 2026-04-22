@@ -320,11 +320,14 @@ function renderAccidentGrid() {
             const p = String(r.injuredPerson||'').trim();
             if(p && p.includes('นักศึกษา')) st.stu++; if(p && p.includes('บุคลากร')) st.staff++; if(p && p.includes('บุคคลภายนอก')) st.ext++; if(p && p.includes('Outsource')) st.out++;
         }
-        const v = r.vehicle||'';
-        if(v.includes('จักรยาน') && !v.includes('ยนต์') && !/motor/i.test(v)) st.bike++;
-        if(v.includes('จักรยานยนต์') || /motor/i.test(v)) st.motor++;
-        if(v.includes('รถยนต์') || /car/i.test(v)) st.car++;
-        if(v.includes('รถบัส') || /bus/i.test(v)) st.bus++;
+        
+        const checkText = String(r.vehicle||'') + ' ' + String(r.type||'');
+        
+        // Regex หาคำว่าจักรยาน ที่ต้องไม่ได้ตามด้วยคำว่า "ยนต์" 
+        if(/จักรยาน(?!ยนต์)/.test(checkText) || /bicycle/i.test(checkText)) st.bike++;
+        if(/จักรยานยนต์/.test(checkText) || /มอเตอร์ไซค์/.test(checkText) || /motor/i.test(checkText)) st.motor++;
+        if(/รถยนต์/.test(checkText) || /กระบะ/.test(checkText) || /เก๋ง/.test(checkText) || /car/i.test(checkText)) st.car++;
+        if(/รถบัส/.test(checkText) || /รถตู้/.test(checkText) || /bus/i.test(checkText)) st.bus++;
     });
 
     const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
@@ -436,6 +439,30 @@ const vehicleMap = { 'car': { icon: 'car', color: 'red' }, 'motorcycle': { icon:
 const mahidolCenter = [13.7946, 100.3235]; 
 const mahidolBounds = L.latLngBounds([13.785, 100.308], [13.810, 100.340]);
 
+let isAllLayersVisible = false;
+
+window.toggleAllLayers = function() {
+    isAllLayersVisible = !isAllLayersVisible;
+    Object.keys(layerData).forEach(id => {
+        layerData[id].visible = isAllLayersVisible;
+        if(isAllLayersVisible) {
+            map.addLayer(layerData[id].group);
+        } else {
+            map.removeLayer(layerData[id].group);
+        }
+    });
+    
+    const btn = document.getElementById('toggleAllLayersBtn');
+    if(btn) {
+        if(isAllLayersVisible) {
+            btn.innerHTML = '<i class="fa fa-eye-slash"></i> ซ่อนหมุดทั้งหมด';
+        } else {
+            btn.innerHTML = '<i class="fa fa-eye"></i> แสดงหมุดทั้งหมด';
+        }
+    }
+    renderSidebar(); 
+};
+
 // Initialize Leaflet Map
 const map = L.map('map', { center: mahidolCenter, zoom: 16, minZoom: 4, maxZoom: 20, zoomControl: false, scrollWheelZoom: false, doubleClickZoom: false });
 
@@ -471,7 +498,7 @@ async function loadDataFromSheet() {
         } else {
             rows.forEach(row => {
                 const id = row[0]; const layerId = row[1]; const layerName = row[14];
-                if (!layerData[layerId]) layerData[layerId] = { group: L.layerGroup().addTo(map), name: layerName || 'Unnamed Layer', markers: [], visible: true, expanded: true };
+                if (!layerData[layerId]) layerData[layerId] = { group: L.layerGroup(), name: layerName || 'Unnamed Layer', markers: [], visible: false, expanded: false };
                 if (id !== 'LAYER_ONLY') {
                     let mDate = row[4] ? new Date(row[4]) : null; if (mDate && mDate.getFullYear() > 2500) mDate.setFullYear(mDate.getFullYear() - 543);
                     let mData = { id: id, lat: row[2], lon: row[3], layerId: layerId, date: row[4], dateObj: mDate, colH: row[5], colG: row[6], colJ: row[7], colK: row[8], colAD: row[9], colAE: row[10], eventType: row[11], icon: row[12], color: row[13] };
@@ -479,7 +506,27 @@ async function loadDataFromSheet() {
                 }
             });
         }
-        const keys = Object.keys(layerData).reverse(); if(keys.length > 0) currentLayerId = keys[0];
+        
+        const keys = Object.keys(layerData).reverse(); 
+        if(keys.length > 0) {
+            currentLayerId = keys[0];
+            
+            isAllLayersVisible = false;
+            keys.forEach((lid, index) => {
+                if(index === 0) {
+                    layerData[lid].visible = true;
+                    layerData[lid].expanded = true;
+                    layerData[lid].group.addTo(map);
+                } else {
+                    layerData[lid].visible = false;
+                    layerData[lid].expanded = false;
+                }
+            });
+            
+            const btn = document.getElementById('toggleAllLayersBtn');
+            if(btn) btn.innerHTML = '<i class="fa fa-eye"></i> แสดงหมุดทั้งหมด';
+        }
+
         renderSidebar(); 
         if(statusText) {
             statusText.innerHTML = '<i class="fa fa-check-circle"></i> เชื่อมต่อแล้ว'; 
@@ -787,6 +834,7 @@ if(incFilterBtn) {
         renderIncidentTable(); 
         renderAccidentGrid(); 
         if(typeof filterCarData === 'function') filterCarData();
+        renderLostFoundStats();
     });
 }
 
@@ -851,10 +899,34 @@ window.filterAccident = (k) => {
         case 'ps_staff': title='ผู้บาดเจ็บ บุคลากร'; dashModalList=all.filter(r=>r.hasInjury && (r.injuredPerson||'').includes('บุคลากร')); break;
         case 'ps_external': title='ผู้บาดเจ็บ บุคคลภายนอก'; dashModalList=all.filter(r=>r.hasInjury && (r.injuredPerson||'').includes('บุคคลภายนอก')); break;
         case 'ps_outsource': title='ผู้บาดเจ็บ Outsource'; dashModalList=all.filter(r=>r.hasInjury && (r.injuredPerson||'').includes('Outsource')); break;
-        case 'veh_bicycle': title='เกี่ยวข้องกับจักรยาน'; dashModalList=all.filter(r=> (r.vehicle||'').includes('จักรยาน') && !(r.vehicle||'').includes('ยนต์')); break;
-        case 'veh_motorcycle': title='เกี่ยวข้องกับจักรยานยนต์'; dashModalList=all.filter(r=> (r.vehicle||'').includes('จักรยานยนต์')); break;
-        case 'veh_car': title='เกี่ยวข้องกับรถยนต์'; dashModalList=all.filter(r=> (r.vehicle||'').includes('รถยนต์')); break;
-        case 'veh_bus': title='เกี่ยวข้องกับรถบัส'; dashModalList=all.filter(r=> (r.vehicle||'').includes('รถบัส')); break;
+        case 'veh_bicycle': 
+            title='เกี่ยวข้องกับจักรยาน'; 
+            dashModalList = all.filter(r => {
+                const text = String(r.vehicle||'') + ' ' + String(r.type||'');
+                return /จักรยาน(?!ยนต์)/.test(text) || /bicycle/i.test(text);
+            }); 
+            break;
+        case 'veh_motorcycle': 
+            title='เกี่ยวข้องกับจักรยานยนต์'; 
+            dashModalList = all.filter(r => {
+                const text = String(r.vehicle||'') + ' ' + String(r.type||'');
+                return /จักรยานยนต์/.test(text) || /มอเตอร์ไซค์/.test(text) || /motor/i.test(text);
+            }); 
+            break;
+        case 'veh_car': 
+            title='เกี่ยวข้องกับรถยนต์'; 
+            dashModalList = all.filter(r => {
+                const text = String(r.vehicle||'') + ' ' + String(r.type||'');
+                return /รถยนต์/.test(text) || /กระบะ/.test(text) || /เก๋ง/.test(text) || /car/i.test(text);
+            }); 
+            break;
+        case 'veh_bus': 
+            title='เกี่ยวข้องกับรถบัส'; 
+            dashModalList = all.filter(r => {
+                const text = String(r.vehicle||'') + ' ' + String(r.type||'');
+                return /รถบัส/.test(text) || /รถตู้/.test(text) || /bus/i.test(text);
+            }); 
+            break;
     }
     dashModalIndex = 0; document.getElementById('dashModalTitle').textContent = title; dashModalBackdrop.style.display = 'flex'; document.body.style.overflow = 'hidden'; document.querySelector('.nav-wrapper').style.display = 'flex'; document.getElementById('markerDetailButton').style.display = 'none'; renderDashModal();
 }
@@ -921,9 +993,7 @@ window.handleTramResponse = function(json) {
         if(c[1]) { if(c[1].v && typeof c[1].v === 'string' && c[1].v.includes('Date')) { const p = c[1].v.match(/\d+/g); if(p) d = new Date(p[0], p[1], p[2]); } else if (c[1].v) { d = new Date(c[1].v); } }
         if(!d || isNaN(d.getTime())) return;
         
-        // ดึงข้อมูลคอลัมน์ D (ส่วนงาน) - index 3
         const departmentStr = c[3] ? (c[3].v || 'ไม่ระบุ') : 'ไม่ระบุ';
-        
         const durationVal = c[6] ? (c[6].v || 0) : 0; const durationRaw = typeof durationVal === 'number' ? durationVal : parseFloat(durationVal);
         const distVal = c[7] ? (c[7].v || 0) : 0; const tramsVal = c[8] ? (c[8].v || 0) : 0; const roundsVal = c[9] ? (c[9].v || 0) : 0; 
         
@@ -939,11 +1009,6 @@ window.handleTramResponse = function(json) {
     });
     filterAnywheelTram();
 };
-
-const awFilterBtn = document.getElementById('awFilterBtn');
-if(awFilterBtn) {
-    awFilterBtn.addEventListener('click', filterAnywheelTram);
-}
 
 function filterAnywheelTram() {
     const sStr = document.getElementById('awStart').value;
@@ -964,7 +1029,7 @@ function updateAnywheelStats(data) {
 function updateTramStats(data) {
     let count = 0, rounds = 0, dist = 0, trams = 0, totalDurationRaw = 0; 
     let dailyMap = {}; 
-    let deptMap = {}; // สำหรับเก็บสถิติส่วนงาน
+    let deptMap = {}; 
 
     data.forEach(item => {
         count++; rounds += item.rounds; dist += item.distance; trams += item.trams; totalDurationRaw += item.durationRaw; 
@@ -972,21 +1037,20 @@ function updateTramStats(data) {
         if(!dailyMap[item.dateStr]) dailyMap[item.dateStr] = { date: item.dateStr, sortDate: item.dateObj, count: 0, rounds: 0, distance: 0, trams: 0, dailyDuration: 0 };
         const d = dailyMap[item.dateStr]; d.count++; d.rounds += item.rounds; d.distance += item.distance; d.trams += item.trams; d.dailyDuration += item.durationRaw;
 
-        // นับจำนวนงานแต่ละส่วนงาน
         let dept = item.department;
         if (!deptMap[dept]) deptMap[dept] = 0;
         deptMap[dept]++;
     });
     
     const countEl = document.getElementById("tram_cardTrips");
-    if(!countEl) return; // Views not loaded yet
+    if(!countEl) return; 
 
     animateValue("tram_cardTrips", count); animateValue("tram_cardRounds", rounds); animateValue("tram_cardDistance", dist, true); animateValue("tram_cardTrams", trams);
     const hours = Math.floor(totalDurationRaw / 60); document.getElementById("tram_cardDuration").innerHTML = `${hours.toLocaleString()} <span class="tram-stat-unit">ชม.</span>`;
     
     tram_currentDaily = Object.values(dailyMap).sort((a,b) => a.sortDate - b.sortDate); tram_page = 1; renderTramTable();
     
-    drawTramDeptChart(deptMap); // วาดกราฟส่วนงาน
+    drawTramDeptChart(deptMap);
 }
 
 function drawTramDeptChart(deptMap) {
@@ -999,19 +1063,14 @@ function drawTramDeptChart(deptMap) {
     }
 
     const dataArray = [['ส่วนงาน', 'จำนวนงาน', { role: 'style' }, { role: 'annotation' }]];
-    const sortedDepts = Object.entries(deptMap).sort((a, b) => b[1] - a[1]); // เรียงจากมากไปน้อย
-    
-    // ชุดสีสำหรับแต่ละแท่งกราฟ
+    const sortedDepts = Object.entries(deptMap).sort((a, b) => b[1] - a[1]); 
     const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'];
     
     sortedDepts.forEach(([dept, count], idx) => {
-        // เติมช่องว่างด้านหลังชื่อส่วนงานเพื่อให้ห่างจากแท่งกราฟมากขึ้น และใส่ count ลงใน annotation
         dataArray.push([dept + '        ', count, palette[idx % palette.length], count]);
     });
 
     const data = google.visualization.arrayToDataTable(dataArray);
-    
-    // ดึงช่วงวันที่มาแสดงในชื่อกราฟ
     const sStr = document.getElementById('awStart').value;
     const eStr = document.getElementById('awEnd').value;
     if(!sStr || !eStr) return;
@@ -1023,7 +1082,6 @@ function drawTramDeptChart(deptMap) {
         title: 'สถิติการใช้บริการรถรางแยกตามส่วนงาน ประจำเดือน ' + titleDate,
         titleTextStyle: { fontSize: 32, color: '#000000', bold: true, fontName: 'TH Sarabun New' },
         fontName: 'TH Sarabun New',
-        // ขยาย chartArea ให้กินพื้นที่มากที่สุด (ลดขอบขวาลง) และเผื่อซ้ายไว้สำหรับตัวหนังสือ
         chartArea: { left: '22%', right: '5%', top: '15%', bottom: '15%' }, 
         hAxis: { 
             title: 'จำนวนงาน (ครั้ง)', 
@@ -1032,12 +1090,11 @@ function drawTramDeptChart(deptMap) {
             textStyle: { fontSize: 24, color: '#000000', bold: true } 
         },
         vAxis: { 
-            textStyle: { fontSize: 36, color: '#000000', bold: true } // ขยายตัวหนังสือส่วนงาน
+            textStyle: { fontSize: 36, color: '#000000', bold: true } 
         },
         legend: { position: 'none' },
         animation: { startup: true, duration: 600, easing: 'out' },
         bar: { groupWidth: '70%' },
-        // ตั้งค่าการแสดงตัวเลขกำกับ (Annotation)
         annotations: {
             alwaysOutside: true,
             textStyle: {
@@ -1123,29 +1180,100 @@ let lf_page = 1;
 const LF_ROWS_PER_PAGE = 3;
 
 async function fetchLostFoundData() {
-    const LF_SHEET_ID = '14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I'; const LF_GID = '751456190';
-    const url = `https://docs.google.com/spreadsheets/d/${LF_SHEET_ID}/gviz/tq?tqx=out:json&gid=${LF_GID}`;
+    const LF_SHEET_ID = '14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I'; 
+    const urls = [
+        { url: `https://docs.google.com/spreadsheets/d/${LF_SHEET_ID}/gviz/tq?tqx=out:json&gid=751456190`, isNew: false },
+        { url: `https://docs.google.com/spreadsheets/d/${LF_SHEET_ID}/gviz/tq?tqx=out:json&gid=2074352966`, isNew: true } // ชีท LF_New
+    ];
 
     try {
-        const response = await fetch(url); const text = await response.text(); const json = JSON.parse(text.substring(47).slice(0, -2));
-        
-        lf_allData = json.table.rows.map(row => {
-            const c = row.c; if (!c || !c[1]) return null;
-            let dateObj = new Date(); const dateVal = c[1]?.v;
+        lf_allData = []; 
+        for (let sheet of urls) {
+            const response = await fetch(sheet.url); 
+            const text = await response.text(); 
+            const json = JSON.parse(text.substring(47).slice(0, -2));
             
-            if(typeof dateVal === 'string' && dateVal.includes('Date')) { const parts = dateVal.match(/\d+/g); dateObj = new Date(parts[0], parts[1], parts[2], parts[3]||0, parts[4]||0); } 
-            else if (dateVal) { dateObj = new Date(dateVal); } else { return null; }
+            const rows = json.table.rows.map(row => {
+                const c = row.c; if (!c) return null;
+                
+                let dateObj = new Date();
+                let dStr = "";
+                let typeText = "";
+                let isReturned = false;
 
-            let year = dateObj.getFullYear(); if (year > 2400) { year = year - 543; dateObj.setFullYear(year); }
+                // 🌟 1. ดึงวันที่จาก Timestamp (คอลัมน์ A หรือ index 0) เป็นหลักเสมอ 🌟
+                dStr = String(c[0]?.v || c[0]?.f || "").trim();
 
-            const fullRowText = c.map(cell => cell ? (cell.v || "").toString() : "").join(" "); const col2Text = (c[2]?.v || "").toString();
-            let type = "other"; let isReturned = false;
+                if (sheet.isNew) {
+                    if (!dStr) dStr = String(c[7]?.v || c[7]?.f || "").trim(); // fallback 
+                    typeText = String(c[2]?.v || c[2]?.f || ""); 
+                    let statusText = String(c[12]?.v || c[12]?.f || ""); 
+                    if (statusText.includes("คืน") || typeText.includes("คืน")) isReturned = true;
+                } else {
+                    if (!dStr) dStr = String(c[1]?.v || c[1]?.f || "").trim(); // fallback
+                    typeText = String(c[2]?.v || c[2]?.f || "");
+                    let fullText = c.map(cell => cell ? (cell.v || "").toString() : "").join(" ");
+                    if (fullText.includes("คืน")) isReturned = true;
+                }
 
-            if (fullRowText.includes("คืน")) isReturned = true;
-            if (col2Text.includes("หาย")) type = "lost"; else if (col2Text.includes("เก็บ") || col2Text.includes("พบ")) type = "found"; else if (fullRowText.includes("หาย")) type = "lost"; else if (fullRowText.includes("เก็บ") || fullRowText.includes("พบ")) type = "found";
+                if (!dStr) return null;
 
-            return { dateObj: dateObj, type: type, isReturned: isReturned };
-        }).filter(item => item !== null);
+                // 🌟 2. ระบบแปลงวันที่แบบทนทานขั้นสุด (สลับเดือนกับวันให้อัตโนมัติถ้ากรอกมาผิด) 🌟
+                if (dStr.includes('Date(')) {
+                    const p = dStr.match(/\d+/g);
+                    if (p) dateObj = new Date(p[0], p[1], p[2], p[3]||0, p[4]||0);
+                } else if (dStr.includes('/') || dStr.includes('-')) {
+                    const splitter = dStr.includes('/') ? /[ T/]/ : /[ T-]/;
+                    const p = dStr.split(splitter).filter(x => x.length > 0);
+                    if (p.length >= 3) {
+                        let y = parseInt(p[2]), m = parseInt(p[1]), day = parseInt(p[0]);
+                        if (p[0].length === 4) { y = parseInt(p[0]); m = parseInt(p[1]); day = parseInt(p[2]); }
+                        
+                        // ถ้าระบบเห็นว่าเดือนเกิน 12 แปลว่าสลับที่กันแน่นอน ให้สลับกลับ
+                        if (m > 12) { 
+                            let temp = m; 
+                            m = day; 
+                            day = temp; 
+                        }
+                        
+                        let hr = 0, min = 0;
+                        if(p.length >= 5 && p[3].includes(':')) {
+                             let t = p[3].split(':'); hr = parseInt(t[0]); min = parseInt(t[1]);
+                        } else if (p.length >= 4 && p[3].includes(':')) {
+                             let t = p[3].split(':'); hr = parseInt(t[0]); min = parseInt(t[1]);
+                        }
+                        
+                        dateObj = new Date(y, m - 1, day, hr, min); 
+                    } else {
+                        dateObj = new Date(dStr);
+                    }
+                } else {
+                    dateObj = new Date(dStr);
+                }
+                
+                if(isNaN(dateObj.getTime())) return null;
+
+                let year = dateObj.getFullYear(); 
+                if (year > 2400) { year = year - 543; dateObj.setFullYear(year); }
+
+                // 🌟 3. กวาดประเภทของให้ครอบคลุมทุกคีย์เวิร์ด 🌟
+                let type = "other"; 
+                if (typeText.includes("หาย") || typeText.includes("สูญหาย") || typeText.includes("ตามหา") || typeText.includes("ลืม")) {
+                    type = "lost"; 
+                } else if (typeText.includes("เก็บ") || typeText.includes("พบ") || typeText.includes("เจอ")) {
+                    type = "found"; 
+                } else {
+                    let fullText = c.map(cell => cell ? (cell.v || "").toString() : "").join(" ");
+                    if (fullText.includes("หาย") || fullText.includes("สูญหาย") || fullText.includes("ตามหา") || fullText.includes("ลืม")) type = "lost";
+                    else if (fullText.includes("เก็บ") || fullText.includes("พบ") || fullText.includes("เจอ")) type = "found";
+                    else type = "found"; 
+                }
+
+                return { dateObj: dateObj, type: type, isReturned: isReturned };
+            }).filter(item => item !== null);
+
+            lf_allData = lf_allData.concat(rows);
+        }
         
         renderLostFoundStats();
 
@@ -1171,7 +1299,6 @@ function renderLostFoundStats() {
 function processLFMonthlyData() {
     let monthlyMap = {};
     
-    // ดึงวันที่สิ้นสุดจากช่องกรองข้อมูล
     const eInput = document.getElementById('incEnd').value;
     if(!eInput) return;
     const endDate = new Date(eInput);
@@ -1182,15 +1309,7 @@ function processLFMonthlyData() {
         let y = d.dateObj.getFullYear();
         let m = d.dateObj.getMonth();
 
-        // ต้องเป็นปีเดียวกับที่เลือก
-        if (y !== selectedYear) {
-            return;
-        }
-        
-        // ต้องเป็นเดือนก่อนหน้าเดือนที่เลือก (เดือนน้อยกว่า)
-        if (m >= selectedMonth) {
-            return;
-        }
+        if (y !== selectedYear || m > selectedMonth) return;
 
         let key = `${y}-${pad(m+1)}`;
         let label = `${thaiMonthLong(m)} ${beYear(y)}`;
@@ -1290,6 +1409,7 @@ function updatePaginationLF(page, total, count) {
 
 // Initialize Lost & Found
 fetchLostFoundData();
+
 // ========================================================
 // 🌟 โค้ดพิเศษ: ระบบจำสถานะ Sidebar (ไม่ให้กระพริบตอนเปลี่ยนหน้า) 🌟
 // ========================================================
@@ -1297,42 +1417,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
 
-    // 1. เช็คว่าก่อนหน้านี้เมนูเปิดอยู่หรือไม่ (ถ้าเปิดอยู่ ให้ใส่คลาส keep-open ค้างไว้)
     if (sessionStorage.getItem('sidebarOpen') === 'true') {
         sidebar.classList.add('keep-open');
     }
 
-    // 2. เมื่อเอาเมาส์เข้าพื้นที่เมนู ให้จำค่าไว้ว่าเปิดอยู่
     sidebar.addEventListener('mouseenter', () => {
         sessionStorage.setItem('sidebarOpen', 'true');
         sidebar.classList.add('keep-open');
     });
 
-    // 3. เมื่อเอาเมาส์ออก ให้ล้างค่าความจำและซ่อนเมนู
     sidebar.addEventListener('mouseleave', () => {
         sessionStorage.setItem('sidebarOpen', 'false');
         sidebar.classList.remove('keep-open');
     });
 });
+
 // ========================================================
 // 🌟 ระบบควบคุมเมนูย่อย (Dropdown Toggle) สำหรับ Sidebar 🌟
 // ========================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // หาเมนูหลักทุกอันที่มีเมนูย่อยซ่อนอยู่
     const submenuLinks = document.querySelectorAll('.has-submenu > a');
     
     submenuLinks.forEach(link => {
         link.addEventListener('click', function(e) {
-            // 1. ป้องกันไม่ให้หน้าเว็บกระตุกเด้งกลับไปด้านบน
             e.preventDefault(); 
-            // 2. ป้องกันคำสั่งซ้อนทับกัน
             e.stopImmediatePropagation(); 
-            
-            // 3. หาเมนูย่อยที่อยู่ติดกับเมนูหลักที่เพิ่งถูกคลิก
             const submenu = this.nextElementSibling;
-            
             if (submenu && submenu.classList.contains('submenu')) {
-                // 4. สลับสถานะเปิด-ปิด (ถ้าปิดอยู่จะเปิด ถ้าเปิดอยู่จะปิด)
                 submenu.classList.toggle('show-submenu');
             }
         });

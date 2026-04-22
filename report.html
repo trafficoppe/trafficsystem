@@ -5,34 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>รายงานและสถิติ - ระบบงานจราจร</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    <link rel="stylesheet" href="style.css">
     
     <style>
-        body { overflow: hidden; margin: 0; padding: 0; background: #f6f7fb; } 
+        body { margin: 0; padding: 0; background: #f6f7fb; overflow-x: hidden; overflow-y: auto; } 
         
-        /* นำคำสั่งที่ดัน 250px ออก เพื่อให้หน้าเว็บกลับมาชิดซ้ายเหมือนเดิม */
-        .frame-container { position: relative; width: 100%; height: 100vh; flex-grow: 1; overflow: hidden; }
+        .frame-container { position: relative; width: 100%; height: calc(100vh - 8px); flex-grow: 1; overflow: hidden; }
         .report-frame { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             border: none; opacity: 0; z-index: -1; pointer-events: none; 
-            transition: opacity 0.2s ease-in-out; 
-            background: #f6f7fb;
+            transition: opacity 0.2s ease-in-out; background: #f6f7fb;
         }
         .report-frame.active { opacity: 1; z-index: 10; pointer-events: auto; }
         
-        /* Loading Spinner */
         .hub-loader {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            display: flex; flex-direction: column; align-items: center;
-            color: #64748b; font-size: 18px; z-index: 1; font-weight: bold;
+            display: flex; flex-direction: column; align-items: center; color: #64748b; font-size: 18px; z-index: 1; font-weight: bold;
         }
-        .spinner {
-            border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; 
-            border-radius: 50%; width: 45px; height: 45px; 
-            animation: spin 1s linear infinite; margin-bottom: 15px;
-        }
+        .spinner { border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 50%; width: 45px; height: 45px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .report-tabs-container { display: inline-flex; background: rgba(255, 255, 255, 0.1); padding: 4px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05); }
+        .report-tab-btn { padding: 6px 16px; border: none; background: transparent; color: #bdc3c7; font-family: 'Kanit', sans-serif; font-size: 14px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; }
+        .report-tab-btn:hover { color: #ffffff; background: rgba(255, 255, 255, 0.05); }
+        .report-tab-btn.active { background: #2ecc71; color: #ffffff; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -41,16 +37,17 @@
         <div class="sidebar-header">ระบบงานจราจร</div>
         <ul class="sidebar-menu">
             <li class="has-submenu">
-                <a href="index.html?main=staff">บุคลากร/พนักงาน</a>
-                <ul class="submenu">
+                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-staff').classList.toggle('show-submenu');" id="menu-staff">บุคลากร/พนักงาน ▾</a>
+                <ul class="submenu" id="submenu-staff">
+                    <li><a href="index.html?main=staff&unit=all">บุคลากรทั้งหมด</a></li>
                     <li><a href="index.html?main=staff&unit=ยุทธศาสตร์">หน่วยยุทธศาสตร์ฯ</a></li>
                     <li><a href="index.html?main=staff&unit=ปฏิบัติการ">หน่วยปฏิบัติการฯ</a></li>
                 </ul>
             </li>
 
             <li class="has-submenu">
-                <a href="index.html?main=mission">การดูแลพื้นที่ส่วนกลาง</a>
-                <ul class="submenu">
+                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-mission').classList.toggle('show-submenu');" id="menu-mission">การดูแลพื้นที่ส่วนกลาง ▾</a>
+                <ul class="submenu" id="submenu-mission">
                     <li><a href="index.html?main=mission&unit=ตรวจพื้นที่">ตรวจพื้นที่</a></li>
                     <li><a href="index.html?main=mission&unit=ช่วยเหลือ">ให้ความช่วยเหลือ</a></li>
                     <li><a href="index.html?main=mission&unit=การจราจร">งานจราจร</a></li>
@@ -58,11 +55,11 @@
                 </ul>
             </li>
             
-            <li><a href="index.html?main=vehicle">ยานพาหนะทั้งหมด</a></li>
+            <li><a href="index.html?main=vehicle" id="menu-vehicle">ยานพาหนะทั้งหมด</a></li>
             
             <li class="has-submenu">
-                <a href="index.html?main=fire">อุปกรณ์ดับเพลิง</a>
-                <ul class="submenu">
+                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-fire').classList.toggle('show-submenu');" id="menu-fire">อุปกรณ์ดับเพลิง ▾</a>
+                <ul class="submenu" id="submenu-fire">
                     <li><a href="index.html?main=fire&unit=ถังดับเพลิง">ถังดับเพลิง</a></li>
                     <li><a href="index.html?main=fire&unit=สายส่งน้ำดับเพลิง">สายส่งน้ำ</a></li>
                     <li><a href="index.html?main=fire&unit=หัวฉีด">หัวฉีด</a></li>
@@ -73,102 +70,110 @@
                 </ul>              
             </li>          
 
-            <li><a href="index.html?main=form">แบบฟอร์มต่างๆ</a></li>
-            <li><a href="index.html?main=lostfound">แจ้งของหาย/เก็บของได้</a></li>
+            <li><a href="index.html?main=form" id="menu-form">แบบฟอร์มต่างๆ</a></li>
+            <li><a href="index.html?main=lostfound" id="menu-lostfound">แจ้งของหาย/เก็บของได้</a></li>
             
-            <li class="has-submenu" style="margin-top: 20px; border-top: 1px solid #34495e; padding-top: 10px;">
-                <a href="#" id="menu-report-main" style="color: #f1c40f; font-weight: 500;">
-                    รายงานและสถิติ ▾
-                </a>
-                <ul class="submenu show-submenu" id="submenu-report">
-                    <li><a href="#" id="link-daily" onclick="switchReport('daily', this); return false;" class="report-link" style="color: #bdc3c7; transition: 0.3s;">รายงานประจำวัน</a></li>
-                    <li><a href="#" id="link-monthly" onclick="switchReport('monthly', this); return false;" class="report-link" style="color: #fff; font-weight: bold; transition: 0.3s;">รายงานประจำเดือน</a></li>
-                    <li><a href="#" id="link-security" onclick="switchReport('security', this); return false;" class="report-link" style="color: #bdc3c7; transition: 0.3s;">รายงานตรวจรับ รปภ.</a></li>
-                </ul>
-            </li>
+            <li class="has-submenu">
+    <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-report').classList.toggle('show-submenu');" id="menu-report-main">รายงานและสถิติ ▾</a>
+    
+    <ul class="submenu" id="submenu-report">
+        <li><a href="report.html?tab=daily">รายงานประจำวัน</a></li>
+        <li><a href="report.html?tab=monthly">รายงานประจำเดือน</a></li>
+        <li><a href="report.html?tab=security">รายงานตรวจรับ รปภ.</a></li>
+    </ul>
+</li>
         </ul>
     </div>
 
-    <!-- ใช้คลาส main-content ดั้งเดิม เพื่อให้ขอบซ้ายขวาเป๊ะเหมือนหน้าอื่น -->
-    <div class="main-content" style="padding: 0; height: 100vh; overflow: hidden;">
+    <div class="main-content" style="padding: 0; background: #f6f7fb;">
         
+        <div class="header-dropdown-wrapper always-open">
+            <div class="header-grabber" title="เลื่อนเมาส์เพื่อแสดงเมนู"><div class="grabber-line"></div></div>
+            <header class="global-header">
+                <div class="header-top-row">
+                    <div class="header-brand">
+                    </div>
+                </div>
+                
+                <div class="header-action-row">
+                    <div class="page-title" style="margin-right: 15px;">สรุปรายงาน</div>
+                    
+                    <div class="header-filters" style="justify-content: flex-start; flex-grow: 1;">
+                        <div class="report-tabs-container">
+                            <button class="report-tab-btn active" id="tab-btn-monthly" onclick="switchReport('monthly')">รายงานประจำเดือน</button>
+                            <button class="report-tab-btn" id="tab-btn-daily" onclick="switchReport('daily')">รายงานประจำวัน</button>
+                            <button class="report-tab-btn" id="tab-btn-security" onclick="switchReport('security')">รายงานตรวจรับ รปภ.</button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+        </div>
+
         <div class="hub-loader" id="hub-loader">
             <div class="spinner"></div>
             <div id="hub-loading-text">กำลังโหลดข้อมูล...</div>
         </div>
 
         <div class="frame-container">
-            <iframe id="frame-monthly" src="report_monthly.html" class="report-frame active"></iframe>
+            <iframe id="frame-monthly" data-src="report_monthly.html" class="report-frame"></iframe>
             <iframe id="frame-daily" data-src="report_daily.html" class="report-frame"></iframe>
             <iframe id="frame-security" data-src="report_security.html" class="report-frame"></iframe>
         </div>
+
+        <footer class="global-footer">
+            <div>© 2026 งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม มหาวิทยาลัยมหิดล</div>
+            <div>โทรศัพท์: 0-2849-6000 | พัฒนาโดย: ยุทธภูมิ ยานเพิ่ม</div>
+        </footer>
     </div>
 
     <script>
-        function switchReport(type, clickedEl) {
+        function switchReport(type) {
             document.querySelectorAll('.report-frame').forEach(f => f.classList.remove('active'));
-            document.querySelectorAll('.report-link').forEach(l => {
-                l.style.color = '#bdc3c7';
-                l.style.fontWeight = 'normal';
-            });
-            
             const targetFrame = document.getElementById('frame-' + type);
-            if (!targetFrame.src || targetFrame.src === window.location.href) {
-                targetFrame.src = targetFrame.getAttribute('data-src');
+            if (!targetFrame.src || targetFrame.src === window.location.href || targetFrame.getAttribute('src') === '') { 
+                targetFrame.src = targetFrame.getAttribute('data-src'); 
             }
             targetFrame.classList.add('active');
             
-            if(clickedEl) {
-                clickedEl.style.color = '#fff';
-                clickedEl.style.fontWeight = 'bold';
-            }
+            document.querySelectorAll('.report-tab-btn').forEach(btn => btn.classList.remove('active'));
+            const activeTabBtn = document.getElementById('tab-btn-' + type);
+            if (activeTabBtn) activeTabBtn.classList.add('active');
 
+            document.querySelectorAll('.report-link').forEach(l => { l.style.color = '#bdc3c7'; l.style.fontWeight = 'normal'; });
+            const activeSidebarLink = document.getElementById('link-' + type);
+            if (activeSidebarLink) { activeSidebarLink.style.color = '#fff'; activeSidebarLink.style.fontWeight = 'bold'; }
+            
             window.history.replaceState(null, '', '?tab=' + type);
         }
 
-        window.addEventListener('load', () => {
+        document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const activeTab = urlParams.get('tab') || 'monthly';
             
-            const activeLink = document.getElementById('link-' + activeTab);
-            if(activeLink) switchReport(activeTab, activeLink);
+            switchReport(activeTab);
 
             setTimeout(() => {
                 ['daily', 'monthly', 'security'].forEach(type => {
                     const frame = document.getElementById('frame-' + type);
-                    if (!frame.src || frame.src === window.location.href) {
-                        frame.src = frame.getAttribute('data-src');
+                    if (!frame.src || frame.src === window.location.href || frame.getAttribute('src') === '') { 
+                        frame.src = frame.getAttribute('data-src'); 
                     }
                 });
-                
                 document.getElementById('hub-loading-text').innerText = 'พร้อมใช้งานแล้ว!';
                 document.getElementById('hub-loader').querySelector('.spinner').style.display = 'none';
                 setTimeout(() => { document.getElementById('hub-loader').style.display = 'none'; }, 800);
-            }, 1500); 
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
+            }, 1000); 
+            
             const sidebar = document.querySelector('.sidebar');
             if (sessionStorage.getItem('sidebarOpen') === 'true') sidebar.classList.add('keep-open');
-
-            sidebar.addEventListener('mouseenter', () => {
-                sessionStorage.setItem('sidebarOpen', 'true');
-                sidebar.classList.add('keep-open');
-            });
-
-            sidebar.addEventListener('mouseleave', () => {
-                sessionStorage.setItem('sidebarOpen', 'false');
-                sidebar.classList.remove('keep-open');
-            });
+            sidebar.addEventListener('mouseenter', () => { sessionStorage.setItem('sidebarOpen', 'true'); sidebar.classList.add('keep-open'); });
+            sidebar.addEventListener('mouseleave', () => { sessionStorage.setItem('sidebarOpen', 'false'); sidebar.classList.remove('keep-open'); });
             
             const submenuLinks = document.querySelectorAll('.has-submenu > a');
             submenuLinks.forEach(link => {
                 link.addEventListener('click', function(e) {
                     const submenu = this.nextElementSibling;
-                    if (submenu && submenu.classList.contains('submenu')) {
-                        e.preventDefault(); e.stopImmediatePropagation(); 
-                        submenu.classList.toggle('show-submenu');
-                    }
+                    if (submenu && submenu.classList.contains('submenu')) { e.preventDefault(); e.stopImmediatePropagation(); submenu.classList.toggle('show-submenu'); }
                 });
             });
         });

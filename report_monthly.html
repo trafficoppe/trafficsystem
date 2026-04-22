@@ -208,7 +208,7 @@
             </h2>
         </div>
 
-        <div id="map-wrapper" class="section-content">
+        <div id="map-wrapper" class="section-content map-sidebar-hidden">
             <div id="map-section">
                 <div id="map-loading-overlay">
                     <div class="spinner"></div>
@@ -223,9 +223,10 @@
                             <h2>Map Manager</h2>
                             <div id="status-text" class="status-indicator"><i class="fa fa-circle-o-notch fa-spin"></i> เชื่อมต่อ...</div>
                         </div>
-                        <div class="action-bar">
-                            <button id="addMarkerBtn" class="btn-main btn-primary"><i class="fa fa-map-marker"></i> เพิ่มหมุด</button>
-                            <button id="addLayerBtn" class="btn-main btn-outline"><i class="fa fa-folder-open"></i> สร้าง Layer</button>
+                        <div class="action-bar" style="flex-wrap: wrap;">
+                            <button id="addMarkerBtn" class="btn-main btn-primary" style="flex: 1;"><i class="fa fa-map-marker"></i> เพิ่มหมุด</button>
+                            <button id="addLayerBtn" class="btn-main btn-outline" style="flex: 1;"><i class="fa fa-folder-open"></i> สร้าง Layer</button>
+                            <button id="toggleAllLayersBtn" onclick="toggleAllLayers()" class="btn-main" style="background:#f1f5f9; color:#475569; width:100%; margin-top:8px; border: 1px solid #cbd5e1;"><i class="fa fa-eye"></i> แสดงหมุดทั้งหมด</button>
                         </div>
                         <div id="layerList"></div>
                         <div id="paginationControls" class="pagination" style="display:none;"></div>
