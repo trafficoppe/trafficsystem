@@ -27,7 +27,7 @@
             background: var(--bg); 
             color: var(--ink); 
             font-family: 'TH Sarabun New', 'Sarabun', sans-serif; 
-            font-size: 24px; 
+            font-size: 20px; 
         }
         
         .dashboard-section { 
@@ -47,7 +47,7 @@
 
         .section-header { 
             text-align: center; 
-            font-size: 32px; 
+            font-size: 26px; 
             margin: 0 0 20px 0; 
             font-weight: 800; 
         }
@@ -84,14 +84,14 @@
         .dash-table thead th { 
             background: #334155; 
             color: #fff; 
-            padding: 16px; 
-            font-size: 28px; 
+            padding: 14px; 
+            font-size: 22px; 
             text-align: center; 
         }
         
         .dash-table td { 
-            font-size: 24px; 
-            padding: 14px; 
+            font-size: 20px; 
+            padding: 12px; 
             border-bottom: 1px solid #cbd5e1; 
             text-align: center; 
         }
@@ -131,10 +131,10 @@
                 </button>
                 
                 <div id="dateBox" class="relative flex flex-col justify-center items-center bg-slate-50 border-2 border-slate-200 rounded-3xl px-10 py-3 cursor-pointer hover:border-blue-400 transition shadow-sm overflow-hidden group min-w-[380px]">
-                    <div id="customDateText" class="font-bold text-[34px] text-slate-700 pointer-events-none whitespace-nowrap text-center leading-none pb-1">
+                    <div id="customDateText" class="font-bold text-[30px] text-slate-700 pointer-events-none whitespace-nowrap text-center leading-none pb-1">
                         รายงานเหตุการณ์ประจำ...
                     </div>
-                    <div class="font-bold text-[24px] text-gray-500 pointer-events-none whitespace-nowrap text-center leading-none pt-1">
+                    <div class="font-bold text-[22px] text-gray-500 pointer-events-none whitespace-nowrap text-center leading-none pt-1">
                         งานจราจรและความปลอดภัย
                     </div>
                     <input type="date" id="dateSelect" onchange="renderAllTables()">
@@ -146,10 +146,10 @@
             </div>
 
             <div id="printHeaderContainer" style="display: none; margin-bottom: 30px;">
-                <h1 id="printHeader" class="text-center font-extrabold text-[48px] text-gray-800 mb-2 leading-tight">
+                <h1 id="printHeader" class="text-center font-extrabold text-[40px] text-gray-800 mb-2 leading-tight">
                     รายงานเหตุการณ์ วันที่ ...
                 </h1>
-                <h2 class="text-center font-bold text-[32px] text-gray-600 m-0 leading-tight">
+                <h2 class="text-center font-bold text-[26px] text-gray-600 m-0 leading-tight">
                     งานจราจรและความปลอดภัย
                 </h2>
             </div>
@@ -178,7 +178,7 @@
                             <thead>
                                 <tr>
                                     <th class="text-center" style="width:65%;">ประตู</th>
-                                    <th class="text-center" style="width:35%;">จำนวนรถ (คัน)</th>
+                                    <th class="text-center" style="width:35%;">จำนวนรถ</th>
                                 </tr>
                             </thead>
                             <tbody id="carDailyBody"></tbody>
@@ -190,7 +190,7 @@
 
             <hr class="my-10 border-t-2 border-dashed border-gray-300">
             
-            <h2 class="text-[32px] font-bold text-center mb-8">รายละเอียดรายงานเหตุการณ์</h2>
+            <h2 class="text-[28px] font-bold text-center mb-8">รายละเอียดรายงานเหตุการณ์</h2>
             
             <div id="incidentTextDetails"></div>
             
@@ -358,7 +358,6 @@
                     const c = r.c; 
                     if (!c) return null;
                     
-                    // 🌟 ดึงวันที่จาก Timestamp (Col A) เป็นหลัก 🌟
                     let dStr = String(c[0]?.v || c[0]?.f || "").trim();
                     if (!dStr) dStr = String(c[1]?.v || c[1]?.f || "").trim();
                     
@@ -375,7 +374,6 @@
                             let y = parseInt(p[2]), m = parseInt(p[1]), day = parseInt(p[0]);
                             if (p[0].length === 4) { y = parseInt(p[0]); m = parseInt(p[1]); day = parseInt(p[2]); }
                             
-                            // สลับเดือนกับวัน ถ้าระบบจำผิด
                             if (m > 12) { 
                                 let temp = m; 
                                 m = day; 
@@ -443,7 +441,6 @@
                     const c = r.c; 
                     if (!c) return null;
                     
-                    // 🌟 ดึงวันที่จาก Timestamp (Col A) เป็นหลัก 🌟
                     let dStr = String(c[0]?.v || c[0]?.f || "").trim();
                     if (!dStr) dStr = String(c[7]?.v || c[7]?.f || "").trim();
                     
@@ -460,7 +457,6 @@
                             let y = parseInt(p[2]), m = parseInt(p[1]), day = parseInt(p[0]);
                             if (p[0].length === 4) { y = parseInt(p[0]); m = parseInt(p[1]); day = parseInt(p[2]); }
                             
-                            // สลับเดือนกับวัน ถ้าระบบจำผิด
                             if (m > 12) { 
                                 let temp = m; 
                                 m = day; 
@@ -622,23 +618,23 @@
             let totalInc = 0;
             
             if (totalInc === 0 && incKeys.length === 0) {
-                incBody.innerHTML += `<tr><td class="text-center text-gray-400 text-[24px]">ไม่มีเหตุการณ์ในวันนี้</td><td class="text-center text-gray-400 text-[24px]">-</td></tr>`;
+                incBody.innerHTML += `<tr><td class="text-center text-gray-400 text-[20px]">ไม่มีเหตุการณ์ในวันนี้</td><td class="text-center text-gray-400 text-[20px]">-</td></tr>`;
                 for(let i = 1; i < maxDataRows; i++) {
-                    incBody.innerHTML += `<tr><td class="text-center text-[24px]">&nbsp;</td><td class="text-center text-[24px]">&nbsp;</td></tr>`;
+                    incBody.innerHTML += `<tr><td class="text-center text-[20px]">&nbsp;</td><td class="text-center text-[20px]">&nbsp;</td></tr>`;
                 }
             } else {
                 for (let i = 0; i < maxDataRows; i++) {
                     if (i < incKeys.length) {
                         let k = incKeys[i];
                         totalInc += summary[k];
-                        incBody.innerHTML += `<tr><td class="text-center font-bold text-[24px]">${k}</td><td class="text-center text-[24px]">${summary[k]}</td></tr>`;
+                        incBody.innerHTML += `<tr><td class="text-center font-bold text-[20px]">${k}</td><td class="text-center text-[20px]">${summary[k]}</td></tr>`;
                     } else {
-                        incBody.innerHTML += `<tr><td class="text-center text-[24px]">&nbsp;</td><td class="text-center text-[24px]">&nbsp;</td></tr>`;
+                        incBody.innerHTML += `<tr><td class="text-center text-[20px]">&nbsp;</td><td class="text-center text-[20px]">&nbsp;</td></tr>`;
                     }
                 }
             }
             
-            incBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[26px]">รวมยอดรวมทั้งหมด</td><td class="text-center text-blue-600 text-[26px]">${totalInc}</td></tr>`;
+            incBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[22px]">รวมยอดรวมทั้งหมด</td><td class="text-center text-blue-600 text-[22px]">${totalInc}</td></tr>`;
 
             const carBody = document.getElementById('carDailyBody'); 
             carBody.innerHTML = '';
@@ -661,25 +657,26 @@
                     if (carRow) {
                         let g = gates[i]; 
                         totalCar += g.v;
-                        carBody.innerHTML += `<tr><td class="text-center text-[24px]">${g.n}</td><td class="text-center text-[24px]">${g.v.toLocaleString()}</td></tr>`;
+                        carBody.innerHTML += `<tr><td class="text-center text-[20px]">${g.n}</td><td class="text-center text-[20px]">${g.v.toLocaleString()}</td></tr>`;
                     } else {
-                        carBody.innerHTML += `<tr><td class="text-center text-[24px]">${gates[i].n}</td><td class="text-center text-gray-400 text-[24px]">-</td></tr>`;
+                        carBody.innerHTML += `<tr><td class="text-center text-[20px]">${gates[i].n}</td><td class="text-center text-gray-400 text-[20px]">-</td></tr>`;
                     }
                 } else {
-                    carBody.innerHTML += `<tr><td class="text-center text-[24px]">&nbsp;</td><td class="text-center text-[24px]">&nbsp;</td></tr>`;
+                    carBody.innerHTML += `<tr><td class="text-center text-[20px]">&nbsp;</td><td class="text-center text-[20px]">&nbsp;</td></tr>`;
                 }
             }
-            carBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[26px]">รวมยอดรถเข้า</td><td class="text-center text-blue-600 text-[26px]">${carRow ? totalCar.toLocaleString() : '-'}</td></tr>`;
+            carBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[22px]">รวมยอดรถเข้า</td><td class="text-center text-blue-600 text-[22px]">${carRow ? totalCar.toLocaleString() : '-'}</td></tr>`;
 
             const detailContainer = document.getElementById('incidentTextDetails');
             detailContainer.innerHTML = '';
             
+            // 🌟 สร้างหน้า UI สำหรับกรณี "เหตุการณ์ปกติ ไม่มีเหตุการณ์ในวันนี้" 🌟
             if (dailyAll.length === 0) {
                 detailContainer.innerHTML = `
                     <div class="text-center py-12">
                         <div class="inline-block bg-green-50 border-2 border-green-200 rounded-2xl px-10 py-6 shadow-sm">
-                            <p class="text-green-600 font-extrabold text-[40px] m-0 flex items-center justify-center gap-3">
-                                <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            <p class="text-green-600 font-extrabold text-[36px] m-0 flex items-center justify-center gap-3">
+                                <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                 เหตุการณ์ปกติ ไม่มีเหตุการณ์ในวันนี้
                             </p>
                         </div>
@@ -698,7 +695,7 @@
                     } else {
                         imgHtml = `
                             <div class="w-full md:w-1/3 flex-shrink-0 flex justify-center items-center bg-gray-50 rounded-xl p-2 border-2 border-dashed border-gray-300 shadow-sm overflow-hidden h-[250px] md:h-[300px]">
-                                <span class="text-gray-400 font-medium text-[22px]">ไม่มีรูปภาพประกอบ</span>
+                                <span class="text-gray-400 font-medium text-[18px]">ไม่มีรูปภาพประกอบ</span>
                             </div>
                         `;
                     }
@@ -709,8 +706,8 @@
                         <div class="mb-10 border-b-2 border-gray-200 pb-8 last:border-0">
                             <div class="flex flex-col md:flex-row gap-8 items-start">
                                 ${imgHtml}
-                                <div class="${textWidthClass} text-[24px] leading-relaxed">
-                                    <div class="font-bold text-blue-700 text-[28px] mb-3 border-b border-blue-100 pb-2 inline-block w-full">${index + 1}. ${item.type}</div>
+                                <div class="${textWidthClass} text-[20px] leading-relaxed">
+                                    <div class="font-bold text-blue-700 text-[24px] mb-3 border-b border-blue-100 pb-2 inline-block w-full">${index + 1}. ${item.type}</div>
                                     <div class="thai-justify">${item.detail}</div>
                                 </div>
                             </div>
@@ -725,6 +722,7 @@
             const controlsArea = document.getElementById('controlsContainer');
             const printHeader = document.getElementById('printHeaderContainer');
             
+            // ซ่อนปุ่ม และแสดงหัวข้อ
             controlsArea.style.display = 'none';
             printHeader.style.display = 'block';
 
