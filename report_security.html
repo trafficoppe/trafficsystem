@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>รายงานตรวจรับ รปภ. - Monthly Dashboard</title>
     <script>
-        // โค้ดปรับหน้าจอให้เต็มกรอบ เพื่อแก้ปัญหาภาพเบี้ยวไปทางขวา
         if (window.self !== window.top) {
             const style = document.createElement('style');
             style.innerHTML = `
@@ -42,10 +41,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
-<body style="background-color: #f8fafc;">
+<body style="background-color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;">
 
-    <div class="main-content" style="padding: 0; overflow-y: auto; height: 100vh; background-color: #f8fafc; margin-left: 0; width: 100%;">
-        <div class="security-dashboard-wrapper p-6 md:p-10 pb-20">
+    <div class="main-content" style="padding: 0; background-color: #f8fafc; margin-left: 0; width: 100%; flex-grow: 1; display: flex; flex-direction: column;">
+        <div class="security-dashboard-wrapper p-6 md:p-10 pb-20" style="flex-grow: 1;">
             
             <div class="max-w-7xl mx-auto mb-10 text-center fade-in">
                 <h1 class="text-4xl md:text-6xl font-extrabold text-gray-900 mb-6">พื้นที่ส่วนกลาง</h1>
@@ -182,14 +181,18 @@
                                         <td colspan="5" class="px-8 py-8 text-right text-2xl">ยอดรวมค่าปรับเดือนนี้</td>
                                         <td class="px-8 py-8 text-right text-red-600 text-4xl font-black" id="footerTotalFine">0</td>
                                     </tr>
-                                </tfoot>
+                                tfoot>
                             </table>
                         </div>
                     </div>
                 </div>
-
             </main>
         </div>
+        
+        <footer class="global-footer" style="background: #ffffff; color: #475569; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; font-size: 15px; margin-top: auto; font-family: 'Prompt', sans-serif;">
+            <div>© 2026 งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม มหาวิทยาลัยมหิดล</div>
+            <div>โทรศัพท์: 0-2849-6000 |</div>
+        </footer>
     </div>
 
     <div id="fineImageModal" style="z-index: 9999; display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(4px); font-family: 'Prompt', sans-serif;">

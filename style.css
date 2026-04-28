@@ -22,10 +22,12 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
 
-body {
+/* 🌟 แก้ไข: บังคับให้หน้าเว็บใช้แถบเลื่อนหลักแค่อันเดียว ป้องกัน Scroll ซ้อน 🌟 */
+html, body {
     background-color: var(--bg-color); color: var(--text-color);
-    display: flex; min-height: 100vh; 
-    overflow-x: hidden; overflow-y: auto; 
+    display: flex; min-height: 100vh !important; height: auto !important;
+    overflow-x: hidden !important; overflow-y: auto !important; 
+    margin: 0; padding: 0; flex-direction: column;
 }
 
 /* ==========================================
@@ -78,10 +80,14 @@ body {
 /* ==========================================
    3. พื้นที่หลัก (Main Content)
    ========================================== */
+/* 🌟 แก้ไข: ลบการจำกัดความสูง ให้เนื้อหายืดขยายได้อิสระ 🌟 */
 .main-content {
     margin-left: 20px !important; width: calc(100% - 20px) !important;
     transition: margin-left 0.4s, width 0.4s !important;
-    display: flex; flex-direction: column; min-height: 100vh;
+    display: flex; flex-direction: column; 
+    min-height: 100vh !important; height: auto !important;
+    overflow-y: visible !important; overflow-x: hidden !important;
+    flex-grow: 1;
 }
 .content-area { padding: 30px 40px; flex-grow: 1; }
 
@@ -151,9 +157,10 @@ body {
 /* ==========================================
    5. ส่วนท้าย (Global Footer) 
    ========================================== */
+/* 🌟 แก้ไข: บังคับให้ดันลงล่างสุดเสมอ 🌟 */
 .global-footer {
     background: #ffffff; color: #475569; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center;
-    margin-top: auto; border-top: 1px solid var(--border-color); flex-shrink: 0; font-size: 15px;
+    margin-top: auto !important; border-top: 1px solid var(--border-color); flex-shrink: 0; font-size: 15px; width: 100% !important;
 }
 .global-footer p { margin: 0; opacity: 1; }
 
@@ -329,8 +336,7 @@ body {
 }
 
 /* ==========================================
-   14. 🌟 ขยายตัวหนังสือเฉพาะหน้ารายงานประจำวันให้อ่านง่าย 🌟
-   (อย่าลืมใส่ class="daily-incident-wrapper" ครอบตารางใน HTML)
+   14. ขยายตัวหนังสือเฉพาะหน้ารายงานประจำวันให้อ่านง่าย
    ========================================== */
 .daily-incident-wrapper table { 
     width: 100% !important; 

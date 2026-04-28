@@ -274,3 +274,24 @@ input[type="date"], #yearSelect { padding: 8px 20px; border-radius: 50px; font-s
 .main-content {
     zoom: 0.65;
 }
+/* ==========================================
+   ยกเลิกการจำกัดความสูงและ Scroll Bar ซ้อนในหน้ารายงาน
+   ========================================== */
+html, body {
+    min-height: 100vh;
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+}
+
+.main-content {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: visible !important; /* ปิด Scroll Bar ด้านใน */
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-section {
+    flex-grow: 1; /* ดันให้สุดถ้ามีการใส่ Footer ในอนาคต */
+}

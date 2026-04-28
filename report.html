@@ -5,12 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>รายงานและสถิติ - ระบบงานจราจร</title>
     
-<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    
+    <link rel="stylesheet" href="style.css">
     
     <style>
-        body { margin: 0; padding: 0; background: #f6f7fb; overflow-x: hidden; overflow-y: auto; } 
+        /* 🌟 ป้องกันไม่ให้ตัว report.html สร้างแถบเลื่อนซ้อน 🌟 */
+        html, body { overflow: hidden !important; height: 100vh !important; margin: 0; padding: 0; background: #f6f7fb; }
         
-        .frame-container { position: relative; width: 100%; height: calc(100vh - 8px); flex-grow: 1; overflow: hidden; }
+        .main-content { 
+            height: 100vh !important; 
+            min-height: unset !important; 
+            overflow: hidden !important; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 0; 
+            background: #f6f7fb;
+        }
+
+        .header-dropdown-wrapper { flex-shrink: 0; }
+
+        .frame-container { position: relative; width: 100%; flex-grow: 1; overflow: hidden; }
         .report-frame { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             border: none; opacity: 0; z-index: -1; pointer-events: none; 
@@ -74,25 +88,24 @@
             <li><a href="index.html?main=lostfound" id="menu-lostfound">แจ้งของหาย/เก็บของได้</a></li>
             
             <li class="has-submenu">
-    <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-report').classList.toggle('show-submenu');" id="menu-report-main">รายงานและสถิติ ▾</a>
-    
-    <ul class="submenu" id="submenu-report">
-        <li><a href="report.html?tab=daily">รายงานประจำวัน</a></li>
-        <li><a href="report.html?tab=monthly">รายงานประจำเดือน</a></li>
-        <li><a href="report.html?tab=security">รายงานตรวจรับ รปภ.</a></li>
-    </ul>
-</li>
+                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-report').classList.toggle('show-submenu');" id="menu-report-main">รายงานและสถิติ ▾</a>
+                
+                <ul class="submenu" id="submenu-report">
+                    <li><a href="report.html?tab=daily">รายงานประจำวัน</a></li>
+                    <li><a href="report.html?tab=monthly">รายงานประจำเดือน</a></li>
+                    <li><a href="report.html?tab=security">รายงานตรวจรับ รปภ.</a></li>
+                </ul>
+            </li>
         </ul>
     </div>
 
-    <div class="main-content" style="padding: 0; background: #f6f7fb;">
+    <div class="main-content" style="padding: 0; background: #f6f7fb; height: 100vh !important; overflow: hidden !important; min-height: unset;">
         
         <div class="header-dropdown-wrapper always-open">
             <div class="header-grabber" title="เลื่อนเมาส์เพื่อแสดงเมนู"><div class="grabber-line"></div></div>
             <header class="global-header">
                 <div class="header-top-row">
-                    <div class="header-brand">
-                    </div>
+                    <div class="header-brand"></div>
                 </div>
                 
                 <div class="header-action-row">
@@ -119,12 +132,8 @@
             <iframe id="frame-daily" data-src="report_daily.html" class="report-frame"></iframe>
             <iframe id="frame-security" data-src="report_security.html" class="report-frame"></iframe>
         </div>
-
-        <footer class="global-footer">
-            <div>© 2026 งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม มหาวิทยาลัยมหิดล</div>
-            <div>โทรศัพท์: 0-2849-6000 | พัฒนาโดย: ยุทธภูมิ ยานเพิ่ม</div>
-        </footer>
-    </div>
+        
+        </div>
 
     <script>
         function switchReport(type) {

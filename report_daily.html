@@ -6,7 +6,7 @@
     <title>Safety Dashboard - Official Daily Report</title>
     
     <link href="https://fonts.cdnfonts.com/css/th-sarabun-new" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Prompt:wght@300;400;500;600;800&display=swap" rel="stylesheet">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { corePlugins: { preflight: false } }</script>
@@ -28,8 +28,16 @@
             color: var(--ink); 
             font-family: 'TH Sarabun New', 'Sarabun', sans-serif; 
             font-size: 20px; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         
+        #containerSection {
+            flex-grow: 1;
+            width: 100%;
+        }
+
         .dashboard-section { 
             padding: 30px; 
             max-width: 1050px; 
@@ -196,6 +204,11 @@
             
         </div>
     </div>
+
+    <footer class="global-footer" style="background: #ffffff; color: #475569; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; font-size: 15px; margin-top: auto; font-family: 'Prompt', sans-serif;">
+        <div>© 2026 งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม มหาวิทยาลัยมหิดล</div>
+        <div>โทรศัพท์: 0-2849-6000 |</div>
+    </footer>
 
     <script>
         // ================= GLOBAL CONFIGURATION =================
@@ -559,7 +572,6 @@
         };
 
         function checkSetupData() { 
-            // ตรวจสอบว่าโหลดครบ 4 แหล่งข้อมูลหรือยัง
             if (flags.accident && flags.lf && flags.lfNew && flags.car) {
                 renderAllTables(); 
             }
@@ -670,7 +682,6 @@
             const detailContainer = document.getElementById('incidentTextDetails');
             detailContainer.innerHTML = '';
             
-            // 🌟 สร้างหน้า UI สำหรับกรณี "เหตุการณ์ปกติ ไม่มีเหตุการณ์ในวันนี้" 🌟
             if (dailyAll.length === 0) {
                 detailContainer.innerHTML = `
                     <div class="text-center py-12">
@@ -722,7 +733,6 @@
             const controlsArea = document.getElementById('controlsContainer');
             const printHeader = document.getElementById('printHeaderContainer');
             
-            // ซ่อนปุ่ม และแสดงหัวข้อ
             controlsArea.style.display = 'none';
             printHeader.style.display = 'block';
 
