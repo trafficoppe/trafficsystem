@@ -5,124 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Safety Dashboard - Official Daily Report</title>
     
+    <!-- External Libraries -->
     <link href="https://fonts.cdnfonts.com/css/th-sarabun-new" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Prompt:wght@300;400;500;600;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { corePlugins: { preflight: false } }</script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script>google.charts.load('current', {'packages':['corechart']});</script>
 
-    <style>
-        :root { 
-            --bg: #f1f5f9; 
-            --ink: #0f172a; 
-            --line: #e2e8f0; 
-            --blue-600: #2563eb; 
-        }
-        
-        body { 
-            margin: 0; 
-            padding: 0; 
-            background: var(--bg); 
-            color: var(--ink); 
-            font-family: 'TH Sarabun New', 'Sarabun', sans-serif; 
-            font-size: 20px; 
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        #containerSection {
-            flex-grow: 1;
-            width: 100%;
-        }
-
-        .dashboard-section { 
-            padding: 30px; 
-            max-width: 1050px; 
-            margin: 0 auto; 
-        }
-        
-        .main-card {
-            background: #ffffff;
-            padding: 40px 50px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01);
-            border: 1px solid #cbd5e1;
-            margin: 0 auto;
-        }
-
-        .section-header { 
-            text-align: center; 
-            font-size: 26px; 
-            margin: 0 0 20px 0; 
-            font-weight: 800; 
-        }
-        
-        input[type="date"] {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            width: 100%; height: 100%;
-            opacity: 0; 
-            cursor: pointer;
-            z-index: 20;
-        }
-        
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            width: 100%; height: 100%;
-            opacity: 0; 
-            cursor: pointer;
-        }
-        
-        .dash-table { 
-            width: 100%; 
-            height: 100%; 
-            border-collapse: separate; 
-            border-spacing: 0; 
-            background: #fff; 
-            border: 1px solid #cbd5e1; 
-            border-radius: 8px; 
-            overflow: hidden; 
-            table-layout: fixed; 
-        }
-        
-        .dash-table thead th { 
-            background: #334155; 
-            color: #fff; 
-            padding: 14px; 
-            font-size: 22px; 
-            text-align: center; 
-        }
-        
-        .dash-table td { 
-            font-size: 20px; 
-            padding: 12px; 
-            border-bottom: 1px solid #cbd5e1; 
-            text-align: center; 
-        }
-
-        .dash-table th:first-child { 
-            border-right: 1px solid #475569; 
-        }
-        
-        .dash-table td:first-child { 
-            border-right: 1px solid #cbd5e1; 
-        }
-        
-        .thai-justify {
-            text-align: justify;
-            text-justify: inter-word;
-            word-break: break-word;
-            text-indent: 80px;
-        }
-
-        @media (max-width: 768px) {
-            .main-card { padding: 20px; }
-        }
-    </style>
+    <!-- เชื่อมไฟล์ CSS ของเรา -->
+    <link rel="stylesheet" href="report_daily_style.css">
 </head>
 <body>
 
@@ -134,44 +27,44 @@
             </button>
 
             <div class="flex justify-center items-center mb-10 relative flex-wrap gap-4" id="controlsContainer">
-                <button id="btnPrev" onclick="changeDate(-1)" class="flex-shrink-0 text-slate-400 hover:text-blue-600 flex justify-center items-center transition z-10 transform hover:scale-110 p-2">
+                <button id="btnPrev" onclick="changeDate(-1)" class="flex-shrink-0 text-slate-400 hover:text-blue-600 flex justify-center items-center transition z-10 transform hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:text-slate-400 p-2">
                     <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
                 
-                <div id="dateBox" class="relative flex flex-col justify-center items-center bg-slate-50 border-2 border-slate-200 rounded-3xl px-10 py-3 cursor-pointer hover:border-blue-400 transition shadow-sm overflow-hidden group min-w-[380px]">
-                    <div id="customDateText" class="font-bold text-[30px] text-slate-700 pointer-events-none whitespace-nowrap text-center leading-none pb-1">
+                <div id="dateBox" class="relative flex flex-col justify-center items-center bg-slate-50 border-2 border-slate-200 rounded-3xl px-10 py-4 cursor-pointer hover:border-blue-400 transition shadow-sm overflow-hidden group min-w-[380px]">
+                    <div id="customDateText" class="font-bold text-[25px] text-slate-700 pointer-events-none whitespace-nowrap text-center leading-normal pb-2 border-b border-gray-200 w-full">
                         รายงานเหตุการณ์ประจำ...
                     </div>
-                    <div class="font-bold text-[22px] text-gray-500 pointer-events-none whitespace-nowrap text-center leading-none pt-1">
+                    <div class="font-bold text-[25px] text-[#0f172a] pointer-events-none whitespace-nowrap text-center leading-normal pt-2">
                         งานจราจรและความปลอดภัย
                     </div>
                     <input type="date" id="dateSelect" onchange="renderAllTables()">
                 </div>
 
-                <button id="btnNext" onclick="changeDate(1)" class="flex-shrink-0 text-slate-400 hover:text-blue-600 flex justify-center items-center transition z-10 transform hover:scale-110 p-2">
+                <button id="btnNext" onclick="changeDate(1)" class="flex-shrink-0 text-slate-400 hover:text-blue-600 flex justify-center items-center transition z-10 transform hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:text-slate-400 p-2">
                     <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
                 </button>
             </div>
 
             <div id="printHeaderContainer" style="display: none; margin-bottom: 30px;">
-                <h1 id="printHeader" class="text-center font-extrabold text-[40px] text-gray-800 mb-2 leading-tight">
+                <h1 id="printHeader" class="text-center font-bold text-[25px] text-gray-800 mb-4 leading-tight">
                     รายงานเหตุการณ์ วันที่ ...
                 </h1>
-                <h2 class="text-center font-bold text-[26px] text-gray-600 m-0 leading-tight">
+                <h2 class="text-center font-bold text-[25px] text-[#0f172a] m-0 leading-tight">
                     งานจราจรและความปลอดภัย
                 </h2>
             </div>
 
             <div class="flex flex-col md:flex-row gap-8 mb-10 items-stretch">
                 
-                <div class="flex-1 flex flex-col">
-                    <h1 class="section-header">เหตุการณ์</h1>
+                <div class="w-full md:w-[35%] flex flex-col">
+                    <!-- 🌟 ลบหัวข้อเหตุการณ์เหนือตารางออกแล้ว 🌟 -->
                     <div class="flex-1"> 
                         <table class="dash-table">
                             <thead>
                                 <tr>
-                                    <th class="text-center" style="width:65%;">ประเภทเหตุการณ์</th>
-                                    <th class="text-center" style="width:35%;">จำนวน</th>
+                                    <th class="text-center" style="width:75%;">เหตุการณ์</th>
+                                    <th class="text-center" style="width:25%;">จำนวน</th>
                                 </tr>
                             </thead>
                             <tbody id="incDailyBody"></tbody>
@@ -179,18 +72,19 @@
                     </div>
                 </div>
 
-                <div class="flex-1 flex flex-col">
-                    <h1 class="section-header">จำนวนรถเข้า</h1>
-                    <div class="flex-1"> 
-                        <table class="dash-table">
-                            <thead>
-                                <tr>
-                                    <th class="text-center" style="width:65%;">ประตู</th>
-                                    <th class="text-center" style="width:35%;">จำนวนรถ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="carDailyBody"></tbody>
-                        </table>
+                <div class="w-full md:w-[65%] flex flex-col">
+                    <!-- 🌟 ลบหัวข้อกราฟแบบเก่าข้างบนออก 🌟 -->
+                    
+                    <div class="chart-box flex-1 flex flex-col relative"> 
+                        <div id="car-summary-cards" class="grid grid-cols-3 gap-4 mb-6"></div>
+                        <div class="flex-1 flex flex-col justify-center w-full">
+                            <div id="daily_car_chart" style="width: 100%; height: 320px;"></div>
+                        </div>
+                        
+                        <!-- 🌟 ย้ายหัวข้อกราฟมาไว้มุมขวาล่างในกรอบ และปรับสไตล์เป็น 13px ตัวบาง 🌟 -->
+                        <div class="text-right mt-2 text-[13px] font-normal text-gray-500">
+                            กราฟแสดงข้อมูลจำนวนรถเข้า
+                        </div>
                     </div>
                 </div>
 
@@ -198,568 +92,19 @@
 
             <hr class="my-10 border-t-2 border-dashed border-gray-300">
             
-            <h2 class="text-[28px] font-bold text-center mb-8">รายละเอียดรายงานเหตุการณ์</h2>
+            <h2 class="text-[20px] font-bold text-center mb-8">รายละเอียดรายงานเหตุการณ์</h2>
             
             <div id="incidentTextDetails"></div>
             
         </div>
     </div>
 
-    <footer class="global-footer" style="background: #ffffff; color: #475569; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; font-size: 15px; margin-top: auto; font-family: 'Prompt', sans-serif;">
+    <footer class="global-footer" style="background: #ffffff; color: #475569; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; font-size: 15px; margin-top: auto;">
         <div>© 2026 งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม มหาวิทยาลัยมหิดล</div>
         <div>โทรศัพท์: 0-2849-6000 |</div>
     </footer>
 
-    <script>
-        // ================= GLOBAL CONFIGURATION =================
-        const thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-        
-        function formatThaiDate(d){ 
-            return `วันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear() + 543}`; 
-        }
-
-        // ตั้งค่าวันที่เริ่มต้นเป็นเมื่อวาน
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yyyy = yesterday.getFullYear();
-        const mm = String(yesterday.getMonth() + 1).padStart(2, '0');
-        const dd = String(yesterday.getDate()).padStart(2, '0');
-        
-        document.getElementById('dateSelect').value = `${yyyy}-${mm}-${dd}`;
-        document.getElementById('customDateText').innerHTML = `รายงานเหตุการณ์ประจำ <span class="text-blue-600 ml-2">${formatThaiDate(yesterday)}</span>`;
-
-        function changeDate(offset) {
-            const dateInput = document.getElementById('dateSelect');
-            if (!dateInput.value) return;
-            
-            const currentDate = new Date(dateInput.value);
-            currentDate.setDate(currentDate.getDate() + offset);
-            
-            const y = currentDate.getFullYear();
-            const m = String(currentDate.getMonth() + 1).padStart(2, '0');
-            const d = String(currentDate.getDate()).padStart(2, '0');
-            
-            dateInput.value = `${y}-${m}-${d}`;
-            renderAllTables(); 
-        }
-
-        function formatThaiTime(val) {
-            if (!val) return '';
-            let str = String(val).trim();
-            let match = str.match(/(\d{1,2}):(\d{2})/);
-            if (match) {
-                let h = parseInt(match[1]);
-                let m = match[2];
-                if (str.toLowerCase().includes('pm') && h < 12) h += 12;
-                if (str.toLowerCase().includes('am') && h === 12) h = 0;
-                return `${String(h).padStart(2,'0')}.${m}`;
-            }
-            return str;
-        }
-
-        function processImageLink(url) {
-            if (!url) return '';
-            let str = String(url).trim();
-            let match = str.match(/id=([a-zA-Z0-9_-]+)/) || str.match(/\/d\/([a-zA-Z0-9_-]+)/);
-            if (match && match[1]) {
-                const driveId = match[1];
-                const driveUrl = encodeURIComponent(`drive.google.com/uc?id=${driveId}`);
-                return `https://wsrv.nl/?url=${driveUrl}&output=jpeg`;
-            }
-            return str;
-        }
-
-        // ================= DATA LOADING =================
-        let accidentData = [];
-        let lfData = [];
-        let carData = [];
-        let flags = { accident: false, lf: false, lfNew: false, car: false };
-
-        function loadScript(url) { 
-            const s = document.createElement('script'); 
-            s.src = url; 
-            document.body.appendChild(s); 
-        }
-
-        // 1. โหลดข้อมูลอุบัติเหตุ
-        loadScript('https://docs.google.com/spreadsheets/d/1tj_BC_YkBBcin8FqqXB_OvOF5ku2Y24MTh04XmA9zTk/gviz/tq?tqx=responseHandler:handleAccidentData&gid=3452793');
-        // 2. โหลดข้อมูลของหาย (ชีทเก่า)
-        loadScript('https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=responseHandler:handleLFData&gid=751456190');
-        // 3. โหลดข้อมูลของหาย (ชีทใหม่)
-        loadScript('https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=responseHandler:handleLFDataNew&gid=2074352966');
-        // 4. โหลดข้อมูลรถเข้า
-        loadScript('https://docs.google.com/spreadsheets/d/1hEFLf_CuzabHOIdCp_LWEU5M8Be_7bsx1aBZickoSXA/gviz/tq?tqx=responseHandler:handleCarData&gid=0');
-
-        // ================= PARSING ACCIDENT DATA =================
-        window.handleAccidentData = function(json) {
-            if (json && json.table && json.table.rows) {
-                accidentData = json.table.rows.map(r => {
-                    const c = r.c; 
-                    if (!c) return null;
-                    
-                    let type = (c[5]?.v || "เหตุการณ์ทั่วไป").toString().trim();
-                    if (type === "ว.40") {
-                        type = "อุบัติเหตุจากยานพาหนะ";
-                    }
-                    
-                    const excludeWords = ["คืนของ", "รับของคืน", "เก็บของได้", "แจ้งเก็บของได้", "แจ้งของหาย", "ปลดบังคับล้อ"];
-                    if (excludeWords.some(word => type.includes(word))) {
-                        return null; 
-                    }
-
-                    let narrative = (c[29]?.v || "").toString().trim(); 
-                    if (!narrative) narrative = (c[13]?.v || "").toString().trim();
-                    if (!narrative) narrative = "ไม่มีรายละเอียดเพิ่มเติม";
-
-                    narrative = narrative.replace(/^\d{1,2}:\d{2}(:\d{2})?\s*(AM|PM)?/i, '').trim();
-                    narrative = narrative.replace(/\s{2,}/g, ' '); 
-
-                    let dStr = String(c[1]?.f || c[1]?.v || "").trim();
-                    if (!dStr) return null;
-                    
-                    let d = new Date();
-                    if (dStr.includes('Date(')) {
-                        const p = dStr.match(/\d+/g);
-                        if (p) d = new Date(p[0], p[1], p[2]);
-                    } else if (dStr.includes('/')) {
-                        const p = dStr.split(/[ T/]/);
-                        if (p.length >= 3) {
-                            if (p[2].length === 4) d = new Date(p[2], p[1]-1, p[0]); 
-                            else d = new Date(p[0], p[1]-1, p[2]); 
-                        }
-                    } else if (dStr.includes('-')) {
-                        const p = dStr.split(/[ T-]/);
-                        if (p.length >= 3) {
-                            if (p[0].length === 4) d = new Date(p[0], p[1]-1, p[2]); 
-                            else d = new Date(p[2], p[1]-1, p[0]); 
-                        }
-                    } else {
-                        d = new Date(dStr);
-                    }
-                    
-                    if (isNaN(d.getTime())) return null;
-                    if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear()-543);
-
-                    let imgLink = "";
-                    
-                    // 🌟 เพิ่มเงื่อนไขพิเศษสำหรับ "บังคับล้อ" ให้ดึงรูปลิงก์จากคอลัมน์ AS (Index 44) 🌟
-                    if (type.includes("บังคับล้อ") && c[44] && (c[44].v || c[44].f)) {
-                        imgLink = String(c[44].v || c[44].f).trim();
-                    }
-
-                    // ถ้ายังไม่มีรูป ให้สแกนหาจากด้านหลังสุดเหมือนเดิม (รองรับ drive.google.com)
-                    if (!imgLink) {
-                        for (let i = c.length - 1; i >= 0; i--) {
-                            if (c[i] && (c[i].v || c[i].f) && typeof (c[i].v || c[i].f) === 'string' && (c[i].v || c[i].f).includes('drive.google.com')) {
-                                imgLink = c[i].v || c[i].f;
-                                break;
-                            }
-                        }
-                    }
-
-                    return { date: d, type: type, detail: narrative, img: imgLink }; 
-                }).filter(x => x && x.date);
-            }
-            flags.accident = true; 
-            checkSetupData();
-        };
-
-        // ================= PARSING LOST & FOUND (OLD) =================
-        window.handleLFData = function(json) {
-            if (json && json.table && json.table.rows) {
-                const oldRows = json.table.rows.map(r => {
-                    const c = r.c; 
-                    if (!c) return null;
-                    
-                    let dStr = String(c[0]?.v || c[0]?.f || "").trim();
-                    if (!dStr) dStr = String(c[1]?.v || c[1]?.f || "").trim();
-                    
-                    if (!dStr) return null;
-                    
-                    let d = new Date();
-                    if (dStr.includes('Date(')) {
-                        const p = dStr.match(/\d+/g);
-                        if (p) d = new Date(p[0], p[1], p[2]);
-                    } else if (dStr.includes('/') || dStr.includes('-')) {
-                        const splitter = dStr.includes('/') ? /[ T/]/ : /[ T-]/;
-                        const p = dStr.split(splitter).filter(x => x.length > 0);
-                        if (p.length >= 3) {
-                            let y = parseInt(p[2]), m = parseInt(p[1]), day = parseInt(p[0]);
-                            if (p[0].length === 4) { y = parseInt(p[0]); m = parseInt(p[1]); day = parseInt(p[2]); }
-                            
-                            if (m > 12) { 
-                                let temp = m; 
-                                m = day; 
-                                day = temp; 
-                            }
-                            d = new Date(y, m - 1, day); 
-                        } else {
-                            d = new Date(dStr);
-                        }
-                    } else {
-                        d = new Date(dStr);
-                    }
-                    
-                    if (isNaN(d.getTime())) return null;
-                    if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear()-543);
-
-                    let name = String(c[2]?.v || c[2]?.f || "ไม่ระบุชื่อ").trim();
-                    if (!name.startsWith('คุณ') && !name.startsWith('นาย') && !name.startsWith('นาง') && !name.startsWith('นางสาว')) {
-                        name = 'คุณ' + name;
-                    }
-
-                    const status = String(c[6]?.v || c[6]?.f || "");
-                    const item = String(c[10]?.v || c[7]?.v || c[13]?.v || "สิ่งของ").replace(/\n/g, ' ').trim();
-                    const place = String(c[11]?.v || c[8]?.v || "ไม่ระบุสถานที่").trim();
-                    const time = formatThaiTime(c[15]?.f || c[15]?.v || "");
-
-                    const typeText = String(c[2]?.v || c[2]?.f || "");
-                    let type = "other";
-                    let narrative = "";
-
-                    if (status.includes("คืน") || typeText.includes("คืน")) {
-                        type = "รับของคืน";
-                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้มาติดต่อขอรับสิ่งของคืน ประกอบด้วย ${item} โดยทางเจ้าหน้าที่ได้ตรวจสอบความถูกต้องและส่งมอบสิ่งของคืนให้แก่เจ้าของเป็นที่เรียบร้อยแล้ว`;
-                    } else if (typeText.includes("หาย") || typeText.includes("สูญหาย") || typeText.includes("ลืม") || typeText.includes("ตามหา")) {
-                        type = "แจ้งของหาย";
-                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้แจ้งเหตุสิ่งของสูญหาย คือ ${item} คาดว่าหล่นหายบริเวณ${place} เจ้าหน้าที่ได้บันทึกข้อมูลเพื่อประสานงานติดตามต่อไป`;
-                    } else {
-                        type = "แจ้งเก็บของได้";
-                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้พบสิ่งของตกหล่น คือ ${item} บริเวณ${place} และได้นำมามอบให้เจ้าหน้าที่เพื่อประกาศตามหาเจ้าของมารับคืนต่อไป`;
-                    }
-                    
-                    narrative = narrative.replace(/\s{2,}/g, ' '); 
-
-                    let imgLink = "";
-                    for (let i = c.length - 1; i >= 0; i--) {
-                        if (c[i] && (c[i].v || c[i].f) && typeof (c[i].v || c[i].f) === 'string' && (c[i].v || c[i].f).includes('drive.google.com')) {
-                            imgLink = c[i].v || c[i].f;
-                            break;
-                        }
-                    }
-
-                    return { date: d, type: type, detail: narrative, img: imgLink };
-                }).filter(x => x);
-                
-                lfData = lfData.concat(oldRows);
-            }
-            flags.lf = true; 
-            checkSetupData();
-        };
-
-        // ================= PARSING LOST & FOUND (NEW) =================
-        window.handleLFDataNew = function(json) {
-            if (json && json.table && json.table.rows) {
-                const newRows = json.table.rows.map(r => {
-                    const c = r.c; 
-                    if (!c) return null;
-                    
-                    let dStr = String(c[0]?.v || c[0]?.f || "").trim();
-                    if (!dStr) dStr = String(c[7]?.v || c[7]?.f || "").trim();
-                    
-                    if (!dStr) return null;
-                    
-                    let d = new Date();
-                    if (dStr.includes('Date(')) {
-                        const p = dStr.match(/\d+/g);
-                        if (p) d = new Date(p[0], p[1], p[2]);
-                    } else if (dStr.includes('/') || dStr.includes('-')) {
-                        const splitter = dStr.includes('/') ? /[ T/]/ : /[ T-]/;
-                        const p = dStr.split(splitter).filter(x => x.length > 0);
-                        if (p.length >= 3) {
-                            let y = parseInt(p[2]), m = parseInt(p[1]), day = parseInt(p[0]);
-                            if (p[0].length === 4) { y = parseInt(p[0]); m = parseInt(p[1]); day = parseInt(p[2]); }
-                            
-                            if (m > 12) { 
-                                let temp = m; 
-                                m = day; 
-                                day = temp; 
-                            }
-                            d = new Date(y, m - 1, day); 
-                        } else {
-                            d = new Date(dStr);
-                        }
-                    } else {
-                        d = new Date(dStr);
-                    }
-                    
-                    if (isNaN(d.getTime())) return null;
-                    if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear()-543);
-
-                    let name = String(c[3]?.v || c[3]?.f || "ไม่ระบุชื่อ").trim();
-                    if (!name.startsWith('คุณ') && !name.startsWith('นาย') && !name.startsWith('นาง') && !name.startsWith('นางสาว')) {
-                        name = 'คุณ' + name;
-                    }
-
-                    const status = String(c[12]?.v || c[12]?.f || "");
-                    const item = String(c[9]?.v || c[9]?.f || "สิ่งของ").replace(/\n/g, ' ').trim();
-                    const place = String(c[10]?.v || c[10]?.f || "ไม่ระบุสถานที่").trim();
-                    const time = formatThaiTime(c[8]?.f || c[8]?.v || "");
-
-                    const colCType = String(c[2]?.v || c[2]?.f || "");
-                    
-                    let type = "other";
-                    let narrative = "";
-
-                    if (status.includes("คืน") || colCType.includes("คืน")) {
-                        type = "รับของคืน";
-                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้มาติดต่อขอรับสิ่งของคืน ประกอบด้วย ${item} โดยทางเจ้าหน้าที่ได้ตรวจสอบความถูกต้องและส่งมอบสิ่งของคืนให้แก่เจ้าของเป็นที่เรียบร้อยแล้ว`;
-                    } else if (colCType.includes("หาย") || colCType.includes("สูญหาย") || colCType.includes("ลืม") || colCType.includes("ตามหา")) {
-                        type = "แจ้งของหาย";
-                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้แจ้งเหตุสิ่งของสูญหาย คือ ${item} คาดว่าหล่นหายบริเวณ${place} เจ้าหน้าที่ได้บันทึกข้อมูลเพื่อประสานงานติดตามต่อไป`;
-                    } else {
-                        type = "แจ้งเก็บของได้";
-                        narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้พบสิ่งของตกหล่น คือ ${item} บริเวณ${place} และได้นำมามอบให้เจ้าหน้าที่เพื่อประกาศตามหาเจ้าของมารับคืนต่อไป`;
-                    }
-                    
-                    narrative = narrative.replace(/\s{2,}/g, ' '); 
-
-                    let imgLink = "";
-                    for (let i = c.length - 1; i >= 0; i--) {
-                        if (c[i] && (c[i].v || c[i].f) && typeof (c[i].v || c[i].f) === 'string' && (c[i].v || c[i].f).includes('drive.google.com')) {
-                            imgLink = c[i].v || c[i].f;
-                            break;
-                        }
-                    }
-
-                    return { date: d, type: type, detail: narrative, img: imgLink };
-                }).filter(x => x);
-                
-                lfData = lfData.concat(newRows);
-            }
-            flags.lfNew = true; 
-            checkSetupData();
-        };
-
-        // ================= PARSING CAR GATES DATA =================
-        window.handleCarData = function(json) {
-            if (json && json.table && json.table.rows) {
-                carData = json.table.rows.map(r => {
-                    const c = r.c; 
-                    if (!c) return null; 
-                    
-                    let dStr = String(c[7]?.v || c[7]?.f || "").trim();
-                    if (!dStr) return null;
-                    
-                    let d = new Date();
-                    if (dStr.includes('Date(')) {
-                        const p = dStr.match(/\d+/g);
-                        if (p) d = new Date(p[0], p[1], p[2]);
-                    } else if (dStr.includes('/')) {
-                        const p = dStr.split(/[ T/]/);
-                        if (p.length >= 3) {
-                            if (p[2].length === 4) d = new Date(p[2], p[1]-1, p[0]); 
-                            else d = new Date(p[0], p[1]-1, p[2]); 
-                        }
-                    } else if (dStr.includes('-')) {
-                        const p = dStr.split(/[ T-]/);
-                        if (p.length >= 3) {
-                            if (p[0].length === 4) d = new Date(p[0], p[1]-1, p[2]); 
-                            else d = new Date(p[2], p[1]-1, p[0]); 
-                        }
-                    } else {
-                        d = new Date(dStr);
-                    }
-                    
-                    if (isNaN(d.getTime())) return null;
-                    if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear()-543);
-                    
-                    return { date: d, g1: c[1]?.v||0, g3: c[2]?.v||0, g4: c[3]?.v||0, g5: c[4]?.v||0, g6: c[5]?.v||0 };
-                }).filter(x => x);
-            }
-            flags.car = true; 
-            checkSetupData();
-        };
-
-        function checkSetupData() { 
-            if (flags.accident && flags.lf && flags.lfNew && flags.car) {
-                renderAllTables(); 
-            }
-        }
-
-        // ================= RENDERING TABLES & UI =================
-        function renderAllTables() {
-            const ds = document.getElementById('dateSelect').value; 
-            if (!ds) return;
-            
-            const targetDate = new Date(ds);
-            const isSame = (d1, d2) => d1 && d2.getFullYear() === d1.getFullYear() && d2.getMonth() === d1.getMonth() && d2.getDate() === d1.getDate();
-
-            const dateStr = formatThaiDate(targetDate);
-            document.getElementById('customDateText').innerHTML = `รายงานเหตุการณ์ประจำ <span class="text-blue-600 ml-2">${dateStr}</span>`;
-            document.getElementById('printHeader').innerText = `รายงานเหตุการณ์ วันที่ ${dateStr}`;
-
-            const summary = {};
-            let dailyAll = [];
-            
-            accidentData.concat(lfData).forEach(r => {
-                if (isSame(r.date, targetDate)) {
-                    summary[r.type] = (summary[r.type] || 0) + 1;
-                    dailyAll.push(r);
-                }
-            });
-
-            const priorityOrder = [
-                "อุบัติเหตุจากยานพาหนะ",
-                "อุบัติเหตุทั่วไป",
-                "รับส่งผู้ป่วย",
-                "รับส่งผู้ได้รับบาดเจ็บ"
-            ];
-
-            const incKeys = Object.keys(summary).sort((a, b) => {
-                let indexA = priorityOrder.indexOf(a);
-                let indexB = priorityOrder.indexOf(b);
-                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                if (indexA !== -1) return -1;
-                if (indexB !== -1) return 1;
-                return a.localeCompare(b, 'th');
-            });
-
-            dailyAll.sort((a, b) => {
-                let indexA = priorityOrder.indexOf(a.type);
-                let indexB = priorityOrder.indexOf(b.type);
-                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                if (indexA !== -1) return -1;
-                if (indexB !== -1) return 1;
-                return a.type.localeCompare(b.type, 'th');
-            });
-
-            const maxDataRows = Math.max(5, incKeys.length);
-            const incBody = document.getElementById('incDailyBody'); 
-            incBody.innerHTML = '';
-            let totalInc = 0;
-            
-            if (totalInc === 0 && incKeys.length === 0) {
-                incBody.innerHTML += `<tr><td class="text-center text-gray-400 text-[20px]">ไม่มีเหตุการณ์ในวันนี้</td><td class="text-center text-gray-400 text-[20px]">-</td></tr>`;
-                for(let i = 1; i < maxDataRows; i++) {
-                    incBody.innerHTML += `<tr><td class="text-center text-[20px]">&nbsp;</td><td class="text-center text-[20px]">&nbsp;</td></tr>`;
-                }
-            } else {
-                for (let i = 0; i < maxDataRows; i++) {
-                    if (i < incKeys.length) {
-                        let k = incKeys[i];
-                        totalInc += summary[k];
-                        incBody.innerHTML += `<tr><td class="text-center font-bold text-[20px]">${k}</td><td class="text-center text-[20px]">${summary[k]}</td></tr>`;
-                    } else {
-                        incBody.innerHTML += `<tr><td class="text-center text-[20px]">&nbsp;</td><td class="text-center text-[20px]">&nbsp;</td></tr>`;
-                    }
-                }
-            }
-            
-            incBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[22px]">รวมยอดรวมทั้งหมด</td><td class="text-center text-blue-600 text-[22px]">${totalInc}</td></tr>`;
-
-            const carBody = document.getElementById('carDailyBody'); 
-            carBody.innerHTML = '';
-            let carRow = carData.find(r => isSame(r.date, targetDate));
-            let gates = [{n:'ประตู 1', v:0}, {n:'ประตู 3', v:0}, {n:'ประตู 4', v:0}, {n:'ประตู 5', v:0}, {n:'ประตู 6', v:0}];
-            
-            if (carRow) {
-                gates = [
-                    {n:'ประตู 1', v:carRow.g1}, 
-                    {n:'ประตู 3', v:carRow.g3}, 
-                    {n:'ประตู 4', v:carRow.g4}, 
-                    {n:'ประตู 5', v:carRow.g5}, 
-                    {n:'ประตู 6', v:carRow.g6}
-                ];
-            }
-            
-            let totalCar = 0;
-            for (let i = 0; i < maxDataRows; i++) {
-                if (i < gates.length) {
-                    if (carRow) {
-                        let g = gates[i]; 
-                        totalCar += g.v;
-                        carBody.innerHTML += `<tr><td class="text-center text-[20px]">${g.n}</td><td class="text-center text-[20px]">${g.v.toLocaleString()}</td></tr>`;
-                    } else {
-                        carBody.innerHTML += `<tr><td class="text-center text-[20px]">${gates[i].n}</td><td class="text-center text-gray-400 text-[20px]">-</td></tr>`;
-                    }
-                } else {
-                    carBody.innerHTML += `<tr><td class="text-center text-[20px]">&nbsp;</td><td class="text-center text-[20px]">&nbsp;</td></tr>`;
-                }
-            }
-            carBody.innerHTML += `<tr class="bg-amber-50 font-bold"><td class="text-center text-[22px]">รวมยอดรถเข้า</td><td class="text-center text-blue-600 text-[22px]">${carRow ? totalCar.toLocaleString() : '-'}</td></tr>`;
-
-            const detailContainer = document.getElementById('incidentTextDetails');
-            detailContainer.innerHTML = '';
-            
-            if (dailyAll.length === 0) {
-                detailContainer.innerHTML = `
-                    <div class="text-center py-12">
-                        <div class="inline-block bg-green-50 border-2 border-green-200 rounded-2xl px-10 py-6 shadow-sm">
-                            <p class="text-green-600 font-extrabold text-[36px] m-0 flex items-center justify-center gap-3">
-                                <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                เหตุการณ์ปกติ ไม่มีเหตุการณ์ในวันนี้
-                            </p>
-                        </div>
-                    </div>`;
-            } else {
-                dailyAll.forEach((item, index) => {
-                    let imgSrc = processImageLink(item.img);
-                    let imgHtml = '';
-                    
-                    if (imgSrc) {
-                        imgHtml = `
-                            <div class="w-full md:w-1/3 flex-shrink-0 flex justify-center bg-gray-50 rounded-xl p-2 border border-gray-200 shadow-sm overflow-hidden">
-                                <img src="${imgSrc}" class="w-full h-[250px] md:h-[300px] object-cover rounded-lg shadow-sm" crossorigin="anonymous" referrerpolicy="no-referrer" alt="รูปภาพประกอบ">
-                            </div>
-                        `;
-                    } else {
-                        imgHtml = `
-                            <div class="w-full md:w-1/3 flex-shrink-0 flex justify-center items-center bg-gray-50 rounded-xl p-2 border-2 border-dashed border-gray-300 shadow-sm overflow-hidden h-[250px] md:h-[300px]">
-                                <span class="text-gray-400 font-medium text-[18px]">ไม่มีรูปภาพประกอบ</span>
-                            </div>
-                        `;
-                    }
-                    
-                    let textWidthClass = 'w-full md:w-2/3';
-                    
-                    detailContainer.innerHTML += `
-                        <div class="mb-10 border-b-2 border-gray-200 pb-8 last:border-0">
-                            <div class="flex flex-col md:flex-row gap-8 items-start">
-                                ${imgHtml}
-                                <div class="${textWidthClass} text-[20px] leading-relaxed">
-                                    <div class="font-bold text-blue-700 text-[24px] mb-3 border-b border-blue-100 pb-2 inline-block w-full">${index + 1}. ${item.type}</div>
-                                    <div class="thai-justify">${item.detail}</div>
-                                </div>
-                            </div>
-                        </div>`;
-                });
-            }
-        }
-
-        // ================= EXPORT TO JPEG =================
-        function exportToJPEG() {
-            const captureArea = document.getElementById('pdfContent');
-            const controlsArea = document.getElementById('controlsContainer');
-            const printHeader = document.getElementById('printHeaderContainer');
-            
-            controlsArea.style.display = 'none';
-            printHeader.style.display = 'block';
-
-            html2canvas(captureArea, {
-                scale: 2, 
-                useCORS: true, 
-                backgroundColor: '#ffffff' 
-            }).then(canvas => {
-                controlsArea.style.display = 'flex';
-                printHeader.style.display = 'none';
-                
-                const imgData = canvas.toDataURL('image/jpeg', 0.9); 
-                
-                const dateVal = document.getElementById('dateSelect').value;
-                const fileName = `Daily_Report_${dateVal}.jpg`;
-                
-                const link = document.createElement('a');
-                link.href = imgData;
-                link.download = fileName;
-                link.click();
-            }).catch(err => {
-                controlsArea.style.display = 'flex';
-                printHeader.style.display = 'none';
-                console.error("Export Error: ", err);
-                alert("เกิดข้อผิดพลาดในการบันทึกภาพ");
-            });
-        }
-    </script>
+    <!-- เชื่อมไฟล์ JavaScript ของเรา -->
+    <script src="report_daily_script.js"></script>
 </body>
 </html>
