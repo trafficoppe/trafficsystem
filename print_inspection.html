@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>พิมพ์เอกสารการตรวจสภาพ</title>
+    <!-- เชื่อมต่อฟอนต์ -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/th-sarabun-new" rel="stylesheet">
+    
+    <!-- เชื่อมต่อไฟล์ CSS หลักของระบบ (สำหรับ Sidebar/Header) -->
+    <link rel="stylesheet" href="style.css">
+    <!-- เชื่อมต่อไฟล์ CSS ของหน้า Print ที่เราแยกไว้ -->
+    <link rel="stylesheet" href="print_inspection_style.css">
+
+    <style>
+        /* 🌟 ล็อก Header ให้ค้างอยู่ด้านบนสุดเวลาเลื่อนเมาส์ (ใช้งานเฉพาะตอนแสดงหน้าจอ ไม่ส่งผลตอนปริ้นท์) 🌟 */
+        @media screen {
+            body, html {
+                height: 100vh;
+                overflow: hidden; /* ปิด Scroll หลักของหน้าจอ */
+            }
+            .main-content {
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden; /* ไม่ให้เนื้อหาล้นออกนอกจอ */
+            }
+            .header-dropdown-wrapper {
+                flex-shrink: 0; /* ป้องกันไม่ให้ Header ถูกบีบ */
+                z-index: 1000;
+            }
+            .content-area {
+                flex-grow: 1; /* ขยายพื้นที่ให้เต็มส่วนที่เหลือ */
+                overflow-y: auto; /* 🌟 สร้าง Scrollbar เฉพาะส่วนที่แสดงรายงาน 🌟 */
+                padding-bottom: 30px; /* เพิ่มพื้นที่หายใจด้านล่างนิดหน่อย */
+            }
+            .global-footer {
+                flex-shrink: 0; /* ป้องกันไม่ให้ Footer ถูกบีบ */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- ================= Sidebar ================= -->
+        <div class="sidebar">
+            <div class="sidebar-header">ระบบงานจราจร</div>
+            <ul class="sidebar-menu">
+                <li class="has-submenu">
+                    <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-staff').classList.toggle('show-submenu');" id="menu-staff">บุคลากร/พนักงาน ▾</a>
+                    <ul class="submenu" id="submenu-staff">
+                        <li><a href="index.html?main=staff&unit=all">บุคลากรทั้งหมด</a></li>
+                        <li><a href="index.html?main=staff&unit=ยุทธศาสตร์">หน่วยยุทธศาสตร์ฯ</a></li>
+                        <li><a href="index.html?main=staff&unit=ปฏิบัติการ">หน่วยปฏิบัติการฯ</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-mission').classList.toggle('show-submenu');" id="menu-mission">การดูแลพื้นที่ส่วนกลาง ▾</a>
+                    <ul class="submenu" id="submenu-mission">
+                        <li><a href="index.html?main=mission&unit=ตรวจพื้นที่">ตรวจพื้นที่</a></li>
+                        <li><a href="index.html?main=mission&unit=ช่วยเหลือ">ให้ความช่วยเหลือ</a></li>
+                        <li><a href="index.html?main=mission&unit=การจราจร">งานจราจร</a></li>
+                        <li><a href="index.html?main=mission&unit=ตารางเวร">ตารางเวร</a></li>
+                    </ul>
+                </li>
+                <li><a href="index.html?main=vehicle" id="menu-vehicle">ยานพาหนะทั้งหมด</a></li>
+                <li class="has-submenu">
+                    <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-fire').classList.toggle('show-submenu');" id="menu-fire">อุปกรณ์ดับเพลิง ▾</a>
+                    <ul class="submenu" id="submenu-fire">
+                        <li><a href="index.html?main=fire&unit=ถังดับเพลิง">ถังดับเพลิง</a></li>
+                        <li><a href="index.html?main=fire&unit=สายส่งน้ำดับเพลิง">สายส่งน้ำ</a></li>
+                        <li><a href="index.html?main=fire&unit=หัวฉีด">หัวฉีด</a></li>
+                        <li><a href="index.html?main=fire&unit=ปั๊มน้ำ">ปั๊มน้ำ</a></li>
+                        <li><a href="index.html?main=fire&unit=ตู้เก็บอุปกรณ์">ตู้เก็บอุปกรณ์</a></li>
+                        <li><a href="index.html?main=fire&unit=หัวรับน้ำ">หัวรับน้ำ</a></li>
+                        <li><a href="index.html?main=fire&unit=ชุด ppe">ชุด PPE</a></li>
+                    </ul>              
+                </li>          
+                <li><a href="index.html?main=form" id="menu-form">แบบฟอร์มต่างๆ</a></li>
+                <li><a href="index.html?main=lostfound" id="menu-lostfound">แจ้งของหาย/เก็บของได้</a></li>
+                <li class="has-submenu">
+                    <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-report').classList.toggle('show-submenu');" id="menu-report-main">รายงานและสถิติ ▾</a>
+                    <ul class="submenu" id="submenu-report">
+                        <li><a href="report.html?tab=daily">รายงานประจำวัน</a></li>
+                        <li><a href="report.html?tab=monthly">รายงานประจำเดือน</a></li>
+                        <li><a href="report.html?tab=security">รายงานตรวจรับ รปภ.</a></li>
+                    </ul>
+                </li>
+                <!-- 🌟 เมนูโหลดเอกสาร (ตั้งให้ active) 🌟 -->
+                <li><a href="print_inspection.html" id="menu-print" class="active">🖨️ โหลดเอกสาร</a></li>
+            </ul>
+        </div>
+        
+        <!-- ================= Main Content ================= -->
+        <div class="main-content">
+            
+            <!-- 🌟 Header แบบล็อกค้างไว้ (Sticky) และเหลือแค่แถวเดียว 🌟 -->
+            <div class="header-dropdown-wrapper" style="height: auto !important; overflow: visible;">
+                <div class="header-grabber" style="display: none !important;"></div>
+                <header class="global-header" style="position: relative !important; transform: none !important; padding: 15px 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+                    
+                    <div class="header-action-row" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; width: 100%; gap: 15px;">
+                        <div class="page-title" style="font-size: 22px; font-weight: 600; color: white;">ระบบโหลดเอกสารและพิมพ์ผลการตรวจสภาพ</div>
+                        
+                        <!-- 🌟 ส่วนแถบ Filter ใน Header 🌟 -->
+                        <div class="no-print" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-left: auto;">
+                            <div class="filter-group" style="background: rgba(0,0,0,0.2); padding: 6px 15px; border-radius: 50px; color: white;">
+                                <label style="color: white;"><input type="radio" name="filterMode" value="all" checked onchange="applyFilter()"> ทั้งหมด</label>
+                                <label style="color: white;"><input type="radio" name="filterMode" value="vehicle" onchange="applyFilter()"> ยานพาหนะ</label>
+                                <label style="color: white;"><input type="radio" name="filterMode" value="fire" onchange="applyFilter()"> ถังดับเพลิง</label>
+                                <label style="color: white;"><input type="radio" name="filterMode" value="refill" onchange="applyFilter()"> ประวัติเติมสาร</label>
+                            </div>
+                            <input type="month" id="filterMonth" onchange="applyFilter()" style="padding: 6px 15px; font-size: 15px; border-radius: 50px; border: none; outline: none; cursor: pointer; color: #0f172a;">
+                            <button class="btn btn-print" onclick="window.print()" style="background-color: #10b981; color: white; padding: 6px 15px; border-radius: 50px; font-size: 15px; font-weight: 600; border: none; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 5px;">🖨️ สั่งพิมพ์เอกสาร</button>
+                        </div>
+                    </div>
+
+                </header>
+            </div>
+            
+            <!-- 🌟 Content Area (ส่วนนี้จะเกิด Scrollbar เลื่อนได้) 🌟 -->
+            <div class="content-area">
+                <div id="loadingStatus" style="text-align: center; margin-top: 50px; font-size: 20px; font-weight: 600; color: #2563eb;">
+                    กำลังเชื่อมต่อข้อมูลจากระบบ... ⏳
+                </div>
+
+                <div id="documentContainer">
+                    <!-- หน้าเอกสารจะถูกสร้างขึ้นที่นี่ -->
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="global-footer" style="font-size: 15px;">
+                <div>© 2026 งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม มหาวิทยาลัยมหิดล</div>
+                <div>โทรศัพท์: 0-2849-6000 | พัฒนาโดย: ยุทธภูมิ ยานเพิ่ม</div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- เชื่อมต่อไฟล์ JavaScript ที่แยกออกมา -->
+    <script src="print_inspection_script.js"></script>
+
+    <!-- สคริปต์ควบคุม Sidebar -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.querySelector('.sidebar');
+            if (sessionStorage.getItem('sidebarOpen') === 'true') sidebar.classList.add('keep-open');
+            sidebar.addEventListener('mouseenter', () => { sessionStorage.setItem('sidebarOpen', 'true'); sidebar.classList.add('keep-open'); });
+            sidebar.addEventListener('mouseleave', () => { sessionStorage.setItem('sidebarOpen', 'false'); sidebar.classList.remove('keep-open'); });
+        });
+    </script>
+</body>
+</html>
