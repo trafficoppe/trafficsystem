@@ -22,7 +22,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
 
-/* 🌟 แก้ไข: บังคับให้หน้าเว็บใช้แถบเลื่อนหลักแค่อันเดียว ป้องกัน Scroll ซ้อน 🌟 */
+/* บังคับให้หน้าเว็บใช้แถบเลื่อนหลักแค่อันเดียว ป้องกัน Scroll ซ้อน */
 html, body {
     background-color: var(--bg-color); color: var(--text-color);
     display: flex; min-height: 100vh !important; height: auto !important;
@@ -80,7 +80,6 @@ html, body {
 /* ==========================================
    3. พื้นที่หลัก (Main Content)
    ========================================== */
-/* 🌟 แก้ไข: ลบการจำกัดความสูง ให้เนื้อหายืดขยายได้อิสระ 🌟 */
 .main-content {
     margin-left: 20px !important; width: calc(100% - 20px) !important;
     transition: margin-left 0.4s, width 0.4s !important;
@@ -149,15 +148,11 @@ html, body {
 .year-select-dropdown { padding: 6px 12px; border-radius: 6px; border: none; font-family: 'Prompt', sans-serif; font-size: 13px; outline: none; cursor: pointer; background-color: rgba(255,255,255,0.2); color: #fff; transition: 0.3s; }
 .year-select-dropdown option { color: #333; }
 
-/* 🌟 ซ่อนช่องค้นหาออกจากทุกหน้าแบบเด็ดขาด 🌟 */
-.global-header .search-container {
-    display: none !important; 
-}
+.global-header .search-container { display: none !important; }
 
 /* ==========================================
    5. ส่วนท้าย (Global Footer) 
    ========================================== */
-/* 🌟 แก้ไข: บังคับให้ดันลงล่างสุดเสมอ 🌟 */
 .global-footer {
     background: #ffffff; color: #475569; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center;
     margin-top: auto !important; border-top: 1px solid var(--border-color); flex-shrink: 0; font-size: 15px; width: 100% !important;
@@ -183,7 +178,6 @@ html, body {
 .image-slide-track img { width: 100%; height: 100%; object-fit: contain; flex-shrink: 0; }
 .card-image-wrapper:has(img:nth-child(2)):hover .image-slide-track { transform: translateX(-100%); }
 .card-content { padding: 20px; text-align: left; flex-grow: 1; display: flex; flex-direction: column; align-items: flex-start; cursor: pointer; width: 100%; }
-
 .card-title { font-size: 20px; color: var(--sidebar-text); margin-bottom: 6px; font-weight: 600; width: 100%; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-plate { font-size: 16px; font-weight: 500; color: #d35400; margin-bottom: 6px; }
 .card-subtitle { font-size: 15px; font-weight: normal; color: #64748b; }
@@ -247,38 +241,157 @@ html, body {
 #cl_submitBtn { background-color: #3b82f6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); }
 #cl_submitBtn:hover { background-color: #2563eb; box-shadow: 0 6px 15px rgba(59, 130, 246, 0.3); }
 
-/* ==========================================
-   12. ป๊อปอัพและหน้าต่าง (Modals)
-   ========================================== */
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(15, 23, 42, 0.8); backdrop-filter: blur(5px); }
-.modal-content { background-color: #ffffff; margin: 5% auto; border-radius: 16px; width: 90%; max-width: 700px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); position: relative; animation: modalFadeIn 0.3s; }
-@keyframes modalFadeIn { from { opacity: 0; transform: translateY(-20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-.modal-image-container { position: relative; width: 100%; height: 400px; background-color: #f8fafc; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border-color); }
-.modal-image-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.close { color: white; position: absolute; top: 15px; right: 20px; font-size: 35px; font-weight: bold; cursor: pointer; z-index: 10; text-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: 0.2s; background: rgba(0,0,0,0.2); width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; border-radius: 50%; line-height: 1; }
-.close:hover { background: var(--primary-color); }
 
-.slide-btn { 
-    position: absolute; top: 50%; transform: translateY(-50%); background-color: #000000; 
-    color: white; border: none; width: 50px; height: 50px; padding: 0; 
-    display: flex; align-items: center; justify-content: center; cursor: pointer; 
-    font-size: 22px; transition: 0.3s; border-radius: 50%; backdrop-filter: blur(2px); 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+/* ==========================================
+   12. 🌟 โค้ดอัปเดต Popup (แบ่งซ้าย-ขวา ล็อกสัดส่วน ปรับตามเรฟ) 🌟
+   ========================================== */
+.modal { 
+    display: none; 
+    position: fixed; 
+    z-index: 10000; 
+    left: 0; top: 0; 
+    width: 100%; height: 100%; 
+    background-color: rgba(0, 0, 0, 0.7); 
+    backdrop-filter: blur(4px); 
 }
-.slide-btn:hover { background-color: #333333; }
+
+/* ปุ่มปิด (X) */
+.close { 
+    position: absolute; top: 15px; right: 20px; z-index: 10100;
+    font-size: 30px; font-weight: bold; color: #333; cursor: pointer;
+    background: white; width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    transition: background-color 0.3s;
+}
+.close:hover { background: #fee2e2; color: #ef4444; }
+
+/* สไตล์ปุ่มเลื่อนรูป (เพิ่มเผื่อรถที่มีหลายรูป) */
+.slide-btn { 
+    position: absolute; top: 50%; transform: translateY(-50%); background-color: rgba(0,0,0,0.6); 
+    color: white; border: none; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; 
+    cursor: pointer; font-size: 20px; border-radius: 50%; z-index: 100; transition: 0.3s; backdrop-filter: blur(2px);
+}
+.slide-btn:hover { background-color: rgba(0,0,0,0.9); }
 #prevImageBtn { left: 15px; }
 #nextImageBtn { right: 15px; }
-.image-counter { position: absolute; bottom: 15px; right: 15px; background-color: rgba(0,0,0,0.6); color: white; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: 500; }
+.image-counter { position: absolute; bottom: 15px; right: 15px; background-color: rgba(0,0,0,0.7); color: white; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 100; }
 
-#modalDetails { padding: 30px; }
-#modalDetails h2 { color: var(--sidebar-text); margin-bottom: 15px; font-size: 26px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
-#modalDetails p { margin-bottom: 12px; font-size: 18px; color: #475569; display: flex; }
-#modalDetails p strong { width: 140px; flex-shrink: 0; color: #94a3b8; }
+/* --- เลย์เอาต์บน Desktop (ซ้ายรูป-ขวาข้อมูล) --- */
+@media screen and (min-width: 768px) {
+    .modal-content, #vehicleModal .modal-content, #fireModal .modal-content, .fire-modal-content {
+        display: flex !important;
+        flex-direction: row !important;
+        max-width: 950px !important; /* หน้าต่างกว้างสำหรับแบ่ง 2 ฝั่ง */
+        width: 90% !important;
+        height: 550px !important; /* ล็อกความสูงหน้าต่างไว้ตายตัว */
+        background: white !important;
+        border-radius: 20px !important;
+        margin: 10vh auto !important;
+        padding: 0 !important;
+        overflow: hidden;
+        position: relative;
+        animation: modalSlideUp 0.4s ease forwards;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
 
-.action-buttons { margin-top: 25px; display: flex; gap: 15px; justify-content: center; }
-.action-btn { padding: 14px 28px; border-radius: 8px; text-decoration: none; color: white; font-weight: bold; text-align: center; transition: 0.3s; font-size: 18px; }
-.btn-inspect { background-color: var(--primary-color); box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2); } 
-.btn-inspect:hover { background-color: var(--primary-dark); transform: translateY(-2px); }
+    .modal-layout-flex, #vehicleModal .modal-layout-flex, #fireModal .modal-layout-flex {
+        display: flex;
+        flex-direction: row !important;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* 📸 ฝั่งซ้าย: รูปภาพ */
+    .modal-image-container, #vehicleModal .modal-image-container, #fireModal .modal-image-container {
+        flex: 1.2 !important; /* พื้นที่รูปใหญ่กว่านิดนึง */
+        background: #1e293b !important; /* สีเข้มช่วยเน้นรูป */
+        height: 100% !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    #modalImage, #vehicleModal #modalImage, #fireModal #modalImage {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important; /* ไม่ตัดกรอบ */
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* 📝 ฝั่งขวา: รายละเอียดต่างๆ */
+    #modalDetails, #vehicleModal #modalDetails, #fireModal #modalDetails, .fire-modal-content #modalDetails {
+        flex: 1 !important;
+        padding: 40px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+        background: white !important;
+        overflow: hidden !important; /* ป้องกันเนื้อหาดันกรอบทะลุ */
+    }
+
+    #modalDetails h2, #vehicleModal #modalDetails h2, #fireModal #modalDetails h2 {
+        font-size: 28px !important;
+        margin-top: 0;
+        margin-bottom: 20px !important;
+        border-bottom: 2px solid #f1f5f9;
+        padding-bottom: 10px !important;
+        flex-shrink: 0; /* ป้องกันหัวข้อยุบ */
+    }
+
+    /* ส่วนเนื้อหาสามารถ scroll ได้ถ้าข้อมูลเยอะเกินไป */
+    .info-content {
+        flex-grow: 1 !important;
+        overflow-y: auto !important;
+        padding-right: 10px;
+        margin-bottom: 20px;
+    }
+
+    #modalDetails p, #modalDetails div:not(.action-buttons):not(.fire-class-badge):not(.info-content):not(.slide-btn):not(.image-counter) {
+        font-size: 16px !important;
+        margin-bottom: 10px !important;
+        line-height: 1.6 !important;
+    }
+
+    /* 🔘 ปุ่มกดต่างๆ ดันไปอยู่ล่างสุดเสมอ */
+    .action-buttons {
+        margin-top: auto !important; /* คำสั่งพระเอกที่ดันให้ชิดขอบล่าง */
+        padding-top: 20px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 12px !important;
+        flex-shrink: 0;
+        width: 100%;
+        border-top: 1px solid #f1f5f9;
+    }
+}
+
+@keyframes modalSlideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* สไตล์ปุ่มในป๊อปอัป */
+.btn-inspect, .action-btn {
+    flex: 1;
+    padding: 15px;
+    text-align: center;
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: bold;
+    transition: 0.3s;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.btn-inspect:hover, .action-btn:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 6px 10px rgba(0,0,0,0.15); }
+
 
 /* ==========================================
    13. 📱 รองรับมือถือและหน้าจอเล็ก (Mobile Responsive)
@@ -315,9 +428,6 @@ html, body {
     .filter-buttons { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; width: 100%; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
     .filter-btn, .sub-filter-btn { min-width: auto; white-space: nowrap; flex-shrink: 0; font-size: 15px; }
     
-    .global-header .search-container { width: 100%; margin-top: 12px; padding: 8px 15px; }
-    .global-header .search-container input { font-size: 16px; }
-    
     .global-footer { flex-direction: column; text-align: center; gap: 8px; padding: 15px; font-size: 14px; border-top: 1px solid var(--border-color); }
     
     .form-layout-container { padding: 0; display: block; height: auto !important; overflow: visible !important; }
@@ -326,7 +436,53 @@ html, body {
     .waste-grid { grid-template-columns: repeat(2, 1fr); }
     .checklist-options { flex-direction: column; gap: 12px; }
     .radio-label { width: 100%; justify-content: center; padding: 14px; }
-    .modal-content { width: 95%; margin: 10% auto; border-radius: 12px; }
+
+    /* 🌟 Modal สำหรับมือถือ (สลับกลับมาเป็น บน-ล่าง) 🌟 */
+    .modal-content, #vehicleModal .modal-content, #fireModal .modal-content, .fire-modal-content { 
+        width: 95% !important; 
+        max-height: 90vh; 
+        margin: 5vh auto !important; 
+        padding: 0 !important;
+        border-radius: 16px !important; 
+        overflow-y: auto !important; 
+        position: relative; 
+        background: #fff !important; 
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .modal-layout-flex, #vehicleModal .modal-layout-flex, #fireModal .modal-layout-flex { 
+        display: flex; flex-direction: column !important; width: 100%; gap: 0 !important;
+    }
+    .modal-image-container, #vehicleModal .modal-image-container, #fireModal .modal-image-container { 
+        width: 100% !important; 
+        height: 280px !important; /* ความสูงตายตัวบนมือถือ */
+        position: relative; 
+        background-color: #1e293b !important; 
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px 16px 0 0 !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+        flex: none !important;
+    }
+    #modalImage, #vehicleModal #modalImage, #fireModal #modalImage { 
+        width: 100% !important; 
+        height: 100% !important; 
+        object-fit: contain !important; 
+        display: block; 
+    }
+    #modalDetails, #vehicleModal #modalDetails, #fireModal #modalDetails { 
+        padding: 25px !important; 
+        display: flex !important;
+        flex-direction: column !important;
+        flex: auto !important;
+    }
+    .info-content {
+        margin-bottom: 20px;
+    }
+    .action-buttons { margin-top: auto !important; display: flex !important; flex-direction: column !important; gap: 10px; width: 100%; }
+    .close { position: absolute; top: 10px; right: 10px; width: 35px; height: 35px; font-size: 20px; display: flex !important; background: rgba(255,255,255,0.9); z-index: 10100;}
 }
 
 @media (max-width: 480px) {

@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบงานจราจรและป้องกันอัคคีภัย</title>
-<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -45,6 +46,13 @@
                 </ul>              
             </li>          
 
+            <li class="has-submenu">
+                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-traffic-manage').classList.toggle('show-submenu');" id="menu-traffic-manage">การจัดการจราจร ▾</a>
+                <ul class="submenu" id="submenu-traffic-manage">
+                    <li><a href="index.html?main=parking" id="menu-parking">ข้อมูลลานจอดรถ</a></li>
+                </ul>
+            </li>
+
             <li><a href="index.html?main=form" id="menu-form">แบบฟอร์มต่างๆ</a></li>
             <li><a href="index.html?main=lostfound" id="menu-lostfound">แจ้งของหาย/เก็บของได้</a></li>
             
@@ -56,8 +64,7 @@
                     <li><a href="report.html?tab=security">รายงานตรวจรับ รปภ.</a></li>
                 </ul>
             </li>
-            <!-- 🌟 เพิ่มเมนูใหม่ตรงนี้ 🌟 -->
-            <li><a href="print_inspection.html" id="menu-print">🖨️ โหลดเอกสาร</a></li>
+            <li><a href="print_inspection.html" id="menu-print">โหลดเอกสาร</a></li>
         </ul>
     </div>
 
@@ -80,6 +87,14 @@
                             <button class="filter-btn" data-filter="รถจักรยานไฟฟ้า">รถจักรยานไฟฟ้า <span class="badge">0</span></button>
                         </div>
 
+                        <div class="filter-buttons" id="filter-group-parking" style="display: none;">
+                            <button class="filter-btn active" data-filter="all">ทั้งหมด <span class="badge">0</span></button>
+                            <button class="filter-btn" data-filter="ส่วนกลาง">ส่วนกลาง <span class="badge">0</span></button>
+                            <button class="filter-btn" data-filter="ส่วนงาน">ส่วนงาน <span class="badge">0</span></button>
+                        </div>
+                        
+                        <div id="parking-summary-box" style="display: none; color: white; margin-left: 10px; align-items: center; font-size: 15px; font-weight: 400;"></div>
+
                         <div class="filter-buttons" id="sub-filter-extinguisher" style="display: none;"></div>
                         <div class="filter-buttons" id="sub-filter-nozzle" style="display: none;"></div>
 
@@ -101,11 +116,15 @@
                             <button class="filter-btn" data-filter="สายตรวจ 3">สายตรวจ 3 <span class="badge">0</span></button>
                         </div>
 
-                        <div class="filter-buttons" id="filter-group-lostfound" style="display: none;">
+                        <div class="filter-buttons" id="filter-group-lostfound" style="display: none; align-items: center;">
                             <button class="filter-btn active" data-filter="all">ทั้งหมด <span class="badge">0</span></button>
                             <button class="filter-btn" data-filter="สิ่งของสูญหาย">แจ้งสูญหาย <span class="badge">0</span></button>
                             <button class="filter-btn" data-filter="พบสิ่งของ">เก็บของได้ <span class="badge">0</span></button>
                             <button class="filter-btn" data-filter="รับของคืน">รับคืนแล้ว <span class="badge">0</span></button>
+                            
+                            <div class="year-select-container" id="sub-filter-lf-month-container" style="display: none; border-left: 1px solid rgba(255,255,255,0.3); margin-left: 5px; padding-left: 10px;">
+                                <select id="sub-filter-lf-month-select" class="year-select-dropdown" style="background-color: white; color: #0f172a; padding: 4px 10px; font-weight: 500;"></select>
+                            </div>
                         </div>
                         
                         <div class="year-select-container" id="sub-filter-mission-year-container">
@@ -135,13 +154,15 @@
     <div id="vehicleModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <div class="modal-image-container">
-                <img id="modalImage" src="" alt="ภาพขยาย">
-                <button class="slide-btn" id="prevImageBtn">❮</button>
-                <button class="slide-btn" id="nextImageBtn">❯</button>
-                <div class="image-counter" id="imageNumber"></div>
+            <div class="modal-layout-flex">
+                <div class="modal-image-container">
+                    <img id="modalImage" src="" alt="ภาพขยาย">
+                    <button class="slide-btn" id="prevImageBtn">❮</button>
+                    <button class="slide-btn" id="nextImageBtn">❯</button>
+                    <div class="image-counter" id="imageNumber"></div>
+                </div>
+                <div id="modalDetails"></div>
             </div>
-            <div id="modalDetails"></div>
         </div>
     </div>
 

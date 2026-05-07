@@ -35,7 +35,7 @@ input[type="date"]:hover, #yearSelect:hover { transform: translateY(-2px); box-s
 
 .nav-buttons button, .pagination button, .btn-outline, .btn-pagination, .page-number-btn, .btn-cancel, input[type="date"], #yearSelect { background: #fff; border: 2px solid #cbd5e1; color: #334155; cursor: pointer; font-family: 'TH Sarabun New'; font-weight: 800; box-shadow: 0 5px 0 #94a3b8 !important; }
 input[type="date"], #yearSelect { padding: 8px 20px; border-radius: 50px; font-size: 22px; font-weight: 700; outline: none; }
-.nav-buttons button:hover:not(:disabled), .btn-pagination:hover:not(:disabled), input[type="date"]:hover, #yearSelect:hover { transform: translateY(-2px); box-shadow: 0 7px 0 #94a3b8 !important; color: var(--blue-600); border-color: var(--blue-600); }
+.nav-buttons button:hover:not(:disabled), .btn-pagination:hover:not(:disabled), input[type="date"], #yearSelect:hover { transform: translateY(-2px); box-shadow: 0 7px 0 #94a3b8 !important; color: var(--blue-600); border-color: var(--blue-600); }
 .nav-buttons button:active:not(:disabled), .btn-pagination:active:not(:disabled), input[type="date"]:active, #yearSelect:active { transform: translateY(5px) !important; box-shadow: 0 0 0 #94a3b8 !important; background: #f1f5f9; }
 .nav-buttons button:disabled, .btn-pagination:disabled { opacity: 0.5; cursor: not-allowed; transform: translateY(5px); box-shadow: none !important; }
 
@@ -151,47 +151,13 @@ input[type="date"], #yearSelect { padding: 8px 20px; border-radius: 50px; font-s
 .aw-stat-value, .tram-stat-value { font-size: 48px !important; font-weight: 900; color: #1f2937; line-height: 1.1; margin: 10px 0; display: inline-block; white-space: nowrap; }
 .aw-stat-unit, .tram-stat-unit { font-size: 22px !important; color: #6b7280; font-weight: 600; margin-left: 6px; margin-right: 6px; display: inline-block; }
 
-
-/* ================= DASHBOARD MODAL ================= */
-.dash-modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:9999; backdrop-filter:blur(4px); font-family: 'Prompt', sans-serif; }
-
-.dash-modal { width:min(800px, 95vw); max-height:85vh; background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.4); padding:30px; display:flex; flex-direction:column; animation:popIn 0.3s; }
-
-@keyframes popIn { from{opacity:0;transform:scale(0.8)} to{opacity:1;transform:scale(1)} }
-
-.dash-modal header { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:15px; margin-bottom:15px; }
-
-.dash-modal h3 { margin:0; font-size: 28px !important; color:var(--blue-600); font-weight: 800; }
-
-.dash-modal .close { background: #ef4444; color: #fff; border: 2px solid #b91c1c; padding: 6px 20px; border-radius: 50px; cursor: pointer; font-size: 18px !important; font-weight: 600; font-family: 'Prompt', sans-serif; }
-.dash-modal .close:hover { background: #dc2626; }
-.dash-modal .body { flex:1; overflow-y:auto; padding-right:10px; }
-
-.detail-card { background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:20px; }
-
-.kv { display:grid; grid-template-columns: 180px 1fr; gap:12px 20px; font-size: 20px !important; }
-.kv .k { color:#64748b; font-weight:700; text-align:right; }
-.kv .k::after { content:" :"; margin-left:4px; }
-.kv .v { color:#0f172a; font-weight:500; line-height:1.4; word-break: break-word; }
-@media(max-width:700px){ .kv{grid-template-columns:1fr; gap:8px} .kv .k{text-align:left} }
-
-.evidence-container { margin-top: 20px; text-align: center; border-bottom: 2px dashed var(--line); padding-bottom: 20px; margin-bottom: 20px; font-size: 20px !important;}
-.evidence-img { max-width: 100%; max-height: 50vh; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.15); display: inline-block; }
-
-.nav-wrapper { display:flex; flex-direction:column; align-items:center; gap:15px; width:100%; margin-top: 15px; border-top: 1px solid var(--line); padding-top: 15px; }
-
-#caseCount { font-size: 22px; font-weight: bold; color: #475569; }
-.nav-buttons { display:flex; gap:15px; }
-.nav-buttons button { background: #fff; border: 2px solid #cbd5e1; color: #334155; padding: 8px 30px; border-radius: 50px; cursor: pointer; font-size: 20px !important; font-weight: 600; font-family: 'Prompt', sans-serif; min-width: 130px; }
-
-
-/* ================= MAP SECTION (🌟 ขยายความสูงให้เต็มตา 🌟) ================= */
+/* ================= MAP SECTION ================= */
 #map-section { 
     width: 100%; 
     max-width: 1600px; 
     margin: 20px auto; 
-    height: 92vh; /* 🌟 ปรับให้ยาวลงมา */
-    min-height: 850px; /* 🌟 ป้องกันไม่ให้หดสั้นเกินไป */
+    height: 92vh;
+    min-height: 850px;
     position: relative; 
     border-top: 5px solid var(--primary); 
     font-family: 'Prompt', sans-serif; 
@@ -268,30 +234,108 @@ input[type="date"], #yearSelect { padding: 8px 20px; border-radius: 50px; font-s
 @media(max-width:1300px){ .grid{grid-template-columns:1fr 1fr} }
 @media(max-width:700px){ .grid{grid-template-columns:1fr} .vehicles{grid-template-columns:1fr 1fr;} }
 .card-hover:hover { transform: translateY(-5px); transition: all 0.3s ease; }
-/* ==========================================
-   ย่อขนาดเนื้อหาหน้ารีพอร์ตให้เหลือ 75%
-========================================== */
-.main-content {
-    zoom: 0.65;
-}
-/* ==========================================
-   ยกเลิกการจำกัดความสูงและ Scroll Bar ซ้อนในหน้ารายงาน
-   ========================================== */
-html, body {
-    min-height: 100vh;
-    height: auto !important;
-    overflow-y: auto !important;
-    overflow-x: hidden;
-}
 
-.main-content {
-    height: auto !important;
-    min-height: 100vh;
-    overflow-y: visible !important; /* ปิด Scroll Bar ด้านใน */
+.main-content { zoom: 0.65; }
+html, body { min-height: 100vh; height: auto !important; overflow-y: auto !important; overflow-x: hidden; }
+.main-content { height: auto !important; min-height: 100vh; overflow-y: visible !important; display: flex; flex-direction: column; }
+.dashboard-section { flex-grow: 1; }
+
+/* ==========================================
+   🌟 โค้ดอัปเดต Popup Dashboard - กึ่งกลางจอ ไม่มีปุ่มปิด 🌟
+   ========================================== */
+.dash-modal-backdrop { 
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; 
+    align-items: center; /* กึ่งกลางแนวตั้ง */
+    justify-content: center; /* กึ่งกลางแนวนอน */
+    z-index: 9999; 
+    backdrop-filter: blur(4px); font-family: 'Prompt', sans-serif; 
+}
+.dash-modal {
+    width: min(500px, 95vw) !important;
+    max-height: 95vh !important;
+    overflow-y: auto !important; 
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    padding: 25px !important; 
     display: flex;
     flex-direction: column;
+    animation: popInCenter 0.3s forwards;
+    margin: 0 !important; /* ยกเลิก margin แปลกๆ เพื่อให้ Flex จัดกลางให้ */
 }
 
-.dashboard-section {
-    flex-grow: 1; /* ดันให้สุดถ้ามีการใส่ Footer ในอนาคต */
+@keyframes popInCenter { 
+    from { opacity: 0; transform: scale(0.95); } 
+    to { opacity: 1; transform: scale(1); } 
+}
+
+/* ซ่อนปุ่มปิดกากบาท เนื่องจากสามารถคลิกพื้นที่ว่างปิดได้ */
+.dash-modal .close { 
+    display: none !important; 
+}
+
+.dash-modal header { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:12px; flex-shrink: 0; }
+.dash-modal h3 { margin:0; font-size: 24px !important; color:var(--blue-600); font-weight: 800; }
+.dash-modal .body { flex:1; overflow-y:visible; } 
+
+.detail-card { background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:20px; }
+
+.kv { display:grid; grid-template-columns: 140px 1fr; gap:10px 15px; font-size: 18px !important; }
+.kv .k { color:#64748b; font-weight:700; text-align:right; }
+.kv .k::after { content:" :"; margin-left:4px; }
+.kv .v { color:#0f172a; font-weight:500; line-height:1.4; word-break: break-word; }
+@media(max-width:700px){ .kv{grid-template-columns:1fr; gap:8px} .kv .k{text-align:left} }
+
+/* คืนรูปภาพให้ใหญ่เท่าเดิม (250px) */
+.evidence-container {
+    margin-top: 10px !important;
+    text-align: center;
+    border-bottom: 2px dashed var(--line);
+    padding-bottom: 15px !important;
+    margin-bottom: 15px !important;
+    font-size: 18px !important;
+}
+.evidence-img {
+    max-width: 100%;
+    max-height: 250px !important; /* กลับไปรูปใหญ่ให้ชัดเจน */
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: inline-block;
+}
+
+/* จัดการปุ่มเปลี่ยนหน้าให้อยู่ด้านล่างตามปกติ */
+.nav-wrapper { display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; margin-top: 15px; border-top: 1px solid var(--line); padding-top: 15px; flex-shrink: 0; }
+#caseCount { font-size: 20px; font-weight: bold; color: #475569; }
+
+.nav-buttons {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+}
+.nav-buttons button {
+    width: 100% !important;
+    padding: 12px 10px !important;
+    border-radius: 50px !important;
+    background: #fff;
+    border: 2px solid #cbd5e1;
+    color: #334155;
+    cursor: pointer;
+    font-size: 18px !important;
+    font-weight: 600;
+    font-family: 'Prompt', sans-serif;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.nav-buttons button:hover:not(:disabled) {
+    transform: translateY(-3px) !important;
+    filter: brightness(1.05) !important;
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important;
+    color: var(--blue-600);
+    border-color: var(--blue-600);
+}
+.nav-buttons button:active:not(:disabled) {
+    transform: translateY(2px) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    background: #f1f5f9;
 }

@@ -1,7 +1,8 @@
-// 🌟 สำคัญมาก: ใส่ลิงก์ Web App ของคุณที่นี่ 🌟
 const scriptURL = "https://script.google.com/macros/s/AKfycbzWc03wzCkfUHs3pIucqNs_tz7BguxUlODGOihfiMgHgkQFx5Kc1DRlITg_SDR9lu4/exec"; 
 
-const lfSheetUrl = `https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=out:json&gid=751456190`;
+const lfSheetUrlOld = "https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=out:json&gid=751456190";
+const lfSheetUrlNew = "https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=out:json&gid=2074352966";
+const parkingSheetUrl = "https://docs.google.com/spreadsheets/d/1lYRhXtLgec6ISM6Ugt-YKLrh47NRt7ihcVLcD8mI_Yg/gviz/tq?tqx=out:json&gid=591543024";
 
 let allVehicles = []; 
 let allLostFound = []; 
@@ -15,6 +16,7 @@ let currentNozzleType = 'all';
 let currentUnit = 'all';
 
 let currentMissionYear = 'all'; 
+let currentLFMonth = 'all'; 
 
 let currentRefillHistory = [];
 let currentRefillHistoryPage = 1;
@@ -64,6 +66,12 @@ function getDirectImageUrl(url) {
 function parseCustomDate(dateStr) {
     if (!dateStr) return null;
     let str = String(dateStr).trim();
+    
+    if (str.startsWith('Date(')) {
+        let p = str.match(/\d+/g);
+        if (p) return new Date(p[0], p[1], p[2], p[3]||0, p[4]||0, p[5]||0);
+    }
+
     let parts = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
     if (parts) {
         let day = parseInt(parts[1]);
@@ -96,6 +104,9 @@ function initPageUI() {
     
     const yearSelectContainer = document.getElementById('sub-filter-mission-year-container');
     if(yearSelectContainer) yearSelectContainer.style.display = 'none';
+
+    const lfMonthContainer = document.getElementById('sub-filter-lf-month-container');
+    if(lfMonthContainer) lfMonthContainer.style.display = 'none';
     
     const galleryElement = document.getElementById('vehicleGallery');
     if(galleryElement) galleryElement.classList.remove('form-list-mode'); 
@@ -154,6 +165,19 @@ function initPageUI() {
         if(item) item.classList.add('active');
         document.getElementById('page-title').innerText = 'รวมแบบฟอร์มรายงานและคำร้องต่างๆ';
         if(galleryElement) galleryElement.classList.add('form-list-mode');
+    } else if (mainCategory === 'parking') { 
+        const parentMenu = document.getElementById('menu-traffic-manage');
+        if(parentMenu) parentMenu.classList.add('active');
+        
+        const submenuTraffic = document.getElementById('submenu-traffic-manage');
+        if(submenuTraffic) submenuTraffic.classList.add('show-submenu');
+
+        const subItem = document.getElementById('menu-parking');
+        if(subItem) subItem.classList.add('active');
+
+        document.getElementById('page-title').innerText = 'การจัดการจราจร: ข้อมูลลานจอดรถ';
+        const fg = document.getElementById('filter-group-parking');
+        if(fg) fg.style.display = 'flex';
     } else if (mainCategory === 'mission') { 
         const item = document.getElementById('menu-mission');
         if(item) item.classList.add('active');
@@ -191,6 +215,7 @@ function initPageUI() {
         document.getElementById('page-title').innerText = 'ระบบแจ้งของหาย / เก็บของได้';
         const fg = document.getElementById('filter-group-lostfound');
         if(fg) fg.style.display = 'flex';
+        if(lfMonthContainer) lfMonthContainer.style.display = 'inline-flex';
     } else { 
         const item = document.getElementById('menu-staff');
         if(item) item.classList.add('active');
@@ -215,6 +240,7 @@ function initPageUI() {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     let activeGroup = null;
     if(mainCategory === 'vehicle') activeGroup = document.getElementById('filter-group-vehicle');
+    if(mainCategory === 'parking') activeGroup = document.getElementById('filter-group-parking');
     if(mainCategory === 'staff') activeGroup = document.getElementById('filter-group-staff');
     if(mainCategory === 'mission' && !currentUnit.includes('ตารางเวร')) activeGroup = document.getElementById('filter-group-mission');
     if(mainCategory === 'lostfound') activeGroup = document.getElementById('filter-group-lostfound');
@@ -226,15 +252,18 @@ function initPageUI() {
     
     const searchInput = document.getElementById('searchInput');
     if(searchInput) searchInput.value = '';
+
+    const parkingSummaryBox = document.getElementById('parking-summary-box');
+    if (parkingSummaryBox) {
+        parkingSummaryBox.style.display = (mainCategory === 'parking') ? 'flex' : 'none';
+    }
 }
 
-// 🌟 ระบบนำทางฉบับ SPA เปลี่ยนหน้าทันที (แก้ไขบั๊กหน่วยยุทธศาสตร์) 🌟
 function setupSeamlessNavigation() {
     document.querySelectorAll('.sidebar-menu a').forEach(link => {
         link.addEventListener('click', function(e) {
             const href = this.getAttribute('href');
 
-            // 1. จัดการการคลิกเปิด-ปิดเมนูย่อย (Dropdown)
             if (this.parentElement.classList.contains('has-submenu') && (!href || href === '#' || !href.includes('?'))) {
                 e.preventDefault();
                 const submenu = this.nextElementSibling;
@@ -244,7 +273,6 @@ function setupSeamlessNavigation() {
                 return;
             }
 
-            // 2. โหมด SPA (เปลี่ยนแท็บรวดเร็ว ไม่ต้องรีเฟรชหน้า)
             const isCurrentIndex = window.location.pathname.endsWith('/') || window.location.pathname.includes('index.html');
             
             if (href && href.includes('index.html') && isCurrentIndex) {
@@ -257,9 +285,8 @@ function setupSeamlessNavigation() {
                 mainCategory = urlParams.has('main') ? urlParams.get('main') : 'staff';
                 currentUnit = urlParams.has('unit') ? urlParams.get('unit').toLowerCase() : 'all';
 
-                // 🌟 FIX BUG: ป้องกันไม่ให้เอาชื่อหน่วยงาน (ยุทธศาสตร์) ไปค้นหาในประเภทพนักงาน
                 if (mainCategory === 'staff') {
-                    currentSubFilter = 'all'; // รีเซ็ตฟิลเตอร์พนักงานเป็นทั้งหมดเสมอ
+                    currentSubFilter = 'all'; 
                 } else {
                     currentSubFilter = currentUnit !== 'all' ? currentUnit : 'all';
                 }
@@ -267,6 +294,7 @@ function setupSeamlessNavigation() {
                 currentExtinguisherType = 'all';
                 currentNozzleType = 'all';
                 currentMissionYear = 'all';
+                currentLFMonth = 'all'; 
 
                 initPageUI();
                 updateFilterCounts();
@@ -290,6 +318,8 @@ function setupSeamlessNavigation() {
                 currentSubFilter = currentUnit !== 'all' ? currentUnit : 'all';
             }
             
+            currentLFMonth = 'all';
+            
             initPageUI();
             updateFilterCounts();
             applyFilters();
@@ -302,7 +332,6 @@ window.onload = function() {
     if(urlParams.has('main')) mainCategory = urlParams.get('main');
     if(urlParams.has('unit')) currentUnit = urlParams.get('unit').toLowerCase();
     
-    // 🌟 FIX BUG: ป้องกันไม่ให้เอาชื่อหน่วยงาน (ยุทธศาสตร์) ไปค้นหาตอนโหลดหน้าแรกครั้งแรกด้วย
     if (mainCategory === 'staff') {
         currentSubFilter = 'all';
     } else if (currentUnit !== 'all') {
@@ -326,17 +355,87 @@ function fetchVehicles() {
         .then(response => response.json())
         .then(data => {
             allVehicles = data;
-            if(mainCategory !== 'lostfound') {
-                updateFilterCounts(); 
-                generateExtinguisherSubFilters(); 
-                generateNozzleSubFilters(); 
-                generateMissionYearSubFilters(); 
-                applyFilters(); 
-            }
+            fetchParkingLots(); 
         })
         .catch(error => { 
             console.error("Error fetching data: ", error);
         });
+}
+
+function fetchParkingLots() {
+    fetch(parkingSheetUrl)
+        .then(res => res.text())
+        .then(text => {
+            const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S\w]+)\);/);
+            if (match && match[1]) {
+                const data = JSON.parse(match[1]);
+                const parkingData = data.table.rows.map(row => {
+                    if (!row || !row.c) return null;
+                    const getV = (i) => (row.c[i] && (row.c[i].f || row.c[i].v)) ? (row.c[i].f || row.c[i].v).toString().trim() : '';
+                    
+                    let caretakerCol = 2; 
+                    for(let i=1; i<=4; i++) {
+                        let val = getV(i);
+                        if(val === 'ส่วนกลาง' || val === 'ส่วนงาน') {
+                            caretakerCol = i;
+                            break;
+                        }
+                    }
+
+                    let order = getV(0);
+                    let name = '', caretaker = '', capacity = '', p1, p2, p3, p4, p5;
+
+                    if (caretakerCol === 3) {
+                        let id = getV(1);
+                        let n = getV(2);
+                        name = (id && id !== '-' && id !== n) ? `${id} - ${n}` : n;
+                        caretaker = getV(3);
+                        capacity = getV(4);
+                        p1 = getV(5); p2 = getV(6); p3 = getV(7); p4 = getV(8); p5 = getV(9);
+                    } else if (caretakerCol === 2) {
+                        name = getV(1);
+                        caretaker = getV(2);
+                        capacity = getV(3);
+                        p1 = getV(4); p2 = getV(5); p3 = getV(6); p4 = getV(7); p5 = getV(8);
+                    } else if (caretakerCol === 1) {
+                        name = getV(0);
+                        caretaker = getV(1);
+                        capacity = getV(2);
+                        p1 = getV(3); p2 = getV(4); p3 = getV(5); p4 = getV(6); p5 = getV(7);
+                    } else {
+                        name = getV(1);
+                        caretaker = getV(2);
+                        capacity = getV(3);
+                    }
+
+                    if(!name) return null;
+
+                    return {
+                        Data_Category: 'Parking',
+                        'ลำดับ': order,
+                        'ยี่ห้อ/รุ่น': name.trim(), 
+                        ประเภท: caretaker,     
+                        'ขนาด': capacity,      
+                        URL_รูปภาพ_1: p1,
+                        URL_รูปภาพ_2: p2,
+                        URL_รูปภาพ_3: p3,
+                        URL_รูปภาพ_4: p4,
+                        URL_รูปภาพ_5: p5
+                    };
+                }).filter(item => item !== null);
+                
+                allVehicles = allVehicles.concat(parkingData); 
+                
+                if(mainCategory !== 'lostfound') {
+                    updateFilterCounts(); 
+                    generateExtinguisherSubFilters(); 
+                    generateNozzleSubFilters(); 
+                    generateMissionYearSubFilters(); 
+                    applyFilters(); 
+                }
+            }
+        })
+        .catch(err => console.error("Parking Fetch Error:", err));
 }
 
 function fetchLostFound() {
@@ -344,68 +443,126 @@ function fetchLostFound() {
         document.getElementById('vehicleGallery').innerHTML = '<p class="loading">กำลังเชื่อมต่อฐานข้อมูล L&F...</p>';
     }
 
-    fetch(lfSheetUrl)
-        .then(res => res.text())
-        .then(text => {
-            let data;
-            try {
-                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S\w]+)\);/);
-                if (match && match[1]) {
-                    data = JSON.parse(match[1]);
-                } else {
-                    const jsonString = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
-                    data = JSON.parse(jsonString);
-                }
-                processLostFoundData(data.table.rows);
-            } catch (err) {
-                console.error("JSON Parse Error:", err);
-                document.getElementById('vehicleGallery').innerHTML = '<p class="loading" style="color: red;">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
-            }
-        })
-        .catch(err => console.error("LF Fetch Error:", err));
+    Promise.all([
+        fetch(lfSheetUrlOld).then(res => res.text()),
+        fetch(lfSheetUrlNew).then(res => res.text())
+    ])
+    .then(([oldText, newText]) => {
+        let dataOld = extractJsonFromGviz(oldText);
+        let dataNew = extractJsonFromGviz(newText);
+        
+        let combinedRows = [];
+        if(dataOld && dataOld.table && dataOld.table.rows) {
+            combinedRows = combinedRows.concat(parseLFRows(dataOld.table.rows, false));
+        }
+        if(dataNew && dataNew.table && dataNew.table.rows) {
+            combinedRows = combinedRows.concat(parseLFRows(dataNew.table.rows, true));
+        }
+        
+        combinedRows.sort((a,b) => b.timestamp - a.timestamp);
+        allLostFound = combinedRows;
+        
+        if (mainCategory === 'lostfound') {
+            generateLFMonthFilters(); 
+            updateFilterCounts();
+            applyFilters();
+        }
+    })
+    .catch(err => {
+        console.error("LF Fetch Error:", err);
+        if(mainCategory === 'lostfound') {
+            document.getElementById('vehicleGallery').innerHTML = '<p class="loading" style="color: red;">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
+        }
+    });
 }
 
-function processLostFoundData(rows) {
-    allLostFound = rows.map(row => {
+function extractJsonFromGviz(text) {
+    try {
+        const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S\w]+)\);/);
+        if (match && match[1]) return JSON.parse(match[1]);
+        const jsonString = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+        return JSON.parse(jsonString);
+    } catch(e) {
+        return null;
+    }
+}
+
+function parseLFRows(rows, isNew) {
+    return rows.map(row => {
         if (!row || !row.c) return null;
-        
         const getV = (i) => (row.c[i] && (row.c[i].f || row.c[i].v)) ? (row.c[i].f || row.c[i].v).toString().trim() : '';
 
-        let dateVal = getV(0) || getV(1); 
-        
-        let isReturned = false;
-        let fullText = row.c.map(c => c ? (c.f || c.v || '') : '').join(' ');
-        if (fullText.includes('รับของคืน') || fullText.includes('รับคืนแล้ว')) isReturned = true;
+        let timestampStr = getV(0);
+        let timestampObj = parseCustomDate(timestampStr) || new Date(0);
+        let timestamp = timestampObj.getTime();
+
+        let filterMonth = '';
+        if (timestampObj.getTime() > 0) {
+            filterMonth = `${timestampObj.getFullYear()}-${String(timestampObj.getMonth()+1).padStart(2, '0')}`;
+        }
 
         let type = '';
-        let colG = getV(6); 
-        if (colG.includes('สูญหาย') || colG.includes('หาย')) type = 'สิ่งของสูญหาย';
-        else if (colG.includes('พบ') || colG.includes('เก็บ')) type = 'พบสิ่งของ';
-        else if (colG.includes('คืน')) type = 'รับของคืน';
-        
-        if (!type) {
-            if (isReturned) type = 'รับของคืน';
-            else if (fullText.includes('สูญหาย') || fullText.includes('หาย')) type = 'สิ่งของสูญหาย';
-            else if (fullText.includes('พบสิ่งของ') || fullText.includes('เก็บ')) type = 'พบสิ่งของ';
-            else return null; 
-        }
-
+        let title = '';
+        let location = '';
+        let dateVal = '';
         let imgUrl = '';
-        for (let i = 3; i <= 19; i++) {
-            let v = getV(i);
-            if (v.includes('drive.google.com')) {
-                imgUrl = v; break;
+        let status = '';
+        let actionText = '';
+        let isReturned = false;
+
+        if (isNew) {
+            let rawType = getV(2);
+            if (rawType.includes('หาย')) type = 'สิ่งของสูญหาย';
+            else if (rawType.includes('พบ') || rawType.includes('เก็บ')) type = 'พบสิ่งของ';
+            else if (rawType.includes('คืน')) type = 'รับของคืน';
+            else type = 'พบสิ่งของ'; 
+
+            title = getV(9) || 'ไม่มีระบุ';
+            location = getV(10) || 'ไม่ระบุสถานที่';
+            
+            let eventDate = getV(7);
+            let eventTime = getV(8);
+            dateVal = eventDate ? `${eventDate} ${eventTime}`.trim() : timestampStr;
+            
+            imgUrl = getV(11);
+            status = getV(12);
+            actionText = getV(13);
+
+            if (status.includes('คืน') || type === 'รับของคืน') isReturned = true;
+
+        } else {
+            dateVal = getV(0) || getV(1); 
+            let fullText = row.c.map(c => c ? (c.f || c.v || '') : '').join(' ');
+            if (fullText.includes('รับของคืน') || fullText.includes('รับคืนแล้ว')) isReturned = true;
+
+            let colG = getV(6); 
+            if (colG.includes('สูญหาย') || colG.includes('หาย')) type = 'สิ่งของสูญหาย';
+            else if (colG.includes('พบ') || colG.includes('เก็บ')) type = 'พบสิ่งของ';
+            else if (colG.includes('คืน')) type = 'รับของคืน';
+            
+            if (!type) {
+                if (isReturned) type = 'รับของคืน';
+                else if (fullText.includes('สูญหาย') || fullText.includes('หาย')) type = 'สิ่งของสูญหาย';
+                else if (fullText.includes('พบสิ่งของ') || fullText.includes('เก็บ')) type = 'พบสิ่งของ';
+                else return null; 
             }
+
+            for (let i = 3; i <= 19; i++) {
+                let v = getV(i);
+                if (v.includes('drive.google.com')) {
+                    imgUrl = v; break;
+                }
+            }
+
+            let titleCandidates = [getV(7), getV(6), getV(5)].filter(v => v && !v.includes('drive.google.com') && !['สิ่งของสูญหาย','พบสิ่งของ','รับของคืน'].includes(v));
+            title = titleCandidates.length > 0 ? titleCandidates[0] : 'ไม่มีระบุ';
+
+            let locCandidates = [getV(8), getV(9), getV(10)].filter(v => v && !v.includes('drive.google.com') && v !== title);
+            location = locCandidates.length > 0 ? locCandidates[0] : 'ไม่ระบุสถานที่';
+
+            actionText = getV(17); 
+            status = getV(18); 
         }
-
-        let titleCandidates = [getV(7), getV(6), getV(5)].filter(v => v && !v.includes('drive.google.com') && !['สิ่งของสูญหาย','พบสิ่งของ','รับของคืน'].includes(v));
-        let title = titleCandidates.length > 0 ? titleCandidates[0] : 'ไม่มีระบุ';
-
-        let locCandidates = [getV(8), getV(9), getV(10)].filter(v => v && !v.includes('drive.google.com') && v !== title);
-        let location = locCandidates.length > 0 ? locCandidates[0] : 'ไม่ระบุสถานที่';
-
-        let actionText = getV(17); 
-        let status = getV(18); 
 
         if (imgUrl) {
             let firstLink = imgUrl.split(',')[0].trim();
@@ -415,13 +572,42 @@ function processLostFoundData(rows) {
             }
         }
 
-        return { type, title, location, dateVal, imgUrl, status, actionText, isReturned };
-    }).filter(item => item !== null).reverse();
-    
-    if (mainCategory === 'lostfound') {
-        updateFilterCounts();
-        applyFilters();
+        return { type, title, location, dateVal, imgUrl, status, actionText, isReturned, timestamp, filterMonth };
+    }).filter(item => item !== null);
+}
+
+function generateLFMonthFilters() {
+    const selectEl = document.getElementById('sub-filter-lf-month-select');
+    const container = document.getElementById('sub-filter-lf-month-container');
+    if (!selectEl || !container) return;
+
+    let months = allLostFound.map(v => v.filterMonth).filter(m => m && m !== '');
+    months = [...new Set(months)].sort((a, b) => b.localeCompare(a)); 
+
+    if (months.length === 0) {
+        container.style.display = 'none';
+        return;
     }
+
+    const thaiMonthsArr = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+    let html = `<option value="all">ทุกเดือน (แสดงทั้งหมด)</option>`;
+    
+    months.forEach(m => {
+        let [y, mo] = m.split('-');
+        let yTh = parseInt(y) < 2500 ? parseInt(y) + 543 : parseInt(y);
+        let monthName = thaiMonthsArr[parseInt(mo) - 1];
+        html += `<option value="${m}">${monthName} ${yTh}</option>`;
+    });
+
+    selectEl.innerHTML = html;
+    selectEl.value = currentLFMonth;
+
+    selectEl.onchange = function() {
+        currentLFMonth = this.value;
+        updateFilterCounts(); 
+        applyFilters();
+    };
 }
 
 function updateFilterCounts() {
@@ -432,6 +618,15 @@ function updateFilterCounts() {
         const badge = btn.querySelector('.badge');
         if(badge) badge.innerText = count;
         btn.style.display = (count === 0 && f !== 'all') ? 'none' : 'inline-flex';
+    });
+
+    let parkingData = allVehicles.filter(v => v.Data_Category === 'Parking');
+    document.querySelectorAll('#filter-group-parking .filter-btn').forEach(btn => {
+        const f = btn.getAttribute('data-filter');
+        const count = (f === 'all') ? parkingData.length : parkingData.filter(v => v.ประเภท && v.ประเภท.includes(f)).length;
+        const badge = btn.querySelector('.badge');
+        if(badge) badge.innerText = count;
+        btn.style.display = 'inline-flex'; 
     });
 
     let staffData = allVehicles.filter(v => v.Data_Category === 'Staff');
@@ -471,9 +666,11 @@ function updateFilterCounts() {
     });
 
     if (allLostFound.length > 0) {
+        let baseData = currentLFMonth === 'all' ? allLostFound : allLostFound.filter(v => v.filterMonth === currentLFMonth);
+        
         document.querySelectorAll('#filter-group-lostfound .filter-btn').forEach(btn => {
             const f = btn.getAttribute('data-filter');
-            const count = (f === 'all') ? allLostFound.length : allLostFound.filter(v => v.type === f).length;
+            const count = (f === 'all') ? baseData.length : baseData.filter(v => v.type === f).length;
             const badge = btn.querySelector('.badge');
             if (badge) badge.innerText = count;
         });
@@ -588,6 +785,9 @@ function applyFilters() {
         if (currentSubFilter !== 'all') {
             filteredData = filteredData.filter(v => v.type === currentSubFilter);
         }
+        if (currentLFMonth !== 'all') {
+            filteredData = filteredData.filter(v => v.filterMonth === currentLFMonth);
+        }
         if (searchText.trim() !== '') {
             filteredData = filteredData.filter(v => 
                 (v.title && v.title.toLowerCase().includes(searchText)) || 
@@ -608,6 +808,9 @@ function applyFilters() {
         if (currentUnit.includes('ปฏิบัติการ')) {
             filteredData = filteredData.filter(v => getUnit(v).includes('ปฏิบัติการ') || (v.ประเภท && v.ประเภท.includes('หัวหน้างาน')));
         }
+    }
+    else if (mainCategory === 'parking') {
+        filteredData = filteredData.filter(v => v.Data_Category === 'Parking');
     }
     else if (mainCategory === 'fire') filteredData = filteredData.filter(v => v.Data_Category === 'Asset' && isFireEquip(v));
     else if (mainCategory === 'form') filteredData = filteredData.filter(v => v.Data_Category === 'Form');
@@ -656,6 +859,8 @@ function applyFilters() {
             } else {
                 filteredData = filteredData.filter(v => v.ประเภท && v.ประเภท.includes(currentSubFilter));
             }
+        } else if (mainCategory === 'parking') { 
+            filteredData = filteredData.filter(v => v.ประเภท && v.ประเภท.includes(currentSubFilter));
         } else {
             filteredData = filteredData.filter(v => getSearchText(v).includes(currentSubFilter.toLowerCase()));
         }
@@ -672,6 +877,25 @@ function applyFilters() {
     if (searchText.trim() !== '') filteredData = filteredData.filter(v => getSearchText(v).includes(searchText));
     
     displayGallery(filteredData); 
+
+    if (mainCategory === 'parking') {
+        const summaryBox = document.getElementById('parking-summary-box');
+        if (summaryBox) {
+            summaryBox.style.display = 'flex';
+            let totalCapacity = 0;
+            filteredData.forEach(item => {
+                let capStr = String(item['ขนาด'] || '0').replace(/,/g, '');
+                let capInt = parseInt(capStr, 10);
+                if (!isNaN(capInt)) totalCapacity += capInt;
+            });
+            
+            let prefix = currentSubFilter === 'all' ? 'ลานจอดรถทั้งหมด' : currentSubFilter;
+            summaryBox.innerHTML = `<span style="background: rgba(255,255,255,0.2); padding: 6px 15px; border-radius: 50px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${prefix} <strong>${filteredData.length}</strong> ลาน จอดได้ <strong>${totalCapacity.toLocaleString()}</strong> คัน</span>`;
+        }
+    } else {
+        const summaryBox = document.getElementById('parking-summary-box');
+        if (summaryBox) summaryBox.style.display = 'none';
+    }
 }
 
 const searchInputEl = document.getElementById('searchInput');
@@ -928,6 +1152,15 @@ function displayGallery(dataToDisplay) {
                 ${sizeHtml}
                 ${plateHtml}
             `;
+        } else if (item.Data_Category === 'Parking') {
+            let capacityText = item['ขนาด'] ? `<div style="font-size: 15px; color: #d35400; margin-bottom: 5px; font-weight: bold; width: 100%; text-align: ${alignStyle};">จอดได้: ${item['ขนาด']} คัน</div>` : '';
+            let orderHtml = item['ลำดับ'] ? `<div class="card-plate large" style="text-align: ${alignStyle}; width: 100%; margin-bottom: 6px;">ลำดับที่: ${item['ลำดับ']}</div>` : '';
+            cardHTML = `
+                ${orderHtml}
+                <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}" style="text-align: ${alignStyle}; width: 100%; margin-bottom: 8px;">ลานจอดรถ: ${item['ยี่ห้อ/รุ่น']}</h3>
+                <div class="card-subtitle" style="width: 100%; text-align: ${alignStyle}; margin-bottom: 8px; font-weight: 500; color: #2980b9;">ผู้ดูแล: ${item.ประเภท}</div>
+                ${capacityText}
+            `;
         } else {
             cardHTML = `
                 <h3 class="card-title" title="${item['ยี่ห้อ/รุ่น']}" style="text-align: ${alignStyle}; width: 100%;">${item['ยี่ห้อ/รุ่น']}</h3>
@@ -1107,6 +1340,14 @@ function openModal(index) {
         detailText = `<h2>${vehicle['ยี่ห้อ/รุ่น']}</h2>
          <p><strong>วัน/เวลาที่บันทึก:</strong> ${timeString}</p>
          <p><strong>หมวดหมู่:</strong> ${vehicle.ประเภท || 'การดูแลพื้นที่ส่วนกลาง'}</p>`;
+         document.getElementById('modalDetails').innerHTML = `${detailText}`; 
+         
+    } else if (vehicle.Data_Category === 'Parking') {
+        let orderHtml = vehicle['ลำดับ'] ? `<p><strong>ลำดับที่:</strong> ${vehicle['ลำดับ']}</p>` : '';
+        detailText = `<h2>ลานจอดรถ: ${vehicle['ยี่ห้อ/รุ่น']}</h2>
+         ${orderHtml}
+         <p><strong>ผู้ดูแล:</strong> ${vehicle.ประเภท}</p>
+         <p><strong>จอดได้:</strong> ${vehicle['ขนาด']} คัน</p>`;
          document.getElementById('modalDetails').innerHTML = `${detailText}`; 
          
     } else if (isFireEquip(vehicle)) {
@@ -1486,25 +1727,16 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebar.classList.remove('keep-open');
     });
 });
-// ========================================================
-// 🌟 ระบบควบคุมเมนูย่อย (Dropdown Toggle) สำหรับ Sidebar 🌟
-// ========================================================
+
 document.addEventListener('DOMContentLoaded', () => {
-    // หาเมนูหลักทุกอันที่มีเมนูย่อยซ่อนอยู่
     const submenuLinks = document.querySelectorAll('.has-submenu > a');
     
     submenuLinks.forEach(link => {
         link.addEventListener('click', function(e) {
-            // 1. ป้องกันไม่ให้หน้าเว็บกระตุกเด้งกลับไปด้านบน
             e.preventDefault(); 
-            // 2. ป้องกันคำสั่งซ้อนทับกัน
             e.stopImmediatePropagation(); 
-            
-            // 3. หาเมนูย่อยที่อยู่ติดกับเมนูหลักที่เพิ่งถูกคลิก
             const submenu = this.nextElementSibling;
-            
             if (submenu && submenu.classList.contains('submenu')) {
-                // 4. สลับสถานะเปิด-ปิด (ถ้าปิดอยู่จะเปิด ถ้าเปิดอยู่จะปิด)
                 submenu.classList.toggle('show-submenu');
             }
         });
