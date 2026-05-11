@@ -250,18 +250,19 @@ html, body { min-height: 100vh; height: auto !important; overflow-y: auto !impor
     z-index: 9999; 
     backdrop-filter: blur(4px); font-family: 'Prompt', sans-serif; 
 }
+
 .dash-modal {
-    width: min(500px, 95vw) !important;
+    width: min(800px, 95vw) !important; 
     max-height: 95vh !important;
-    overflow-y: auto !important; 
+    overflow: hidden !important; /* ล็อกกล่องหลักไม่ให้ขยับ */
     background: #fff;
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-    padding: 25px !important; 
+    padding: 25px 25px 0 25px !important; /* เว้นขอบล่างให้ปุ่มติดขอบ */
     display: flex;
     flex-direction: column;
     animation: popInCenter 0.3s forwards;
-    margin: 0 !important; /* ยกเลิก margin แปลกๆ เพื่อให้ Flex จัดกลางให้ */
+    margin: 0 !important; 
 }
 
 @keyframes popInCenter { 
@@ -276,7 +277,13 @@ html, body { min-height: 100vh; height: auto !important; overflow-y: auto !impor
 
 .dash-modal header { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:12px; flex-shrink: 0; }
 .dash-modal h3 { margin:0; font-size: 24px !important; color:var(--blue-600); font-weight: 800; }
-.dash-modal .body { flex:1; overflow-y:visible; } 
+
+.dash-modal .body { 
+    flex: 1; 
+    overflow-y: auto !important; /* เปิดให้เฉพาะส่วนเนื้อหาสามารถเลื่อน (Scroll) ได้ */
+    padding-right: 10px; /* เว้นที่ให้ Scrollbar เล็กน้อย */
+    padding-bottom: 20px; /* เว้นระยะด้านล่างสุดของเนื้อหา */
+} 
 
 .detail-card { background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:20px; }
 
@@ -286,7 +293,7 @@ html, body { min-height: 100vh; height: auto !important; overflow-y: auto !impor
 .kv .v { color:#0f172a; font-weight:500; line-height:1.4; word-break: break-word; }
 @media(max-width:700px){ .kv{grid-template-columns:1fr; gap:8px} .kv .k{text-align:left} }
 
-/* คืนรูปภาพให้ใหญ่เท่าเดิม (250px) */
+/* ขยายรูปภาพให้ใหญ่ขึ้นอีกนิด (480px) */
 .evidence-container {
     margin-top: 10px !important;
     text-align: center;
@@ -297,36 +304,64 @@ html, body { min-height: 100vh; height: auto !important; overflow-y: auto !impor
 }
 .evidence-img {
     max-width: 100%;
-    max-height: 250px !important; /* กลับไปรูปใหญ่ให้ชัดเจน */
+    max-height: 480px !important; /* ปรับเพิ่มจาก 400px เป็น 480px เพื่อความคมชัดและเต็มพื้นที่ */
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     display: inline-block;
 }
 
-/* จัดการปุ่มเปลี่ยนหน้าให้อยู่ด้านล่างตามปกติ */
-.nav-wrapper { display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; margin-top: 15px; border-top: 1px solid var(--line); padding-top: 15px; flex-shrink: 0; }
-#caseCount { font-size: 20px; font-weight: bold; color: #475569; }
+/* จัดการปุ่มเปลี่ยนหน้าให้อยู่ด้านล่างและจัดเรียงแบบ ซ้าย - กลาง - ขวา พร้อม Freeze ติดขอบล่าง */
+.nav-wrapper { 
+    display: flex; 
+    flex-direction: row; 
+    justify-content: center; 
+    align-items: center; 
+    width: 100%; 
+    margin-top: 0; 
+    border-top: 1px solid var(--line); 
+    padding-top: 15px; 
+    padding-bottom: 25px; /* ใส่ขอบล่างตรงนี้แทนกล่องหลัก */
+    flex-shrink: 0; 
+    position: relative; 
+    min-height: 50px; 
+    background-color: #fff; /* ใส่สีขาวและดันให้อยู่ชั้นบนสุดเสมอ */
+    z-index: 10; 
+}
+
+#caseCount { 
+    font-size: 18px; 
+    font-weight: bold; 
+    color: #475569; 
+    margin: 0;
+    z-index: 2; /* ดันข้อความมาไว้ด้านหน้า */
+}
 
 .nav-buttons {
     display: flex !important;
-    flex-direction: column !important;
-    gap: 10px !important;
+    flex-direction: row !important; /* ปุ่มเรียงแนวนอน */
+    justify-content: space-between !important; /* ดันปุ่มไปชิดซ้ายสุด และขวาสุด */
     width: 100% !important;
+    position: absolute; /* ลอยทับอยู่บน wrapper */
+    left: 0;
+    pointer-events: none; /* ให้คลิกทะลุช่องว่างตรงกลางได้ (ไม่บังข้อความ) */
 }
+
 .nav-buttons button {
-    width: 100% !important;
-    padding: 12px 10px !important;
+    width: auto !important; /* ยกเลิกความกว้าง 100% */
+    padding: 8px 20px !important; /* ปรับขนาดปุ่มให้พอดีคำ ไม่ใหญ่เทอะทะ */
+    pointer-events: auto; /* ให้ตัวปุ่มยังสามารถคลิกได้ตามปกติ */
     border-radius: 50px !important;
     background: #fff;
     border: 2px solid #cbd5e1;
     color: #334155;
     cursor: pointer;
-    font-size: 18px !important;
+    font-size: 16px !important;
     font-weight: 600;
     font-family: 'Prompt', sans-serif;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
 }
+
 .nav-buttons button:hover:not(:disabled) {
     transform: translateY(-3px) !important;
     filter: brightness(1.05) !important;
@@ -334,6 +369,7 @@ html, body { min-height: 100vh; height: auto !important; overflow-y: auto !impor
     color: var(--blue-600);
     border-color: var(--blue-600);
 }
+
 .nav-buttons button:active:not(:disabled) {
     transform: translateY(2px) !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
