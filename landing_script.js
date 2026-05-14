@@ -1308,17 +1308,24 @@ function openModal(index) {
     let actionButtonsHtml = '';
     if (showInspectBtn || showRefillBtn || showCleanBtn) {
         actionButtonsHtml += `<div class="action-buttons" style="flex-direction: column; gap: 10px; margin-top: 20px;">`;
+        
+        // 1. กลุ่มปุ่มตรวจสอบสภาพ (แสดงทั้งพาหนะและถังดับเพลิง)
         if (showInspectBtn) {
             actionButtonsHtml += `<a href="${autoFillURL}" class="action-btn btn-inspect" style="width: 100%;">ตรวจสอบสภาพ</a>`;
-        }
-        if (showCleanBtn) {
-            actionButtonsHtml += `<button onclick="openCleanFormModal(${index})" class="action-btn" style="width: 100%; background-color: #3498db; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">ทำความสะอาดยานพาหนะ</button>`;
-        }
-        if (showInspectBtn) {
-            actionButtonsHtml += `<a href="${autoFillURL}" class="action-btn btn-inspect" style="width: 100%;">ตรวจสอบสภาพ</a>`;
-            // เพิ่มปุ่มประวัติการตรวจสภาพ ตรงนี้
             actionButtonsHtml += `<button onclick="openInspectionHistoryModal(${index})" class="action-btn" style="width: 100%; background-color: #3498db; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">ประวัติการตรวจสภาพ</button>`;
         }
+        
+        // 2. กลุ่มปุ่มทำความสะอาด (แสดงเฉพาะพาหนะ)
+        if (showCleanBtn) {
+            actionButtonsHtml += `<button onclick="openCleanFormModal(${index})" class="action-btn" style="width: 100%; background-color: #0ea5e9; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">ทำความสะอาดยานพาหนะ</button>`;
+        }
+
+        // 3. กลุ่มปุ่มเติมสารเคมี (แสดงเฉพาะถังดับเพลิง)
+        if (showRefillBtn) {
+            actionButtonsHtml += `<button onclick="openRefillFormModal(${index})" class="action-btn" style="width: 100%; background-color: #27ae60; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">บันทึกการเติมสารเคมี</button>`;
+            actionButtonsHtml += `<button onclick="openRefillHistoryModal(${index})" class="action-btn" style="width: 100%; background-color: #f39c12; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; padding: 10px; border-radius: 4px; color: white;">ประวัติการเติมสารเคมี</button>`;
+        }
+        
         actionButtonsHtml += `</div>`;
     }
     
@@ -1762,12 +1769,12 @@ window.openInspectionHistoryModal = function(index) {
     const carItems = ["ลมยาง", "เนื้อยาง", "ล้อน็อต", "เบรก", "ช่วงล่าง", "ไฟ/แตร", "แบตเตอรี่", "ส่งกำลัง", "ตัวถัง"];
     const activeItems = isFireExtinguisher ? fireItems : carItems;
 
-    // 1. สร้างหัวตาราง (เปลี่ยนสีเป็น #000 ดำสนิท)
-    let headHtml = `<tr><th style="padding: 6px 10px; text-align: left; width: 85px; background: #f8fafc; color: #000; padding-left: 15px;">เดือน</th>`;
+    // 1. สร้างหัวตาราง (ปรับ font-size เป็น 14px เท่ากันหมด)
+    let headHtml = `<tr><th style="padding: 10px 10px; text-align: left; width: 95px; background: #e2e8f0; color: #000; padding-left: 15px; font-size: 14px;">เดือน</th>`;
     activeItems.forEach(item => {
-        headHtml += `<th style="padding: 6px 2px; font-weight: 600; font-size: 12px; color: #000;">${item}</th>`;
+        headHtml += `<th style="padding: 10px 2px; font-weight: 600; font-size: 14px; color: #000; background: #e2e8f0; border-left: 1px solid #cbd5e1;">${item}</th>`;
     });
-    headHtml += `<th style="padding: 6px 10px; text-align: left; width: 120px; background: #f8fafc; color: #000;">ผู้ตรวจสอบ</th></tr>`;
+    headHtml += `<th style="padding: 10px 10px; text-align: left; width: 140px; background: #e2e8f0; color: #000; border-left: 1px solid #cbd5e1; font-size: 14px;">ผู้ตรวจสอบ</th></tr>`;
     document.getElementById('inspectionChecklistHead').innerHTML = headHtml;
 
     // 2. ข้อมูลอุปกรณ์ (เปลี่ยนสีตัวเน้นเป็น #000 ดำสนิท)
@@ -1846,21 +1853,27 @@ window.openInspectionHistoryModal = function(index) {
             });
         }
 
-        // 4. แสดงผลลงในตาราง 12 เดือน
+        // 4. แสดงผลลงในตาราง 12 เดือน 
         let html = '';
-        thaiMonths.forEach((month, idx) => {
-            const data = monthlyData[idx];
-            const rowBg = idx % 2 === 0 ? '#ffffff' : '#fcfcfc';
+        const shortMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const yearEl = document.getElementById('yearSelect');
+        const currentViewYear = (yearEl && yearEl.value ? parseInt(yearEl.value) : new Date().getFullYear()) + 543;
+        const shortYear = currentViewYear.toString().slice(-2);
+
+        shortMonths.forEach((monthShort, idx) => {
+            const data = monthlyData[idx]; 
+            const rowBg = idx % 2 === 0 ? '#ffffff' : '#f1f5f9';
+            const monthLabel = `${monthShort}${shortYear}`; 
             
-            // 🌟 ล็อคความสูงแถวด้วย height: 32px; ทำให้ตารางนิ่งสนิท 100% ไม่ยืดตามตัวอักษร
-            html += `<tr style="border-bottom: 1px solid #f1f5f9; background: ${rowBg}; height: 32px;">
-                <td style="padding: 4px 15px; text-align: left; font-weight: 500; color: #000;">${month}</td>`;
+            // ตั้งค่า font-size: 14px เท่ากันทุกคอลัมน์
+            html += `<tr style="border-bottom: 1px solid #cbd5e1; background: ${rowBg}; height: 38px;">
+                <td style="padding: 6px 15px; text-align: left; font-weight: 600; color: #0f172a; font-size: 14px;">${monthLabel}</td>`;
+            
             for(let i=0; i<9; i++) {
-                // จัดให้อยู่กึ่งกลางในแนวตั้ง (vertical-align: middle)
-                html += `<td style="padding: 4px 2px; border-left: 1px solid #f1f5f9; vertical-align: middle;">${data.results[i]}</td>`;
+                html += `<td style="padding: 6px 2px; border-left: 1px solid #cbd5e1; vertical-align: middle; font-size: 14px;">${data.results[i]}</td>`;
             }
-            // เปลี่ยนสีข้อความผู้ตรวจสอบเป็น #000
-            html += `<td style="padding: 4px 10px; text-align: left; color: #000; white-space: nowrap; font-size: 11px; border-left: 1px solid #f1f5f9; vertical-align: middle;">${data.inspector}</td></tr>`;
+            
+            html += `<td style="padding: 6px 10px; text-align: left; color: #000; white-space: nowrap; font-size: 14px; border-left: 1px solid #cbd5e1; vertical-align: middle;">${data.inspector}</td></tr>`;
         });
         document.getElementById('inspectionChecklistBody').innerHTML = html;
         
