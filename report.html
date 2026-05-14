@@ -82,7 +82,14 @@
                     <li><a href="index.html?main=fire&unit=หัวรับน้ำ">หัวรับน้ำ</a></li>
                     <li><a href="index.html?main=fire&unit=ชุด ppe">ชุด PPE</a></li>
                 </ul>              
-            </li>          
+            </li>  
+            
+             <li class="has-submenu">
+                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-traffic-manage').classList.toggle('show-submenu');" id="menu-traffic-manage">การจัดการจราจร ▾</a>
+                <ul class="submenu" id="submenu-traffic-manage">
+                    <li><a href="index.html?main=parking" id="menu-parking">ข้อมูลลานจอดรถ</a></li>
+                </ul>
+            </li>
 
             <li><a href="index.html?main=form" id="menu-form">แบบฟอร์มต่างๆ</a></li>
             <li><a href="index.html?main=lostfound" id="menu-lostfound">แจ้งของหาย/เก็บของได้</a></li>

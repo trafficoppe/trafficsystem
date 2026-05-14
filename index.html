@@ -178,15 +178,31 @@
         </div>
     </div>
 
-    <div id="refillHistoryModal" class="modal" style="z-index: 1050;">
-        <div class="modal-content" style="max-width: 550px;">
-            <span class="close" onclick="document.getElementById('refillHistoryModal').style.display='none'">&times;</span>
-            <div style="padding: 25px;">
-                <h2 style="color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">ประวัติการเติมสาร</h2>
-                <div id="refillDetailsContent"></div>
+<div id="inspectionHistoryModal" class="modal" style="display:none; z-index: 9999; padding: 2vh 0; overflow-y: auto;">
+    <div id="inspectionModalContent" class="modal-content" style="width: 98%; max-width: 1200px; max-height: none !important; padding: 0; border-radius: 16px; border: none; font-family: 'Prompt', sans-serif; margin: 0 auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); background: #fff;">
+        
+        <div style="display: flex; justify-content: flex-end; align-items: center; padding: 20px 25px 0 25px; background: #fff; border-radius: 16px 16px 0 0;">
+            <span class="close" onclick="document.getElementById('inspectionHistoryModal').style.display='none'" style="font-size: 26px; cursor: pointer; color: #000; background: #f1f5f9; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; line-height: 1;">&times;</span>
+        </div>
+        
+        <div style="padding: 20px 40px 50px 40px; background: #fff; border-radius: 0 0 16px 16px;">
+            
+            <div style="display: flex; justify-content: center; margin-bottom: 35px;">
+                <div id="inspInfoLeft" style="display: grid; grid-template-columns: auto auto; gap: 15px 80px; font-size: 15px; color: #000; font-weight: 500;">
+                    </div>
+            </div>
+
+            <div style="width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; margin: 0 auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; table-layout: fixed; margin: 0 auto;">
+                    <thead id="inspectionChecklistHead" style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                        </thead>
+                    <tbody id="inspectionChecklistBody">
+                        </tbody>
+                </table>
             </div>
         </div>
     </div>
+</div>
 
     <div id="refillFormModal" class="modal" style="z-index: 1050;">
         <div class="modal-content" style="max-width: 600px; overflow-y: auto; max-height: 90vh;">
