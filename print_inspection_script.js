@@ -442,7 +442,6 @@ function generatePrintPages(dataToRender) {
         
         let colorLabel = 'สี:';
         let plateLabel = 'ทะเบียน:';
-        
         let docTitle = 'ประวัติการตรวจสภาพยานพาหนะ';
         let vImgUrl = "";
         
@@ -478,30 +477,26 @@ function generatePrintPages(dataToRender) {
             plateInfoHtml = `<div class="info-item"><span class="label">${plateLabel}</span> <span class="value">${data.plate}</span></div>`;
         }
 
-        let infoHtml = '';
-        if (isFire) {
-            infoHtml = `
+        let infoHtml = isFire ? `
                 <div class="info-item"><span class="label">รายละเอียด:</span> <span class="value">${data.detail}</span></div>
                 ${plateInfoHtml}
                 <div class="info-item"><span class="label">หมายเลขครุภัณฑ์:</span> <span class="value">${data.equipId}</span></div>
-            `;
-        } else {
-            infoHtml = `
+            ` : `
                 <div class="info-item"><span class="label">รายละเอียดรถ:</span> <span class="value">${data.detail}</span></div>
                 <div class="info-item"><span class="label">${colorLabel}</span> <span class="value">${data.color}</span></div>
                 ${plateInfoHtml}
                 <div class="info-item"><span class="label">หมายเลขครุภัณฑ์:</span> <span class="value">${data.equipId}</span></div>
             `;
-        }
 
-        let tableHtml = '';
         const itemsList = isFire ? fireItemsList : vehicleItemsList;
         
+        // 1. เพิ่มหัวตาราง "สถานะการใช้งาน"
         let tableHeaderHtml = `
             <tr>
-                <th style="width: 80px;">เดือน/ปี</th>
+                <th style="width: 70px;">เดือน/ปี</th>
                 ${itemsList.map(item => `<th>${item}</th>`).join('')}
-                <th style="width: 100px;">ผู้ตรวจสอบ</th>
+                <th style="width: 85px;">สถานะการใช้งาน</th>
+                <th style="width: 90px;">ผู้ตรวจสอบ</th>
             </tr>
         `;
 
@@ -526,11 +521,29 @@ function generatePrintPages(dataToRender) {
                 checklistHtml += `<td class="text-center">${mark}</td>`;
             });
 
+            // 2. ตรวจสอบสถานะเพื่อแสดงคำว่า "ใช้งานได้" หรือ "ใช้งานไม่ได้"
+            let displayStatus = "-";
+            let statusColorStyle = "color: #000;";
+            if (monthRecord) {
+                const s = monthRecord.finalStatus || "";
+                if (s.includes("ปกติ") || s.includes("ใช้งานได้")) {
+                    displayStatus = "ใช้งานได้";
+                    statusColorStyle = "color: #15803d; font-weight: bold;"; // เขียว
+                } else if (s.includes("ชำรุด") || s.includes("ใช้งานไม่ได้") || s.includes("แจ้งซ่อม")) {
+                    displayStatus = "ใช้งานไม่ได้";
+                    statusColorStyle = "color: #dc2626; font-weight: bold;"; // แดง
+                } else {
+                    displayStatus = s !== "-" ? s : "-";
+                }
+            }
+
+            checklistHtml += `<td class="text-center" style="font-size: 13px; ${statusColorStyle}">${displayStatus}</td>`;
+
             let inspectorName = monthRecord ? monthRecord.inspector.replace(/^(นาย|นางสาว|นาง)\s*/, "").split(' ')[0] : '-';
-            checklistHtml += `<td class="text-center" style="font-size: 14px; color: #334155;">${inspectorName}</td></tr>`;
+            checklistHtml += `<td class="text-center" style="font-size: 13px; color: #334155;">${inspectorName}</td></tr>`;
         }
 
-        tableHtml = `
+        let tableHtml = `
             <table class="checklist">
                 <thead>${tableHeaderHtml}</thead>
                 <tbody>${checklistHtml}</tbody>
@@ -541,7 +554,6 @@ function generatePrintPages(dataToRender) {
         let headSignatureUrl = chiefSignatureGlobal || staffSignatures["ยุทธภูมิ ญานเพิ่ม"] || fallbackHeadSignature;
         let headSignatureHtml = headSignatureUrl ? `<img src="${headSignatureUrl}" class="head-signature-img" alt="ลายเซ็นหัวหน้า" />` : '';
 
-        // 👇 ตัวแปร notes ที่เผลอลบไป ใส่คืนให้แล้วครับ
         let notes = asset.records.filter(r => r && r.note && r.note !== "-").map(r => r.note);
 
         html += `

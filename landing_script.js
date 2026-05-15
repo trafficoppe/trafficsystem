@@ -1758,26 +1758,30 @@ window.openInspectionHistoryModal = function(index) {
     const vType = String(vehicle['ประเภท / ชนิด'] || vehicle['ยี่ห้อ/รุ่น'] || "").trim();
     const currentYearThai = new Date().getFullYear() + 543;
 
+    // ตรวจสอบว่าเป็นอุปกรณ์ดับเพลิงหรือไม่
     const isFireExtinguisher = vType.includes("ดับเพลิง") || vType.includes("ถัง") || (typeof mainCategory !== 'undefined' && mainCategory === 'fire_extinguisher');
 
     const modalContent = document.getElementById('inspectionModalContent');
     if (modalContent) {
-        modalContent.style.maxWidth = isFireExtinguisher ? "1200px" : "1050px";
+        // ปรับความกว้างให้เหมาะสม
+        modalContent.style.maxWidth = isFireExtinguisher ? "1200px" : "1100px";
     }
 
     const fireItems = ["ตัวถัง", "เกจ์วัด", "สายฉีด", "สลักซีล", "คันบีบ", "ป้ายชื่อ", "ที่ตั้ง", "ฐานรอง", "สะอาด"];
     const carItems = ["ลมยาง", "เนื้อยาง", "ล้อน็อต", "เบรก", "ช่วงล่าง", "ไฟ/แตร", "แบตเตอรี่", "ส่งกำลัง", "ตัวถัง"];
     const activeItems = isFireExtinguisher ? fireItems : carItems;
 
-    // 1. สร้างหัวตาราง (ปรับ font-size เป็น 14px เท่ากันหมด)
-    let headHtml = `<tr><th style="padding: 6px 10px; text-align: left; width: 95px; background: #e2e8f0; color: #000; padding-left: 15px; font-size: 14px;">เดือน</th>`;
+    // 1. สร้างหัวตาราง (เพิ่มคอลัมน์สถานะการใช้งาน)
+    let headHtml = `<tr><th style="padding: 6px 10px; text-align: left; width: 85px; background: #e2e8f0; color: #000; padding-left: 15px; font-size: 14px;">เดือน</th>`;
     activeItems.forEach(item => {
         headHtml += `<th style="padding: 6px 2px; font-weight: 600; font-size: 14px; color: #000; background: #e2e8f0; border-left: 1px solid #cbd5e1;">${item}</th>`;
     });
-    headHtml += `<th style="padding: 6px 10px; text-align: left; width: 140px; background: #e2e8f0; color: #000; border-left: 1px solid #cbd5e1; font-size: 14px;">ผู้ตรวจสอบ</th></tr>`;
+    // แทรกคอลัมน์ใหม่ "สถานะการใช้งาน" ก่อนชื่อผู้ตรวจสอบ
+    headHtml += `<th style="padding: 6px 5px; font-weight: 600; font-size: 14px; color: #000; background: #e2e8f0; border-left: 1px solid #cbd5e1; width: 100px;">สถานะการใช้งาน</th>`;
+    headHtml += `<th style="padding: 6px 10px; text-align: left; width: 130px; background: #e2e8f0; color: #000; border-left: 1px solid #cbd5e1; font-size: 14px;">ผู้ตรวจสอบ</th></tr>`;
     document.getElementById('inspectionChecklistHead').innerHTML = headHtml;
 
-    // 2. ข้อมูลอุปกรณ์ (เปลี่ยนสีตัวเน้นเป็น #000 ดำสนิท)
+    // ข้อมูลอุปกรณ์ด้านบน
     document.getElementById('inspInfoLeft').innerHTML = `
         <div><strong>ประเภท:</strong> ${vType}</div>
         <div><strong>หมายเลขครุภัณฑ์:</strong> ${equipID || '-'}</div>
@@ -1785,7 +1789,8 @@ window.openInspectionHistoryModal = function(index) {
         <div><strong>ข้อมูลประจำปี:</strong> ${currentYearThai}</div>
     `;
 
-    document.getElementById('inspectionChecklistBody').innerHTML = '<tr><td colspan="11" style="padding:40px; color:#000;">⌛ กำลังดึงประวัติการตรวจสภาพ...</td></tr>';
+    // แสดง Loading ระหว่างรอข้อมูล (ปรับ colspan เป็น 12 เพื่อให้เต็มตารางใหม่)
+    document.getElementById('inspectionChecklistBody').innerHTML = '<tr><td colspan="12" style="padding:40px; color:#000;">⌛ กำลังดึงประวัติการตรวจสภาพ...</td></tr>';
     
     document.getElementById('vehicleModal').style.display = 'none';
     document.getElementById('inspectionHistoryModal').style.display = 'block';
@@ -1799,8 +1804,13 @@ window.openInspectionHistoryModal = function(index) {
         const jsonStr = match && match[1] ? match[1] : text.substring(47).slice(0, -2);
         const json = JSON.parse(jsonStr);
 
-        const monthlyData = Array.from({length: 12}, () => ({ hasData: false, results: new Array(9).fill("-"), inspector: "-" }));
-        const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+        // เตรียมข้อมูล 12 เดือน (เพิ่ม finalStatus)
+        const monthlyData = Array.from({length: 12}, () => ({ 
+            hasData: false, 
+            results: new Array(9).fill("-"), 
+            inspector: "-", 
+            finalStatus: "-" 
+        }));
 
         if(json.table && json.table.rows) {
             json.table.rows.forEach(row => {
@@ -1808,6 +1818,7 @@ window.openInspectionHistoryModal = function(index) {
                 let rPlate = row.c[5] ? String(row.c[5].f || row.c[5].v || "").trim() : "";
                 let rEquip = row.c[6] ? String(row.c[6].f || row.c[6].v || "").trim() : "";
 
+                // ตรวจสอบว่าข้อมูลตรงกับคันที่เลือกหรือไม่
                 if ((equipID !== "" && equipID !== "-" && rEquip === equipID) || (plateID !== "" && plateID !== "-" && rPlate === plateID)) {
                     
                     let rowMonth = -1, rowYear = -1;
@@ -1828,19 +1839,18 @@ window.openInspectionHistoryModal = function(index) {
                         }
                     }
 
-                    if (rowYear > 0 && rowYear < 2500) {
-                        rowYear += 543;
-                    }
+                    if (rowYear > 0 && rowYear < 2500) rowYear += 543;
 
+                    // เก็บข้อมูลลงใน Array ตามเดือน
                     if (rowYear === currentYearThai && rowMonth >= 0 && rowMonth <= 11) {
                         monthlyData[rowMonth].hasData = true;
                         monthlyData[rowMonth].inspector = row.c[1] ? String(row.c[1].v).trim() : "-";
+                        // ดึงค่าสถานะจากคอลัมน์ R (Index 17)
+                        monthlyData[rowMonth].finalStatus = row.c[17] ? String(row.c[17].v).trim() : "-";
                         
                         for(let i=0; i<9; i++) {
                             let val = row.c[7 + i] ? String(row.c[7+i].v).trim() : "";
-                            
                             if (val !== "" && val !== "-" && val !== "null") {
-                                // 🌟 ปรับ line-height: 1 เพื่อไม่ให้ไอคอนดันเซลล์ให้สูงขึ้น
                                 if (val.includes("ชำรุด") || val.includes("ซ่อม") || val.includes("ไม่พร้อม")) {
                                     monthlyData[rowMonth].results[i] = '<span style="color:#ef4444; font-weight:bold; font-size:15px; line-height:1;">✘</span>';
                                 } else {
@@ -1853,19 +1863,32 @@ window.openInspectionHistoryModal = function(index) {
             });
         }
 
-        // 4. แสดงผลลงในตาราง 12 เดือน 
+        // 2. แสดงผลลงในตาราง (วนลูป 12 เดือน)
         let html = '';
         const shortMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-        const yearEl = document.getElementById('yearSelect');
-        const currentViewYear = (yearEl && yearEl.value ? parseInt(yearEl.value) : new Date().getFullYear()) + 543;
-        const shortYear = currentViewYear.toString().slice(-2);
+        const shortYear = currentYearThai.toString().slice(-2);
 
         shortMonths.forEach((monthShort, idx) => {
             const data = monthlyData[idx]; 
             const rowBg = idx % 2 === 0 ? '#ffffff' : '#f1f5f9';
             const monthLabel = `${monthShort}${shortYear}`; 
+
+            // ตรวจสอบการแสดงผลคำว่า "ใช้งานได้" หรือ "ใช้งานไม่ได้"
+            let displayStatus = "-";
+            let statusColor = "#000";
+            if (data.hasData) {
+                if (data.finalStatus.includes("ปกติ") || data.finalStatus.includes("ใช้งานได้")) {
+                    displayStatus = "ใช้งานได้";
+                    statusColor = "#10b981"; // สีเขียว
+                } else if (data.finalStatus.includes("ชำรุด") || data.finalStatus.includes("ใช้งานไม่ได้") || data.finalStatus.includes("แจ้งซ่อม")) {
+                    displayStatus = "ใช้งานไม่ได้";
+                    statusColor = "#ef4444"; // สีแดง
+                } else {
+                    displayStatus = data.finalStatus; // กรณีอื่นๆ แสดงตามจริง
+                }
+            }
             
-            // ตั้งค่า font-size: 14px เท่ากันทุกคอลัมน์ และบีบ height ลง
+            // สร้างแถวข้อมูล (ปรับความสูงบรรทัดเหลือ 30px เพื่อให้เห็นครบทุกเดือน)
             html += `<tr style="border-bottom: 1px solid #cbd5e1; background: ${rowBg}; height: 30px;">
                 <td style="padding: 4px 15px; text-align: left; font-weight: 600; color: #0f172a; font-size: 14px;">${monthLabel}</td>`;
             
@@ -1873,13 +1896,17 @@ window.openInspectionHistoryModal = function(index) {
                 html += `<td style="padding: 4px 2px; border-left: 1px solid #cbd5e1; vertical-align: middle; font-size: 14px;">${data.results[i]}</td>`;
             }
             
+            // ช่องคอลัมน์สถานะการใช้งาน
+            html += `<td style="padding: 4px 5px; border-left: 1px solid #cbd5e1; vertical-align: middle; font-size: 14px; font-weight: bold; color: ${statusColor};">${displayStatus}</td>`;
+            
+            // ช่องชื่อผู้ตรวจสอบ
             html += `<td style="padding: 4px 10px; text-align: left; color: #000; white-space: nowrap; font-size: 14px; border-left: 1px solid #cbd5e1; vertical-align: middle;">${data.inspector}</td></tr>`;
         });
         document.getElementById('inspectionChecklistBody').innerHTML = html;
         
     }).catch(err => {
-        console.error("Error fetching inspection data: ", err);
-        document.getElementById('inspectionChecklistBody').innerHTML = '<tr><td colspan="11" style="padding:40px; color:#ef4444;">❌ ไม่สามารถโหลดข้อมูลได้ โปรดลองอีกครั้ง</td></tr>';
+        console.error("Error: ", err);
+        document.getElementById('inspectionChecklistBody').innerHTML = '<tr><td colspan="12" style="padding:40px; color:#ef4444;">❌ ไม่สามารถโหลดข้อมูลได้</td></tr>';
     });
 };
 
