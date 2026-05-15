@@ -1770,11 +1770,11 @@ window.openInspectionHistoryModal = function(index) {
     const activeItems = isFireExtinguisher ? fireItems : carItems;
 
     // 1. สร้างหัวตาราง (ปรับ font-size เป็น 14px เท่ากันหมด)
-    let headHtml = `<tr><th style="padding: 10px 10px; text-align: left; width: 95px; background: #e2e8f0; color: #000; padding-left: 15px; font-size: 14px;">เดือน</th>`;
+    let headHtml = `<tr><th style="padding: 6px 10px; text-align: left; width: 95px; background: #e2e8f0; color: #000; padding-left: 15px; font-size: 14px;">เดือน</th>`;
     activeItems.forEach(item => {
-        headHtml += `<th style="padding: 10px 2px; font-weight: 600; font-size: 14px; color: #000; background: #e2e8f0; border-left: 1px solid #cbd5e1;">${item}</th>`;
+        headHtml += `<th style="padding: 6px 2px; font-weight: 600; font-size: 14px; color: #000; background: #e2e8f0; border-left: 1px solid #cbd5e1;">${item}</th>`;
     });
-    headHtml += `<th style="padding: 10px 10px; text-align: left; width: 140px; background: #e2e8f0; color: #000; border-left: 1px solid #cbd5e1; font-size: 14px;">ผู้ตรวจสอบ</th></tr>`;
+    headHtml += `<th style="padding: 6px 10px; text-align: left; width: 140px; background: #e2e8f0; color: #000; border-left: 1px solid #cbd5e1; font-size: 14px;">ผู้ตรวจสอบ</th></tr>`;
     document.getElementById('inspectionChecklistHead').innerHTML = headHtml;
 
     // 2. ข้อมูลอุปกรณ์ (เปลี่ยนสีตัวเน้นเป็น #000 ดำสนิท)
@@ -1865,15 +1865,15 @@ window.openInspectionHistoryModal = function(index) {
             const rowBg = idx % 2 === 0 ? '#ffffff' : '#f1f5f9';
             const monthLabel = `${monthShort}${shortYear}`; 
             
-            // ตั้งค่า font-size: 14px เท่ากันทุกคอลัมน์
-            html += `<tr style="border-bottom: 1px solid #cbd5e1; background: ${rowBg}; height: 38px;">
-                <td style="padding: 6px 15px; text-align: left; font-weight: 600; color: #0f172a; font-size: 14px;">${monthLabel}</td>`;
+            // ตั้งค่า font-size: 14px เท่ากันทุกคอลัมน์ และบีบ height ลง
+            html += `<tr style="border-bottom: 1px solid #cbd5e1; background: ${rowBg}; height: 30px;">
+                <td style="padding: 4px 15px; text-align: left; font-weight: 600; color: #0f172a; font-size: 14px;">${monthLabel}</td>`;
             
             for(let i=0; i<9; i++) {
-                html += `<td style="padding: 6px 2px; border-left: 1px solid #cbd5e1; vertical-align: middle; font-size: 14px;">${data.results[i]}</td>`;
+                html += `<td style="padding: 4px 2px; border-left: 1px solid #cbd5e1; vertical-align: middle; font-size: 14px;">${data.results[i]}</td>`;
             }
             
-            html += `<td style="padding: 6px 10px; text-align: left; color: #000; white-space: nowrap; font-size: 14px; border-left: 1px solid #cbd5e1; vertical-align: middle;">${data.inspector}</td></tr>`;
+            html += `<td style="padding: 4px 10px; text-align: left; color: #000; white-space: nowrap; font-size: 14px; border-left: 1px solid #cbd5e1; vertical-align: middle;">${data.inspector}</td></tr>`;
         });
         document.getElementById('inspectionChecklistBody').innerHTML = html;
         
