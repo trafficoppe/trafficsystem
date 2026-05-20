@@ -89,6 +89,7 @@ function parseGoogleDate(cell) {
         let y = parseInt(parts[2]), m = parseInt(parts[1]), day = parseInt(parts[0]);
         if (parts[0].length === 4) { y = parseInt(parts[0]); m = parseInt(parts[1]); day = parseInt(parts[2]); }
         if (m > 12) { let temp = m; m = day; day = temp; } 
+        if (y < 100) y += 2000;
         d = new Date(y, m - 1, day);
         if (!isNaN(d.getTime())) {
             if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear() - 543);
@@ -102,7 +103,10 @@ function parseGoogleDate(cell) {
 let accidentData = [];
 let lfData = [];
 let carData = [];
-let flags = { accident: false, lf: false, lfNew: false, car: false };
+let rosterData = {}; // เก็บข้อมูลตารางเวรที่ดูดมาจากชีท
+
+// เพิ่ม flag สำหรับระบบเวร
+let flags = { accident: false, lf: false, lfNew: false, car: false, roster: false };
 
 function loadScript(url) { 
     const s = document.createElement('script'); 
@@ -110,10 +114,14 @@ function loadScript(url) {
     document.body.appendChild(s); 
 }
 
+// โหลดข้อมูลเก่าทั้งหมด
 loadScript('https://docs.google.com/spreadsheets/d/1tj_BC_YkBBcin8FqqXB_OvOF5ku2Y24MTh04XmA9zTk/gviz/tq?tqx=responseHandler:handleAccidentData&gid=3452793');
 loadScript('https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=responseHandler:handleLFData&gid=751456190');
 loadScript('https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=responseHandler:handleLFDataNew&gid=2074352966');
 loadScript('https://docs.google.com/spreadsheets/d/1hEFLf_CuzabHOIdCp_LWEU5M8Be_7bsx1aBZickoSXA/gviz/tq?tqx=responseHandler:handleCarData&gid=0');
+
+// 🌟 โหลดข้อมูลตารางเวรจาก Google Sheet ลิงก์ที่ให้มา 🌟
+loadScript('https://docs.google.com/spreadsheets/d/1lYRhXtLgec6ISM6Ugt-YKLrh47NRt7ihcVLcD8mI_Yg/gviz/tq?tqx=responseHandler:handleRosterData&gid=1075222543&headers=0');
 
 window.handleAccidentData = function(json) {
     if (json && json.table && json.table.rows) {
@@ -252,7 +260,86 @@ window.handleCarData = function(json) {
     flags.car = true; checkSetupData();
 };
 
-function checkSetupData() { if (flags.accident && flags.lf && flags.lfNew && flags.car) renderAllTables(); }
+// 🌟 ระบบประมวลผลข้อมูลตารางเวร 🌟
+window.handleRosterData = function(json) {
+    if (json && json.table && json.table.rows) {
+        let groups = { 1: [], 2: [], 3: [], 4: [] };
+        
+        // ดึงรายชื่อพนักงานจากแถวที่ 5-8 ของ Sheet
+        for (let i = 4; i <= 7; i++) {
+            if (json.table.rows[i]) {
+                let c = json.table.rows[i].c;
+                if (c && c[1] && c[1].v) groups[1].push(String(c[1].v).trim());
+                if (c && c[2] && c[2].v) groups[2].push(String(c[2].v).trim());
+                if (c && c[3] && c[3].v) groups[3].push(String(c[3].v).trim());
+                if (c && c[4] && c[4].v) groups[4].push(String(c[4].v).trim());
+            }
+        }
+
+        for (let i = 11; i < json.table.rows.length; i++) {
+            let r = json.table.rows[i];
+            if (!r || !r.c || !r.c[0]) continue;
+            
+            let d = null;
+            if (r.c[0].v && typeof r.c[0].v === 'string' && r.c[0].v.startsWith('Date(')) {
+                let p = r.c[0].v.match(/\d+/g);
+                if (p && p.length >= 3) d = new Date(parseInt(p[0]), parseInt(p[1]), parseInt(p[2]));
+            } else {
+                let text = r.c[0].f || r.c[0].v;
+                if (text && typeof text === 'string') {
+                    let parts = text.split(/[ \/\-]/).filter(x => x);
+                    if (parts.length >= 3) {
+                        let y = parseInt(parts[2]), m = parseInt(parts[1]), day = parseInt(parts[0]);
+                        if (parts[0].length === 4) { y = parseInt(parts[0]); m = parseInt(parts[1]); day = parseInt(parts[2]); }
+                        if (m > 12) { let t = m; m = day; day = t; }
+                        if (y < 100) y += 2000;
+                        if (y > 2400) y -= 543;
+                        d = new Date(y, m - 1, day);
+                    }
+                }
+            }
+
+            if (!d || isNaN(d.getTime())) continue;
+
+            let y = d.getFullYear();
+            let m = String(d.getMonth() + 1).padStart(2, '0');
+            let day = String(d.getDate()).padStart(2, '0');
+            let dateKey = `${y}-${m}-${day}`;
+
+            let shiftM = [], shiftA = [], shiftN = [];
+            let s1 = r.c[1] ? String(r.c[1].v).trim() : "";
+            let s2 = r.c[2] ? String(r.c[2].v).trim() : "";
+            let s3 = r.c[3] ? String(r.c[3].v).trim() : "";
+            let s4 = r.c[4] ? String(r.c[4].v).trim() : "";
+
+            if (s1 === 'เช้า') shiftM = shiftM.concat(groups[1]);
+            else if (s1 === 'บ่าย') shiftA = shiftA.concat(groups[1]);
+            else if (s1 === 'ดึก') shiftN = shiftN.concat(groups[1]);
+
+            if (s2 === 'เช้า') shiftM = shiftM.concat(groups[2]);
+            else if (s2 === 'บ่าย') shiftA = shiftA.concat(groups[2]);
+            else if (s2 === 'ดึก') shiftN = shiftN.concat(groups[2]);
+
+            if (s3 === 'เช้า') shiftM = shiftM.concat(groups[3]);
+            else if (s3 === 'บ่าย') shiftA = shiftA.concat(groups[3]);
+            else if (s3 === 'ดึก') shiftN = shiftN.concat(groups[3]);
+
+            if (s4 === 'เช้า') shiftM = shiftM.concat(groups[4]);
+            else if (s4 === 'บ่าย') shiftA = shiftA.concat(groups[4]);
+            else if (s4 === 'ดึก') shiftN = shiftN.concat(groups[4]);
+
+            rosterData[dateKey] = { 'เช้า': shiftM, 'บ่าย': shiftA, 'ดึก': shiftN };
+        }
+    }
+    flags.roster = true;
+    checkSetupData();
+};
+
+function checkSetupData() { 
+    if (flags.accident && flags.lf && flags.lfNew && flags.car && flags.roster) {
+        renderAllTables(); 
+    }
+}
 
 function renderAllTables() {
     const ds = document.getElementById('dateSelect').value; 
@@ -265,7 +352,6 @@ function renderAllTables() {
     const dateStr = formatThaiDate(targetDate);
     document.getElementById('customDateText').innerHTML = `รายงานเหตุการณ์ประจำ <span class="text-blue-600 ml-2">${dateStr}</span>`;
     
-    // Check if element exists before modifying
     const printHeader = document.getElementById('printHeader');
     if(printHeader) printHeader.innerText = `รายงานเหตุการณ์ ${dateStr}`;
 
@@ -339,7 +425,6 @@ function renderAllTables() {
     if (google && google.visualization && google.visualization.ColumnChart) drawDailyCarChart();
     else google.charts.setOnLoadCallback(drawDailyCarChart);
 
-    // ================== ส่วนเพิ่มใหม่: อัปเดตข้อมูลในหน้า A4 ไปด้วย ==================
     updateDocumentDates();
 }
 
@@ -412,10 +497,6 @@ function exportToJPEG() {
     });
 }
 
-// =======================================================
-// ฟังก์ชันใหม่: สำหรับ Tab A4 และการโหลด PDF
-// =======================================================
-
 function toggleView(view) {
     const tabDash = document.getElementById('tabDash');
     const tabDoc = document.getElementById('tabDoc');
@@ -444,39 +525,46 @@ function updateDocumentDates() {
     const targetDate = new Date(ds);
     const dateStr = formatThaiDate(targetDate); 
     
-    const today = new Date();
-    // const printDateStr = formatThaiDate(today); // คอมเมนต์ไว้ ไม่ใช้แล้ว
-    const shortPrintDate = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()+543}`;
-
     const targetEl = document.getElementById('docTargetDate');
     if(targetEl) targetEl.innerText = dateStr;
     
-    // ปิดการทำงานบรรทัดนี้ เพื่อปล่อยวันที่ด้านบนให้ว่างไว้สำหรับระบบกรอก
-    // const printEl = document.getElementById('docPrintDate');
-    // if(printEl) printEl.innerText = printDateStr;
-
-    // ส่วนวันที่ลายเซ็นด้านล่างยังคงเติมอัตโนมัติ (ถ้าต้องการให้ว่างด้วย สามารถปิดโค้ด 2 บรรทัดล่างนี้ได้ครับ)
-    const signDates = document.querySelectorAll('.docSignDate');
-    signDates.forEach(el => el.innerText = shortPrintDate);
+    updateShiftTableByDate(ds);
 }
 
-function exportToPDF() {
-    const element = document.getElementById('a4-paper-content');
-    const targetDate = document.getElementById('dateSelect').value;
+// 🌟 ฟังก์ชันจัดการข้อมูลลงในตาราง (เช้า 07.00, บ่าย 15.00, ดึก 23.00) 🌟
+function updateShiftTableByDate(selectedDate) {
+    const dayData = rosterData[selectedDate];
     
-    const opt = {
-        margin:       0,
-        filename:     `รายงานเหตุการณ์_A4_${targetDate}.pdf`,
-        image:        { type: 'jpeg', quality: 1.0 },
-        html2canvas:  { scale: 3, useCORS: true, letterRendering: true }, 
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    // นำแสงเงาออกชั่วคราวก่อนสร้าง PDF
-    element.style.boxShadow = 'none';
-    
-    html2pdf().set(opt).from(element).save().then(() => {
-        // นำแสงเงากลับมาใส่หลังโหลดเสร็จ
-        element.style.boxShadow = '0 0 15px rgba(0,0,0,0.2)';
-    });
+    if (dayData) {
+        // กะเช้า
+        if(document.getElementById('count_m')) document.getElementById('count_m').innerText = dayData['เช้า'].length || 0;
+        if(document.getElementById('names_m')) {
+            document.getElementById('names_m').innerHTML = dayData['เช้า'].length > 0 
+                ? dayData['เช้า'].map((name, index) => `${index + 1}. ${name}`).join('<br>') 
+                : '-';
+        }
+        
+        // กะบ่าย
+        if(document.getElementById('count_a')) document.getElementById('count_a').innerText = dayData['บ่าย'].length || 0;
+        if(document.getElementById('names_a')) {
+            document.getElementById('names_a').innerHTML = dayData['บ่าย'].length > 0 
+                ? dayData['บ่าย'].map((name, index) => `${index + 1}. ${name}`).join('<br>') 
+                : '-';
+        }
+        
+        // กะดึก
+        if(document.getElementById('count_n')) document.getElementById('count_n').innerText = dayData['ดึก'].length || 0;
+        if(document.getElementById('names_n')) {
+            document.getElementById('names_n').innerHTML = dayData['ดึก'].length > 0 
+                ? dayData['ดึก'].map((name, index) => `${index + 1}. ${name}`).join('<br>') 
+                : '-';
+        }
+    } else {
+        const defaultFields = ['count_m', 'count_a', 'count_n'];
+        const defaultNameFields = ['names_m', 'names_a', 'names_n'];
+        
+        defaultFields.forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerText = "0"; });
+        // ใช้ innerHTML เพื่อให้รองรับแท็ก <br> ได้ในกรณีที่ต้องการเคลียร์ค่า
+        defaultNameFields.forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerHTML = "-"; });
+    }
 }

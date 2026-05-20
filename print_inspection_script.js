@@ -592,4 +592,5 @@ function generatePrintPages(dataToRender) {
     container.innerHTML = html;
 }
 
+
 window.onload = loadAllData;
