@@ -25,16 +25,6 @@ if (deptText) {
     deptText.className = "font-bold text-[25px] text-[#0f172a] pointer-events-none whitespace-nowrap text-center leading-normal pt-2";
 }
 
-const printDeptText = document.querySelector('#printHeaderContainer > h2');
-if (printDeptText) {
-    printDeptText.className = "text-center font-bold text-[25px] text-[#0f172a] m-0 leading-tight";
-}
-
-const detailsHeader = document.querySelector('h2.text-center.mb-8');
-if (detailsHeader) {
-    detailsHeader.className = "text-[20px] font-bold text-center mb-8";
-}
-
 function changeDate(offset) {
     const dateInput = document.getElementById('dateSelect');
     if (!dateInput.value) return;
@@ -77,11 +67,8 @@ function extractDriveId(url) {
     return match ? match[1] : '';
 }
 
-// 🌟 ฟังก์ชันแกะวันที่แบบแม่นยำ 100% จากระบบ Google Sheets ดึงจากคอลัมน์เป้าหมายโดยตรง 🌟
 function parseGoogleDate(cell) {
     if (!cell) return null;
-    
-    // 1. อ่านค่า Raw Data ของ Google (ชัวร์สุด ไม่สนฟอร์แมตหน้าบ้าน)
     if (cell.v && typeof cell.v === 'string' && cell.v.startsWith('Date(')) {
         let p = cell.v.match(/\d+/g);
         if (p && p.length >= 3) {
@@ -90,18 +77,13 @@ function parseGoogleDate(cell) {
             return d;
         }
     }
-    
-    // 2. เผื่อไม่มี Raw Data ค่อยอ่านค่า Text แทน
     let str = String(cell.f || cell.v || "").trim();
     if (!str) return null;
-    
     let d = new Date(str);
     if (!isNaN(d.getTime())) {
         if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear() - 543);
         return d;
     }
-    
-    // 3. ก๊อกสุดท้าย ถ้าแปลตรงๆไม่ได้ ให้จับแยกทีละส่วน
     let parts = str.split(/[ T\/\-]/).filter(x => x);
     if (parts.length >= 3) {
         let y = parseInt(parts[2]), m = parseInt(parts[1]), day = parseInt(parts[0]);
@@ -133,23 +115,17 @@ loadScript('https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNV
 loadScript('https://docs.google.com/spreadsheets/d/14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I/gviz/tq?tqx=responseHandler:handleLFDataNew&gid=2074352966');
 loadScript('https://docs.google.com/spreadsheets/d/1hEFLf_CuzabHOIdCp_LWEU5M8Be_7bsx1aBZickoSXA/gviz/tq?tqx=responseHandler:handleCarData&gid=0');
 
-// ================= PARSING ACCIDENT DATA =================
 window.handleAccidentData = function(json) {
     if (json && json.table && json.table.rows) {
         accidentData = json.table.rows.map(r => {
             const c = r.c; 
             if (!c) return null;
-            
             let type = (c[5]?.v || "เหตุการณ์ทั่วไป").toString().trim();
             if (type === "ว.40") type = "อุบัติเหตุจากยานพาหนะ";
-            
             const excludeWords = ["คืนของ", "รับของคืน", "เก็บของได้", "แจ้งเก็บของได้", "แจ้งของหาย", "ปลดบังคับล้อ"];
             if (excludeWords.some(word => type.includes(word))) return null; 
-
-            // 🌟 ดึงวันที่จาก คอลัมน์ B (Index 1) 🌟
             let d = parseGoogleDate(c[1]);
             if (!d) return null;
-
             let imgLink = "";
             for (let i = c.length - 1; i >= 0; i--) {
                 if (!c[i]) continue;
@@ -161,14 +137,12 @@ window.handleAccidentData = function(json) {
                     break;
                 }
             }
-
             let narrativeOut = "";
             if (type === "บังคับล้อ") {
                 let lockTime = c[40] ? formatThaiTime(c[40].v || c[40].f) : "";
                 let plate = c[41] ? String(c[41].v || "").trim() : "";
                 let reason = c[42] ? String(c[42].v || "").trim() : "";
                 let lockPlace = c[43] ? String(c[43].v || "").trim() : (c[6] ? String(c[6].v || "").trim() : "");
-
                 let text = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543}`;
                 if (lockTime && lockTime !== '-') text += ` เวลา ${lockTime} น.`;
                 text += ` ทางเจ้าหน้าที่จราจรได้ดำเนินการบังคับล้อรถยนต์`;
@@ -183,25 +157,19 @@ window.handleAccidentData = function(json) {
                 narrative = narrative.replace(/^\d{1,2}:\d{2}(:\d{2})?\s*(AM|PM)?/i, '').trim();
                 narrativeOut = narrative.replace(/\s{2,}/g, ' '); 
             }
-
             return { date: d, type: type, detail: narrativeOut, img: imgLink }; 
         }).filter(x => x && x.date);
     }
-    flags.accident = true; 
-    checkSetupData();
+    flags.accident = true; checkSetupData();
 };
 
-// ================= PARSING LOST & FOUND (OLD) =================
 window.handleLFData = function(json) {
     if (json && json.table && json.table.rows) {
         const oldRows = json.table.rows.map(r => {
             const c = r.c; 
             if (!c) return null;
-            
-            // 🌟 ดึงวันที่จาก คอลัมน์ A (0) หรือ B (1) 🌟
             let d = parseGoogleDate(c[0]) || parseGoogleDate(c[1]);
             if (!d) return null;
-
             let name = String(c[2]?.v || c[2]?.f || "ไม่ระบุชื่อ").trim();
             if (!name.startsWith('คุณ') && !name.startsWith('นาย') && !name.startsWith('นาง') && !name.startsWith('นางสาว')) name = 'คุณ' + name;
             const status = String(c[6]?.v || c[6]?.f || "");
@@ -211,7 +179,6 @@ window.handleLFData = function(json) {
             const typeText = String(c[2]?.v || c[2]?.f || "");
             let type = "other";
             let narrative = "";
-
             if (status.includes("คืน") || typeText.includes("คืน")) {
                 type = "รับของคืน";
                 narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้มาติดต่อขอรับสิ่งของคืน ประกอบด้วย ${item} โดยทางเจ้าหน้าที่ได้ตรวจสอบความถูกต้องและส่งมอบสิ่งของคืนให้แก่เจ้าของเป็นที่เรียบร้อยแล้ว`;
@@ -225,30 +192,22 @@ window.handleLFData = function(json) {
             narrative = narrative.replace(/\s{2,}/g, ' '); 
             let imgLink = "";
             for (let i = c.length - 1; i >= 0; i--) {
-                if (c[i] && (c[i].v || c[i].f) && typeof (c[i].v || c[i].f) === 'string' && (c[i].v || c[i].f).includes('drive.google.com')) {
-                    imgLink = c[i].v || c[i].f;
-                    break;
-                }
+                if (c[i] && (c[i].v || c[i].f) && typeof (c[i].v || c[i].f) === 'string' && (c[i].v || c[i].f).includes('drive.google.com')) { imgLink = c[i].v || c[i].f; break; }
             }
             return { date: d, type: type, detail: narrative, img: imgLink };
         }).filter(x => x);
         lfData = lfData.concat(oldRows);
     }
-    flags.lf = true; 
-    checkSetupData();
+    flags.lf = true; checkSetupData();
 };
 
-// ================= PARSING LOST & FOUND (NEW) =================
 window.handleLFDataNew = function(json) {
     if (json && json.table && json.table.rows) {
         const newRows = json.table.rows.map(r => {
             const c = r.c; 
             if (!c) return null;
-            
-            // 🌟 ดึงวันที่จาก คอลัมน์ A (0) หรือ H (7) 🌟
             let d = parseGoogleDate(c[0]) || parseGoogleDate(c[7]);
             if (!d) return null;
-
             let name = String(c[3]?.v || c[3]?.f || "ไม่ระบุชื่อ").trim();
             if (!name.startsWith('คุณ') && !name.startsWith('นาย') && !name.startsWith('นาง') && !name.startsWith('นางสาว')) name = 'คุณ' + name;
             const status = String(c[12]?.v || c[12]?.f || "");
@@ -258,7 +217,6 @@ window.handleLFDataNew = function(json) {
             const colCType = String(c[2]?.v || c[2]?.f || "");
             let type = "other";
             let narrative = "";
-            
             if (status.includes("คืน") || colCType.includes("คืน")) {
                 type = "รับคืนของ";
                 narrative = `เมื่อวันที่ ${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543} ${time ? `เวลา ${time} น.` : ''} ${name} ได้มาติดต่อขอรับสิ่งของคืน ประกอบด้วย ${item} โดยทางเจ้าหน้าที่ได้ตรวจสอบความถูกต้องและส่งมอบสิ่งของคืนให้แก่เจ้าของเป็นที่เรียบร้อยแล้ว`;
@@ -272,17 +230,13 @@ window.handleLFDataNew = function(json) {
             narrative = narrative.replace(/\s{2,}/g, ' '); 
             let imgLink = "";
             for (let i = c.length - 1; i >= 0; i--) {
-                if (c[i] && (c[i].v || c[i].f) && typeof (c[i].v || c[i].f) === 'string' && (c[i].v || c[i].f).includes('drive.google.com')) {
-                    imgLink = c[i].v || c[i].f;
-                    break;
-                }
+                if (c[i] && (c[i].v || c[i].f) && typeof (c[i].v || c[i].f) === 'string' && (c[i].v || c[i].f).includes('drive.google.com')) { imgLink = c[i].v || c[i].f; break; }
             }
             return { date: d, type: type, detail: narrative, img: imgLink };
         }).filter(x => x);
         lfData = lfData.concat(newRows);
     }
-    flags.lfNew = true; 
-    checkSetupData();
+    flags.lfNew = true; checkSetupData();
 };
 
 window.handleCarData = function(json) {
@@ -290,16 +244,12 @@ window.handleCarData = function(json) {
         carData = json.table.rows.map(r => {
             const c = r.c; 
             if (!c) return null; 
-            
-            // 🌟 ดึงวันที่จาก คอลัมน์ H (7) 🌟
             let d = parseGoogleDate(c[7]);
             if (!d) return null;
-
             return { date: d, g1: c[1]?.v||0, g3: c[2]?.v||0, g4: c[3]?.v||0, g5: c[4]?.v||0, g6: c[5]?.v||0 };
         }).filter(x => x);
     }
-    flags.car = true; 
-    checkSetupData();
+    flags.car = true; checkSetupData();
 };
 
 function checkSetupData() { if (flags.accident && flags.lf && flags.lfNew && flags.car) renderAllTables(); }
@@ -314,7 +264,10 @@ function renderAllTables() {
     document.getElementById('btnNext').disabled = (targetCheck.getTime() >= todayCheck.getTime());
     const dateStr = formatThaiDate(targetDate);
     document.getElementById('customDateText').innerHTML = `รายงานเหตุการณ์ประจำ <span class="text-blue-600 ml-2">${dateStr}</span>`;
-    document.getElementById('printHeader').innerText = `รายงานเหตุการณ์ ${dateStr}`;
+    
+    // Check if element exists before modifying
+    const printHeader = document.getElementById('printHeader');
+    if(printHeader) printHeader.innerText = `รายงานเหตุการณ์ ${dateStr}`;
 
     const summary = {};
     let dailyAll = [];
@@ -325,19 +278,10 @@ function renderAllTables() {
         }
     });
 
-    // 🌟 จัดลำดับใหม่ให้ "เพลิงไหม้" และ "บังคับล้อ" อยู่บนๆ 🌟
-    const priorityOrder = [
-        "เพลิงไหม้",
-        "บังคับล้อ",
-        "อุบัติเหตุจากยานพาหนะ",
-        "อุบัติเหตุทั่วไป",
-        "รับส่งผู้ป่วย",
-        "รับส่งผู้ได้รับบาดเจ็บ"
-    ];
+    const priorityOrder = ["เพลิงไหม้", "บังคับล้อ", "อุบัติเหตุจากยานพาหนะ", "อุบัติเหตุทั่วไป", "รับส่งผู้ป่วย", "รับส่งผู้ได้รับบาดเจ็บ"];
 
     const incKeys = Object.keys(summary).sort((a, b) => {
-        let indexA = priorityOrder.indexOf(a);
-        let indexB = priorityOrder.indexOf(b);
+        let indexA = priorityOrder.indexOf(a); let indexB = priorityOrder.indexOf(b);
         if (indexA !== -1 && indexB !== -1) return indexA - indexB;
         if (indexA !== -1) return -1;
         if (indexB !== -1) return 1;
@@ -345,8 +289,7 @@ function renderAllTables() {
     });
 
     dailyAll.sort((a, b) => {
-        let indexA = priorityOrder.indexOf(a.type);
-        let indexB = priorityOrder.indexOf(b.type);
+        let indexA = priorityOrder.indexOf(a.type); let indexB = priorityOrder.indexOf(b.type);
         if (indexA !== -1 && indexB !== -1) return indexA - indexB;
         if (indexA !== -1) return -1;
         if (indexB !== -1) return 1;
@@ -392,8 +335,12 @@ function renderAllTables() {
             detailContainer.innerHTML += `<div class="mb-10 border-b-2 border-gray-200 pb-8 last:border-0"><div class="flex flex-col md:flex-row gap-8 items-start">${imgHtml}<div class="w-full md:w-2/3 leading-relaxed"><div class="font-bold text-blue-700 text-[18px] mb-3 border-b border-blue-100 pb-2 inline-block w-full">${index + 1}. ${item.type}</div><div class="thai-justify font-normal text-[18px]">${item.detail}</div></div></div></div>`;
         });
     }
+    
     if (google && google.visualization && google.visualization.ColumnChart) drawDailyCarChart();
     else google.charts.setOnLoadCallback(drawDailyCarChart);
+
+    // ================== ส่วนเพิ่มใหม่: อัปเดตข้อมูลในหน้า A4 ไปด้วย ==================
+    updateDocumentDates();
 }
 
 function drawDailyCarChart() {
@@ -416,7 +363,6 @@ function drawDailyCarChart() {
     if (summaryContainer) {
         summaryContainer.innerHTML = `<div class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center shadow-sm text-slate-600 font-normal"><div class="text-[16px] mb-1">วันที่ ${shortDate(date2)}</div><div class="text-[16px]">ทั้งหมด ${total2.toLocaleString()} คัน</div></div><div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center shadow-sm text-blue-600 font-normal"><div class="text-[16px] mb-1">วันที่ ${shortDate(date1)}</div><div class="text-[16px]">ทั้งหมด ${total1.toLocaleString()} คัน</div></div><div class="bg-blue-600 border border-blue-700 rounded-lg p-3 text-center shadow-md transform scale-105 text-white font-normal"><div class="text-[16px] mb-1">วันที่ ${shortDate(date0)}</div><div class="text-[16px]">ทั้งหมด ${total0.toLocaleString()} คัน</div></div>`;
     }
-
     const dataArray = [
         ['ประตู', `${shortDate(date2)}`, { role: 'annotation' }, { role: 'style' }, `${shortDate(date1)}`, { role: 'annotation' }, { role: 'style' }, `${shortDate(date0)}`, { role: 'annotation' }, { role: 'style' }],
         ['ประตู 1', row2.g1, row2.g1, 'stroke-color: #ffffff; stroke-width: 1.5; fill-color: #cbd5e1', row1.g1, row1.g1, 'stroke-color: #ffffff; stroke-width: 1.5; fill-color: #60a5fa', row0.g1, row0.g1, 'stroke-color: #ffffff; stroke-width: 1.5; fill-color: #2563eb'],
@@ -425,7 +371,6 @@ function drawDailyCarChart() {
         ['ประตู 5', row2.g5, row2.g5, 'stroke-color: #ffffff; stroke-width: 1.5; fill-color: #cbd5e1', row1.g5, row1.g5, 'stroke-color: #ffffff; stroke-width: 1.5; fill-color: #60a5fa', row0.g5, row0.g5, 'stroke-color: #ffffff; stroke-width: 1.5; fill-color: #2563eb'],
         ['ประตู 6', row2.g6, row2.g6, 'stroke-color: #ffffff; stroke-width: 1.5; fill-color: #cbd5e1', row1.g6, row1.g6, 'stroke-color: #ffffff; stroke-width: 1.5; fill-color: #60a5fa', row0.g6, row0.g6, 'stroke-color: #ffffff; stroke-width: 1.5; fill-color: #2563eb']
     ];
-
     const options = {
         fontName: 'TH Sarabun New',
         chartArea: { left: '6%', right: '2%', top: '15%', bottom: '15%' },
@@ -438,7 +383,6 @@ function drawDailyCarChart() {
         backgroundColor: '#ffffff',
         bar: { groupWidth: '75%' }
     };
-
     window.myChart = new google.visualization.ColumnChart(document.getElementById('daily_car_chart'));
     window.myChart.draw(google.visualization.arrayToDataTable(dataArray), options);
 }
@@ -446,7 +390,6 @@ function drawDailyCarChart() {
 function exportToJPEG() {
     const captureArea = document.getElementById('pdfContent');
     const controlsArea = document.getElementById('controlsContainer');
-    const printHeader = document.getElementById('printHeaderContainer');
     const exportBtn = document.getElementById('exportBtn');
     const chartDiv = document.getElementById('daily_car_chart');
     let tempImg = null;
@@ -456,15 +399,84 @@ function exportToJPEG() {
         tempImg.style.width = "100%"; tempImg.style.height = "320px"; tempImg.style.objectFit = "contain";
         chartDiv.style.display = 'none'; chartDiv.parentNode.insertBefore(tempImg, chartDiv); 
     }
-    controlsArea.style.display = 'none'; printHeader.style.display = 'block'; exportBtn.style.display = 'none';
+    controlsArea.style.display = 'none'; exportBtn.style.display = 'none';
     html2canvas(captureArea, { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', imageTimeout: 15000 }).then(canvas => {
-        controlsArea.style.display = 'flex'; printHeader.style.display = 'none'; exportBtn.style.display = 'flex'; 
+        controlsArea.style.display = 'flex'; exportBtn.style.display = 'flex'; 
         if (tempImg) { tempImg.remove(); chartDiv.style.display = 'block'; }
         const link = document.createElement('a');
         link.href = canvas.toDataURL('image/jpeg', 0.9); link.download = `Daily_Report_${document.getElementById('dateSelect').value}.jpg`; link.click();
     }).catch(err => {
-        controlsArea.style.display = 'flex'; printHeader.style.display = 'none'; exportBtn.style.display = 'flex';
+        controlsArea.style.display = 'flex'; exportBtn.style.display = 'flex';
         if (tempImg) { tempImg.remove(); chartDiv.style.display = 'block'; }
         console.error("Export Error: ", err); alert("เกิดข้อผิดพลาดในการบันทึกภาพ");
+    });
+}
+
+// =======================================================
+// ฟังก์ชันใหม่: สำหรับ Tab A4 และการโหลด PDF
+// =======================================================
+
+function toggleView(view) {
+    const tabDash = document.getElementById('tabDash');
+    const tabDoc = document.getElementById('tabDoc');
+    
+    if(view === 'dashboard') {
+        document.getElementById('pdfContent').style.display = 'block';
+        document.getElementById('documentSection').style.display = 'none';
+        
+        tabDash.className = "px-6 py-2 bg-blue-600 text-white rounded-lg shadow font-bold transition";
+        tabDoc.className = "px-6 py-2 bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-lg shadow font-bold transition";
+    } else {
+        document.getElementById('pdfContent').style.display = 'none';
+        document.getElementById('documentSection').style.display = 'flex';
+        
+        tabDash.className = "px-6 py-2 bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-lg shadow font-bold transition";
+        tabDoc.className = "px-6 py-2 bg-blue-600 text-white rounded-lg shadow font-bold transition";
+        
+        updateDocumentDates();
+    }
+}
+
+function updateDocumentDates() {
+    const ds = document.getElementById('dateSelect').value; 
+    if (!ds) return;
+    
+    const targetDate = new Date(ds);
+    const dateStr = formatThaiDate(targetDate); 
+    
+    const today = new Date();
+    // const printDateStr = formatThaiDate(today); // คอมเมนต์ไว้ ไม่ใช้แล้ว
+    const shortPrintDate = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()+543}`;
+
+    const targetEl = document.getElementById('docTargetDate');
+    if(targetEl) targetEl.innerText = dateStr;
+    
+    // ปิดการทำงานบรรทัดนี้ เพื่อปล่อยวันที่ด้านบนให้ว่างไว้สำหรับระบบกรอก
+    // const printEl = document.getElementById('docPrintDate');
+    // if(printEl) printEl.innerText = printDateStr;
+
+    // ส่วนวันที่ลายเซ็นด้านล่างยังคงเติมอัตโนมัติ (ถ้าต้องการให้ว่างด้วย สามารถปิดโค้ด 2 บรรทัดล่างนี้ได้ครับ)
+    const signDates = document.querySelectorAll('.docSignDate');
+    signDates.forEach(el => el.innerText = shortPrintDate);
+}
+
+function exportToPDF() {
+    const element = document.getElementById('a4-paper-content');
+    const targetDate = document.getElementById('dateSelect').value;
+    
+    const opt = {
+        margin:       0,
+        filename:     `รายงานเหตุการณ์_A4_${targetDate}.pdf`,
+        image:        { type: 'jpeg', quality: 1.0 },
+        html2canvas:  { scale: 3, useCORS: true, letterRendering: true }, 
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // นำแสงเงาออกชั่วคราวก่อนสร้าง PDF
+    element.style.boxShadow = 'none';
+    
+    html2pdf().set(opt).from(element).save().then(() => {
+        // นำแสงเงากลับมาใส่หลังโหลดเสร็จ
+        element.style.boxShadow = '0 0 15px rgba(0,0,0,0.2)';
     });
 }

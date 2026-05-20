@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Safety Dashboard - Official Daily Report</title>
     
-    <!-- External Libraries -->
     <link href="https://fonts.cdnfonts.com/css/th-sarabun-new" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,13 +12,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script>google.charts.load('current', {'packages':['corechart']});</script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-    <!-- เชื่อมไฟล์ CSS ของเรา -->
     <link rel="stylesheet" href="report_daily_style.css">
 </head>
 <body>
 
     <div class="dashboard-section" id="containerSection">
+        
+        <div class="flex justify-center gap-4 mb-6">
+            <button onclick="toggleView('dashboard')" id="tabDash" class="px-6 py-2 bg-blue-600 text-white rounded-lg shadow font-bold transition">หน้า Dashboard</button>
+            <button onclick="toggleView('document')" id="tabDoc" class="px-6 py-2 bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-lg shadow font-bold transition">หน้าเอกสารรายงาน (A4)</button>
+        </div>
+
         <div class="main-card relative" id="pdfContent">
             
             <button id="exportBtn" onclick="exportToJPEG()" title="บันทึกเป็นภาพ" class="absolute top-6 right-6 w-12 h-12 rounded-full bg-green-500 hover:bg-green-600 text-white flex justify-center items-center transition shadow-md z-50">
@@ -56,9 +62,7 @@
             </div>
 
             <div class="flex flex-col md:flex-row gap-8 mb-10 items-stretch">
-                
                 <div class="w-full md:w-[35%] flex flex-col">
-                    <!-- 🌟 ลบหัวข้อเหตุการณ์เหนือตารางออกแล้ว 🌟 -->
                     <div class="flex-1"> 
                         <table class="dash-table">
                             <thead>
@@ -73,30 +77,151 @@
                 </div>
 
                 <div class="w-full md:w-[65%] flex flex-col">
-                    <!-- 🌟 ลบหัวข้อกราฟแบบเก่าข้างบนออก 🌟 -->
-                    
                     <div class="chart-box flex-1 flex flex-col relative"> 
                         <div id="car-summary-cards" class="grid grid-cols-3 gap-4 mb-6"></div>
                         <div class="flex-1 flex flex-col justify-center w-full">
                             <div id="daily_car_chart" style="width: 100%; height: 320px;"></div>
                         </div>
-                        
-                        <!-- 🌟 ย้ายหัวข้อกราฟมาไว้มุมขวาล่างในกรอบ และปรับสไตล์เป็น 13px ตัวบาง 🌟 -->
                         <div class="text-right mt-2 text-[13px] font-normal text-gray-500">
                             กราฟแสดงข้อมูลจำนวนรถเข้า
                         </div>
                     </div>
                 </div>
-
             </div>
 
             <hr class="my-10 border-t-2 border-dashed border-gray-300">
-            
             <h2 class="text-[20px] font-bold text-center mb-8">รายละเอียดรายงานเหตุการณ์</h2>
-            
             <div id="incidentTextDetails"></div>
             
         </div>
+
+        <div id="documentSection" style="display: none;" class="flex-col items-center pb-10">
+            
+            <button onclick="exportToPDF()" class="mb-6 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg font-bold flex items-center gap-2 text-[20px] transition transform hover:scale-105">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                ดาวน์โหลดรายงานเป็น PDF (A4)
+            </button>
+
+          <div id="a4-paper-content" class="a4-paper text-black">
+                
+                <div class="relative w-full h-[120px] mb-4">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Mahidol_U.png/500px-Mahidol_U.png" class="absolute top-0 left-1/2 transform -translate-x-1/2 h-[90px]" alt="ตรามหาวิทยาลัยมหิดล">
+                    
+                    <div class="absolute top-10 right-0 text-right leading-tight text-[15px]">
+                        งานจราจรและความปลอดภัย<br>
+                        กองกายภาพและสิ่งแวดล้อม<br>
+                        โทร. 02-441-4400
+                    </div>
+                </div>
+
+                <div class="w-full leading-relaxed mb-3 text-[15px]">
+                    <div class="flex"><div class="w-[100px] font-bold">ที่</div><div id="docNo"></div></div>
+                    <div class="flex"><div class="w-[100px] font-bold">วันที่</div><div id="docPrintDate"></div></div>
+                    <div class="flex"><div class="w-[55px] font-bold">เรื่อง</div><div>รายงานเหตุการณ์</div></div>
+                    <div class="flex"><div class="w-[55px] font-bold">เรียน</div><div>ผู้อำนวยการกองกายภาพและสิ่งแวดล้อม</div></div>
+                </div>
+
+                <div class="indent-4tab text-justify mb-4 text-[15px]">
+                    ด้วยงานจราจรและความปลอดภัย ใคร่ขอรายงานการปฏิบัติงานและเหตุการณ์ในวันที่ <span id="docTargetDate" class="font-bold text-blue-800">.....</span> ระหว่างเวลา 07.00-07.00 น. ของวันรุ่งขึ้น
+                </div>
+
+                <div class="w-full flex justify-center mb-4 text-[15px]">
+                    <table class="w-[85%] border-none text-center">
+                        <tr class="font-bold"><td class="w-1/3">เวลา</td><td class="w-1/3">เจ้าหน้าที่ประจำผลัด</td><td class="w-1/3 text-left">ผู้ปฏิบัติหน้าที่สายตรวจ</td></tr>
+                        <tr><td>23.00-07.00 น.</td><td>จำนวน &nbsp;&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp; นาย</td><td class="text-left">นายศุภชัย เรืองเพชร</td></tr>
+                        <tr><td>07.00-15.00 น.</td><td>จำนวน &nbsp;&nbsp;&nbsp;4&nbsp;&nbsp;&nbsp; นาย</td><td class="text-left">นายไกรสอน คชมิตร</td></tr>
+                        <tr><td>15.00-23.00 น.</td><td>จำนวน &nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp; นาย</td><td class="text-left">นายอำนาจ แม้นพรม</td></tr>
+                    </table>
+                </div>
+
+                <div class="indent-4tab mb-2 text-[15px]">
+                    จำนวนพนักงานรักษาความปลอดภัย ของบริษัทNP ที่ปฏิบัติงาน 6 สัญญาจ้าง รายละเอียดดังนี้
+                </div>
+
+                <div class="w-full text-[15px] leading-snug mb-4">
+                    <div class="flex w-full">
+                        <div class="w-[230px] shrink-0">1. หน่วยงานส่วนกลาง</div>
+                        <div class="flex flex-1 justify-between">
+                            <div class="flex w-[100px]"><div class="w-[45px]">ทั้งหมด</div><div class="flex-1 text-center">56</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางวัน</div><div class="flex-1 text-center">32</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางคืน</div><div class="flex-1 text-center">24</div><div>คน</div></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex w-full">
+                        <div class="w-[230px] shrink-0">2. หน่วยงานศูนย์การเรียนรู้มหิดล</div>
+                        <div class="flex flex-1 justify-between">
+                            <div class="flex w-[100px]"><div class="w-[45px]">ทั้งหมด</div><div class="flex-1 text-center">18</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางวัน</div><div class="flex-1 text-center">11</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางคืน</div><div class="flex-1 text-center">7</div><div>คน</div></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex w-full">
+                        <div class="w-[230px] shrink-0">3. หน่วยงานมหิดลสิทธาคาร</div>
+                        <div class="flex flex-1 justify-between">
+                            <div class="flex w-[100px]"><div class="w-[45px]">ทั้งหมด</div><div class="flex-1 text-center">15</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางวัน</div><div class="flex-1 text-center">10</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางคืน</div><div class="flex-1 text-center">5</div><div>คน</div></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex w-full">
+                        <div class="w-[230px] shrink-0">4. หน่วยงานอาคารสิริวิทยา</div>
+                        <div class="flex flex-1 justify-between">
+                            <div class="flex w-[100px]"><div class="w-[45px]">ทั้งหมด</div><div class="flex-1 text-center">10</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางวัน</div><div class="flex-1 text-center">7</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางคืน</div><div class="flex-1 text-center">3</div><div>คน</div></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex w-full">
+                        <div class="w-[230px] shrink-0">5. หน่วยงานอุทยานธรรมชาติฯ</div>
+                        <div class="flex flex-1 justify-between">
+                            <div class="flex w-[100px]"><div class="w-[45px]">ทั้งหมด</div><div class="flex-1 text-center">14</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางวัน</div><div class="flex-1 text-center">10</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางคืน</div><div class="flex-1 text-center">4</div><div>คน</div></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex w-full">
+                        <div class="w-[230px] shrink-0">6. หน่วยงานหอพักนักศึกษา</div>
+                        <div class="flex flex-1 justify-between">
+                            <div class="flex w-[100px]"><div class="w-[45px]">ทั้งหมด</div><div class="flex-1 text-center">24</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางวัน</div><div class="flex-1 text-center">11</div><div>คน</div></div>
+                            <div class="flex w-[125px]"><div class="w-[70px]">ผลัดกลางคืน</div><div class="flex-1 text-center">13</div><div>คน</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="indent-4tab mb-3 text-[15px]">
+                    เหตุการณ์โดยทั่วไป &nbsp;(&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;)&nbsp; เรียบร้อย &nbsp;&nbsp;(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)&nbsp; ไม่เรียบร้อย
+                </div>
+
+                <div class="indent-4tab mb-4 text-[15px]">
+                    Link รายงานออนไลน์ : <a href="https://trafficoppe.github.io/trafficsystem/report.html?tab=daily" class="text-blue-600" style="text-decoration: none !important;" target="_blank">https://trafficoppe.github.io/trafficsystem/report.html?tab=daily</a>
+                </div>
+
+                <div class="indent-4tab text-justify mb-6 text-[15px]">
+                    จึงเรียนมาเพื่อโปรดทราบและพิจารณาลงนาม
+                </div>
+
+                <div class="w-full text-[15px] mt-8 flex flex-col items-end pr-12">
+                    
+                    <div class="flex flex-col items-center text-center w-[320px] mb-8">
+                        <div class="h-10 mb-1"></div>
+                        <div>( นายยุทธภูมิ ญานเพิ่ม )</div>
+                        <div>หัวหน้างานจราจรและความปลอดภัย</div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center text-center w-[320px]">
+                        <div class="h-10 mb-1"></div>
+                        <div>( นายพุฒิเศรษฐ ตันติเมฆิน )</div>
+                        <div>ผู้อำนวยการกองกายภาพและสิ่งแวดล้อม</div>
+                    </div>
+                </div>
+            </div>
+
     </div>
 
     <footer class="global-footer" style="background: #ffffff; color: #475569; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; font-size: 15px; margin-top: auto;">
@@ -104,7 +229,6 @@
         <div>โทรศัพท์: 0-2849-6000 |</div>
     </footer>
 
-    <!-- เชื่อมไฟล์ JavaScript ของเรา -->
     <script src="report_daily_script.js"></script>
 </body>
 </html>
