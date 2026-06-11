@@ -7,12 +7,11 @@
     
     <link href="https://fonts.cdnfonts.com/css/th-sarabun-new" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { corePlugins: { preflight: false } }</script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-    <script>google.charts.load('current', {'packages':['corechart']});</script>
     
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <link rel="stylesheet" href="report_daily_style.css">
@@ -52,15 +51,6 @@
                 </button>
             </div>
 
-            <div id="printHeaderContainer" style="display: none; margin-bottom: 30px;">
-                <h1 id="printHeader" class="text-center font-bold text-[25px] text-gray-800 mb-4 leading-tight">
-                    รายงานเหตุการณ์ วันที่ ...
-                </h1>
-                <h2 class="text-center font-bold text-[25px] text-[#0f172a] m-0 leading-tight">
-                    งานจราจรและความปลอดภัย
-                </h2>
-            </div>
-
             <div class="flex flex-col md:flex-row gap-8 mb-10 items-stretch">
                 <div class="w-full md:w-[35%] flex flex-col">
                     <div class="flex-1"> 
@@ -90,34 +80,26 @@
             </div>
 
             <hr class="my-10 border-t-2 border-dashed border-gray-300">
+            <h2 class="text-[20px] font-bold text-center mb-8">ตารางเวรปฏิบัติงานประจำวัน</h2>
+            <div class="overflow-x-auto w-full mb-10">
+                <table class="w-full text-center border-collapse border border-black text-[16px]">
+                    <thead>
+                        <tr class="bg-gray-100 text-black">
+                            <th class="border border-black px-4 py-2 w-1/3">ผลัดการปฏิบัติงาน</th>
+                            <th class="border border-black px-4 py-2 w-1/4">หน้าที่</th>
+                            <th class="border border-black px-4 py-2 w-auto">รายชื่อผู้ปฏิบัติงาน</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboardRosterBody">
+                        </tbody>
+                </table>
+            </div>
+
+            <hr class="my-10 border-t-2 border-dashed border-gray-300">
             <h2 class="text-[20px] font-bold text-center mb-8">รายละเอียดรายงานเหตุการณ์</h2>
             <div id="incidentTextDetails"></div>
             
         </div>
-
-        <script>
-            function downloadPDFImmediately() {
-                const element = document.getElementById('a4-paper-content');
-                const ds = document.getElementById('dateSelect').value || 'ประจำวัน';
-                
-                const opt = {
-                    margin:       0,
-                    filename:     `รายงานเหตุการณ์_${ds}.pdf`,
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true, allowTaint: true, logging: false },
-                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
-                
-                // เอาเงาออกก่อนโหลด PDF
-                const originalShadow = element.style.boxShadow;
-                element.style.boxShadow = 'none';
-                
-                html2pdf().set(opt).from(element).save().then(() => {
-                    // ใส่เงากลับคืน
-                    element.style.boxShadow = originalShadow;
-                });
-            }
-        </script>
 
         <div id="documentSection" style="display: none;" class="flex-col items-center pb-10">
             
@@ -132,139 +114,92 @@
             </div>
 
             <div id="a4-paper-content" class="a4-paper text-black">
-                
-                <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400&display=swap');
+    
+    <table width="100%" style="border: none; border-collapse: collapse;">
+        <thead class="print-only-thead">
+            <tr>
+                <td style="text-align: center; font-size: 16pt; font-family: 'TH Sarabun New', sans-serif; height: 40px; vertical-align: top; padding-top: 5px;">
+                    </td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <div class="page-one-cover" style="background: white; position: relative; z-index: 10; margin-top: -45px; padding-top: 5px;">
+                        <div style="position: relative; width: 100%; height: 120px; margin-bottom: 20px;">
+                            <div style="position: absolute; left: 50%; transform: translateX(-50%); top: 0; text-align: center;">
+                                <img src="logo-MU_blackwhite.png" style="height: 85px; width: auto; display: inline-block;" alt="ตรามหาวิทยาลัยมหิดล">
+                            </div>
+                            <div style="position: absolute; right: 0; top: 40px; text-align: right; line-height: 1.3 !important; white-space: nowrap;">
+                                งานจราจรและความปลอดภัย<br>
+                                กองกายภาพและสิ่งแวดล้อม<br>
+                                มหาวิทยาลัยมหิดล ศาลายา<br>
+                                โทร. 02-441-4400 ต่อ 1253
+                            </div>
+                        </div>
+
+                        <div style="width: 100%; margin-bottom: 15px;">
+                            <div style="display: flex; flex-direction: row; align-items: flex-start; margin-bottom: 2px;">
+                                <div style="width: 60px; flex-shrink: 0;">ที่</div>
+                                <div id="docNo"></div>
+                            </div>
+                            <div style="display: flex; flex-direction: row; align-items: flex-start; margin-bottom: 2px;">
+                                <div style="width: 60px; flex-shrink: 0;">วันที่</div>
+                                <div id="docPrintDate"></div>
+                            </div>
+                            <div style="display: flex; flex-direction: row; align-items: flex-start; margin-bottom: 2px;">
+                                <div style="width: 60px; flex-shrink: 0;">เรื่อง</div>
+                                <div>รายงานเหตุการณ์</div>
+                            </div>
+                            <div style="display: flex; flex-direction: row; align-items: flex-start; margin-bottom: 2px;">
+                                <div style="width: 60px; flex-shrink: 0;">เรียน</div>
+                                <div>ผู้อำนวยการกองกายภาพและสิ่งแวดล้อม</div>
+                            </div>
+                        </div>
+                    </div> 
                     
-                    #a4-paper-content, #a4-paper-content * {
-                        font-family: 'TH Sarabun New', 'Sarabun', sans-serif !important;
-                        font-size: 15px !important;
-                        font-weight: 300 !important; 
-                        line-height: 1.55 !important; 
-                        box-sizing: border-box !important;
-                    }
-
-                    .a4-paper {
-                        width: 100% !important;
-                        max-width: 800px !important;
-                        margin: 0 auto !important;
-                        padding: 20px 75px 20px 100px !important; 
-                        background-color: #ffffff;
-                        position: relative;
-                        box-shadow: 0 0 15px rgba(0,0,0,0.2);
-                    }
-
-                    @media print {
-                        .no-print { display: none !important; }
-                        .a4-paper { box-shadow: none !important; margin: 0 !important; }
-                    }
-
-                    .report-row {
-                        display: flex; width: 100%; align-items: center; justify-content: flex-start;
-                    }
-                    .unit-name { width: 220px; flex-shrink: 0; white-space: nowrap; }
-                    .unit-total { display: flex; width: 95px; flex-shrink: 0; white-space: nowrap; margin-right: 15px; }
-                    .unit-day { display: flex; width: 125px; flex-shrink: 0; white-space: nowrap; margin-right: 15px; }
-                    .unit-night { display: flex; width: 125px; flex-shrink: 0; white-space: nowrap; }
-                </style>
-                
-                <div style="position: relative; width: 100%; height: 110px; margin-bottom: 10px;">
-                    <div style="position: absolute; left: 50%; transform: translateX(-50%); top: 5px; text-align: center;">
-                        <img src="logo-MU_blackwhite.png" style="height: 85px; width: auto; display: inline-block;" alt="ตรามหาวิทยาลัยมหิดล">
+                    <div style="display: block; width: 100%; text-align: justify; text-justify: inter-word; margin-bottom: 15px; font-family: 'TH Sarabun New', 'TH SarabunPSK', Tahoma, sans-serif; font-size: 16pt; line-height: 26px; white-space: normal; word-wrap: break-word; letter-spacing: 0px !important;">
+                        <span style="display: inline-block; width: 2.5cm;"></span>ด้วยงานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม ใคร่ขอสรุปรายงานผลการปฏิบัติงานและเหตุการณ์ทั่วไปที่เกิดขึ้นภายในพื้นที่ความรับผิดชอบ ประจำ<span id="docTargetDate">วันที่ .....</span> ระหว่างเวลา 07.00 - 07.00 น. ของวันรุ่งขึ้น <span id="docIntroSuffix">โดยมีรายละเอียดดังนี้</span>
                     </div>
-                    
-                    <div style="position: absolute; right: 0; top: 30px; text-align: right; line-height: 1.3 !important;">
-                        งานจราจรและความปลอดภัย<br>
-                        กองกายภาพและสิ่งแวดล้อม<br>
-                        โทร. 02-441-4400
-                    </div>
-                </div>
 
-                <div style="width: 100%; margin-bottom: 10px;">
-                    <div style="display: flex;"><div style="width: 60px;">ที่</div><div id="docNo"></div></div>
-                    <div style="display: flex;"><div style="width: 60px;">วันที่</div><div id="docPrintDate"></div></div>
-                    <div style="display: flex;"><div style="width: 60px;">เรื่อง</div><div>รายงานเหตุการณ์</div></div>
-                    <div style="display: flex;"><div style="width: 60px;">เรียน</div><div>ผู้อำนวยการกองกายภาพและสิ่งแวดล้อม</div></div>
-                </div>
+                    <div id="incidentSummaryList" style="padding-left: 100px; margin-bottom: 20px; line-height: 1.6;"></div>
 
-                <div style="text-indent: 100px; text-align: justify; width: 100%; margin-bottom: 10px;">
-                    ด้วยงานจราจรและความปลอดภัย ใคร่ขอรายงานผลการปฏิบัติงานและเหตุการณ์ทั่วไป<br>
-                    ประจำ <span id="docTargetDate" class="text-blue-800">.....</span> ระหว่างเวลา 07.00-07.00 น. ของวันรุ่งขึ้น โดยมีรายละเอียดดังนี้
-                </div>
-
-                <div style="width: 100%; display: flex; justify-content: center; margin-bottom: 10px;">
-                    <table style="width: 100%; border: 0.5px solid #e2e8f0; border-collapse: collapse; text-align: center;">
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-family: 'TH Sarabun New', Tahoma, sans-serif; font-size: 16pt; border: 1px solid #000; color: #000;">
                         <thead>
                             <tr style="background-color: #f1f5f9;">
-                                <th style="border: 0.5px solid #e2e8f0; padding: 5px 10px; font-weight: bold; width: 25%; text-align: center;">เวลา</th>
-                                <th style="border: 0.5px solid #e2e8f0; padding: 5px 10px; font-weight: bold; width: 35%; text-align: center;">เจ้าหน้าที่ประจำผลัด</th>
-                                <th style="border: 0.5px solid #e2e8f0; padding: 5px 10px; font-weight: bold; width: 40%; text-align: center;">ชื่อสายตรวจ</th>
+                                <th style="border: 1px solid #000; padding: 8px; width: 30%;">ผลัดการปฏิบัติงาน</th>
+                                <th style="border: 1px solid #000; padding: 8px; width: 25%;">หน้าที่</th>
+                                <th style="border: 1px solid #000; padding: 8px; width: 45%;">รายชื่อผู้ปฏิบัติงาน</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td style="border: 0.5px solid #e2e8f0; padding: 5px 10px;">07.00 - 15.00 น.</td>
-                                <td style="border: 0.5px solid #e2e8f0; padding: 5px 10px;">จำนวน <span id="count_m" style="margin: 0 5px; font-weight: bold;">0</span> นาย</td>
-                                <td id="names_m" style="border: 0.5px solid #e2e8f0; padding: 5px 10px; text-align: left;">-</td>
-                            </tr>
-                            <tr>
-                                <td style="border: 0.5px solid #e2e8f0; padding: 5px 10px;">15.00 - 23.00 น.</td>
-                                <td style="border: 0.5px solid #e2e8f0; padding: 5px 10px;">จำนวน <span id="count_a" style="margin: 0 5px; font-weight: bold;">0</span> นาย</td>
-                                <td id="names_a" style="border: 0.5px solid #e2e8f0; padding: 5px 10px; text-align: left;">-</td>
-                            </tr>
-                            <tr>
-                                <td style="border: 0.5px solid #e2e8f0; padding: 5px 10px;">23.00 - 07.00 น.</td>
-                                <td style="border: 0.5px solid #e2e8f0; padding: 5px 10px;">จำนวน <span id="count_n" style="margin: 0 5px; font-weight: bold;">0</span> นาย</td>
-                                <td id="names_n" style="border: 0.5px solid #e2e8f0; padding: 5px 10px; text-align: left;">-</td>
-                            </tr>
-                        </tbody>
+                        <tbody id="documentRosterBody">
+                            </tbody>
                     </table>
-                </div>
-                
-                <div style="text-indent: 100px; text-align: justify; width: 100%; margin-bottom: 5px;">
-                    จำนวนพนักงานรักษาความปลอดภัย บริษัท NP (6 สัญญาจ้าง) มีดังนี้
-                </div>
 
-                <div style="width: 100%; margin-bottom: 10px;">
-                    <div class="report-row"><div class="unit-name">1. หน่วยงานส่วนกลาง</div><div class="unit-total"><div style="width: 45px;">ทั้งหมด</div><div style="flex: 1; text-align: center;">56</div><div>คน</div></div><div class="unit-day"><div style="width: 75px;">ผลัดกลางวัน</div><div style="flex: 1; text-align: center;">32</div><div>คน</div></div><div class="unit-night"><div style="width: 75px;">ผลัดกลางคืน</div><div style="flex: 1; text-align: center;">24</div><div>คน</div></div></div>
-                    <div class="report-row"><div class="unit-name">2. หน่วยงานศูนย์การเรียนรู้มหิดล</div><div class="unit-total"><div style="width: 45px;">ทั้งหมด</div><div style="flex: 1; text-align: center;">18</div><div>คน</div></div><div class="unit-day"><div style="width: 75px;">ผลัดกลางวัน</div><div style="flex: 1; text-align: center;">11</div><div>คน</div></div><div class="unit-night"><div style="width: 75px;">ผลัดกลางคืน</div><div style="flex: 1; text-align: center;">7</div><div>คน</div></div></div>
-                    <div class="report-row"><div class="unit-name">3. หน่วยงานมหิดลสิทธาคาร</div><div class="unit-total"><div style="width: 45px;">ทั้งหมด</div><div style="flex: 1; text-align: center;">15</div><div>คน</div></div><div class="unit-day"><div style="width: 75px;">ผลัดกลางวัน</div><div style="flex: 1; text-align: center;">10</div><div>คน</div></div><div class="unit-night"><div style="width: 75px;">ผลัดกลางคืน</div><div style="flex: 1; text-align: center;">5</div><div>คน</div></div></div>
-                    <div class="report-row"><div class="unit-name">4. หน่วยงานอาคารสิริวิทยา</div><div class="unit-total"><div style="width: 45px;">ทั้งหมด</div><div style="flex: 1; text-align: center;">10</div><div>คน</div></div><div class="unit-day"><div style="width: 75px;">ผลัดกลางวัน</div><div style="flex: 1; text-align: center;">7</div><div>คน</div></div><div class="unit-night"><div style="width: 75px;">ผลัดกลางคืน</div><div style="flex: 1; text-align: center;">3</div><div>คน</div></div></div>
-                    <div class="report-row"><div class="unit-name">5. หน่วยงานอุทยานธรรมชาติฯ</div><div class="unit-total"><div style="width: 45px;">ทั้งหมด</div><div style="flex: 1; text-align: center;">14</div><div>คน</div></div><div class="unit-day"><div style="width: 75px;">ผลัดกลางวัน</div><div style="flex: 1; text-align: center;">10</div><div>คน</div></div><div class="unit-night"><div style="width: 75px;">ผลัดกลางคืน</div><div style="flex: 1; text-align: center;">4</div><div>คน</div></div></div>
-                    <div class="report-row"><div class="unit-name">6. หน่วยงานหอพักนักศึกษา</div><div class="unit-total"><div style="width: 45px;">ทั้งหมด</div><div style="flex: 1; text-align: center;">24</div><div>คน</div></div><div class="unit-day"><div style="width: 75px;">ผลัดกลางวัน</div><div style="flex: 1; text-align: center;">11</div><div>คน</div></div><div class="unit-night"><div style="width: 75px;">ผลัดกลางคืน</div><div style="flex: 1; text-align: center;">13</div><div>คน</div></div></div>
-                </div>
-
-                <div style="text-indent: 100px; text-align: justify; width: 100%; margin-bottom: 5px;">
-                    เหตุการณ์โดยทั่วไป <span style="margin: 0 5px;">(</span><span style="display: inline-block; width: 20px;"></span>/<span style="display: inline-block; width: 20px;"></span><span style="margin: 0 5px;">)</span> เรียบร้อย <span style="margin: 0 5px;">(</span><span style="display: inline-block; width: 40px;"></span><span style="margin: 0 5px;">)</span> ไม่เรียบร้อย
-                </div>
-                
-                <div style="text-indent: 100px; text-align: justify; width: 100%; margin-bottom: 15px; word-break: break-word;">
-                    ลิงค์รายงาน : <a href="https://trafficoppe.github.io/trafficsystem/report.html?tab=daily" style="color: #2563eb; text-decoration: none;" target="_blank">https://trafficoppe.github.io/trafficsystem/report.html?tab=daily</a>
-                </div>
-
-                <div style="text-indent: 100px; text-align: justify; width: 100%; margin-bottom: 5px;">
-                    จึงเรียนมาเพื่อโปรดทราบและพิจารณาลงนาม
-                </div>
-
-                <div style="width: 100%; margin-top: 10px; display: flex; flex-direction: column; align-items: flex-end; padding-right: 50px;">
-                    <div style="text-align: center; width: 250px; margin-bottom: 10px;">
-                        <div style="height: 30px;"></div>
-                        <div>( นายยุทธภูมิ ญานเพิ่ม )</div>
-                        <div>หัวหน้างานจราจรและความปลอดภัย</div>
+                    <div id="docChartArea" style="width: 100%; margin-bottom: 25px; padding: 0; border: 1px solid #000; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid;">
+                        <div id="car-summary-cards-doc" style="width: 100%;"></div>
+                        <div id="daily_car_chart_doc" style="width: 100%; height: 180px; padding-top: 10px;"></div>
                     </div>
-                    <div style="text-align: center; width: 250px;">
-                        <div style="height: 30px;"></div>
-                        <div>( นายพุฒิเศรษฐ ตันติเมฆิน )</div>
-                        <div>ผู้อำนวยการกองกายภาพและสิ่งแวดล้อม</div>
+
+                    <div id="incidentTextList" style="width: 100%; margin-bottom: 20px;"></div>
+
+                    <div id="incidentTextList" style="width: 100%;"></div>
+
+                    <div style="margin-top: 60px; margin-bottom: 30px; page-break-inside: avoid; break-inside: avoid;">
+                        <div style="margin-left: auto; margin-right: 12%; width: 350px; text-align: center; font-family: 'TH Sarabun New', 'TH SarabunPSK', Tahoma, sans-serif; font-size: 16pt; line-height: 24px;">
+                            <br><br>
+                            (นายยุทธภูมิ ญานเพิ่ม)<br>
+                            หัวหน้างานจราจรและความปลอดภัย<br>
+                            <br><br><br><br>
+                            (นายพุฒิเศรษฐ์ ตันติเมฆิน)<br>
+                            ผู้อำนวยการกองกายภาพและสิ่งแวดล้อม
+                        </div>
                     </div>
-                </div>
-
-            </div>
-
-    <footer class="global-footer" style="background: #ffffff; color: #475569; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; font-size: 15px; margin-top: auto;">
-        <div>© 2026 งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม มหาวิทยาลัยมหิดล</div>
-        <div>โทรศัพท์: 0-2849-6000 |</div>
-    </footer>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
 
     <script src="report_daily_script.js"></script>
 </body>

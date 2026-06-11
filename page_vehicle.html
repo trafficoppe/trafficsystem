@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ยานพาหนะทั้งหมด / All Vehicles</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    
+    <link rel="stylesheet" href="page_vehicle.css">
+</head>
+<body>
+
+    <div class="content-area" style="padding-top: 10px;">
+        <div class="gallery-grid" id="vehicleGallery">
+            <p class="loading" data-th="กำลังโหลดข้อมูลล่าสุด..." data-en="Loading latest data...">กำลังโหลดข้อมูลล่าสุด...</p>
+        </div>
+    </div>
+
+    <div id="vehicleModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="modal-layout-flex">
+                <div class="modal-image-container">
+                    <img id="modalImage" src="" alt="Vehicle Image">
+                    <button class="slide-btn" id="prevImageBtn">❮</button>
+                    <button class="slide-btn" id="nextImageBtn">❯</button>
+                    <div class="image-counter" id="imageNumber"></div>
+                </div>
+                <div id="modalDetails"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="inspectionHistoryModal" class="modal">
+        <div id="inspectionModalContent" class="modal-content">
+            <div class="modal-close-wrapper">
+                <span class="close" onclick="document.getElementById('inspectionHistoryModal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-table-padding">
+                <div class="insp-info-wrapper">
+                    <div id="inspInfoLeft"></div>
+                </div>
+                <div class="table-scroll-container">
+                    <table>
+                        <thead id="inspectionChecklistHead"></thead>
+                        <tbody id="inspectionChecklistBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cleanFormModal" class="modal">
+        <div class="modal-content modal-form-width">
+            <span class="close" onclick="document.getElementById('cleanFormModal').style.display='none'">&times;</span>
+            <div class="form-padding">
+                <h2 class="form-title" data-th="บันทึกการทำความสะอาดยานพาหนะ" data-en="Vehicle Cleaning Record">บันทึกการทำความสะอาดยานพาหนะ</h2>
+                <form id="cleanForm">
+                    <input type="hidden" name="sheet_name" value="การทำความสะอาดยานพาหนะ">
+                    <input type="hidden" name="Data_category" value="Cleaning">
+                    <input type="hidden" name="รุ่นรถ" id="cl_model">
+                    
+                    <div class="form-group">
+                        <label data-th="รหัส/ทะเบียนรถ:" data-en="Vehicle ID/Plate:">รหัส/ทะเบียนรถ:</label>
+                        <input type="text" id="cl_plate" name="ทะเบียน" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label data-th="หมายเลขครุภัณฑ์:" data-en="Asset Number:">หมายเลขครุภัณฑ์:</label>
+                        <input type="text" id="cl_equip" name="หมายเลขครุภัณฑ์" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label><span data-th="วันที่ทำความสะอาด:" data-en="Cleaning Date:">วันที่ทำความสะอาด:</span> <span class="required">*</span></label>
+                        <input type="date" name="วันที่" id="cl_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label><span data-th="ผู้ดำเนินการล้างรถ:" data-en="Cleaner Name:">ผู้ดำเนินการล้างรถ:</span> <span class="required">*</span></label>
+                        <input type="text" name="ผู้ดำเนินการ" data-th-placeholder="ระบุชื่อผู้รับผิดชอบ" data-en-placeholder="Enter cleaner name" placeholder="ระบุชื่อผู้รับผิดชอบ" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-th="แนบรูปถ่าย (เลือกได้ 1-5 รูป):" data-en="Attach Photos (1-5 images):">แนบรูปถ่าย (เลือกได้ 1-5 รูป):</label>
+                        <div class="file-upload-wrapper" onclick="document.getElementById('cl_images').click()">
+                            <span data-th="คลิกลากคลุมเพื่อเลือกภาพ (สูงสุด 5 รูป)" data-en="Click to select images (Max 5)">คลิกลากคลุมเพื่อเลือกภาพ (สูงสุด 5 รูป)</span>
+                            <input type="file" id="cl_images" accept="image/*" multiple style="display: none;">
+                            <div id="cl_file_preview"></div>
+                        </div>
+                        <input type="hidden" name="imageB64_1" id="cl_b64_1"><input type="hidden" name="imageMime_1" id="cl_m_1"><input type="hidden" name="imageName_1" id="cl_n_1">
+                        <input type="hidden" name="imageB64_2" id="cl_b64_2"><input type="hidden" name="imageMime_2" id="cl_m_2"><input type="hidden" name="imageName_2" id="cl_n_2">
+                        <input type="hidden" name="imageB64_3" id="cl_b64_3"><input type="hidden" name="imageMime_3" id="cl_m_3"><input type="hidden" name="imageName_3" id="cl_n_3">
+                        <input type="hidden" name="imageB64_4" id="cl_b64_4"><input type="hidden" name="imageMime_4" id="cl_m_4"><input type="hidden" name="imageName_4" id="cl_n_4">
+                        <input type="hidden" name="imageB64_5" id="cl_b64_5"><input type="hidden" name="imageMime_5" id="cl_m_5"><input type="hidden" name="imageName_5" id="cl_n_5">
+                    </div>
+                    <div class="form-group">
+                        <label data-th="หมายเหตุ (ถ้ามี):" data-en="Remarks (if any):">หมายเหตุ (ถ้ามี):</label>
+                        <textarea name="หมายเหตุ" rows="2" data-th-placeholder="ระบุรายละเอียดเพิ่มเติม" data-en-placeholder="Additional details..." placeholder="ระบุรายละเอียดเพิ่มเติม"></textarea>
+                    </div>
+                    <button type="submit" id="cl_submitBtn" data-th="บันทึกข้อมูลการทำความสะอาด" data-en="Save Cleaning Record">บันทึกข้อมูลการทำความสะอาด</button>
+                    <div id="cl_message"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="page_vehicle.js"></script>
+</body>
+</html>

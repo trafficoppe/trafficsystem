@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตั้งค่าระบบ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="page_settings_style.css">
+</head>
+<body>
+
+    <div class="settings-container">
+        <div class="setting-card">
+            <div class="setting-info">
+                <div class="setting-icon"><i class="fa-solid fa-globe"></i></div>
+                <div>
+                    <div class="setting-title" id="txtLangTitle">ภาษาของระบบ (Language)</div>
+                    <div class="setting-desc" id="txtLangDesc">เลือกภาษาที่ต้องการให้แสดงผลในระบบ</div>
+                </div>
+            </div>
+            <div class="lang-toggle">
+                <button class="lang-btn active" id="btnTH" onclick="setLang('th')">TH</button>
+                <button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button>
+            </div>
+        </div>
+
+        <div class="setting-card">
+            <div class="setting-info">
+                <div class="setting-icon theme"><i class="fa-solid fa-sun" id="themeIconDisp"></i></div>
+                <div>
+                    <div class="setting-title" id="txtThemeTitle">โหมดหน้าจอ (Theme Mode)</div>
+                    <div class="setting-desc" id="txtThemeDesc">สลับหน้าจอระหว่างโหมดสว่างและโหมดมืด</div>
+                </div>
+            </div>
+            <button class="theme-btn" id="btnTheme" onclick="toggleTheme()">
+                <i class="fa-solid fa-moon" id="themeBtnIcon"></i> <span id="themeBtnText">โหมดมืด</span>
+            </button>
+        </div>
+    </div>
+
+    <script src="page_settings_script.js"></script>
+</body>
+</html>

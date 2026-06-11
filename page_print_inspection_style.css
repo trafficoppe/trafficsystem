@@ -1,0 +1,126 @@
+/* 🌟 ตั้งค่าพื้นฐาน */
+body { 
+    margin: 0; 
+    padding: 20px; 
+    background-color: transparent; /* ให้กลืนไปกับ main.html */
+    color: #0f172a; 
+    font-family: 'Prompt', sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* 🌟 แถบเครื่องมือ (ตัวกรองและปุ่มพิมพ์) */
+.page-tools {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    padding: 15px 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
+    border: 1px solid #e2e8f0;
+}
+.page-title { font-size: 20px; font-weight: 600; color: #059669; }
+.tools-group { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+.filter-group { display: flex; gap: 15px; align-items: center; background: #f1f5f9; padding: 8px 20px; border-radius: 50px; }
+.filter-group label { font-size: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.filter-group input[type="radio"] { cursor: pointer; transform: scale(1.1); margin: 0; }
+.month-picker { padding: 8px 15px; font-size: 15px; border-radius: 50px; border: 1px solid #cbd5e1; outline: none; cursor: pointer; font-family: 'Prompt'; }
+.btn { border: none; font-weight: 600; border-radius: 50px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); padding: 8px 20px; font-family: 'Prompt'; }
+.btn-print { background-color: #10b981; color: white; font-size: 15px; }
+.btn-print:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+#loadingStatus { text-align: center; margin-top: 50px; font-size: 20px; font-weight: 600; color: #2563eb; }
+.no-data-msg { text-align: center; font-size: 20px; color: #ef4444; margin-top: 50px; font-weight: bold; }
+
+/* 🌟 บังคับใช้ฟอนต์ TH Sarabun New ในกระดาษรายงาน */
+.page, .page * { font-family: 'TH Sarabun New', sans-serif !important; }
+
+/* 🌟 ตั้งค่าหน้ากระดาษเป็นแนวนอน (Landscape) บนหน้าจอปกติ */
+.page { 
+    width: 29.7cm; min-height: 21cm; padding: 1.5cm 2cm; margin: 0 auto 40px auto; 
+    background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.1); box-sizing: border-box; 
+    color: #0f172a; border-radius: 4px; font-size: 16px; display: flex; flex-direction: column;
+}
+
+/* เลย์เอาต์ข้อมูลทั่วไป */
+.content-split { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: center !important; align-items: flex-start !important; gap: 40px !important; margin-bottom: 20px !important; }
+.left-header-info { flex: 0 1 auto !important; min-width: 480px !important; max-width: 600px !important; }
+.doc-header, .info-text-section { padding-left: 30px !important; text-align: left !important; display: flex !important; flex-direction: column !important; }
+.doc-header { margin-bottom: 15px !important; gap: 5px !important; }
+.info-text-section { gap: 5px !important; }
+.doc-header h1, .doc-header h2 { white-space: nowrap !important; font-weight: normal !important; font-size: 15px !important; margin: 0 !important; line-height: 1.2 !important; }
+.info-item { display: flex; flex-direction: row; align-items: baseline; margin-bottom: 0; padding-left: 0 !important; justify-content: flex-start !important; }
+.info-item span.label { margin-right: 5px; font-weight: normal !important; font-size: 15px !important; color: #1e293b; }
+.info-item span.value { font-weight: normal !important; font-size: 15px !important; color: #0f172a; }
+.page p[style*="color: #dc2626"] { display: none !important; }
+.info-image-section { width: 250px; height: 180px; flex-shrink: 0 !important; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px; box-sizing: border-box; }
+.info-image-section img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+
+/* ตาราง */
+table.checklist { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; }
+table.checklist th, table.checklist td { border: 1px solid #94a3b8; padding: 4px; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap !important; font-weight: normal; vertical-align: middle;}
+table.checklist th { background-color: #f1f5f9; text-align: center; line-height: 1.1; }
+table.checklist td { height: 22px !important; max-height: 22px !important; padding: 2px 4px !important; line-height: 1 !important; }
+.item-name { text-align: left !important; padding-left: 8px !important; }
+.status-fail { color: #dc2626; font-size: 14px; display: inline-block; line-height: 1; margin: 0; }
+.tick-mark { color: #15803d; font-size: 14px; display: inline-block; line-height: 1; margin: 0; }
+.text-center { text-align: center !important; }
+
+/* ลายเซ็น */
+.signature-section { display: flex; font-size: 16px; line-height: 1.2; }
+.signature-block { text-align: center; width: 260px; }
+.signature-img-container { height: 50px; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px dashed #0f172a; margin-bottom: 8px; padding-bottom: 2px; }
+.head-signature-img { max-height: 55px; max-width: 220px; object-fit: contain; }
+
+/* 🌟 Dark Mode (เปลี่ยนสีแถบเครื่องมือให้กลืนกับหน้าหลัก) */
+body.dark-mode { color: #e2e8f0; }
+body.dark-mode .page-tools { background: #1e293b; border-color: #334155; }
+body.dark-mode .page-title { color: #34d399; }
+body.dark-mode .filter-group { background: #0f172a; color: #cbd5e1; }
+body.dark-mode .month-picker { background: #0f172a; color: #e2e8f0; border-color: #475569; }
+
+/* =========================================================================
+   🖨️ สไตล์สำหรับการพิมพ์ (แก้ไขหรือวางทับใน @media printเดิม)
+   ========================================================================= */
+/* =========================================================================
+   🖨️ สไตล์สำหรับการพิมพ์ 
+   ========================================================================= */
+/* =========================================================================
+   🖨️ สไตล์สำหรับการพิมพ์ (แก้ไขหรือวางทับใน @media printเดิม)
+   ========================================================================= */
+@media print {
+    /* 🌟 คำสั่งนี้จะปิด Header/Footer ของ Browser (วันที่, ลิงก์, เลขหน้า) 🌟 */
+    @page {
+        margin: 0; 
+    }
+
+    .page-tools, .no-print { display: none !important; }
+    body { padding: 0 !important; margin: 0 !important; background: #fff !important; }
+    
+    /* 🌟 จัดระยะขอบกระดาษใหม่ทดแทน margin ที่ลบไป และบังคับขึ้นหน้าใหม่ 🌟 */
+    .page {
+        margin: 0 !important;
+        padding: 15mm 20mm !important; 
+        page-break-after: always !important;
+        box-shadow: none !important;
+        min-height: auto !important;
+    }
+
+    /* ปรับขนาดตารางให้กระชับขึ้นตอนพิมพ์ */
+    .inspection-table th, .inspection-table td {
+        padding: 4px 6px !important; 
+        font-size: 14px !important;
+    }
+    
+    .signature-section {
+        margin-top: 5px !important;
+    }
+}
+
+/* 🌟 สไตล์ปรับรายละเอียดให้เป็นตัวบาง (ตามที่พี่ต้องการ) */
+.doc-info-detail {
+    font-weight: normal !important; /* เปลี่ยนจากตัวหนาเป็นตัวบาง */
+    color: #334155;
+}

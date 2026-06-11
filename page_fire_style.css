@@ -1,0 +1,92 @@
+/* ==========================================
+   FIRE EQUIPMENT STYLE (page_fire_style.css)
+   ========================================== */
+
+body { background-color: transparent !important; padding: 20px; margin: 0; font-family: 'Prompt', sans-serif; }
+
+.loading-text { text-align: center; padding: 40px; color: #64748b; font-size: 16px; grid-column: 1 / -1; }
+
+/* 🌟 การ์ดแสดงผลแบบ Original 100% 🌟 */
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 25px; }
+.vehicle-card { background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.04); border: 1px solid #cbd5e1; transition: 0.3s; display: flex; flex-direction: column; position: relative; }
+.vehicle-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(5, 150, 105, 0.1); border-color: #059669; } 
+.card-image-wrapper { width: 100%; height: 240px; overflow: hidden; position: relative; background-color: #f8fafc; cursor: pointer; box-sizing: border-box; border-bottom: 1px solid #f1f5f9; }
+
+.image-slide-track { display: flex; height: 100%; justify-content: flex-start; transition: transform 0.5s ease-in-out; width: 100%; }
+.image-slide-track img { width: 100%; height: 100%; object-fit: contain; flex-shrink: 0; }
+.card-content { padding: 20px; text-align: center; flex-grow: 1; display: flex; flex-direction: column; align-items: center; cursor: pointer; width: 100%; }
+.card-title { font-size: 20px; color: #1e293b; margin-bottom: 6px; font-weight: 600; width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-plate { font-size: 16px; font-weight: 500; color: #d35400; margin-bottom: 6px; text-align: center; width: 100%; }
+
+/* 🌟 สัญลักษณ์ประเภทไฟ (Fire Classes) Original 🌟 */
+.fire-class-badge { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); font-family: Arial, Helvetica, sans-serif; }
+.class-a { background-color: #059669; } .class-b { background-color: #ef4444; } .class-c { background-color: #3b82f6; } .class-k { background-color: #334155; } 
+
+/* ==========================================
+   🌟 โครงสร้างหน้าต่าง Popup (แบบแบ่งครึ่ง)
+   ========================================== */
+#vehicleModal .modal-content { 
+    max-width: 950px; 
+    width: 90%;
+    height: 550px; 
+    border-radius: 20px; 
+    background-color: #ffffff; 
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); 
+    border: 1px solid #e2e8f0; 
+    padding: 0; 
+    overflow: hidden; 
+    position: relative;
+    /* ปิดแอนิเมชันให้เด้งทันที */
+    animation: none !important; 
+    transform: none !important;
+    transition: none !important;
+}
+
+#vehicleModal .close { position: absolute; top: 15px; right: 20px; font-size: 30px; font-weight: bold; color: #333; cursor: pointer; transition: 0.3s; background: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; z-index: 10100; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+#vehicleModal .close:hover { background: #fee2e2; color: #ef4444; }
+
+.modal-layout-flex { display: flex; flex-direction: row; width: 100%; height: 100%; }
+.modal-image-container { flex: 1.2; background: #1e293b; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+#modalImage { width: 100%; height: 100%; object-fit: contain; }
+#modalDetails { flex: 1; padding: 40px; display: flex; flex-direction: column; height: 100%; background: white; overflow: hidden; box-sizing: border-box;}
+.info-content { flex-grow: 1; overflow-y: auto; padding-right: 10px; margin-bottom: 10px; text-align: left; }
+
+.info-content h2 { font-size: 28px; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; color: #1e293b; font-weight: bold;}
+.info-content p { font-size: 16px; margin-bottom: 10px; color: #334155; line-height: 1.6;}
+.info-content strong { color: #0f172a; }
+
+.action-buttons { margin-top: auto; padding-top: 15px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; border-top: 1px solid #f1f5f9; }
+.action-btn { flex: 1; padding: 10px 5px; text-align: center; border-radius: 8px; font-weight: bold; transition: 0.3s; border: none; cursor: pointer; font-size: 13px; font-family: 'Prompt', sans-serif; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); line-height: 1.4; text-decoration: none;}
+.action-btn:hover { filter: brightness(0.9); transform: translateY(-2px); box-shadow: 0 6px 10px rgba(0,0,0,0.15); }
+
+/* ปุ่มเลื่อนภาพซ้ายขวา */
+.slide-btn { position: absolute; top: 50%; transform: translateY(-50%); background-color: rgba(0,0,0,0.6); color: white; border: none; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; border-radius: 50%; z-index: 100; transition: 0.3s; backdrop-filter: blur(2px); }
+.slide-btn:hover { background-color: rgba(0,0,0,0.9); }
+#prevImageBtn { left: 15px; }
+#nextImageBtn { right: 15px; }
+.image-counter { position: absolute; bottom: 15px; right: 15px; background-color: rgba(0,0,0,0.7); color: white; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 100; }
+
+/* ==========================================
+   🌙 รองรับโหมดมืด (Dark Mode)
+   ========================================== */
+body.dark-mode .loading-text { color: #94a3b8; }
+body.dark-mode .vehicle-card { background: #1e293b; border-color: #334155; }
+body.dark-mode .card-image-wrapper { background: #0f172a; border-color: #334155; }
+body.dark-mode .card-title { color: #f8fafc; }
+body.dark-mode #vehicleModal .modal-content { background-color: #1e293b; border-color: #334155; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+body.dark-mode #modalDetails { background: #1e293b; }
+body.dark-mode .info-content h2 { color: #f8fafc; border-bottom-color: #334155; }
+body.dark-mode .info-content p { color: #cbd5e1; }
+body.dark-mode .info-content strong { color: #e2e8f0; }
+body.dark-mode .action-buttons { border-top-color: #334155; }
+body.dark-mode #vehicleModal .close { background: #334155; color: #cbd5e1; box-shadow: none;}
+body.dark-mode #vehicleModal .close:hover { background: #7f1d1d; color: #f87171; }
+
+/* มือถือสลับเลย์เอาต์ */
+@media (max-width: 768px) {
+    .modal-layout-flex { flex-direction: column; height: auto; }
+    #vehicleModal .modal-content { height: 90vh; width: 95%; overflow-y: auto; }
+    .modal-image-container { height: 280px; flex: none; border-radius: 16px 16px 0 0; }
+    #modalDetails { padding: 20px; flex: auto; height: auto;}
+    .action-buttons { grid-template-columns: 1fr 1fr; } /* มือถือเรียงปุ่ม 2x2 */
+}

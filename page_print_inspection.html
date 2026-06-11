@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>พิมพ์ประวัติการตรวจสภาพ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/th-sarabun-new" rel="stylesheet">
+    
+<link rel="stylesheet" href="page_print_inspection_style.css">
+</head>
+<body>
+    
+    <div id="printFilterTemplate" style="display: none;">
+        <div class="filter-group" id="filter-group-print">
+            <button class="filter-btn active" data-filter="vehicle">ยานพาหนะ</button>
+            <button class="filter-btn" data-filter="fire">ถังดับเพลิง</button>
+            <button class="filter-btn" data-filter="refill">ประวัติเติมสาร</button>
+            
+            <input type="month" id="filterMonth" class="year-select-dropdown" title="ระบุเดือน/ปี" style="cursor: pointer; padding: 5px 12px; border-radius: 20px; font-family: 'Prompt', sans-serif;">
+            
+            <button class="filter-btn" id="btnPrintAction" style="background-color: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5);">
+                <i class="fa-solid fa-print"></i> 
+                <span id="btnPrintText">พิมพ์เอกสาร</span>
+            </button>
+        </div>
+    </div>
+    <div class="content-area" style="padding-top: 10px;">
+        <div id="loadingStatus">
+            ⌛ กำลังเชื่อมต่อข้อมูลจากระบบ... 
+        </div>
+        <div id="documentContainer"></div>
+    </div>
+
+    <script src="page_print_inspection_script.js"></script>
+</body>
+</html>

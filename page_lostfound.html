@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แจ้งของหาย/เก็บของได้</title>
+    <!-- โหลดฟอนต์ Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    
+    <!-- เชื่อมโยง CSS หลักของระบบที่มีอยู่แล้ว -->
+    <link rel="stylesheet" href="style.css">
+    <!-- เชื่อมโยง CSS เฉพาะของหน้า Lost & Found -->
+    <link rel="stylesheet" href="page_lostfound_style.css">
+</head>
+<body class="lf-body">
+
+    <!-- 🌟 กล่องซ่อนโค้ด Filter (Template) -->
+    <div id="lfFilterTemplate" style="display: none;">
+        <!-- กลุ่มปุ่มของ Lost & Found -->
+        <div class="filter-group" id="filter-group-lostfound">
+            <button class="filter-btn active" data-filter="all">ทั้งหมด <span class="badge">0</span></button>
+            <button class="filter-btn" data-filter="สิ่งของสูญหาย">แจ้งสูญหาย <span class="badge">0</span></button>
+            <button class="filter-btn" data-filter="พบสิ่งของ">เก็บของได้ <span class="badge">0</span></button>
+            <button class="filter-btn" data-filter="รับของคืน">รับคืนแล้ว <span class="badge">0</span></button>
+            
+            <!-- 🌟 ปรับเปลี่ยนเป็นปฏิทินเลือกแบบรายเดือน (type="month") -->
+            <input type="month" id="sub-filter-lf-month" class="year-select-dropdown" title="ระบุเดือนที่ค้นหา" style="cursor: pointer; padding: 5px 12px; border-radius: 20px; font-family: 'Prompt', sans-serif;">
+            
+        </div>
+        
+        <!-- ช่องค้นหา -->
+        <div class="search-container">
+            <input type="text" id="globalSearchInput" placeholder="ค้นหาชื่อสิ่งของ, สถานที่...">
+        </div>
+    </div>
+    <!-- 🌟 จบส่วนกล่องซ่อนโค้ด Filter -->
+
+    <!-- พื้นที่แสดงการ์ดรายการของหาย / เก็บของได้ -->
+    <div class="content-area">
+        <div class="gallery-grid" id="vehicleGallery">
+            <p class="lf-loading-text">กำลังเชื่อมต่อฐานข้อมูล L&F...</p>
+        </div>
+    </div>
+
+    <!-- 🌟 หน้าต่าง Popup แบบใหม่ (Modern Modal) 🌟 -->
+    <div id="lfActionModal" class="modal lf-modal-overlay">
+        <div class="modal-content lf-modal-content">
+            <!-- ส่วนหัว Modal -->
+            <div class="lf-modal-header">
+                <div class="lf-modal-title">
+                    <i class="fa-solid fa-circle-info" style="color: #059669; margin-right: 8px;"></i>
+                    รายละเอียดและสถานะ
+                </div>
+                <button class="lf-close-icon" onclick="document.getElementById('lfActionModal').style.display='none'">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <!-- ส่วนเนื้อหา Modal -->
+            <div class="lf-modal-body">
+                <div id="lfModalImageContainer" class="lf-modal-img-container">
+                    <img id="lfModalImage" src="" alt="รูปภาพสิ่งของ">
+                </div>
+                
+                <div class="lf-status-box">
+                    <div class="lf-status-label">บันทึกการดำเนินการ (Action Note):</div>
+                    <div id="lfModalText" class="lf-modal-text"></div>
+                </div>
+            </div>
+            
+            <!-- ส่วนท้าย Modal -->
+            <div class="lf-modal-footer">
+                <button class="lf-modal-close-btn" onclick="document.getElementById('lfActionModal').style.display='none'">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- เชื่อมโยงสคริปต์ JavaScript เฉพาะของหน้า Lost & Found -->
+    <script src="page_lostfound_script.js"></script>
+</body>
+</html>

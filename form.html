@@ -6,109 +6,234 @@
     <title>ฟอร์มบันทึกและตรวจสภาพ</title>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* จัดเลย์เอาต์ให้ฟอร์มอยู่ตรงกลาง โล่งๆ สะอาดตา */
+        body {
+            background-color: #f1f5f9;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Prompt', sans-serif;
+        }
+        .standalone-form-container {
+            background: #fff;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-header-title {
+            text-align: center;
+            color: #059669;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px dashed #e2e8f0;
+        }
+        @media (max-width: 600px) {
+            body { padding: 15px; }
+            .standalone-form-container { padding: 25px 20px; }
+            .form-header-title { font-size: 22px; }
+        }
+        
+        /* 🌟 ตกแต่ง Popup (SweetAlert2) ให้มีมิติแบบ Pro 🌟 */
+        .swal2-popup.custom-swal-popup {
+            border-radius: 24px !important; 
+            background: linear-gradient(145deg, #ffffff, #f8fafc) !important; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.05) !important; 
+        }
+        .swal2-title.custom-swal-title {
+            font-family: 'Prompt', sans-serif !important;
+            color: #166534 !important;
+            font-size: 26px !important;
+            font-weight: 600 !important;
+        }
+    </style>
 </head>
 <body>
-    <div class="app-container">
+
+    <div class="standalone-form-container">
+        <div class="form-header-title">ฟอร์มบันทึกและตรวจสภาพ</div>
         
-       <div class="sidebar">
-        <div class="sidebar-header">ระบบงานจราจร</div>
-        <ul class="sidebar-menu">
-            <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-staff').classList.toggle('show-submenu');" id="menu-staff">บุคลากร/พนักงาน ▾</a>
-                <ul class="submenu" id="submenu-staff">
-                    <li><a href="index.html?main=staff&unit=all">บุคลากรทั้งหมด</a></li>
-                    <li><a href="index.html?main=staff&unit=ยุทธศาสตร์">หน่วยยุทธศาสตร์ฯ</a></li>
-                    <li><a href="index.html?main=staff&unit=ปฏิบัติการ">หน่วยปฏิบัติการฯ</a></li>
-                </ul>
-            </li>
-
-            <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-mission').classList.toggle('show-submenu');" id="menu-mission">การดูแลพื้นที่ส่วนกลาง ▾</a>
-                <ul class="submenu" id="submenu-mission">
-                    <li><a href="index.html?main=mission&unit=ตรวจพื้นที่">ตรวจพื้นที่</a></li>
-                    <li><a href="index.html?main=mission&unit=ช่วยเหลือ">ให้ความช่วยเหลือ</a></li>
-                    <li><a href="index.html?main=mission&unit=การจราจร">งานจราจร</a></li>
-                    <li><a href="index.html?main=mission&unit=ตารางเวร">ตารางเวร</a></li>
-                </ul>
-            </li>
+        <form id="inspectionForm">
+            <div class="form-group">
+                <label>ผู้ตรวจสอบ: <span style="color:red">*</span></label>
+                <input type="text" id="inspector" name="inspector" value="ปราณี คำมี" required placeholder="ชื่อผู้ตรวจ">
+            </div>
             
-            <li><a href="index.html?main=vehicle" id="menu-vehicle">ยานพาหนะทั้งหมด</a></li>
+            <div class="form-group">
+                <label>ประเภท: <span style="color:red">*</span></label>
+                <select id="vehicleType" name="vehicleType" onchange="updateFormFields()" required>
+                    <option value="">-- เลือกประเภท --</option>
+                    <option value="รถจักรยานยนต์">รถจักรยานยนต์</option>
+                    <option value="รถจักรยานไฟฟ้า">รถจักรยานไฟฟ้า</option>
+                    <option value="รถกอล์ฟ">รถกอล์ฟ</option>
+                    <option value="อุปกรณ์ดับเพลิง">อุปกรณ์ดับเพลิง</option>
+                </select>
+            </div>
             
-            <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-fire').classList.toggle('show-submenu');" id="menu-fire">อุปกรณ์ดับเพลิง ▾</a>
-                <ul class="submenu" id="submenu-fire">
-                    <li><a href="index.html?main=fire&unit=ถังดับเพลิง">ถังดับเพลิง</a></li>
-                    <li><a href="index.html?main=fire&unit=สายส่งน้ำดับเพลิง">สายส่งน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=หัวฉีด">หัวฉีด</a></li>
-                    <li><a href="index.html?main=fire&unit=ปั๊มน้ำ">ปั๊มน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=ตู้เก็บอุปกรณ์">ตู้เก็บอุปกรณ์</a></li>
-                    <li><a href="index.html?main=fire&unit=หัวรับน้ำ">หัวรับน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=ชุด ppe">ชุด PPE</a></li>
-                </ul>              
-            </li>          
-
-            <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-traffic-manage').classList.toggle('show-submenu');" id="menu-traffic-manage">การจัดการจราจร ▾</a>
-                <ul class="submenu" id="submenu-traffic-manage">
-                    <li><a href="index.html?main=parking" id="menu-parking">ข้อมูลลานจอดรถ</a></li>
-                </ul>
-            </li>
-
-            <li><a href="index.html?main=form" id="menu-form">แบบฟอร์มต่างๆ</a></li>
-            <li><a href="index.html?main=lostfound" id="menu-lostfound">แจ้งของหาย/เก็บของได้</a></li>
+            <div id="dynamicFields"></div>
             
-            <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-report').classList.toggle('show-submenu');" id="menu-report-main">รายงานและสถิติ ▾</a>
-                <ul class="submenu" id="submenu-report">
-                    <li><a href="report.html?tab=daily">รายงานประจำวัน</a></li>
-                    <li><a href="report.html?tab=monthly">รายงานประจำเดือน</a></li>
-                    <li><a href="report.html?tab=security">รายงานตรวจรับ รปภ.</a></li>
-                </ul>
-            </li>
-            <li><a href="print_inspection.html" id="menu-print">ประวัติการตรวจสภาพ</a></li>
-        </ul>
+            <button type="submit" id="submitBtn" style="width: 100%; padding: 16px; background-color: #059669; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 30px; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);">
+                บันทึกข้อมูล
+            </button>
+        </form>
     </div>
-        
-        <div class="main-content">
-            <div class="header-dropdown-wrapper">
-                <header class="global-header" style="position: relative; transform: none;">
-                    <div class="header-top-row">
-                        <div class="header-brand">
-                            <div class="brand-text">
-                                <span class="brand-main">งานจราจรและความปลอดภัย</span>
-                                <span class="brand-sub">กองกายภาพและสิ่งแวดล้อม</span>
-                            </div>
+
+    <script>
+        // 🌟 ลิงก์ Apps Script ของคุณ 🌟
+        const scriptURL = "https://script.google.com/macros/s/AKfycbzWc03wzCkfUHs3pIucqNs_tz7BguxUlODGOihfiMgHgkQFx5Kc1DRlITg_SDR9lu4/exec"; 
+
+        const vehicleItems = ["ลมยาง (ระดับความดันปกติ ไม่แบนรั่ว)", "สภาพเนื้อยาง / ดอกยาง (ไม่มีรอยปริแตก ซึม หรือฉีกขาด)", "สภาพกะทะล้อ / น็อตล้อ (ไม่คดดุ้ง ขันแน่น)", "ระบบเบรก (หน้า-หลัง / เบรกมือ)", "ระบบบังคับเลี้ยว / โช้คอัพ / ช่วงล่าง", "ระบบไฟฟ้า / ส่องสว่าง / แตร / สัญญาณเตือน", "แบตเตอรี่ / สายชาร์จ / ระดับของเหลว", "ระบบขับเคลื่อน (โซ่ / สายพาน / มอเตอร์)", "สภาพตัวถัง / เบาะนั่ง / กระจกมองข้าง"];
+        const fireExtinguisherItems = ["สภาพตัวถัง (ไม่บุบ ไม่เป็นสนิม)", "แรงดันในเกจ์วัด (เข็มต้องอยู่ในแถบสีเขียว)", "สายส่งน้ำดับเพลิงและหัวฉีด (ไม่แตก ไม่ตัน)", "สลักล็อกและซีลตะกั่ว (ต้องอยู่ครบ ไม่ถูกดึงออก)", "คันบีบและข้อต่อ (ไม่ค้าง ไม่หลวม)", "ป้ายคำแนะนำการใช้ (ชัดเจน ไม่หลุดลอก)", "ตำแหน่งที่ติดตั้ง (เข้าถึงง่าย ไม่มีสิ่งกีดขวาง)", "ฐานรองหรือที่แขวน (มั่นคงแข็งแรง)", "อายุการใช้งาน (ยังไม่หมดอายุตามป้ายระบุ)"];
+
+        const fireKeywords = ['อุปกรณ์ดับเพลิง', 'ถังดับเพลิง', 'สายส่งน้ำดับเพลิง', 'สายฉีด', 'หัวฉีด', 'ปั๊มน้ำ', 'ตู้เก็บอุปกรณ์', 'หัวรับน้ำ'];
+
+        // โหลดข้อมูลจาก URL อัตโนมัติ (รับค่าจากการ์ด)
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.has('type')) {
+                let type = urlParams.get('type');
+                
+                const isFire = fireKeywords.some(keyword => type.includes(keyword));
+                if(isFire) type = 'อุปกรณ์ดับเพลิง';
+                else if(type.includes('กอล์ฟ')) type = 'รถกอล์ฟ'; 
+                else if(type.includes('จักรยานยนต์')) type = 'รถจักรยานยนต์';
+                else if(type.includes('จักรยานไฟฟ้า') || type.includes('ไฟฟ้า')) type = 'รถจักรยานไฟฟ้า';
+
+                document.getElementById('vehicleType').value = type;
+                updateFormFields(); 
+
+                // เติมข้อมูลลงช่องอัตโนมัติ
+                setTimeout(() => {
+                    if(document.getElementsByName('vehicleDetail')[0]) document.getElementsByName('vehicleDetail')[0].value = urlParams.get('detail') || '';
+                    if(document.getElementsByName('color')[0]) document.getElementsByName('color')[0].value = urlParams.get('color') || '';
+                    if(document.getElementsByName('licensePlate')[0]) document.getElementsByName('licensePlate')[0].value = urlParams.get('plate') || '';
+                    if(document.getElementsByName('equipNumber')[0]) document.getElementsByName('equipNumber')[0].value = urlParams.get('equip') || '';
+                }, 200);
+            }
+        };
+
+        // แสดงช่องระบุสาเหตุเมื่อกด "ไม่ปกติ"
+        window.toggleReason = function(index, isAbnormal) {
+            const reasonInput = document.getElementById(`reason_${index}`);
+            if(isAbnormal) { 
+                reasonInput.classList.add('show'); 
+                reasonInput.setAttribute('required', 'true'); 
+            } else { 
+                reasonInput.classList.remove('show'); 
+                reasonInput.removeAttribute('required'); 
+                reasonInput.value = ''; 
+            }
+        };
+
+        // วาดฟอร์มตามประเภท
+        function updateFormFields() {
+            const type = document.getElementById('vehicleType').value;
+            const dynamicFields = document.getElementById('dynamicFields');
+            let html = ''; 
+            let currentItems = [];
+
+            if (type === 'รถจักรยานยนต์') {
+                html += `<div class="form-group"><label>ยี่ห้อ/รุ่น:</label><input type="text" name="vehicleDetail" required></div>
+                         <div class="form-group"><label>สีรถ:</label><input type="text" name="color" required></div>
+                         <div class="form-group"><label>ทะเบียน:</label><input type="text" name="licensePlate" required></div>
+                         <div class="form-group"><label>หมายเลขครุภัณฑ์:</label><input type="text" name="equipNumber" required></div>`;
+                currentItems = vehicleItems;
+            } else if (type === 'รถจักรยานไฟฟ้า' || type === 'รถกอล์ฟ') {
+                let labelName = (type === 'รถกอล์ฟ') ? "ชื่อรถกอล์ฟ" : "รายละเอียดรถ";
+                html += `<div class="form-group"><label>${labelName}:</label><input type="text" name="vehicleDetail" required></div>
+                         <div class="form-group"><label>สีรถ:</label><input type="text" name="color" required></div>
+                         <input type="hidden" name="licensePlate" value="-"><input type="hidden" name="equipNumber" value="-">`;
+                currentItems = vehicleItems;
+            } else if (type === 'อุปกรณ์ดับเพลิง') {
+                html += `<div class="form-group"><label>ชื่ออุปกรณ์ / ชนิดถัง:</label><input type="text" name="vehicleDetail" placeholder="เช่น ถังดับเพลิง CO2" required></div>
+                         <div class="form-group"><label>ตำแหน่งที่ติดตั้ง:</label><input type="text" name="color" placeholder="เช่น อาคารสำนักงาน ชั้น 1" required></div>
+                         <div class="form-group"><label>รหัสถัง/รหัสอุปกรณ์:</label><input type="text" name="licensePlate" placeholder="ถ้าไม่มีให้ใส่ -" required></div>
+                         <div class="form-group"><label>หมายเลขครุภัณฑ์:</label><input type="text" name="equipNumber" placeholder="ถ้าไม่มีให้ใส่ -" required></div>`;
+                currentItems = fireExtinguisherItems;
+            }
+
+            if (type !== '') {
+                html += `<div class="checklist-container"><h4>รายการตรวจสภาพ (${type})</h4>`;
+                currentItems.forEach((item, idx) => {
+                    html += `<div class="checklist-item"><span class="chk-label">${idx + 1}. ${item}</span>
+                            <div class="checklist-options">
+                                <label class="radio-label"><input type="radio" name="chk_${idx}" value="ปกติ" onchange="toggleReason(${idx}, false)" required checked> ปกติ</label>
+                                <label class="radio-label check-fail"><input type="radio" name="chk_${idx}" value="ไม่ปกติ" onchange="toggleReason(${idx}, true)" required> ไม่ปกติ</label>
+                            </div><input type="text" id="reason_${idx}" name="reason_${idx}" class="reason-input" placeholder="ระบุสาเหตุที่ ไม่ปกติ..."></div>`;
+                });
+                
+                html += `</div>
+                        <div class="final-status-box form-group">
+                            <label>สรุปสถานะหลังการตรวจสภาพ:</label>
+                            <select name="finalStatus" required style="font-weight:bold; font-size:16px;">
+                                <option value="สามารถใช้งานได้" selected>✅ สามารถใช้งานได้ (ปกติ)</option>
+                                <option value="ไม่สามารถใช้งานได้ (ต้องส่งซ่อม/แก้ไข)">❌ ไม่สามารถใช้งานได้ (ชำรุด/แจ้งซ่อม)</option>
+                            </select>
                         </div>
-                        <div class="header-right"><span class="dept-name">มหาวิทยาลัยมหิดล</span></div>
-                    </div>
-                    <div class="header-action-row">
-                        <div class="page-title">ฟอร์มบันทึกและตรวจสภาพ</div>
-                    </div>
-                </header>
-            </div>
-            
-            <div class="content-area">
-                <div class="form-layout-container" style="padding-top: 0;">
-                    <div class="form-section">
-                        <form id="inspectionForm">
-                            <div class="form-group"><label>ผู้ตรวจสอบ:</label><input type="text" name="inspector" required placeholder="ชื่อผู้ตรวจ"></div>
-                            <div class="form-group"><label>ประเภท:</label><select id="vehicleType" name="vehicleType" onchange="updateFormFields()" required><option value="">-- เลือกประเภท --</option><option value="รถจักรยานยนต์">รถจักรยานยนต์</option><option value="รถจักรยานไฟฟ้า">รถจักรยานไฟฟ้า</option><option value="รถกอล์ฟ">รถกอล์ฟ</option><option value="อุปกรณ์ดับเพลิง">อุปกรณ์ดับเพลิง</option></select></div>
-                            <div id="dynamicFields"></div>
-                            <div class="form-group" style="margin-top: 20px;"><label>สถานะทั่วไป (สำหรับลงบันทึกประจำวัน):</label><select id="status" name="status" required><option value="ปกติ" selected>ปกติ (พร้อมใช้งาน)</option><option value="แจ้งซ่อม">ชำรุด / แจ้งซ่อม</option></select></div>
-                            <div class="form-group"><label>หมายเหตุ / อาการชำรุดเพิ่มเติม (ถ้ามี):</label><textarea name="note" rows="3" placeholder="ระบุอาการชำรุดเพิ่มเติม"></textarea></div>
-                            <button type="submit" id="submitBtn">บันทึกข้อมูล</button>
-                            <div id="message"></div>
-                        </form>
-                    </div>
-                </div>
-            </div>
+                        <div class="form-group" style="margin-top: 20px;">
+                            <label>หมายเหตุ / อาการชำรุดเพิ่มเติม (ถ้ามี):</label>
+                            <textarea name="note" rows="3" placeholder="ระบุรายละเอียด หรือข้อควรระวังเพิ่มเติม..."></textarea>
+                        </div>`;
+            }
+            dynamicFields.innerHTML = html;
+        }
 
-            <footer class="global-footer">
-                <p>© 2026 งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม มหาวิทยาลัยมหิดล</p>
-                <p>| โทร: 0-2849-6000</p>
-            </footer>
-        </div>
-    </div>
-    <script src="script.js"></script>
+        // 🌟 ระบบ Submit ทำงานเบื้องหลัง (Background Fetch) 🌟
+        document.getElementById('inspectionForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const form = document.getElementById('inspectionForm');
+            const formData = new FormData(form);
+            const type = document.getElementById('vehicleType').value;
+            let targetItems = (type === 'อุปกรณ์ดับเพลิง') ? fireExtinguisherItems : vehicleItems;
+
+            // รวบรวมข้อมูล Checklist จัดเป็น JSON
+            if (document.getElementsByName('chk_0').length > 0) {
+                let checksArray = [];
+                for(let i=0; i < targetItems.length; i++) {
+                    let chkStatus = formData.get(`chk_${i}`); 
+                    let reason = formData.get(`reason_${i}`);
+                    let itemName = targetItems[i].split('(')[0].trim(); 
+                    
+                    if (chkStatus === 'ไม่ปกติ') checksArray.push(`(${itemName}) ไม่ปกติ: ${reason}`);
+                    else checksArray.push(`(${itemName}) ปกติ`);
+                }
+                formData.append('checklistJSON', JSON.stringify({ checks: checksArray, finalStatus: formData.get('finalStatus') }));
+            }
+
+            // แสดง Popup ส่งสำเร็จทันที 
+            Swal.fire({ 
+                title: 'ส่งสำเร็จ', 
+                icon: 'success', 
+                timer: 1500, 
+                showConfirmButton: false,
+                backdrop: `rgba(15, 23, 42, 0.5)`,
+                customClass: {
+                    popup: 'custom-swal-popup',
+                    title: 'custom-swal-title'
+                }
+            }).then(() => {
+                // ยิงข้อมูลไป Google Sheet แบบไม่ต้องรอ (keepalive: true อนุญาตให้ส่งคำร้องขอแม้แท็บจะถูกปิด)
+                fetch(scriptURL, { method: 'POST', body: formData, keepalive: true }).catch(console.error);
+
+                // ปิดแท็บนี้เพื่อเด้งกลับไปหน้าแกลเลอรี่ถังดับเพลิงทันที
+                window.close();
+                
+                // หาก browser บล็อกการปิดแท็บ (เปิดจากลิงก์เดิม) จะทำการ redirect กลับไปหน้าเดิม
+                setTimeout(() => {
+                    window.location.href = 'index.html?main=fire&unit=ถังดับเพลิง';
+                }, 300);
+            });
+        });
+    </script>
 </body>
 </html>

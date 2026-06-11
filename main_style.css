@@ -1,0 +1,375 @@
+/* ==========================================
+   GLOBAL VARIABLES
+   ========================================== */
+:root {
+    --primary-color: #059669; /* สีเขียวหลัก */
+    --primary-dark: #047857; 
+    --sidebar-bg: #059669; /* 🌟 สีเดียวกับ Header */
+    --sidebar-text: #ffffff; /* 🌟 ตัวอักษรสีขาว */
+    --sidebar-hover: #ffffff; /* 🌟 พื้นหลังตอน Hover เป็นสีขาว */
+    --sidebar-hover-text: #059669; /* 🌟 ตัวอักษรตอน Hover เป็นสีเขียว */
+    --bg-color: #f1f5f9; 
+    --text-color: #0f172a; 
+    --sidebar-collapsed-width: 75px; 
+    --sidebar-expanded-width: 270px; 
+    --border-color: rgba(255,255,255,0.2); 
+    --header-text: #ffffff;
+}
+
+/* 🌟 โทนสี Dark Mode แบบถนอมสายตา (Premium Slate) */
+body.dark-mode {
+    --primary-color: #1e293b; /* สี Header ปรับเป็นเทาเข้มอมฟ้า ดูพรีเมียมและลดแสงแยงตา */
+    --primary-dark: #0f172a; 
+    --sidebar-bg: #1e293b; /* สี Sidebar เป็นเทาเข้ม (โทนเดียวกับ Header) */
+    --sidebar-text: #cbd5e1; /* สีอักษรเป็นเทาอ่อนๆ (ไม่ใช้ขาวล้วน เพราะจะสะท้อนตา) */
+    --sidebar-hover: #334155; /* สีพื้นหลังเวลาเอาเมาส์ชี้ เป็นเทาสว่างขึ้นนิดหน่อย */
+    --sidebar-hover-text: #34d399; /* 🌟 สีไฮไลท์ตอนเลือกเมนู ใช้ "สีเขียวมินต์ (Mint)" จะตัดกับพื้นดำได้สวยและอ่านง่ายมาก */
+    --bg-color: #0f172a; /* สีพื้นหลังจอหลัก (Iframe) ให้มืดกว่า Sidebar เล็กน้อย เพื่อสร้างมิติ */
+    --text-color: #e2e8f0; 
+    --border-color: rgba(255,255,255,0.08); /* สีเส้นขอบบางๆ */
+    --header-text: #f8fafc;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
+
+html, body {
+    width: 100vw; height: 100vh; margin: 0; padding: 0;
+    overflow: hidden; background-color: var(--bg-color); color: var(--text-color);
+    display: flex; transition: background-color 0.3s, color 0.3s;
+}
+
+/* ==========================================
+   SIDEBAR (ยืดหดอัตโนมัติด้วย Hover)
+   ========================================== */
+.sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--sidebar-collapsed-width); /* 🌟 ขนาดเริ่มต้นตอนพับ */
+    height: 100vh;
+    background-color: var(--sidebar-bg); 
+    color: var(--sidebar-text);
+    display: flex; flex-direction: column; 
+    z-index: 1000;
+    box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+    transition: width 0.3s ease; /* 🌟 แอนิเมชันยืดหด */
+    overflow-x: hidden;
+    white-space: nowrap;
+}
+
+/* 🌟 เมื่อเอาเมาส์ชี้ ให้ความกว้างขยายออก */
+.sidebar:hover {
+    width: var(--sidebar-expanded-width);
+}
+
+.sidebar-header {
+    padding: 20px 0; background-color: rgba(0,0,0,0.1); 
+    color: var(--header-text); font-size: 18px; font-weight: bold; 
+    display: flex; align-items: center; padding-left: 25px;
+    height: 68px; flex-shrink: 0;
+}
+
+.sidebar-header i { width: 30px; font-size: 20px; }
+
+.sidebar-menu { list-style: none; overflow-y: auto; overflow-x: hidden; flex-grow: 1; padding-top: 15px; }
+
+.sidebar-menu li a {
+    display: flex; align-items: center;
+    padding: 12px 10px 12px 25px; 
+    color: var(--sidebar-text); text-decoration: none;
+    font-weight: 500; transition: 0.2s;
+    margin: 5px 15px 5px 10px; /* 🌟 เว้นขอบซ้ายขวาให้เป็นแคปซูล */
+    border-radius: 8px; /* 🌟 มุมโค้งมนเหมือนงานภูมิทัศน์ */
+}
+
+.menu-icon { width: 30px; font-size: 18px; text-align: left; flex-shrink: 0; transition: 0.2s; }
+
+/* 🌟 ซ่อนข้อความตอนพับ และแสดงตอนยืด */
+.menu-text, .arrow-icon {
+    opacity: 0; transition: opacity 0.2s; display: inline-block; vertical-align: middle;
+}
+.sidebar:hover .menu-text, .sidebar:hover .arrow-icon {
+    opacity: 1; transition-delay: 0.1s;
+}
+
+.arrow-icon { margin-left: auto; font-size: 12px; }
+
+/* 🌟 ไฮไลท์ตอนเลือกเมนู (แสดงเฉพาะตอนเอาเมาส์ชี้ให้ Sidebar กางออกเท่านั้น) */
+.sidebar:hover .sidebar-menu li a:hover, 
+.sidebar:hover .sidebar-menu li a.active { 
+    background-color: var(--sidebar-hover); 
+    color: var(--sidebar-hover-text); 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+/* ==========================================
+   SUBMENU
+   ========================================== */
+.submenu { display: none; background: rgba(0,0,0,0.15); margin: 0 15px 5px 10px; border-radius: 8px; }
+.submenu.show-submenu { display: block; animation: slideDown 0.3s ease; }
+.submenu li a { padding: 10px 15px 10px 45px; font-size: 14px; font-weight: 400; color: rgba(255,255,255,0.8); margin: 2px 0; }
+
+/* 🌟 1. บังคับซ่อนเมนูย่อยทั้งหมดเวลาพับ Sidebar */
+.sidebar:not(:hover) .submenu { 
+    display: none !important; 
+}
+
+/* 🌟 2. ไฮไลท์เมนูย่อยเฉพาะตอนกาง Sidebar เท่านั้น */
+.sidebar:hover .submenu li a:hover, 
+.sidebar:hover .submenu li a.active { 
+    color: var(--sidebar-hover-text); 
+    font-weight: 500; 
+    background-color: var(--sidebar-hover); 
+}
+
+@keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ==========================================
+   MAIN CONTENT & HEADER
+   ========================================== */
+.main-content {
+    margin-left: var(--sidebar-collapsed-width); /* 🌟 ถอยให้แถบพับ */
+    width: calc(100vw - var(--sidebar-collapsed-width));
+    flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    background-color: var(--bg-color); transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+.global-header {
+    background-color: var(--primary-color); padding: 0 30px; height: 68px;
+    color: var(--header-text); box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    z-index: 50; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; 
+}
+
+.header-left { display: flex; align-items: center; gap: 15px; }
+.page-title { font-size: 22px; font-weight: 600; }
+.dept-name { font-size: 16px; font-weight: 500; opacity: 0.9; }
+
+/* ==========================================
+   IFRAME AREA
+   ========================================== */
+.content-area { flex: 1; width: 100%; position: relative; overflow: hidden; }
+#contentFrame { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; display: block; }
+
+/* ==========================================
+   MOBILE RESPONSIVE
+   ========================================== */
+.mobile-toggle-btn { display: none; background: transparent; border: none; color: white; font-size: 24px; cursor: pointer; }
+.sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+
+@media (max-width: 768px) {
+    .sidebar { width: var(--sidebar-expanded-width) !important; transform: translateX(-100%); }
+    .sidebar:hover { width: var(--sidebar-expanded-width); }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar .menu-text, .sidebar .arrow-icon { opacity: 1; }
+    
+    .main-content { margin-left: 0; width: 100vw; }
+    .mobile-toggle-btn { display: block; }
+    .global-header { padding: 0 20px; }
+    .sidebar-overlay.show { display: block; }
+}
+/* ==========================================
+   🌟 SETTINGS MODAL (ป๊อปอัปตั้งค่า)
+   ========================================== */
+.settings-modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.4); backdrop-filter: blur(3px);
+    z-index: 9999; display: none; justify-content: center; align-items: center;
+    opacity: 0; transition: opacity 0.3s;
+}
+.settings-modal-overlay.show { display: flex; opacity: 1; }
+
+.settings-modal-content {
+    background: #ffffff; width: 90%; max-width: 650px;
+    border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    overflow: hidden; border: 1px solid var(--border-color);
+}
+.settings-modal-overlay.show .settings-modal-content { transform: translateY(0); }
+
+.settings-modal-header {
+    padding: 20px 25px; border-bottom: 1px solid #e2e8f0;
+    display: flex; justify-content: space-between; align-items: center;
+    background: #f8fafc;
+}
+.settings-modal-header h3 { font-size: 20px; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 10px; }
+.close-modal-btn { background: none; border: none; font-size: 28px; color: #64748b; cursor: pointer; transition: 0.2s; }
+.close-modal-btn:hover { color: #ef4444; transform: scale(1.1); }
+
+.settings-modal-body { padding: 25px; display: flex; flex-direction: column; gap: 20px; }
+
+.setting-row {
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.3s;
+}
+.setting-row:hover { border-color: #cbd5e1; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+
+.setting-info { display: flex; align-items: center; gap: 20px; }
+.setting-icon { font-size: 26px; color: #3b82f6; width: 40px; text-align: center; }
+.setting-icon.theme { color: #f59e0b; }
+.setting-title { font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 3px; }
+.setting-desc { font-size: 13px; color: #64748b; }
+
+.lang-toggle-group { display: flex; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
+.lang-btn { background: #f8fafc; border: none; padding: 10px 20px; font-size: 15px; font-weight: 600; cursor: pointer; color: #64748b; transition: 0.2s; }
+.lang-btn.active { background: #059669; color: white; }
+
+.theme-toggle-btn {
+    background: #1e293b; color: white; border: none; padding: 10px 20px; border-radius: 8px;
+    font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;
+}
+.theme-toggle-btn:hover { background: #0f172a; transform: translateY(-1px); }
+
+/* 🌟 Dark Mode สำหรับ Modal */
+body.dark-mode .settings-modal-content { background: #0f172a; border-color: #334155; }
+body.dark-mode .settings-modal-header { background: #1e293b; border-color: #334155; }
+body.dark-mode .settings-modal-header h3 { color: #f8fafc; }
+body.dark-mode .setting-row { background: #1e293b; border-color: #334155; }
+body.dark-mode .setting-row:hover { border-color: #475569; }
+body.dark-mode .setting-title { color: #f8fafc; }
+body.dark-mode .setting-desc { color: #94a3b8; }
+body.dark-mode .lang-toggle-group { border-color: #475569; }
+body.dark-mode .lang-btn { background: #0f172a; color: #94a3b8; }
+body.dark-mode .lang-btn.active { background: #10b981; color: white; }
+body.dark-mode .theme-toggle-btn { background: #f59e0b; color: #0f172a; }
+body.dark-mode .theme-toggle-btn:hover { background: #d97706; }
+/* ==========================================
+   FOOTER (ส่วนท้ายกระดาษ)
+   ========================================== */
+.global-footer {
+    background-color: #ffffff; /* 🌟 พื้นหลังสีขาว */
+    padding: 15px 30px; 
+    font-size: 14px; 
+    color: #475569;
+    border-top: 1px solid #cbd5e1; /* 🌟 เส้นขอบคั่นด้านบน */
+    display: flex; 
+    justify-content: space-between; /* 🌟 ดันข้อความไปซ้ายสุด-ขวาสุด จะได้ไม่ซ้อนกัน */
+    align-items: center;
+    z-index: 50;
+    flex-shrink: 0; /* 🌟 ล็อคความสูงไว้ไม่ให้โดนบีบ */
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+/* 🌟 กรณีเปิดในหน้าจอมือถือ ให้ข้อความเรียงลงมาเป็น 2 บรรทัดจะได้ไม่ล้น */
+@media (max-width: 768px) {
+    .global-footer {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+        font-size: 12px;
+        padding: 15px 20px;
+    }
+}
+
+/* 🌟 รองรับโหมดกลางคืน (Dark Mode) */
+body.dark-mode .global-footer {
+    background-color: #1e293b;
+    color: #cbd5e1;
+    border-top-color: #334155;
+}
+/* ==========================================
+   DYNAMIC HEADER FILTERS STYLE (ช่องจัดวางฟิลเตอร์บน Header)
+   ========================================== */
+.header-center-filters {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto; /* ดันฟิลเตอร์ไปทางขวา */
+    margin-right: 25px; /* เว้นระยะห่างจากชื่อมหาวิทยาลัย */
+}
+
+/* กลุ่มปุ่มกดกรองข้อมูล */
+.header-center-filters .filter-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* ตกแต่งปุ่มกดให้ออกแนวโปร่งแสงบนพื้นเขียว */
+.header-center-filters .filter-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 400;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.header-center-filters .filter-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* สไตล์เมื่อปุ่มกำลังถูกเลือก (Active) */
+.header-center-filters .filter-btn.active {
+    background: #ffffff;
+    color: #047857; /* เปลี่ยนตัวอักษรเป็นสีเขียวเข้มตามธีมหลัก */
+    font-weight: 600;
+    border-color: #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* ตัวเลข Badge สถิติมุมขวาของปุ่ม */
+.header-center-filters .filter-btn .badge {
+    background: rgba(0, 0, 0, 0.2);
+    color: #ffffff;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+}
+
+.header-center-filters .filter-btn.active .badge {
+    background: #047857;
+    color: #ffffff;
+}
+
+/* สไตล์ช่องกรองรายเดือน Dropdown */
+.header-center-filters .year-select-dropdown {
+    background-color: #ffffff;
+    color: #0f172a;
+    padding: 5px 12px;
+    font-weight: 500;
+    border-radius: 20px;
+    border: 1px solid #cbd5e1;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+}
+
+/* สไตล์กล่องค้นหา Text Input บน Header */
+.header-center-filters .search-container input {
+    padding: 6px 15px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-size: 13px;
+    width: 200px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.header-center-filters .search-container input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.header-center-filters .search-container input:focus {
+    background: #ffffff;
+    color: #0f172a;
+    border-color: #ffffff;
+}
+
+/* 🌙 รองรับดีไซน์โหมดมืด (Dark Mode) */
+body.dark-mode .header-center-filters .filter-btn.active {
+    background: #38bdf8; /* สีฟ้าสว่างในโหมดมืด */
+    color: #0f172a;
+    border-color: #38bdf8;
+}
+body.dark-mode .header-center-filters .filter-btn.active .badge {
+    background: #0f172a;
+    color: #38bdf8;
+}

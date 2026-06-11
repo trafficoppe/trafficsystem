@@ -8,134 +8,116 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        .waste-container { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eaeaea; max-width: 800px; margin: 0 auto 50px auto; }
+        body {
+            background-color: #f1f5f9; 
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+        .waste-container { 
+            background: #fff; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+            border: 1px solid #e2e8f0; 
+            width: 100%;
+            max-width: 800px; 
+            margin: 0 auto; 
+        }
+        .form-header-title {
+            text-align: center;
+            color: #27ae60;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding-bottom: 20px;
+            border-bottom: 2px dashed #e2e8f0;
+        }
         .section-title { margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #27ae60; padding-bottom: 5px; color: #2c3e50; font-size: 20px; font-weight: bold; }
         .summary-box { border: 2px solid #27ae60; background-color: #e8f8f5; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+        
+        @media (max-width: 600px) {
+            body { padding: 15px; }
+            .waste-container { padding: 25px 20px; }
+            .summary-box { flex-direction: column; align-items: flex-start; gap: 10px; }
+        }
+
+        /* ==========================================
+           🌟 ตกแต่ง Popup (SweetAlert2) ให้มีมิติแบบ Pro 🌟
+           ========================================== */
+        .swal2-popup.custom-swal-popup {
+            border-radius: 24px !important; /* ขอบโค้งมนทันสมัย */
+            background: linear-gradient(145deg, #ffffff, #f8fafc) !important; /* ไล่สีพื้นหลังสร้างมิติ */
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.05) !important; /* เงาซ้อนชั้น */
+            padding: 2em 1.5em !important;
+        }
+        
+        .swal2-title.custom-swal-title {
+            font-family: 'Kanit', sans-serif !important;
+            color: #166534 !important; /* สีเขียวเข้มพรีเมียม */
+            font-size: 26px !important;
+            font-weight: 600 !important;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+            margin-top: 10px !important;
+        }
+
+        /* แต่งไอคอนติ๊กถูกให้มีแสงเงา */
+        .swal2-icon.swal2-success {
+            border-color: #22c55e !important;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3) !important; /* แสงเรืองรองสีเขียว */
+        }
+        .swal2-icon.swal2-success [class^=swal2-success-line] {
+            background-color: #22c55e !important;
+        }
+        .swal2-icon.swal2-success .swal2-success-ring {
+            border-color: rgba(34, 197, 94, 0.2) !important;
+        }
     </style>
 </head>
 <body>
-    <div class="app-container">
+
+    <div class="waste-container">
+        <div class="form-header-title">แบบฟอร์มบันทึกการคัดแยกขยะ</div>
         
-        <div class="sidebar">
-        <div class="sidebar-header">ระบบงานจราจร</div>
-        <ul class="sidebar-menu">
-            <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-staff').classList.toggle('show-submenu');" id="menu-staff">บุคลากร/พนักงาน ▾</a>
-                <ul class="submenu" id="submenu-staff">
-                    <li><a href="index.html?main=staff&unit=all">บุคลากรทั้งหมด</a></li>
-                    <li><a href="index.html?main=staff&unit=ยุทธศาสตร์">หน่วยยุทธศาสตร์ฯ</a></li>
-                    <li><a href="index.html?main=staff&unit=ปฏิบัติการ">หน่วยปฏิบัติการฯ</a></li>
-                </ul>
-            </li>
+        <form id="wasteForm">
+            <div class="section-title">ข้อมูลผู้รายงาน</div>
+            <div class="form-group"><label>ชื่อ-สกุล ผู้รายงาน *</label><input type="text" id="reporterName" name="reporterName" value="ปราณี คำมี" required></div>
+            <div class="form-group"><label>ตำแหน่ง *</label><input type="text" id="position" name="position" value="พนักงานทำความสะอาด" required></div>
 
-            <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-mission').classList.toggle('show-submenu');" id="menu-mission">การดูแลพื้นที่ส่วนกลาง ▾</a>
-                <ul class="submenu" id="submenu-mission">
-                    <li><a href="index.html?main=mission&unit=ตรวจพื้นที่">ตรวจพื้นที่</a></li>
-                    <li><a href="index.html?main=mission&unit=ช่วยเหลือ">ให้ความช่วยเหลือ</a></li>
-                    <li><a href="index.html?main=mission&unit=การจราจร">งานจราจร</a></li>
-                    <li><a href="index.html?main=mission&unit=ตารางเวร">ตารางเวร</a></li>
-                </ul>
-            </li>
+            <div class="section-title">ปริมาณขยะ (กิโลกรัม)</div>
+            <p style="font-size: 14px; color: #e74c3c; margin-bottom: 15px;">* กรอกเฉพาะตัวเลข หากไม่มีให้เว้นว่างไว้ หรือใส่ 0</p>
             
-            <li><a href="index.html?main=vehicle" id="menu-vehicle">ยานพาหนะทั้งหมด</a></li>
-            
-            <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-fire').classList.toggle('show-submenu');" id="menu-fire">อุปกรณ์ดับเพลิง ▾</a>
-                <ul class="submenu" id="submenu-fire">
-                    <li><a href="index.html?main=fire&unit=ถังดับเพลิง">ถังดับเพลิง</a></li>
-                    <li><a href="index.html?main=fire&unit=สายส่งน้ำดับเพลิง">สายส่งน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=หัวฉีด">หัวฉีด</a></li>
-                    <li><a href="index.html?main=fire&unit=ปั๊มน้ำ">ปั๊มน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=ตู้เก็บอุปกรณ์">ตู้เก็บอุปกรณ์</a></li>
-                    <li><a href="index.html?main=fire&unit=หัวรับน้ำ">หัวรับน้ำ</a></li>
-                    <li><a href="index.html?main=fire&unit=ชุด ppe">ชุด PPE</a></li>
-                </ul>              
-            </li>          
-
-            <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-traffic-manage').classList.toggle('show-submenu');" id="menu-traffic-manage">การจัดการจราจร ▾</a>
-                <ul class="submenu" id="submenu-traffic-manage">
-                    <li><a href="index.html?main=parking" id="menu-parking">ข้อมูลลานจอดรถ</a></li>
-                </ul>
-            </li>
-
-            <li><a href="index.html?main=form" id="menu-form">แบบฟอร์มต่างๆ</a></li>
-            <li><a href="index.html?main=lostfound" id="menu-lostfound">แจ้งของหาย/เก็บของได้</a></li>
-            
-            <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-report').classList.toggle('show-submenu');" id="menu-report-main">รายงานและสถิติ ▾</a>
-                <ul class="submenu" id="submenu-report">
-                    <li><a href="report.html?tab=daily">รายงานประจำวัน</a></li>
-                    <li><a href="report.html?tab=monthly">รายงานประจำเดือน</a></li>
-                    <li><a href="report.html?tab=security">รายงานตรวจรับ รปภ.</a></li>
-                </ul>
-            </li>
-            <li><a href="print_inspection.html" id="menu-print">ประวัติการตรวจสภาพ</a></li>
-        </ul>
-    </div>
-        
-        <div class="main-content">
-            
-            <div class="header-dropdown-wrapper">
-                <div class="header-grabber" title="เลื่อนเมาส์เพื่อแสดงเมนู"><div class="grabber-line"></div></div>
-                <header class="global-header">
-                    <div class="header-top-row">
-                        <div class="header-brand"></div>
-                    </div>
-                    
-                    <div class="header-action-row">
-                        <div class="page-title">แบบฟอร์มบันทึกการคัดแยกขยะ</div>
-                    </div>
-                </header>
-            </div>
-            
-            <div class="content-area">
-                <div class="waste-container">
-                    <form id="wasteForm">
-                        <div class="section-title">ข้อมูลผู้รายงาน</div>
-                        <div class="form-group"><label>ชื่อ-สกุล ผู้รายงาน *</label><input type="text" id="reporterName" name="reporterName" value="พนักงานทำความสะอาด" required></div>
-                        <div class="form-group"><label>ตำแหน่ง *</label><input type="text" id="position" name="position" value="พนักงานทำความสะอาด" required></div>
-
-                        <div class="section-title">ปริมาณขยะ (กิโลกรัม)</div>
-                        <p style="font-size: 14px; color: #e74c3c; margin-bottom: 15px;">* กรอกเฉพาะตัวเลข หากไม่มีให้เว้นว่างไว้ หรือใส่ 0</p>
-                        
-                        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                            <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะทั่วไป</label><input type="number" step="0.01" class="waste-input" name="wasteGeneral" placeholder="0"></div>
-                            <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะรีไซเคิล</label><input type="number" step="0.01" class="waste-input" name="wasteRecycle" placeholder="0"></div>
-                            <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะกำพร้า</label><input type="number" step="0.01" class="waste-input" name="wasteOrphan" placeholder="0"></div>
-                            <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะอินทรีย์/ขยะเปียก</label><input type="number" step="0.01" class="waste-input" name="wasteOrganic" placeholder="0"></div>
-                            <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะอันตราย</label><input type="number" step="0.01" class="waste-input" name="wasteHazard" placeholder="0"></div>
-                            <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะติดเชื้อ (ถ้ามี)</label><input type="number" step="0.01" class="waste-input" name="wasteInfect" placeholder="0"></div>
-                        </div>
-
-                        <div class="summary-box">
-                            <strong style="font-size: 18px; color: #2c3e50;">รวมน้ำหนักทั้งหมด:</strong>
-                            <span style="font-size: 24px; font-weight: bold; color: #27ae60;"><span id="totalDisplay">0.00</span> กก.</span>
-                        </div>
-
-                        <div class="section-title">อัปโหลดรูปภาพประกอบ</div>
-                        <p style="font-size: 14px; color: #7f8c8d; margin-bottom: 15px;">รองรับไฟล์รูปภาพ (สูงสุด 5 รูป)</p>
-                        <div class="form-group">
-                            <input type="file" name="img1" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
-                            <input type="file" name="img2" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
-                            <input type="file" name="img3" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
-                            <input type="file" name="img4" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
-                            <input type="file" name="img5" accept="image/*" style="border: 1px solid #ddd; padding: 5px; width: 100%;">
-                        </div>
-
-                        <button type="submit" id="submitBtn" style="width: 100%; padding: 16px; background-color: #27ae60; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 20px;">
-                            บันทึกข้อมูล
-                        </button>
-                    </form>
-                </div>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะทั่วไป</label><input type="number" step="0.01" class="waste-input" name="wasteGeneral" placeholder="0"></div>
+                <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะรีไซเคิล</label><input type="number" step="0.01" class="waste-input" name="wasteRecycle" placeholder="0"></div>
+                <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะกำพร้า</label><input type="number" step="0.01" class="waste-input" name="wasteOrphan" placeholder="0"></div>
+                <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะทำเชื้อเพลิง</label><input type="number" step="0.01" class="waste-input" name="wasteFuel" placeholder="0"></div>
+                <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะอินทรีย์/ขยะเปียก</label><input type="number" step="0.01" class="waste-input" name="wasteOrganic" placeholder="0"></div>
+                <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะอันตราย</label><input type="number" step="0.01" class="waste-input" name="wasteHazard" placeholder="0"></div>
+                <div class="form-group" style="flex: 1; min-width: 200px;"><label>ขยะติดเชื้อ (ถ้ามี)</label><input type="number" step="0.01" class="waste-input" name="wasteInfect" placeholder="0"></div>
             </div>
 
-            <footer class="global-footer">
-                <div>© 2026 งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม มหาวิทยาลัยมหิดล</div>
-                <div>โทรศัพท์: 0-2849-6000 | พัฒนาโดย: ยุทธภูมิ ยานเพิ่ม</div>
-            </footer>
-        </div>
+            <div class="summary-box">
+                <strong style="font-size: 18px; color: #2c3e50;">รวมน้ำหนักทั้งหมด:</strong>
+                <span style="font-size: 24px; font-weight: bold; color: #27ae60;"><span id="totalDisplay">0.00</span> กก.</span>
+            </div>
+
+            <div class="section-title">อัปโหลดรูปภาพประกอบ</div>
+            <p style="font-size: 14px; color: #7f8c8d; margin-bottom: 15px;">รองรับไฟล์รูปภาพ (สูงสุด 5 รูป)</p>
+            <div class="form-group">
+                <input type="file" name="img1" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
+                <input type="file" name="img2" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
+                <input type="file" name="img3" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
+                <input type="file" name="img4" accept="image/*" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 5px; width: 100%;">
+                <input type="file" name="img5" accept="image/*" style="border: 1px solid #ddd; padding: 5px; width: 100%;">
+            </div>
+
+            <button type="submit" id="submitBtn" style="width: 100%; padding: 16px; background-color: #27ae60; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 20px;">
+                บันทึกข้อมูล
+            </button>
+        </form>
     </div>
 
     <script>
@@ -153,9 +135,6 @@
             totalDisplay.innerText = sum.toFixed(2); 
         }
 
-        // ==========================================
-        // ฟังก์ชันบีบอัดรูปภาพ (ลดขนาดไฟล์ก่อนส่ง)
-        // ==========================================
         const compressImage = (file, maxWidth = 1024, maxHeight = 1024, quality = 0.7) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -167,7 +146,6 @@
                         let width = img.width;
                         let height = img.height;
 
-                        // คำนวณสัดส่วนรูปใหม่ไม่ให้เกินค่าที่กำหนด
                         if (width > height) {
                             if (width > maxWidth) {
                                 height = Math.round((height *= maxWidth / width));
@@ -180,14 +158,12 @@
                             }
                         }
 
-                        // วาดรูปลงบน Canvas เพื่อย่อขนาด
                         const canvas = document.createElement('canvas');
                         canvas.width = width;
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
 
-                        // แปลงเป็น Base64 (บังคับเป็น JPEG เพื่อบีบอัดให้เล็กที่สุด)
                         const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
                         resolve(compressedBase64);
                     };
@@ -197,48 +173,54 @@
             });
         };
 
-        document.getElementById('wasteForm').addEventListener('submit', async (e) => {
+        document.getElementById('wasteForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const form = document.getElementById('wasteForm'); 
-            const btn = document.getElementById('submitBtn');
-            btn.innerText = 'กำลังบีบอัดรูปภาพและบันทึกข้อมูล...'; // แจ้งผู้ใช้ว่ากำลังบีบอัดรูป
-            btn.disabled = true;
-
-            const formData = new FormData(form); 
-            formData.append('Data_category', 'Waste'); 
-
-            try {
-                // วนลูปบีบอัดไฟล์ทุกรูปที่แนบมา
-                for (let i = 1; i <= 5; i++) {
-                    const fileInput = form.querySelector(`input[name="img${i}"]`);
-                    if (fileInput && fileInput.files.length > 0) { 
-                        const file = fileInput.files[0]; 
-                        const base64 = await compressImage(file, 1024, 1024, 0.7); 
-                        formData.append(`imgB64_${i}`, base64.split(',')[1]); 
-                        formData.append(`imgMime_${i}`, 'image/jpeg'); // บังคับเป็น JPEG เพราะเราใช้ toDataURL('image/jpeg') 
-                        formData.append(`imgName_${i}`, file.name); 
-                    }
+            
+            const formDataToUpload = new FormData(form); 
+            formDataToUpload.append('Data_category', 'Waste'); 
+            
+            const filesToProcess = [];
+            for (let i = 1; i <= 5; i++) {
+                const fileInput = form.querySelector(`input[name="img${i}"]`);
+                if (fileInput && fileInput.files.length > 0) { 
+                    filesToProcess.push({ index: i, file: fileInput.files[0] });
                 }
-
-                // ส่งข้อมูล
-                const res = await fetch(scriptURL, { method: 'POST', body: formData });
-                const txt = await res.text();
-                
-                Swal.fire({ title: 'สำเร็จ!', text: 'บันทึกข้อมูลเรียบร้อยแล้ว', icon: 'success', confirmButtonColor: '#27ae60' });
-                form.reset(); 
-                document.getElementById('reporterName').value = "พนักงานทำความสะอาด"; 
-                document.getElementById('position').value = "พนักงานทำความสะอาด"; 
-                totalDisplay.innerText = "0.00";
-                
-                btn.innerText = 'บันทึกข้อมูล'; 
-                btn.disabled = false;
-                
-            } catch (err) {
-                console.error(err);
-                Swal.fire({ title: 'ผิดพลาด!', text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ หรือรูปภาพใหญ่เกินไป', icon: 'error', confirmButtonColor: '#e74c3c' });
-                btn.innerText = 'บันทึกข้อมูล'; 
-                btn.disabled = false;
             }
+
+            // 🌟 เรียกใช้ Popup ที่ตกแต่งใหม่ พร้อมใส่ฉากหลังมืดๆ
+            Swal.fire({ 
+                title: 'ส่งสำเร็จ', 
+                icon: 'success', 
+                timer: 2000, 
+                showConfirmButton: false,
+                backdrop: `rgba(15, 23, 42, 0.5)`, // พื้นหลังสีมืดลง เพื่อให้ Popup เด้งลอยขึ้นมา
+                customClass: {
+                    popup: 'custom-swal-popup',
+                    title: 'custom-swal-title'
+                }
+            });
+
+            form.reset(); 
+            document.getElementById('reporterName').value = "ปราณี คำมี"; 
+            document.getElementById('position').value = "พนักงานทำความสะอาด"; 
+            totalDisplay.innerText = "0.00";
+
+            (async () => {
+                try {
+                    for (const item of filesToProcess) {
+                        const base64 = await compressImage(item.file, 1024, 1024, 0.7); 
+                        formDataToUpload.append(`imgB64_${item.index}`, base64.split(',')[1]); 
+                        formDataToUpload.append(`imgMime_${item.index}`, 'image/jpeg'); 
+                        formDataToUpload.append(`imgName_${item.index}`, item.file.name); 
+                    }
+                    await fetch(scriptURL, { method: 'POST', body: formDataToUpload });
+                    console.log("Background Upload Success!");
+                } catch (err) {
+                    console.error("Background Upload Failed: ", err);
+                }
+            })();
+            
         });
     </script>
 </body>

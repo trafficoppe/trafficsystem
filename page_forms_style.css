@@ -1,0 +1,42 @@
+body {
+    background-color: transparent !important;
+    padding: 20px 40px;
+    margin: 0;
+    font-family: 'Prompt', sans-serif;
+}
+
+.form-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.form-loading {
+    text-align: center;
+    padding: 40px;
+    color: #64748b;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* 🌟 รองรับโหมดมืด (Dark Mode) 🌟 */
+body.dark-mode .form-bar {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #f8fafc;
+}
+
+body.dark-mode .form-bar:hover {
+    background-color: #0f172a;
+    border-color: #34d399; /* เปลี่ยนเส้นขอบเป็นสีเขียวมินต์ตอนชี้เมาส์ */
+}
+
+body.dark-mode .form-name {
+    color: #f8fafc;
+}
+
+body.dark-mode .form-loading {
+    color: #94a3b8;
+}

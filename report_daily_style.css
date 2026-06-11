@@ -277,3 +277,51 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .indent-4tab {
     text-indent: 3.0cm;
 }
+/* =======================================================
+   Print Media Query (กำหนดการแสดงผลตอนกด Print เป็น PDF)
+   ======================================================= */
+@media print {
+    /* ซ่อนทุกอย่างบนหน้าเว็บก่อน */
+    body * {
+        visibility: hidden;
+    }
+
+    /* โชว์เฉพาะส่วนที่เป็นเอกสาร A4 และลูกๆ ของมัน */
+    #documentSection, #documentSection * {
+        visibility: visible;
+    }
+
+    /* จัดตำแหน่งหน้า A4 ให้ชิดขอบซ้ายบนสุดของกระดาษพอดี */
+    #documentSection {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        display: block !important;
+    }
+
+    /* ซ่อนปุ่มโหลด PDF หรือปุ่มอื่นๆ ที่มีคลาส no-print */
+    .no-print {
+        display: none !important;
+    }
+
+    /* ตั้งค่าหน้ากระดาษเป็น A4 แนวตั้ง */
+    @page {
+        size: A4 portrait;
+        /* 🌟 บังคับ Margin เป็น 0 เพื่อลบ URL วันที่ และเลขหน้า ของ Browser ทิ้งทั้งหมด */
+        margin: 0; 
+    }
+
+    /* เอาเงาและเส้นขอบของหน้า A4 ออกตอนพริ้นต์ */
+    .a4-paper {
+        box-shadow: none !important;
+        border: none !important;
+        width: 100% !important;
+        /* 🌟 เพิ่ม Padding ชดเชย Margin ที่ตั้งเป็น 0 เพื่อไม่ให้เนื้อหาชิดขอบกระดาษตอนปริ้น */
+        padding: 15mm 20mm !important; 
+        min-height: auto !important;
+        box-sizing: border-box !important;
+    }
+}
