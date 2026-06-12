@@ -90,3 +90,58 @@ body.dark-mode #vehicleModal .close:hover { background: #7f1d1d; color: #f87171;
     #modalDetails { padding: 20px; flex: auto; height: auto;}
     .action-buttons { grid-template-columns: 1fr 1fr; } /* มือถือเรียงปุ่ม 2x2 */
 }
+/* ==========================================
+   🌟 แก้ไขปัญหาเฟรมเรตตก & สไตล์ตารางประวัติลอยเพียวๆ
+   ========================================== */
+
+/* ปิดระบบเบลอที่ทำให้กระตุก และเปลี่ยนสีดำให้ทึบขึ้น */
+.modal {
+    backdrop-filter: none !important;
+    background-color: rgba(0, 0, 0, 0.75) !important;
+}
+
+/* สไตล์กล่องตารางประวัติลอย */
+#inspectionHistoryModal .modal-content {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 1200px;
+    width: 98%;
+    padding: 0;
+    height: auto;
+    max-height: none;
+    overflow: hidden;
+}
+
+.modal-close-wrapper { display: none; }
+.modal-table-padding { padding: 0; background: transparent; }
+
+.table-scroll-container {
+    width: 100%; 
+    border: none; 
+    border-radius: 12px; 
+    overflow: hidden; 
+    background: #ffffff;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+}
+
+.table-scroll-container table {
+    width: 100%; 
+    border-collapse: collapse; 
+    font-size: 14px; 
+    text-align: center; 
+    table-layout: fixed; 
+}
+
+.table-scroll-container th {
+    padding: 10px;
+    background: #e2e8f0;
+    color: #1e293b;
+    font-weight: 600;
+    border: 1px solid #cbd5e1;
+}
+
+.table-scroll-container td {
+    padding: 8px;
+    border: 1px solid #cbd5e1;
+}

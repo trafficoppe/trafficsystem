@@ -1,0 +1,66 @@
+/* ==========================================
+   สไตล์เฉพาะหน้า ตรวจพื้นที่ส่วนกลาง
+   ========================================== */
+body {
+    background-color: #f1f5f9; 
+    margin: 0;
+    padding: 0;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.vehicle-card {
+    background: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    will-change: transform;
+    transform: translateZ(0);
+    contain: content; 
+}
+
+.vehicle-card:hover {
+    transform: translateY(-5px) translateZ(0);
+    box-shadow: 0 12px 20px -5px rgba(0,0,0,0.15);
+}
+
+.card-image-wrapper {
+    height: 200px;
+    background-color: #f8fafc;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: translateZ(0); 
+}
+
+.card-content {
+    padding: 20px;
+    text-align: center;
+}
+
+.card-title {
+    color: #059669; /* ใช้สีเขียวให้เข้ากับธีมส่วนกลาง */
+    font-size: 18px;
+    margin-bottom: 10px;
+    white-space: normal;
+}
+
+.loading-text {
+    text-align: center;
+    padding: 50px;
+    font-size: 1.2em;
+    color: #64748b;
+}

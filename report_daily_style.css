@@ -310,8 +310,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     /* ตั้งค่าหน้ากระดาษเป็น A4 แนวตั้ง */
     @page {
         size: A4 portrait;
-        /* 🌟 บังคับ Margin เป็น 0 เพื่อลบ URL วันที่ และเลขหน้า ของ Browser ทิ้งทั้งหมด */
-        margin: 0; 
+        /* 🌟 คืนค่าขอบกระดาษ: บน-ล่าง 1.5cm (ประมาณ 2 บรรทัด), ซ้าย-ขวา 2cm */
+        margin: 1.5cm 2cm; 
     }
 
     /* เอาเงาและเส้นขอบของหน้า A4 ออกตอนพริ้นต์ */
@@ -319,8 +319,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         box-shadow: none !important;
         border: none !important;
         width: 100% !important;
-        /* 🌟 เพิ่ม Padding ชดเชย Margin ที่ตั้งเป็น 0 เพื่อไม่ให้เนื้อหาชิดขอบกระดาษตอนปริ้น */
-        padding: 15mm 20mm !important; 
+        /* 🌟 เปลี่ยน Padding เป็น 0 ปล่อยให้ @page จัดการขอบกระดาษแทน ข้อความจะไม่ชนรอยต่อหน้าแล้ว */
+        padding: 0 !important; 
+        margin: 0 !important;
         min-height: auto !important;
         box-sizing: border-box !important;
     }

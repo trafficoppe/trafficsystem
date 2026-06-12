@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตรวจพื้นที่ส่วนกลาง</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="page_area_inspection_style.css">
+</head>
+<body>
+
+    <div id="areaFilterTemplate" style="display: none;">
+        <div class="search-container" style="display: flex; gap: 10px;">
+            <input type="text" id="globalSearchInput" placeholder="ค้นหาสถานที่, จุดตรวจ..." style="padding: 8px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); color: #fff; width: 250px;">
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div class="gallery-grid" id="areaGallery">
+            <div id="assetLoading" class="loading-text">⌛ กำลังเชื่อมต่อฐานข้อมูลการตรวจพื้นที่...</div>
+        </div>
+    </div>
+
+    <script src="page_area_inspection_script.js"></script>
+</body>
+</html>

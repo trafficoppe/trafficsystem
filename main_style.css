@@ -373,3 +373,48 @@ body.dark-mode .header-center-filters .filter-btn.active .badge {
     background: #0f172a;
     color: #38bdf8;
 }
+/* ==========================================
+   🌟 MODAL (ตั้งค่าหน้าต่างป๊อปอัปให้แสดงถูกต้อง)
+   ========================================== */
+.modal {
+    display: none; 
+    position: fixed; 
+    z-index: 9999; 
+    left: 0; 
+    top: 0; 
+    width: 100vw; 
+    height: 100vh; 
+    background-color: rgba(0,0,0,0.6); /* พื้นหลังสีดำโปร่งแสง */
+    align-items: center; 
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #ffffff;
+    margin: auto;
+    border-radius: 12px;
+    position: relative;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+}
+
+.close {
+    color: #94a3b8;
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 32px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close:hover {
+    color: #ef4444;
+}
+
+/* รองรับโหมดกลางคืนสำหรับป๊อปอัป */
+body.dark-mode .modal-content {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    color: #f8fafc;
+}

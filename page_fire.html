@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>อุปกรณ์ดับเพลิง</title>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="style.css">
@@ -16,20 +16,6 @@
         <div class="search-container" style="display: flex; gap: 10px;">
             <input type="text" id="globalSearchInput" placeholder="ค้นหาสถานที่ติดตั้ง, หมายเลขถัง..." style="padding: 8px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); color: #fff; width: 250px;">
         </div>
-    </div>
-
-    <div id="fireSidebarTemplate" style="display: none;">
-        <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-fire').classList.toggle('show-submenu');"><i class="fa-solid fa-fire-extinguisher menu-icon"></i> <span class="menu-text" data-th="อุปกรณ์ดับเพลิง" data-en="Fire Equipment">อุปกรณ์ดับเพลิง</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
-        <ul class="submenu show-submenu" id="submenu-fire">
-            <li><a href="#" data-unit="all" data-th-title="อุปกรณ์ดับเพลิงทั้งหมด" data-en-title="All Fire Equipment"><span class="menu-text" data-th="แสดงทั้งหมด" data-en="All Equipment">แสดงทั้งหมด</span></a></li>
-            <li><a href="#" data-unit="ถังดับเพลิง" data-th-title="ข้อมูลถังดับเพลิง" data-en-title="Fire Extinguishers"><span class="menu-text" data-th="ถังดับเพลิง" data-en="Fire Extinguishers">ถังดับเพลิง</span></a></li>
-            <li><a href="#" data-unit="สายส่งน้ำ" data-th-title="ข้อมูลสายส่งน้ำดับเพลิง" data-en-title="Fire Hoses"><span class="menu-text" data-th="สายส่งน้ำ" data-en="Fire Hoses">สายส่งน้ำ</span></a></li>
-            <li><a href="#" data-unit="หัวฉีด" data-th-title="ข้อมูลหัวฉีดดับเพลิง" data-en-title="Nozzles"><span class="menu-text" data-th="หัวฉีด" data-en="Nozzles">หัวฉีด</span></a></li>
-            <li><a href="#" data-unit="ปั๊มน้ำ" data-th-title="ข้อมูลปั๊มน้ำ" data-en-title="Water Pumps"><span class="menu-text" data-th="ปั๊มน้ำ" data-en="Water Pumps">ปั๊มน้ำ</span></a></li>
-            <li><a href="#" data-unit="ตู้เก็บอุปกรณ์" data-th-title="ข้อมูลตู้เก็บอุปกรณ์" data-en-title="Cabinets"><span class="menu-text" data-th="ตู้เก็บอุปกรณ์" data-en="Cabinets">ตู้เก็บอุปกรณ์</span></a></li>
-            <li><a href="#" data-unit="หัวรับน้ำ" data-th-title="ข้อมูลหัวรับน้ำ" data-en-title="Fire Hydrants"><span class="menu-text" data-th="หัวรับน้ำ" data-en="Fire Hydrants">หัวรับน้ำ</span></a></li>
-            <li><a href="#" data-unit="ชุด ppe" data-th-title="ข้อมูลชุด PPE" data-en-title="PPE Suits"><span class="menu-text" data-th="ชุด PPE" data-en="PPE Suits">ชุด PPE</span></a></li>
-        </ul>
     </div>
 
     <div class="content-area">
@@ -49,6 +35,46 @@
                     <div class="image-counter" id="imageNumber"></div>
                 </div>
                 <div id="modalDetails"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="inspectionHistoryModal" class="modal">
+        <div id="inspectionModalContent" class="modal-content">
+            <div class="modal-close-wrapper" style="display: none;">
+                <span class="close" onclick="closeHistoryModal()">&times;</span>
+            </div>
+            <div class="modal-table-padding" style="padding: 0; background: transparent;">
+                <div class="table-scroll-container">
+                    <table>
+                        <thead id="inspectionChecklistHead"></thead>
+                        <tbody id="inspectionChecklistBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="refillHistoryModal" class="modal">
+        <div id="refillModalContent" class="modal-content">
+            <div class="modal-close-wrapper" style="display: none;">
+                <span class="close" onclick="closeRefillModal()">&times;</span>
+            </div>
+            <div class="modal-table-padding" style="padding: 0; background: transparent;">
+                <div class="table-scroll-container">
+                    <table>
+                        <thead id="refillHistoryHead">
+                            <tr style="background-color: #f1f5f9;">
+                                <th style="padding: 10px; border: 1px solid #cbd5e1; width: 120px;">วันที่เติม</th>
+                                <th style="padding: 10px; border: 1px solid #cbd5e1;">สารเคมี</th>
+                                <th style="padding: 10px; border: 1px solid #cbd5e1; width: 110px;">นน.ก่อน (Kg.)</th>
+                                <th style="padding: 10px; border: 1px solid #cbd5e1; width: 110px;">นน.หลัง (Kg.)</th>
+                                <th style="padding: 10px; border: 1px solid #cbd5e1;">บริษัทที่ดำเนินการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="refillHistoryBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

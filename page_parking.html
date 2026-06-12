@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ข้อมูลลานจอดรถ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="page_parking_style.css">
+</head>
+<body>
+
+    <div id="parkingFilterTemplate" style="display: none;">
+        <div class="filter-group" id="filter-group-parking">
+            <button class="filter-btn active" data-filter="all">ทั้งหมด <span class="badge">0 ลาน (0 คัน)</span></button>
+            <button class="filter-btn" data-filter="ส่วนกลาง">ส่วนกลาง <span class="badge">0 ลาน (0 คัน)</span></button>
+            <button class="filter-btn" data-filter="ส่วนงาน">ส่วนงาน <span class="badge">0 ลาน (0 คัน)</span></button>
+        </div>
+        <div class="search-container" style="display: flex; gap: 10px;">
+            <input type="text" id="globalSearchInput" placeholder="ค้นหาชื่อลานจอดรถ..." style="padding: 8px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); color: #fff; width: 250px;">
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div class="gallery-grid" id="parkingGallery">
+            <div id="assetLoading" class="loading-text">⌛ กำลังเชื่อมต่อฐานข้อมูลลานจอดรถ...</div>
+        </div>
+    </div>
+
+    <script src="page_parking_script.js"></script>
+</body>
+</html>

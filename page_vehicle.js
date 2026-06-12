@@ -9,16 +9,15 @@ let currentVehicleIndex = 0;
 let currentImageIndex = 0; 
 let mainCategory = 'vehicle'; 
 let currentSubFilter = 'all';
+let globalInspectionHistory = []; // 🌟 ตัวแปรใหม่สำหรับเก็บประวัติจาก Sheet ตรวจสภาพโดยตรง
 
 // ==========================================
 // 🌟 2. ดันปุ่ม Filter ขึ้นไปที่ Header (DOM Injection) 🌟
 // ==========================================
 function setupParentHeader() {
-    // เช็คว่าอยู่ใน Iframe และ Parent มีช่องรอรับ Header หรือไม่
     if (window.parent && window.parent.document.getElementById('headerFilterSlot')) {
         const filterSlot = window.parent.document.getElementById('headerFilterSlot');
         
-        // ส่งโค้ด HTML ขึ้นไปแสดงผล (ตัด รถยนต์/รถตู้/รถกระบะ ออกแล้ว)
         filterSlot.innerHTML = `
             <div class="filter-group" id="filter-group-vehicle">
                 <button class="filter-btn active" data-filter="all">
@@ -46,7 +45,6 @@ function setupParentHeader() {
             </div>
         `;
 
-        // ผูกสคริปต์การคลิกกับปุ่มที่อยู่ด้านบน
         const filterBtns = filterSlot.querySelectorAll('.filter-btn');
         filterBtns.forEach(btn => {
             btn.addEventListener('click', function() {
@@ -57,13 +55,11 @@ function setupParentHeader() {
             });
         });
 
-        // ผูกการค้นหาเมื่อพิมพ์ข้อความ
         const searchInput = filterSlot.querySelector('#parentSearchInput');
         if (searchInput) {
             searchInput.addEventListener('input', applyFilters);
         }
         
-        // สั่งเปลี่ยนภาษาทันทีหลังสร้างปุ่ม
         if (typeof window.applyLanguageUI === 'function') {
             window.applyLanguageUI();
         }
@@ -71,7 +67,7 @@ function setupParentHeader() {
 }
 
 // ==========================================
-// 3. ฟังก์ชันโหลดข้อมูล (Caches)
+// 3. ฟังก์ชันโหลดข้อมูล (Caches & History Fetch)
 // ==========================================
 function fetchVehicles() {
     let cachedData = sessionStorage.getItem('cachedVehicles');
@@ -92,6 +88,47 @@ function fetchVehicles() {
             fetchParkingLots(); 
         })
         .catch(error => console.error("Error fetching vehicles: ", error));
+}
+
+// 🌟 ฟังก์ชันใหม่: ดึงประวัติการตรวจสภาพทั้งหมดจาก Sheet แบบเดียวกับหน้า Print
+function fetchInspectionHistory() {
+    const insUrl = "https://docs.google.com/spreadsheets/d/1lYRhXtLgec6ISM6Ugt-YKLrh47NRt7ihcVLcD8mI_Yg/gviz/tq?tqx=out:json&gid=267450301";
+    fetch(insUrl)
+        .then(res => res.text())
+        .then(text => {
+            const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S\w]+)\);/);
+            if (match && match[1]) {
+                const json = JSON.parse(match[1]);
+                globalInspectionHistory = json.table.rows.map(row => {
+                    if (!row || !row.c || !row.c[0] || !row.c[0].v) return null;
+                    let rawDateVal = row.c[0].v;
+                    let dObj = null;
+                    
+                    if (typeof rawDateVal === 'string' && rawDateVal.startsWith('Date(')) {
+                        let p = rawDateVal.match(/\d+/g);
+                        dObj = new Date(p[0], p[1], p[2], p[3]||0, p[4]||0);
+                    } else {
+                        let strVal = String(row.c[0].f || row.c[0].v);
+                        let datePart = strVal.split(/[, ]/)[0];
+                        let parts = datePart.split('/');
+                        if (parts.length === 3) dObj = new Date(parts[2], parts[1]-1, parts[0]);
+                        else dObj = new Date(strVal);
+                    }
+                    if (!dObj || isNaN(dObj.getTime())) return null;
+                    
+                    return {
+                        monthIndex: dObj.getMonth(),
+                        year: dObj.getFullYear(),
+                        inspector: row.c[1] ? String(row.c[1].v).trim() : "-", // 🌟 เพิ่มบรรทัดนี้: เก็บชื่อผู้ตรวจ
+                        detail: row.c[3] ? String(row.c[3].v).trim() : "-",
+                        plate: row.c[5] ? String(row.c[5].v).trim() : "-",
+                        equipId: row.c[6] ? String(row.c[6].v).trim() : "-",
+                        status: row.c[17] ? String(row.c[17].v) : ""
+                    };
+                }).filter(item => item !== null);
+            }
+        })
+        .catch(err => console.error("Inspection Fetch Error:", err));
 }
 
 function fetchParkingLots() {
@@ -150,7 +187,6 @@ function fetchParkingLots() {
 function updateFilterCounts() {
     const vehicleData = allVehicles.filter(v => v.Data_Category === 'Asset' && !isFireEquip(v));
     
-    // ค้นหาช่องแสดงผลจาก Parent
     let filterContainer = document;
     if (window.parent && window.parent.document.getElementById('filter-group-vehicle')) {
         filterContainer = window.parent.document;
@@ -170,7 +206,6 @@ function updateFilterCounts() {
 }
 
 function applyFilters() {
-    // อ่านค่าการพิมพ์ค้นหาจากแถบด้านบน (Parent)
     let searchText = '';
     if (window.parent && window.parent.document.getElementById('parentSearchInput')) {
         searchText = window.parent.document.getElementById('parentSearchInput').value.toLowerCase();
@@ -219,11 +254,9 @@ function displayGallery(dataList) {
         const card = document.createElement('div');
         card.className = 'vehicle-card';
 
-        // ดึงรูปภาพทั้งหมดที่มี (1-3) / Get all available images (1-3)
         const images = [item.URL_รูปภาพ_1, item.URL_รูปภาพ_2, item.URL_รูปภาพ_3].filter(u => u);
         if(images.length === 0) images.push('placeholder.png');
 
-        // สรรค์สร้างโค้ด HTML สำหรับรูปภาพทั้งหมด / Generate HTML for all images
         let imagesHtml = '';
         images.forEach(imgUrl => {
             imagesHtml += `<img src="${getDirectImageUrl(imgUrl)}" onerror="this.src='placeholder.png'">`;
@@ -236,7 +269,7 @@ function displayGallery(dataList) {
             <div class="card-image-wrapper" onclick="openModal(${originalIndex})">
                 <span style="position: absolute; top: 10px; right: 10px; background: ${statusBg}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; z-index: 10;">${statusText}</span>
                 <div class="image-slide-track">
-                    ${imagesHtml} <!-- 🌟 แสดงรูปทั้งหมดที่นี่เพื่อให้ CSS สไลด์ได้ 🌟 -->
+                    ${imagesHtml}
                 </div>
             </div>
             <div class="card-content" onclick="openModal(${originalIndex})">
@@ -260,6 +293,7 @@ function openModal(index) {
     const images = [vehicle.URL_รูปภาพ_1, vehicle.URL_รูปภาพ_2, vehicle.URL_รูปภาพ_3, vehicle.URL_รูปภาพ_4, vehicle.URL_รูปภาพ_5].filter(u => u);
     
     let autoFillURL = `form.html?type=${encodeURIComponent(vehicle.ประเภท)}&detail=${encodeURIComponent(vehicle['ยี่ห้อ/รุ่น'])}&color=${encodeURIComponent(vehicle.สี)}&plate=${encodeURIComponent(vehicle.ทะเบียน)}&equip=${encodeURIComponent(vehicle.หมายเลขครุภัณฑ์)}`;
+    let cleanURL = `page_clean_vehicle_form.html?model=${encodeURIComponent(vehicle['ยี่ห้อ/รุ่น'] || '-')}&plate=${encodeURIComponent(vehicle.ทะเบียน || '-')}&equip=${encodeURIComponent(vehicle.หมายเลขครุภัณฑ์ || '-')}`;
 
     let detailHtml = `
         <h2>${vehicle['ยี่ห้อ/รุ่น'] || '-'}</h2>
@@ -268,9 +302,9 @@ function openModal(index) {
         <p><strong>${lang === 'th' ? 'เลขทะเบียน' : 'License Plate'}:</strong> ${vehicle.ทะเบียน || '-'}</p>
         <p><strong>${lang === 'th' ? 'หมายเลขครุภัณฑ์' : 'Asset ID'}:</strong> ${vehicle.หมายเลขครุภัณฑ์ || '-'}</p>
         <div class="action-buttons">
-            <a href="${autoFillURL}" class="action-btn" style="background:#059669;">${lang === 'th' ? '🔧 ตรวจสอบสภาพ' : '🔧 Inspect Vehicle'}</a>
-            <button onclick="openInspectionHistoryModal(${index})" class="action-btn" style="background:#3498db;">${lang === 'th' ? '📊 ประวัติ' : '📊 History'}</button>
-            <button onclick="openCleanFormModal(${index})" class="action-btn" style="background:#0ea5e9;">${lang === 'th' ? '✨ ล้างรถ' : '✨ Clean'}</button>
+            <a href="${autoFillURL}" class="action-btn" style="background:#059669; text-decoration:none;">${lang === 'th' ? 'ตรวจสอบสภาพ' : 'Inspect Vehicle'}</a>
+            <a href="${cleanURL}" class="action-btn" style="background:#0ea5e9; text-decoration:none;">${lang === 'th' ? 'ล้างรถ' : 'Clean'}</a>
+            <button onclick="openInspectionHistoryModal(${index})" class="action-btn" style="background:#3498db;">${lang === 'th' ? 'ประวัติ' : 'History'}</button>
         </div>
     `;
 
@@ -292,13 +326,11 @@ function changeImage(images) {
 window.applyLanguageUI = function() {
     const currentLang = localStorage.getItem('appLang') || 'th';
     
-    // อัปเดตภาษาใน Iframe
     document.querySelectorAll('[data-th][data-en]').forEach(el => {
         const text = el.getAttribute(`data-${currentLang}`);
         if (text) el.textContent = text;
     });
 
-    // อัปเดตภาษาบน Header Parent
     if (window.parent && window.parent.document.getElementById('headerFilterSlot')) {
         const parentSlot = window.parent.document.getElementById('headerFilterSlot');
         parentSlot.querySelectorAll('[data-th][data-en]').forEach(el => {
@@ -308,14 +340,9 @@ window.applyLanguageUI = function() {
         const parentSearch = parentSlot.querySelector('#parentSearchInput');
         if (parentSearch) {
             const placeholderText = parentSearch.getAttribute(`data-${currentLang}-placeholder`);
-            if (placeholderText) parentSearch.placeholder = placeholderText;
+            if (parentSearch) parentSearch.placeholder = placeholderText;
         }
     }
-    
-    const cleanerInput = document.getElementsByName('ผู้ดำเนินการ')[0];
-    if (cleanerInput) cleanerInput.placeholder = cleanerInput.getAttribute(`data-${currentLang}-placeholder`) || cleanerInput.placeholder;
-    const remarkTextarea = document.getElementsByName('หมายเหตุ')[0];
-    if (remarkTextarea) remarkTextarea.placeholder = remarkTextarea.getAttribute(`data-${currentLang}-placeholder`) || remarkTextarea.placeholder;
 };
 
 // ==========================================
@@ -324,8 +351,8 @@ window.applyLanguageUI = function() {
 document.addEventListener('DOMContentLoaded', () => {
     setupParentHeader(); 
     fetchVehicles();
+    fetchInspectionHistory(); // 🌟 ดึงข้อมูลประวัติการตรวจสภาพทันทีที่เปิดหน้า
 
-    // ปุ่มสไลด์รูปใน Modal
     document.getElementById('prevImageBtn')?.addEventListener('click', () => {
         const images = [allVehicles[currentVehicleIndex].URL_รูปภาพ_1, allVehicles[currentVehicleIndex].URL_รูปภาพ_2, allVehicles[currentVehicleIndex].URL_รูปภาพ_3].filter(u=>u);
         currentImageIndex = (currentImageIndex > 0) ? currentImageIndex - 1 : Math.max(images.length - 1, 0);
@@ -339,26 +366,155 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('click', e => {
-        if(e.target.classList.contains('modal')) e.target.style.display = 'none';
+        if(e.target.classList.contains('modal')) {
+            e.target.style.display = 'none';
+            // 🌟 ปลดล็อกให้ Sidebar กลับมากดได้เมื่อคลิกปิด Popup
+            if (window.parent && window.parent.document.body) {
+                window.parent.document.querySelectorAll('.sidebar, #sidebar, .main-sidebar, .sidebar-menu').forEach(el => {
+                    el.style.pointerEvents = 'auto';
+                });
+            }
+        }
     });
+    
     document.querySelectorAll('.close').forEach(btn => {
         btn.addEventListener('click', function() {
             this.closest('.modal').style.display = 'none';
+            // 🌟 ปลดล็อกให้ Sidebar กลับมากดได้เมื่อคลิกปิด Popup
+            if (window.parent && window.parent.document.body) {
+                window.parent.document.querySelectorAll('.sidebar, #sidebar, .main-sidebar, .sidebar-menu').forEach(el => {
+                    el.style.pointerEvents = 'auto';
+                });
+            }
         });
     });
 });
 
+// ==========================================
+// 9. ระบบตารางประวัติการตรวจสภาพ (ดึงข้อมูลจาก Sheet ตรงๆ)
+// ==========================================
 window.openInspectionHistoryModal = function(index) {
-    document.getElementById('vehicleModal').style.display = 'none';
-    document.getElementById('inspectionHistoryModal').style.display = 'flex';
-};
-
-window.openCleanFormModal = function(index) {
     const vehicle = allVehicles[index];
-    document.getElementById('cl_plate').value = vehicle.ทะเบียน || '-';
-    document.getElementById('cl_equip').value = vehicle.หมายเลขครุภัณฑ์ || '-';
-    document.getElementById('cl_model').value = vehicle['ยี่ห้อ/รุ่น'] || '-';
-    document.getElementById('cl_date').value = new Date().toISOString().split('T')[0];
+    const modal = document.getElementById('inspectionHistoryModal');
+    
+    const modalContent = document.getElementById('inspectionModalContent');
+    if (modalContent) {
+        modalContent.style.maxWidth = '1200px'; 
+        modalContent.style.width = '98%';       
+        modalContent.style.padding = '0'; 
+        modalContent.style.height = 'auto';      
+        modalContent.style.maxHeight = 'none';   
+        modalContent.style.overflow = 'hidden';  
+        modalContent.style.background = 'transparent';
+        modalContent.style.boxShadow = 'none';
+        modalContent.style.border = 'none';
+    }
+
+    const tablePadding = modal.querySelector('.modal-table-padding');
+    if (tablePadding) {
+        tablePadding.style.background = 'transparent';
+        tablePadding.style.padding = '0';
+    }
+
+    // ✨ ซ่อนปุ่ม (X) ออกไปเลย
+    const closeWrapper = modal.querySelector('.modal-close-wrapper');
+    if (closeWrapper) {
+        closeWrapper.style.display = 'none';
+    }
+
+    const tableContainer = modal.querySelector('.table-scroll-container');
+    if (tableContainer) {
+        tableContainer.style.background = '#ffffff';
+        tableContainer.style.boxShadow = '0 15px 40px rgba(0,0,0,0.4)';
+        tableContainer.style.borderRadius = '12px';
+    }
+
+    modal.style.overflowY = 'auto';
+    modal.style.paddingTop = '15px'; 
+    modal.style.paddingBottom = '40px';
+
+    document.getElementById('inspInfoLeft').innerHTML = '';
+    const infoWrapper = document.querySelector('.insp-info-wrapper');
+    if (infoWrapper) {
+        infoWrapper.style.display = 'none'; 
+        infoWrapper.style.marginBottom = '0';
+    }
+
+    const isFire = vehicle.ประเภท && vehicle.ประเภท.includes('ดับเพลิง');
+    const items = isFire 
+        ? ["สภาพตัวถัง", "แรงดันเกจ์", "สาย/หัวฉีด", "สลัก/ซีล", "คันบีบ", "ป้ายแนะนำ", "ตำแหน่งติดตั้ง", "ฐาน/ที่แขวน", "อายุใช้งาน"]
+        : ["ลมยาง", "สภาพยาง", "กะทะล้อ", "ระบบเบรก", "โช้คอัพ", "ระบบไฟ", "แบตเตอรี่", "ขับเคลื่อน", "ตัวถัง"];
+
+    let headHtml = `<tr style="background-color: #f1f5f9;">
+        <th style="padding: 10px; border: 1px solid #cbd5e1; width: 60px;">เดือน</th>`;
+    items.forEach(item => {
+        headHtml += `<th style="padding: 10px; border: 1px solid #cbd5e1; font-size: 13px;">${item}</th>`;
+    });
+    headHtml += `<th style="padding: 10px; border: 1px solid #cbd5e1; width: 90px;">สถานะ</th>
+                 <th style="padding: 10px; border: 1px solid #cbd5e1; width: 100px;">ผู้ตรวจ</th></tr>`;
+    document.getElementById('inspectionChecklistHead').innerHTML = headHtml;
+
+    const monthsTH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    let bodyHtml = '';
+
+    let vPlate = vehicle['ทะเบียน'] ? String(vehicle['ทะเบียน']).trim() : "-";
+    let vEquip = vehicle['หมายเลขครุภัณฑ์'] ? String(vehicle['หมายเลขครุภัณฑ์']).trim() : "-";
+    let vDetail = vehicle['ยี่ห้อ/รุ่น'] ? String(vehicle['ยี่ห้อ/รุ่น']).trim() : "-";
+    const currentYear = new Date().getFullYear();
+
+    monthsTH.forEach((m, idx) => {
+        let records = globalInspectionHistory.filter(r => {
+            if (r.monthIndex !== idx || r.year !== currentYear) return false;
+            let matchEquip = (vEquip !== "-" && vEquip !== "" && r.equipId === vEquip);
+            let matchPlate = (vPlate !== "-" && vPlate !== "" && r.plate === vPlate);
+            let matchDetail = (vDetail !== "-" && vDetail !== "" && r.detail === vDetail);
+            
+            return matchEquip || matchPlate || (matchDetail && vPlate === "-" && vEquip === "-");
+        });
+
+        let hasData = records.length > 0;
+        let finalStatusStr = hasData ? records[records.length - 1].status : "-";
+        
+        let inspectorStr = "-";
+        if (hasData) {
+            let rawName = records[records.length - 1].inspector;
+            if (rawName && rawName !== "-") {
+                inspectorStr = rawName.replace(/^(นาย|นางสาว|นาง)\s*/, "").split(' ')[0];
+            }
+        }
+
+        bodyHtml += `<tr><td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold; text-align: center; background-color: #f8fafc;">${m}</td>`;
+
+        if (hasData) {
+            for(let i = 0; i < 9; i++) {
+                let mark = '<span style="color:#10b981; font-weight:bold; font-size: 16px;">&#10004;</span>';
+                bodyHtml += `<td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">${mark}</td>`;
+            }
+
+            let statusHtml = (finalStatusStr.includes('ไม่สามารถ') || finalStatusStr.includes('ชำรุด') || finalStatusStr.includes('ไม่ปกติ')) 
+                ? '<span style="color:#ef4444; font-weight:bold; font-size:14px;">ชำรุด</span>' 
+                : '<span style="color:#10b981; font-weight:bold; font-size:14px;">ใช้งานได้</span>';
+            
+            bodyHtml += `<td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">${statusHtml}</td>`;
+            bodyHtml += `<td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center; font-size: 14px; color: #334155;">${inspectorStr}</td></tr>`;
+
+        } else {
+            for(let i = 0; i < 9; i++) {
+                bodyHtml += `<td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center; color:#94a3b8;">-</td>`;
+            }
+            bodyHtml += `<td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center; color:#94a3b8;">-</td>`;
+            bodyHtml += `<td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center; color:#94a3b8;">-</td></tr>`;
+        }
+    });
+
+    document.getElementById('inspectionChecklistBody').innerHTML = bodyHtml;
     document.getElementById('vehicleModal').style.display = 'none';
-    document.getElementById('cleanFormModal').style.display = 'block';
+    modal.style.display = 'flex';
+
+    // 🌟 3. ล็อกไม่ให้คลิก Sidebar ในหน้าแม่ขณะที่ Popup เปิดอยู่
+    if (window.parent && window.parent.document.body) {
+        window.parent.document.querySelectorAll('.sidebar, #sidebar, .main-sidebar, .sidebar-menu').forEach(el => {
+            el.style.pointerEvents = 'none'; // ปิดการรับคำสั่งการคลิก
+        });
+    }
 };

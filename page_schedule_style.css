@@ -1,0 +1,81 @@
+/* ==========================================
+   สไตล์เฉพาะหน้า ตารางเวรปฏิบัติงาน HTML
+   ========================================== */
+body {
+    background-color: #f1f5f9; 
+    margin: 0;
+    padding: 0;
+}
+
+.content-area {
+    padding: 20px;
+}
+
+.schedule-table-container {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    padding: 20px;
+    overflow-x: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.schedule-date-header {
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    color: #059669;
+    margin-bottom: 20px;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+}
+
+.shift-header th {
+    background-color: #059669;
+    color: #ffffff;
+    padding: 12px;
+    border: 1px solid #047857;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.name-header th {
+    background-color: #f8fafc;
+    color: #000000;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.6;
+    vertical-align: top;
+}
+
+.schedule-table td {
+    padding: 12px 10px;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 15px;
+}
+
+.schedule-table tbody tr:hover {
+    background-color: #f1f5f9;
+}
+
+/* 🌟 สไตล์พิเศษสำหรับช่องที่ "พักกะ" จะเด้งเป็นสีแดงอัตโนมัติ */
+.cell-rest {
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+    font-weight: bold;
+}
+
+.loading-text {
+    text-align: center;
+    padding: 50px;
+    font-size: 1.2em;
+    color: #64748b;
+}

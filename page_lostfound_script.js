@@ -292,7 +292,9 @@ function displayLostFoundGallery(dataToDisplay) {
 
         card.style.border = `2px solid ${borderColor}`;
         card.style.backgroundColor = bgColor;
-        card.style.cursor = 'pointer';
+        
+        // ✨ เปลี่ยนให้เคอร์เซอร์เป็นลูกศรปกติ (ไม่แสดงรูปมือให้ดูเหมือนกดได้)
+        card.style.cursor = 'default';
 
         let displayType = item.type;
         let badgeColor = "#95a5a6";
@@ -315,32 +317,12 @@ function displayLostFoundGallery(dataToDisplay) {
                 <div style="font-size: 13px; margin-bottom: 10px; width: 100%; color: #64748b;">📅 ${item.dateVal || '-'}</div>
                 <div style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 8px; font-weight: bold; font-size: 14px; color: ${borderColor};">${finalStatusText}</div>
             </div>`;
-        card.onclick = () => window.openLFModal(item.actionText, item.imgUrl);
+            
+        // ✨ ลบคำสั่ง card.onclick ทิ้งไปแล้ว เพื่อไม่ให้คลิกเปิด Popup ได้
         fragment.appendChild(card);
     });
     gallery.appendChild(fragment);
 }
-
-window.openLFModal = function(actionText, imgUrl) {
-    const modalText = document.getElementById('lfModalText');
-    const modalImgContainer = document.getElementById('lfModalImageContainer');
-    const modalImg = document.getElementById('lfModalImage');
-    const t = lfTranslations[currentLang];
-
-    if (!actionText || actionText.trim() === '') {
-        modalText.innerHTML = `<span style="color: #94a3b8; font-weight: bold;">${t.modalPending}</span>`;
-    } else {
-        modalText.innerHTML = `<span style="color: #2980b9; font-weight: bold;">${actionText.replace(/"/g, '')}</span>`;
-    }
-
-    if (imgUrl && imgUrl.trim() !== '') {
-        modalImg.src = imgUrl.replace('sz=w320', 'sz=w1000').replace('sz=w500', 'sz=w1000');
-        modalImgContainer.style.display = 'block';
-    } else {
-        modalImg.src = ''; modalImgContainer.style.display = 'none';
-    }
-    document.getElementById('lfActionModal').style.display = 'block';
-};
 
 function checkParentTheme() {
     if (window.parent && window.parent.document.body.classList.contains('dark-mode')) document.body.classList.add('dark-mode');

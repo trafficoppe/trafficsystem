@@ -1,0 +1,57 @@
+/* ==========================================
+   สไตล์เฉพาะหน้า บุคลากร/พนักงาน
+   ========================================== */
+body {
+    background-color: #f1f5f9; 
+    margin: 0;
+    padding: 0;
+}
+
+/* สไตล์ปุ่ม Dropdown บน Header */
+.header-select {
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-family: 'Prompt', sans-serif;
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.header-select:hover, .header-select:focus {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.header-select option {
+    background: #059669; 
+    color: #ffffff;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.vehicle-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    will-change: transform;
+    transform: translateZ(0);
+    contain: content; 
+}
+
+.vehicle-card:hover {
+    transform: translateY(-5px) translateZ(0);
+    box-shadow: 0 12px 20px -5px rgba(0,0,0,0.15) !important;
+}
+
+.loading-text {
+    text-align: center;
+    padding: 50px;
+    font-size: 1.2em;
+    color: #64748b;
+}

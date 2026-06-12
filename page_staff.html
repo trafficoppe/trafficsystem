@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>บุคลากรและพนักงาน</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="page_staff_style.css">
+</head>
+<body>
+
+    <div id="staffFilterTemplate" style="display: none;">
+        <div class="search-container" style="display: flex; gap: 10px; align-items: center;">
+            
+            <select id="staffUnitSelect" class="header-select">
+                <option value="all">ทุกหน่วยงาน</option>
+                <option value="ยุทธศาสตร์">ยุทธศาสตร์และพัฒนาระบบฯ</option>
+                <option value="ปฏิบัติการ">ปฏิบัติการจราจรฯ</option>
+            </select>
+
+            <select id="staffRoleSelect" class="header-select">
+                <option value="all">ทุกตำแหน่ง</option>
+                <option value="หัวหน้า">หัวหน้างาน</option>
+                <option value="แอดมิน">แอดมิน</option>
+                <option value="สายตรวจ 1">สายตรวจ 1</option>
+                <option value="สายตรวจ 2">สายตรวจ 2</option>
+                <option value="สายตรวจ 3">สายตรวจ 3</option>
+                <option value="จราจร">จราจร</option>
+                <option value="วิทยุสื่อสาร">วิทยุสื่อสาร</option>
+            </select>
+
+            <input type="text" id="globalSearchInput" placeholder="ค้นหาชื่อ, รหัส, ตำแหน่ง..." style="padding: 8px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); color: #fff; width: 220px; outline: none; font-family: 'Prompt', sans-serif;">
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div class="gallery-grid" id="staffGallery">
+            <div id="assetLoading" class="loading-text">⌛ กำลังโหลดข้อมูลบุคลากร...</div>
+        </div>
+    </div>
+
+    <script src="page_staff_script.js"></script>
+</body>
+</html>

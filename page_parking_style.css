@@ -1,0 +1,75 @@
+/* ==========================================
+   สไตล์เฉพาะหน้าลานจอดรถ (page_parking_style.css)
+   ========================================== */
+
+/* 🌟 1. เติมพื้นหลังให้ทึบ เพื่อลดการคำนวณความโปร่งใส (Transparency) ของหน้าต่าง iframe */
+body {
+    background-color: #f1f5f9; 
+    margin: 0;
+    padding: 0;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.vehicle-card {
+    background: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    
+    /* 🌟 2. เปิดใช้งาน Hardware Acceleration ให้การ์ดจอช่วยคำนวณแอนิเมชัน */
+    will-change: transform;
+    transform: translateZ(0);
+    
+    /* 🌟 3. ล็อกขอบเขตการ์ด เพื่อบอกเบราว์เซอร์ว่าไม่ต้องคำนวณเผื่อของล้น */
+    contain: content; 
+}
+
+.vehicle-card:hover {
+    transform: translateY(-5px) translateZ(0);
+    box-shadow: 0 12px 20px -5px rgba(0,0,0,0.15);
+}
+
+.card-image-wrapper {
+    height: 200px;
+    background-color: #f8fafc;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 🌟 4. ลดภาระการคำนวณการยืดหดรูปภาพ (object-fit) ระหว่างที่ Sidebar เลื่อน */
+.card-image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: translateZ(0); 
+}
+
+.card-content {
+    padding: 20px;
+    text-align: center;
+}
+
+.card-title {
+    color: #0ea5e9;
+    font-size: 18px;
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* ตัดคำถ้ายาวเกินไป ลดภาระการจัดบรรทัดใหม่ */
+}
+
+.loading-text {
+    text-align: center;
+    padding: 50px;
+    font-size: 1.2em;
+    color: #64748b;
+}

@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* จัดเลย์เอาต์ให้ฟอร์มอยู่ตรงกลาง โล่งๆ สะอาดตา */
         body {
             background-color: #f1f5f9;
             padding: 40px 20px;
@@ -43,8 +42,6 @@
             .standalone-form-container { padding: 25px 20px; }
             .form-header-title { font-size: 22px; }
         }
-        
-        /* 🌟 ตกแต่ง Popup (SweetAlert2) ให้มีมิติแบบ Pro 🌟 */
         .swal2-popup.custom-swal-popup {
             border-radius: 24px !important; 
             background: linear-gradient(145deg, #ffffff, #f8fafc) !important; 
@@ -61,12 +58,18 @@
 <body>
 
     <div class="standalone-form-container">
+        <div style="margin-bottom: 10px;">
+            <button type="button" onclick="goBack()" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #475569; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; font-family: 'Prompt', sans-serif; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px;">
+                ❮ ย้อนกลับ
+            </button>
+        </div>
+        
         <div class="form-header-title">ฟอร์มบันทึกและตรวจสภาพ</div>
         
         <form id="inspectionForm">
             <div class="form-group">
                 <label>ผู้ตรวจสอบ: <span style="color:red">*</span></label>
-                <input type="text" id="inspector" name="inspector" value="ปราณี คำมี" required placeholder="ชื่อผู้ตรวจ">
+                <input type="text" id="inspector" name="inspector" required placeholder="ชื่อผู้ตรวจ">
             </div>
             
             <div class="form-group">
@@ -89,7 +92,6 @@
     </div>
 
     <script>
-        // 🌟 ลิงก์ Apps Script ของคุณ 🌟
         const scriptURL = "https://script.google.com/macros/s/AKfycbzWc03wzCkfUHs3pIucqNs_tz7BguxUlODGOihfiMgHgkQFx5Kc1DRlITg_SDR9lu4/exec"; 
 
         const vehicleItems = ["ลมยาง (ระดับความดันปกติ ไม่แบนรั่ว)", "สภาพเนื้อยาง / ดอกยาง (ไม่มีรอยปริแตก ซึม หรือฉีกขาด)", "สภาพกะทะล้อ / น็อตล้อ (ไม่คดดุ้ง ขันแน่น)", "ระบบเบรก (หน้า-หลัง / เบรกมือ)", "ระบบบังคับเลี้ยว / โช้คอัพ / ช่วงล่าง", "ระบบไฟฟ้า / ส่องสว่าง / แตร / สัญญาณเตือน", "แบตเตอรี่ / สายชาร์จ / ระดับของเหลว", "ระบบขับเคลื่อน (โซ่ / สายพาน / มอเตอร์)", "สภาพตัวถัง / เบาะนั่ง / กระจกมองข้าง"];
@@ -97,7 +99,6 @@
 
         const fireKeywords = ['อุปกรณ์ดับเพลิง', 'ถังดับเพลิง', 'สายส่งน้ำดับเพลิง', 'สายฉีด', 'หัวฉีด', 'ปั๊มน้ำ', 'ตู้เก็บอุปกรณ์', 'หัวรับน้ำ'];
 
-        // โหลดข้อมูลจาก URL อัตโนมัติ (รับค่าจากการ์ด)
         window.onload = () => {
             const urlParams = new URLSearchParams(window.location.search);
             if(urlParams.has('type')) {
@@ -112,7 +113,6 @@
                 document.getElementById('vehicleType').value = type;
                 updateFormFields(); 
 
-                // เติมข้อมูลลงช่องอัตโนมัติ
                 setTimeout(() => {
                     if(document.getElementsByName('vehicleDetail')[0]) document.getElementsByName('vehicleDetail')[0].value = urlParams.get('detail') || '';
                     if(document.getElementsByName('color')[0]) document.getElementsByName('color')[0].value = urlParams.get('color') || '';
@@ -122,7 +122,6 @@
             }
         };
 
-        // แสดงช่องระบุสาเหตุเมื่อกด "ไม่ปกติ"
         window.toggleReason = function(index, isAbnormal) {
             const reasonInput = document.getElementById(`reason_${index}`);
             if(isAbnormal) { 
@@ -135,7 +134,6 @@
             }
         };
 
-        // วาดฟอร์มตามประเภท
         function updateFormFields() {
             const type = document.getElementById('vehicleType').value;
             const dynamicFields = document.getElementById('dynamicFields');
@@ -188,7 +186,6 @@
             dynamicFields.innerHTML = html;
         }
 
-        // 🌟 ระบบ Submit ทำงานเบื้องหลัง (Background Fetch) 🌟
         document.getElementById('inspectionForm').addEventListener('submit', e => {
             e.preventDefault();
             const form = document.getElementById('inspectionForm');
@@ -196,7 +193,6 @@
             const type = document.getElementById('vehicleType').value;
             let targetItems = (type === 'อุปกรณ์ดับเพลิง') ? fireExtinguisherItems : vehicleItems;
 
-            // รวบรวมข้อมูล Checklist จัดเป็น JSON
             if (document.getElementsByName('chk_0').length > 0) {
                 let checksArray = [];
                 for(let i=0; i < targetItems.length; i++) {
@@ -222,18 +218,25 @@
                     title: 'custom-swal-title'
                 }
             }).then(() => {
-                // ยิงข้อมูลไป Google Sheet แบบไม่ต้องรอ (keepalive: true อนุญาตให้ส่งคำร้องขอแม้แท็บจะถูกปิด)
+                // ยิงข้อมูลไป Google Sheet แบบไม่ต้องรอ
                 fetch(scriptURL, { method: 'POST', body: formData, keepalive: true }).catch(console.error);
 
-                // ปิดแท็บนี้เพื่อเด้งกลับไปหน้าแกลเลอรี่ถังดับเพลิงทันที
+                // พยายามปิดแท็บ (หากเปิดเป็นแท็บใหม่)
                 window.close();
                 
-                // หาก browser บล็อกการปิดแท็บ (เปิดจากลิงก์เดิม) จะทำการ redirect กลับไปหน้าเดิม
                 setTimeout(() => {
-                    window.location.href = 'index.html?main=fire&unit=ถังดับเพลิง';
-                }, 300);
+    if (type === 'อุปกรณ์ดับเพลิง') {
+        window.location.href = 'page_fire.html?unit=ถังดับเพลิง'; // ✨ เปลี่ยนให้โหลดหน้ารวมดับเพลิงในกรอบเดิม
+    } else {
+        window.location.href = 'page_vehicle.html'; 
+    }
+}, 300);
             });
         });
+        // ✨ ฟังก์ชันสำหรับปุ่มย้อนกลับ (แบบเร็วทันใจ)
+        window.goBack = function() {
+            window.history.back();
+        };
     </script>
 </body>
 </html>

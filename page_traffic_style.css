@@ -1,0 +1,72 @@
+/* ==========================================
+   สไตล์เฉพาะหน้า งานจราจร (page_traffic_style.css)
+   ========================================== */
+body {
+    background-color: #f1f5f9; 
+    margin: 0;
+    padding: 0;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.vehicle-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    
+    /* เปิดใช้งาน Hardware Acceleration ป้องกันเมนูด้านข้างกระตุก */
+    will-change: transform;
+    transform: translateZ(0);
+    contain: content; 
+}
+
+.vehicle-card:hover {
+    transform: translateY(-5px) translateZ(0);
+    box-shadow: 0 12px 20px -5px rgba(0,0,0,0.15);
+}
+
+.card-image-wrapper {
+    height: 260px; /* 🌟 ปรับขนาดกรอบรูปใหญ่จุใจตามบรีฟ */
+    background-color: #f1f5f9;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+}
+
+.card-image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; 
+    transform: translateZ(0); 
+    border-radius: 8px;
+}
+
+.card-content {
+    padding: 15px 20px;
+    text-align: left;
+}
+
+.card-title {
+    color: #000000; /* 🌟 ล็อกสีตัวหนังสือเป็นสีดำสนิท */
+    font-size: 16px;
+    margin: 0 0 10px 0;
+    font-weight: 600;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.loading-text {
+    text-align: center;
+    padding: 50px;
+    font-size: 1.2em;
+    color: #64748b;
+}

@@ -475,7 +475,6 @@ function renderAllTables() {
         if (dailyAll.length === 0) {
             summaryContainerDoc.innerHTML = `
             <div style="display: flex; gap: 20px; margin-bottom: 5px; white-space: nowrap;">
-                <div>- ไม่มีเหตุการณ์</div>
                 <div></div>
             </div>`;
         } else {
@@ -501,27 +500,28 @@ function renderAllTables() {
                 let driveId = extractDriveId(item.img);
                 let imgHtml = '';
                 
-                // ปรับขนาดรูปให้กว้าง 45% (เกือบครึ่งหน้า) และสั่ง float: left เพื่อให้ตัวหนังสือไหลล้อมรูป
                 if (driveId) {
-                    let safeImgUrl = `https://wsrv.nl/?url=drive.google.com/uc?id=${driveId}&output=jpg&w=600&fit=cover`; // ดึงภาพที่ความละเอียดสูงขึ้น
+                    let safeImgUrl = `https://wsrv.nl/?url=drive.google.com/uc?id=${driveId}&output=jpg&w=600&fit=cover`; 
                     imgHtml = `<img src="${safeImgUrl}" crossorigin="anonymous" style="float: left; width: 45%; max-height: 250px; object-fit: cover; border-radius: 6px; margin: 5px 20px 10px 0; border: 1px solid #000000;">`;
                 } else {
                     imgHtml = `<div style="float: left; width: 45%; height: 180px; background-color: #f8fafc; border: 2px dashed #000000; border-radius: 6px; margin: 5px 20px 10px 0; display: table; text-align: center;"><div style="display: table-cell; vertical-align: middle; color: #000000; font-size: 14pt;">ไม่มีรูปภาพ</div></div>`;
                 }
 
-                // ยกเลิก display: flex และใช้รูปแบบ Block ธรรมดา เพื่อให้ float ทำงานได้สมบูรณ์
+                // 🌟 ถอด page-break-inside: avoid; ออก เพื่อให้เริ่มต่อจากตารางได้ทันที และไหลข้ามหน้าได้
+                // 🌟 ใส่ margin-top: 25px; เพื่อเว้นระยะจากตารางด้านบนประมาณ 1 บรรทัดเสมอ
                 detailContainerDoc.innerHTML += `
-                <div style="width: 100%; margin-bottom: 30px; page-break-inside: avoid; break-inside: avoid; font-family: 'TH Sarabun New', 'TH SarabunPSK', Tahoma, sans-serif; text-rendering: optimizeLegibility;">
+                <div style="width: 100%; margin-top: 25px; margin-bottom: 30px; font-family: 'TH Sarabun New', 'TH SarabunPSK', Tahoma, sans-serif; text-rendering: optimizeLegibility;">
                     ${imgHtml}
                     <div style="font-size: 16pt; line-height: 26px; word-wrap: break-word; text-align: justify; text-justify: inter-word;">
                         <div style="font-weight: bold; margin-bottom: 5px; text-align: left;">${index + 1}. ${item.type}</div>
                         <span style="display: inline-block; width: 1cm;"></span>${item.detail}
                     </div>
-                    <div style="clear: both;"></div> </div>`;
+                    <div style="clear: both;"></div> 
+                </div>`;
             });
         }
 
-        // 🌟 เพิ่มคำลงท้าย "จึงเรียนมาเพื่อโปรดทราบ" ลงไปเป็นบรรทัดสุดท้ายเสมอ (ไม่ว่าจะมีหรือไม่มีเหตุการณ์ก็ตาม)
+        // เพิ่มคำลงท้าย "จึงเรียนมาเพื่อโปรดทราบ"
         detailContainerDoc.innerHTML += `
         <div style="width: 100%; text-align: justify; font-family: 'TH Sarabun New', 'TH SarabunPSK', Tahoma, sans-serif; font-size: 16pt; line-height: 26px; margin-top: 10px; margin-bottom: 20px;">
             <span style="display: inline-block; width: 2.5cm;"></span>จึงเรียนมาเพื่อโปรดทราบ
@@ -806,3 +806,90 @@ window.removeNameFromShift = function(shiftId, nameToRemove) {
         }
     }
 };
+// ==========================================
+// 🌟 ฟังก์ชันดึงข้อมูลตาราง รปภ. จาก Google Sheet โดยตรง
+// ==========================================
+function loadSecurityGuardData() {
+    const sheetId = '1lYRhXtLgec6ISM6Ugt-YKLrh47NRt7ihcVLcD8mI_Yg';
+    const gid = '949046249';
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&gid=${gid}&headers=1`;
+
+    fetch(url)
+        .then(response => response.text())
+        .then(text => {
+            const jsonString = text.match(/google\.visualization\.Query\.setResponse\(([\s\S\w]+)\);/)[1];
+            const data = JSON.parse(jsonString);
+            
+            const rows = data.table.rows;
+            let html = '';
+            let sumTotal = 0, sumMorning = 0, sumNight = 0;
+
+            if (rows.length > 0) {
+                rows.forEach(row => {
+                    let unit = row.c[0] ? row.c[0].v : '';
+                    if (!unit) return; 
+
+                    // 🌟 1. ย่อชื่อสถาบันให้สั้นลง
+                    if (unit.includes('โครงการจัดตั้งสถาบันอุทยานธรรมชาติวิทยาสิรีรุกขชาติ')) {
+                        unit = 'สิรีรุกขชาติ';
+                    }
+
+                    let total = row.c[1] && row.c[1].v != null ? row.c[1].v : '-';
+                    let morning = row.c[2] && row.c[2].v != null ? row.c[2].v : '-';
+                    let night = row.c[3] && row.c[3].v != null ? row.c[3].v : '-';
+                    
+                    // ดึงข้อความหมายเหตุที่พิมพ์ไว้ใน Google Sheet
+                    let sheetRemark = row.c[4] && row.c[4].v != null ? row.c[4].v : '';
+                    let finalRemark = sheetRemark;
+
+                    // 🌟 2. ระบบคำนวณคนขาด/ครบ อัตโนมัติ
+                    if (total !== '-' && morning !== '-' && night !== '-') {
+                        let t = Number(total);
+                        let m = Number(morning);
+                        let n = Number(night);
+                        let diff = t - (m + n);
+
+                        if (diff === 0) {
+                            finalRemark = 'ครบ';
+                        } else if (diff > 0) {
+                            // ถ้าขาด ระบบจะพิมพ์ "ขาด X คน" สีแดงให้ทันที
+                            // ส่วนคำว่า "ผลัดเช้า" หรือ "ผลัดดึก" ให้คุณแพรวพิมพ์ใส่ช่องหมายเหตุใน Sheet ได้เลย มันจะเอามาต่อท้ายให้เองครับ
+                            finalRemark = `<span style="color: #dc2626; font-weight: bold;">ขาด ${diff} คน ${sheetRemark}</span>`;
+                        }
+                    }
+
+                    if (!isNaN(total) && total !== '-') sumTotal += Number(total);
+                    if (!isNaN(morning) && morning !== '-') sumMorning += Number(morning);
+                    if (!isNaN(night) && night !== '-') sumNight += Number(night);
+
+                    // 🌟 3. ปรับ padding ให้เหลือ 0px 8px เพื่อให้บรรทัดแคบลงที่สุด
+                    html += `<tr>
+                        <td style="border: 1px solid #000; padding: 0px 8px; text-align: left;">${unit}</td>
+                        <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${total}</td>
+                        <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${morning}</td>
+                        <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${night}</td>
+                        <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${finalRemark}</td>
+                    </tr>`;
+                });
+
+                html += `<tr style="font-weight: bold; background-color: #f8fafc;">
+                    <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">รวมทั้งหมด</td>
+                    <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${sumTotal}</td>
+                    <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${sumMorning}</td>
+                    <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${sumNight}</td>
+                    <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;"></td>
+                </tr>`;
+
+            } else {
+                html = `<tr><td colspan="5" style="text-align: center; border: 1px solid #000; padding: 4px;">ไม่มีข้อมูล</td></tr>`;
+            }
+
+            const tbody = document.getElementById('securityGuardTableBody');
+            if (tbody) tbody.innerHTML = html;
+        })
+        .catch(error => { console.error('Error:', error); });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadSecurityGuardData();
+});
