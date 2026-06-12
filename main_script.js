@@ -184,3 +184,43 @@ document.addEventListener('DOMContentLoaded', () => {
         fireMenuSlot.innerHTML = fireSubmenuHTML;
     }
 });
+// ==========================================
+// 🌟 ระบบย้าย Footer ไปไว้ล่างสุดของเนื้อหาในหน้าลูก (Iframe)
+// ==========================================
+document.getElementById('contentFrame').addEventListener('load', function() {
+    try {
+        const iframeDoc = this.contentDocument || this.contentWindow.document;
+        
+        // เช็คว่ามี Footer อยู่แล้วหรือยัง ถ้ายังไม่มีให้สร้างใหม่
+        if (!iframeDoc.getElementById('dynamic-footer')) {
+            const footer = iframeDoc.createElement('footer');
+            footer.id = 'dynamic-footer';
+            
+            // จัดทรง Footer ให้ไปอยู่ล่างสุด (ใช้ var() เพื่อรองรับการเปลี่ยนสีโหมดมืดอัตโนมัติ)
+            footer.style.cssText = `
+                background-color: var(--bg-color, #ffffff);
+                color: var(--text-color, #475569);
+                border-top: 1px solid var(--border-color, #cbd5e1);
+                padding: 15px 30px;
+                font-size: 14px;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 40px; /* ดันให้ห่างจากเนื้อหาด้านบน */
+                font-family: 'Prompt', sans-serif;
+            `;
+            
+            // ใส่ข้อความลิขสิทธิ์
+            footer.innerHTML = `
+                <div data-th="© 2026 งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม มหาวิทยาลัยมหิดล" data-en="© 2026 Traffic and Security, Mahidol University">© 2026 งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม มหาวิทยาลัยมหิดล</div>
+                <div data-th="โทรศัพท์: 02-441-4400 กด 0" data-en="Tel: 02-441-9318">โทรศัพท์: 02-441-9318</div>
+            `;
+            
+            // นำไปต่อท้ายสุดของหน้าเนื้อหา
+            iframeDoc.body.appendChild(footer);
+        }
+    } catch (e) {
+        console.log("ไม่สามารถแทรก Footer ได้:", e);
+    }
+});
