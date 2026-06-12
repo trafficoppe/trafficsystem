@@ -165,6 +165,24 @@ function syncIframeThemeLanguage() {
 // 🌟 ระบบเสกเมนูย่อยผ่าน Javascript (ป้องกันเมนูค้าง และ main.html ไม่รก)
 // ==================================================
 document.addEventListener('DOMContentLoaded', () => {
+
+    // =======================================================
+    // 🌟 1. ระบบตรวจสอบการล็อกอิน (สำคัญที่สุด: ห้ามเอาออก)
+    // =======================================================
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    if (!loggedInUser) {
+        return; // หยุดการทำงานของหน้าเว็บหลักทั้งหมด
+    } else {
+        // ถ้าล็อกอินแล้ว ให้นำชื่อไปแสดงที่มุมขวาบน
+        const nameDisplay = document.getElementById('displayUserName');
+        if (nameDisplay) {
+            nameDisplay.textContent = loggedInUser;
+        }
+    }
+    // =======================================================
+
+    // โหลดสถานะ Theme โหมดมืดจากความจำ... (โค้ดเดิมของคุณแพรวจะอยู่ต่อจากนี้)
+    
     
     // โค้ดก้อนเมนูอุปกรณ์ดับเพลิง
     const fireSubmenuHTML = `

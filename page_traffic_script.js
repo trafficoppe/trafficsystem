@@ -1,14 +1,14 @@
 /* ==========================================
-   TRAFFIC JAVASCRIPT (page_traffic_script.js)
+   STAFF JAVASCRIPT (page_staff_script.js)
    ========================================== */
 
-const trafficSheetUrl = "https://docs.google.com/spreadsheets/d/1lYRhXtLgec6ISM6Ugt-YKLrh47NRt7ihcVLcD8mI_Yg/gviz/tq?tqx=out:json&gid=1509680619";
+const staffApiUrl = "https://script.google.com/macros/s/AKfycbzWc03wzCkfUHs3pIucqNs_tz7BguxUlODGOihfiMgHgkQFx5Kc1DRlITg_SDR9lu4/exec";
 
-let allTrafficData = [];
+let allStaffData = [];
 
 window.onload = function() {
     injectUI();
-    fetchTrafficData();
+    fetchStaffData();
 };
 
 function injectUI() {
@@ -16,180 +16,141 @@ function injectUI() {
     if (!pDoc) return;
 
     const headerSlot = pDoc.getElementById('headerFilterSlot');
-    const headerTemplate = document.getElementById('trafficFilterTemplate');
+    const headerTemplate = document.getElementById('staffFilterTemplate');
     
     if (headerSlot && headerTemplate) {
         headerSlot.innerHTML = headerTemplate.innerHTML;
+        
         const searchInput = pDoc.getElementById('globalSearchInput');
-        if (searchInput) searchInput.oninput = displayTrafficData;
+        const unitSelect = pDoc.getElementById('staffUnitSelect');
+        const roleSelect = pDoc.getElementById('staffRoleSelect');
+        
+        // รับค่าจาก URL (เผื่อกดมาจากเมนูด้านข้าง)
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.has('unit')) {
+            let u = urlParams.get('unit').toLowerCase();
+            if(u.includes('ยุทธศาสตร์')) unitSelect.value = 'ยุทธศาสตร์';
+            else if(u.includes('ปฏิบัติการ')) unitSelect.value = 'ปฏิบัติการ';
+        }
+
+        if (searchInput) searchInput.oninput = displayStaffData;
+        if (unitSelect) unitSelect.onchange = displayStaffData;
+        if (roleSelect) roleSelect.onchange = displayStaffData;
     }
 }
 
-// ระบบแปลงวันที่เพื่อนำมาจัดเรียง
-function parseDateToTimestamp(dateStr, fileName) {
-    try {
-        if (dateStr) {
-            let str = dateStr.toString().trim();
-            if (str.startsWith('Date(')) {
-                let p = str.match(/\d+/g);
-                if (p && p.length >= 3) {
-                    return new Date(parseInt(p[0]), parseInt(p[1]), parseInt(p[2]), p[3] ? parseInt(p[3]) : 0, p[4] ? parseInt(p[4]) : 0).getTime();
-                }
-            }
-            let parts = str.split(/[\/\-\s:]+/);
-            if (parts.length >= 3) {
-                let day = parseInt(parts[0]);
-                let month = parseInt(parts[1]) - 1;
-                let year = parseInt(parts[2]);
-                if (year > 2500) year -= 543;
-                let hour = parts[3] ? parseInt(parts[3]) : 0;
-                let minute = parts[4] ? parseInt(parts[4]) : 0;
-                let parsed = new Date(year, month, day, hour, minute).getTime();
-                if (!isNaN(parsed)) return parsed;
-            }
-        }
-        if (fileName) {
-            let match = fileName.match(/(\d{4})(\d{2})(\d{2})_?(\d{2})?(\d{2})?/);
-            if (match && match[1] && parseInt(match[1]) >= 2020) {
-                let year = parseInt(match[1]);
-                let month = parseInt(match[2]) - 1;
-                let day = parseInt(match[3]);
-                let hour = match[4] ? parseInt(match[4]) : 0;
-                let minute = match[5] ? parseInt(match[5]) : 0;
-                let parsed = new Date(year, month, day, hour, minute).getTime();
-                if (!isNaN(parsed)) return parsed;
-            }
-        }
-    } catch (e) {}
-    return 0;
-}
-
-// ระบบแปลงวันที่รูปแบบเต็มภาษาไทย
-function formatThaiDate(timestamp) {
-    if (!timestamp) return '-';
-    const d = new Date(timestamp);
-    const thaiMonths = [
-        "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
-    ];
-    const day = d.getDate();
-    const month = thaiMonths[d.getMonth()];
-    const year = d.getFullYear() + 543; 
-    
-    let h = d.getHours();
-    let m = d.getMinutes();
-    
-    if (h > 0 || m > 0) {
-        return `${day} ${month} ${year} เวลา ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} น.`;
-    }
-    return `${day} ${month} ${year}`;
-}
-
-function fetchTrafficData() {
+function fetchStaffData() {
     const loadingEl = document.getElementById('assetLoading');
     if(loadingEl) loadingEl.style.display = 'block';
 
-    fetch(trafficSheetUrl)
-        .then(res => res.text())
-        .then(text => {
-            const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S\w]+)\);/);
-            if (match && match[1]) {
-                const data = JSON.parse(match[1]);
-                allTrafficData = data.table.rows.map((row, index) => {
-                    if (!row || !row.c) return null;
-                    const getV = (i) => (row.c[i] && (row.c[i].f || row.c[i].v)) ? (row.c[i].f || row.c[i].v).toString().trim() : '';
-                    
-                    let dateStr = getV(0);
-                    let fileName = getV(1);
-                    let imageUrl = getV(2);
-                    let category = getV(3);
-                    
-                    if(!imageUrl || imageUrl === '-' || imageUrl === '') return null;
-                    
-                    // 🌟 กรองเอาเฉพาะหมวดหมู่ที่เกี่ยวข้องกับ "จราจร"
-                    if(!category.includes('จราจร')) return null;
-                    
-                    let timestamp = parseDateToTimestamp(dateStr, fileName);
-                    let displayDate = formatThaiDate(timestamp);
-                    if (displayDate === '-') displayDate = dateStr;
-                    
-                    return { 
-                        date: dateStr,
-                        displayDate: displayDate,
-                        fileName: fileName,
-                        image: imageUrl,
-                        category: category,
-                        timestamp: timestamp,
-                        rowIndex: index
-                    };
-                }).filter(item => item !== null);
-                
-                // เรียงลำดับชั้นที่ 1 (วันที่ล่าสุด) และชั้นที่ 2 (แถวล่าสุด)
-                allTrafficData.sort((a, b) => {
-                    if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
-                    return b.rowIndex - a.rowIndex;
-                });
-
-                // ดึง 20 ภาพล่าสุด
-                allTrafficData = allTrafficData.slice(0, 20);
-                
-                if(loadingEl) loadingEl.style.display = 'none';
-                displayTrafficData();
-            }
+    fetch(staffApiUrl)
+        .then(res => res.json())
+        .then(data => {
+            // กรองเอาเฉพาะหมวดหมู่บุคลากร
+            allStaffData = data.filter(item => item.Data_Category === 'Staff');
+            
+            if(loadingEl) loadingEl.style.display = 'none';
+            displayStaffData();
         }).catch(err => {
-            if(loadingEl) loadingEl.innerHTML = `<span style="color:red;">❌ เกิดข้อผิดพลาดในการโหลดข้อมูล</span>`;
+            console.error("Fetch Error:", err);
+            if(loadingEl) loadingEl.innerHTML = `<span style="color:red;">❌ เกิดข้อผิดพลาดในการเชื่อมต่อข้อมูล</span>`;
         });
 }
 
-function displayTrafficData() {
-    const gallery = document.getElementById('trafficGallery');
+function displayStaffData() {
+    const gallery = document.getElementById('staffGallery');
     if(!gallery) return;
     
     const pDoc = window.parent.document;
     let searchInput = pDoc ? pDoc.getElementById('globalSearchInput') : null;
-    let keyword = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    
-    let filtered = allTrafficData;
+    let unitSelect = pDoc ? pDoc.getElementById('staffUnitSelect') : null;
+    let roleSelect = pDoc ? pDoc.getElementById('staffRoleSelect') : null;
 
-    if (keyword !== '') {
-        filtered = filtered.filter(v => 
-            (v.fileName && v.fileName.toLowerCase().includes(keyword)) || 
-            (v.date && v.date.toLowerCase().includes(keyword)) ||
-            (v.displayDate && v.displayDate.includes(keyword))
-        );
+    let keyword = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    let selUnit = unitSelect ? unitSelect.value : 'all';
+    let selRole = roleSelect ? roleSelect.value : 'all';
+
+    let filtered = allStaffData;
+
+    // กรองตามหน่วยงาน
+    if (selUnit !== 'all') {
+        filtered = filtered.filter(v => {
+            let unitName = (v['หน่วย'] || v['หน่วยงาน'] || '').toLowerCase();
+            return unitName.includes(selUnit);
+        });
     }
-    
+
+    // กรองตามประเภท/กะ
+    if (selRole !== 'all') {
+        filtered = filtered.filter(v => {
+            let roleName = (v.ประเภท || '').toLowerCase();
+            if(selRole === 'หัวหน้า') return roleName.includes('หัวหน้า');
+            if(selRole === 'จราจร') return roleName.includes('จราจร') && !roleName.includes('หัวหน้า');
+            return roleName.includes(selRole.toLowerCase());
+        });
+    }
+
+    // กรองตามคำค้นหา
+    if (keyword !== '') {
+        filtered = filtered.filter(v => {
+            let combinedText = `${v['ยี่ห้อ/รุ่น'] || ''} ${v.ประเภท || ''} ${v.ทะเบียน || ''} ${v['ตำแหน่ง'] || ''} ${v['หัวหน้าหน่วย'] || ''}`.toLowerCase();
+            return combinedText.includes(keyword);
+        });
+    }
+
+    // 🌟 เพิ่มการกรอง ผอ. และ รองอธิการ ออกจากรายการ (ดักจากชื่อ)
+    filtered = filtered.filter(v => {
+        let staffName = v['ยี่ห้อ/รุ่น'] || '';
+        if (staffName.includes('รองอธิการ') || staffName.includes('ผอ')) {
+            return false; // ข้ามการสร้างการ์ดคนนี้ไปเลย
+        }
+        return true;
+    });
+
     if (filtered.length === 0) {
-        gallery.innerHTML = `<div class="loading-text" style="grid-column: 1/-1;">🔍 ไม่พบข้อมูลงานจราจร</div>`;
+        gallery.innerHTML = `<div class="loading-text" style="grid-column: 1/-1;">🔍 ไม่พบรายชื่อบุคลากรที่ค้นหา</div>`;
         return;
     }
 
     gallery.innerHTML = filtered.map(v => {
         let imgHtml = '';
-        if (v.image) {
-            const match = v.image.match(/[?&]id=([a-zA-Z0-9_-]+)/) || v.image.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        let imgUrl = v.URL_รูปภาพ_1 || '';
+        
+        if (imgUrl) {
+            const match = imgUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/) || imgUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
                 const fileId = match[1];
-                const imgUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
-                imgHtml = `
-                <div class="card-image-wrapper" style="height: 260px; background-color: #f1f5f9; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 5px;">
-                    <img src="${imgUrl}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;">
-                </div>`;
+                const cleanUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+                imgHtml = `<img src="${cleanUrl}" style="width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 8px;">`;
             } else {
-                imgHtml = `
-                <div class="card-image-wrapper" style="height: 260px; background-color: #f1f5f9; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 5px;">
-                    <img src="${v.image}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;">
-                </div>`;
+                imgHtml = `<img src="${imgUrl}" style="width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 8px;">`;
             }
+        } else {
+            imgHtml = `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; background:#e2e8f0; color:#94a3b8; font-size:40px;"><i class="fa-solid fa-user"></i></div>`;
         }
+
+        let staffName = v['ยี่ห้อ/รุ่น'] || 'ไม่ระบุชื่อ';
+        let staffRole = v.ประเภท || '-';
+        let staffId = v.ทะเบียน || '-';
+        let staffPhone = v.สี || '-';
+
+        let staffPosition = v['ตำแหน่ง'] || v['หัวหน้าหน่วย'] || v['หน่วย'] || v['หน่วยงาน'] || '-';
 
         return `
         <div class="vehicle-card" style="background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); overflow: hidden;">
-            ${imgHtml}
-            <div class="card-content" style="padding: 15px 20px; text-align: left;">
-                <h3 class="card-title" style="color: #000000; font-size: 16px; margin: 0 0 10px 0; font-weight: 600; word-break: break-word;">${v.fileName || 'ภาพถ่ายงานจราจร'}</h3>
-                <div style="font-size: 14px; color: #000000; margin-bottom: 5px;"><strong>เวลา:</strong> ${v.displayDate || '-'}</div>
-                <div style="font-size: 14px; color: #000000; font-weight: 500;"><strong>หมวดหมู่:</strong> ${v.category || '-'}</div>
+            <div class="card-image-wrapper" style="height: 280px; background-color: #f1f5f9; overflow: hidden; padding: 5px;">
+                ${imgHtml}
+            </div>
+            <div class="card-content" style="padding: 15px 20px;">
+                <div style="font-size: 13px; color: #64748b; margin-bottom: 5px; font-weight: 500; text-align: left;">รหัสพนักงาน: ${staffId}</div>
+                <h3 class="card-title" style="color: #000000; font-size: 18px; margin: 0 0 5px 0; font-weight: 600; word-break: break-word; text-align: left;">${staffName}</h3>
+                <div style="font-size: 14px; color: #000000; font-weight: 600; margin-bottom: 5px; text-align: left;">${staffRole}</div>
+                
+                <div style="font-size: 13px; color: #000000; margin-bottom: 5px; text-align: center; min-height: 40px; display: flex; align-items: center; justify-content: center;">${staffPosition}</div>
+                
+                <div style="font-size: 13px; color: #000000; font-weight: 500; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9; text-align: left;">
+                    <i class="fa-solid fa-phone" style="margin-right: 5px; color: #3b82f6;"></i> ${staffPhone}
+                </div>
             </div>
         </div>
         `;
