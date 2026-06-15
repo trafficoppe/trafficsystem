@@ -43,11 +43,20 @@
             <li><a href="#" onclick="loadPage('page_vehicle.html', 'ยานพาหนะทั้งหมด', 'All Vehicles', this)"><i class="fa-solid fa-car-side menu-icon"></i> <span class="menu-text" data-th="ยานพาหนะทั้งหมด" data-en="All Vehicles">ยานพาหนะทั้งหมด</span></a></li>
             
             <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-fire').classList.toggle('show-submenu');" id="menu-fire">
-                    <i class="fa-solid fa-fire-extinguisher menu-icon"></i> 
-                    <span class="menu-text" data-th="อุปกรณ์ดับเพลิง ▾" data-en="Fire Equipment ▾">อุปกรณ์ดับเพลิง ▾</span>
+                <a href="#" class="menu-toggle">
+                    <i class="fa-solid fa-fire-extinguisher menu-icon"></i>
+                    <span class="menu-text" data-th="อุปกรณ์ดับเพลิง" data-en="Fire Equip">อุปกรณ์ดับเพลิง</span>
+                    <i class="fa-solid fa-chevron-down arrow-icon"></i>
                 </a>
-                <ul class="submenu" id="submenu-fire"></ul>
+                <ul class="submenu" id="submenu-fire">
+                    <li><a href="#" onclick="loadPage('page_fire.html?unit=ถังดับเพลิง', 'ข้อมูลถังดับเพลิง', 'Extinguishers', this)"><span class="menu-text" data-th="ถังดับเพลิง" data-en="Extinguishers">ถังดับเพลิง</span></a></li>
+                    <li><a href="#" onclick="loadPage('page_fire.html?unit=สายฉีด', 'ข้อมูลสายฉีดดับเพลิง', 'Fire Hoses', this)"><span class="menu-text" data-th="สายฉีด" data-en="Hoses">สายฉีด</span></a></li>
+                    <li><a href="#" onclick="loadPage('page_fire.html?unit=หัวฉีด', 'ข้อมูลหัวฉีดดับเพลิง', 'Nozzles', this)"><span class="menu-text" data-th="หัวฉีด" data-en="Nozzles">หัวฉีด</span></a></li>
+                    <li><a href="#" onclick="loadPage('page_fire.html?unit=ปั๊มน้ำ', 'ข้อมูลปั๊มน้ำ', 'Water Pumps', this)"><span class="menu-text" data-th="ปั๊มน้ำ" data-en="Water Pumps">ปั๊มน้ำ</span></a></li>
+                    <li><a href="#" onclick="loadPage('page_fire.html?unit=ตู้เก็บอุปกรณ์', 'ข้อมูลตู้เก็บอุปกรณ์', 'Cabinets', this)"><span class="menu-text" data-th="ตู้เก็บอุปกรณ์" data-en="Cabinets">ตู้เก็บอุปกรณ์</span></a></li>
+                    <li><a href="#" onclick="loadPage('page_fire.html?unit=หัวรับน้ำ', 'ข้อมูลหัวรับน้ำ', 'Fire Hydrants', this)"><span class="menu-text" data-th="หัวรับน้ำ" data-en="Fire Hydrants">หัวรับน้ำ</span></a></li>
+                    <li><a href="#" onclick="loadPage('page_fire.html?unit=ชุด ppe', 'ข้อมูลชุด PPE', 'PPE Suits', this)"><span class="menu-text" data-th="ชุด PPE" data-en="PPE Suits">ชุด PPE</span></a></li>
+                </ul>
             </li>
             
             <li class="has-submenu">
