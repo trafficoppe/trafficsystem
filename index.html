@@ -66,17 +66,25 @@
                 </ul>
             </li>
 
-            <li><a href="#" onclick="loadPage('page_forms.html', 'แบบฟอร์มต่างๆ', 'Forms & Requests', this)"><i class="fa-solid fa-file-signature menu-icon"></i> <span class="menu-text" data-th="แบบฟอร์มต่างๆ" data-en="Forms & Requests">แบบฟอร์มต่างๆ</span></a></li>
+            <li class="has-submenu">
+    <a href="#"><i class="fa-solid fa-file-signature menu-icon"></i> <span class="menu-text" data-th="แบบฟอร์มต่างๆ" data-en="Forms & Requests">แบบฟอร์มต่างๆ</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
+    <ul class="submenu">
+        <li><a href="#" onclick="loadPage('page_forms.html', 'แบบฟอร์มทั่วไป', 'General Forms', this)"><span class="menu-text" data-th="แบบฟอร์มทั่วไป" data-en="General Forms">แบบฟอร์มทั่วไป</span></a></li>
+        <li><a href="#" onclick="loadPage('page_base_station.html', 'บันทึกศูนย์วิทยุสื่อสาร', 'Base Station Log', this)"><span class="menu-text" data-th="บันทึกศูนย์วิทยุสื่อสาร" data-en="Base Station Log">บันทึกศูนย์วิทยุสื่อสาร</span></a></li>
+    </ul>
+</li>
             <li><a href="#" onclick="loadPage('page_lostfound.html', 'แจ้งของหาย/เก็บของได้', 'Lost & Found', this)"><i class="fa-solid fa-box-open menu-icon"></i> <span class="menu-text" data-th="แจ้งของหาย/เก็บของได้" data-en="Lost & Found">แจ้งของหาย/เก็บของได้</span></a></li>
             
             <li class="has-submenu">
-                <a href="#"><i class="fa-solid fa-chart-pie menu-icon"></i> <span class="menu-text" data-th="รายงานและสถิติ" data-en="Reports & Stats">รายงานและสถิติ</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
-                <ul class="submenu">
-                    <li><a href="#" onclick="loadPage('report_daily.html', 'รายงานประจำวัน', 'Daily Report', this)"><span class="menu-text" data-th="รายงานประจำวัน" data-en="Daily Report">รายงานประจำวัน</span></a></li>
-                    <li><a href="#" onclick="loadPage('report_monthly.html', 'รายงานประจำเดือน', 'Monthly Report', this)"><span class="menu-text" data-th="รายงานประจำเดือน" data-en="Monthly Report">รายงานประจำเดือน</span></a></li>
-                    <li><a href="#" onclick="loadPage('report_security.html', 'รายงานตรวจรับ รปภ.', 'Security Audit Report', this)"><span class="menu-text" data-th="รายงานตรวจรับ รปภ." data-en="Security Audit Report">รายงานตรวจรับ รปภ.</span></a></li>
-                </ul>
-            </li>
+    <a href="#"><i class="fa-solid fa-chart-pie menu-icon"></i> <span class="menu-text" data-th="รายงานและสถิติ" data-en="Reports & Stats">รายงานและสถิติ</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
+    <ul class="submenu">
+        <li><a href="#" onclick="loadPage('report_daily.html', 'รายงานประจำวัน', 'Daily Report', this)"><span class="menu-text" data-th="รายงานประจำวัน" data-en="Daily Report">รายงานประจำวัน</span></a></li>
+        <li><a href="#" onclick="loadPage('report_base_station.html', 'รายงานวิทยุสื่อสาร', 'Base Station Report', this)"><span class="menu-text" data-th="รายงานวิทยุสื่อสาร" data-en="Base Station Report">รายงานวิทยุสื่อสาร</span></a></li>
+        
+        <li><a href="#" onclick="loadPage('report_monthly.html', 'รายงานประจำเดือน', 'Monthly Report', this)"><span class="menu-text" data-th="รายงานประจำเดือน" data-en="Monthly Report">รายงานประจำเดือน</span></a></li>
+        <li><a href="#" onclick="loadPage('report_security.html', 'รายงานตรวจรับ รปภ.', 'Security Audit Report', this)"><span class="menu-text" data-th="รายงานตรวจรับ รปภ." data-en="Security Audit Report">รายงานตรวจรับ รปภ.</span></a></li>
+    </ul>
+</li>
             <li><a href="#" onclick="loadPage('page_print_inspection.html', 'ประวัติการตรวจสภาพ', 'Inspection History', this)"><i class="fa-solid fa-print menu-icon"></i> <span class="menu-text" data-th="ประวัติการตรวจสภาพ" data-en="Inspection History">ประวัติการตรวจสภาพ</span></a></li>
 
             <li>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>บันทึกรายงานศูนย์วิทยุสื่อสาร</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            padding: 30px 20px;
+            margin: 0;
+        }
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+        
+        /* 🌟 ปุ่มย้อนกลับ */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            color: #475569;
+            font-size: 14px;
+            font-family: 'Prompt', sans-serif;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 20px;
+        }
+        .back-btn:hover {
+            background-color: #f8fafc;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+
+        /* 🌟 หัวข้อฟอร์มสีเขียว */
+        .form-title {
+            text-align: center;
+            color: #059669;
+            font-size: 24px;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .divider {
+            border: 0;
+            border-top: 1px dashed #cbd5e1;
+            margin-bottom: 30px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #334155;
+        }
+        input[type="text"], input[type="datetime-local"], select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: 'Prompt', sans-serif;
+            box-sizing: border-box;
+            background-color: #ffffff;
+            transition: 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        }
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffffff;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .checkbox-item:hover { background: #f8fafc; border-color: #94a3b8; }
+        button[type="submit"] {
+            width: 100%;
+            padding: 14px;
+            background-color: #059669;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: 0.3s;
+        }
+        button[type="submit"]:hover {
+            background-color: #047857;
+            box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);
+        }
+
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .form-group.full-width { grid-column: span 1; }
+            .checkbox-group { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <button type="button" class="back-btn" onclick="window.history.back()">
+        <i class="fa-solid fa-chevron-left"></i> ย้อนกลับ
+    </button>
+
+    <h2 class="form-title">ฟอร์มบันทึกศูนย์วิทยุสื่อสาร</h2>
+    <hr class="divider">
+
+    <form id="baseStationForm">
+        <input type="hidden" name="sheet_name" value="บันทึกรายงานวิทยุสื่อสาร">
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label>วันเวลาที่รับแจ้ง</label>
+                <input type="datetime-local" id="bs_datetime" name="วันเวลาที่บันทึก">
+            </div>
+            
+            <div class="form-group">
+                <label>เจ้าหน้าที่ศูนย์วิทยุ (ผู้บันทึก)</label>
+                <input type="text" name="เจ้าหน้าที่ศูนย์วิทยุ" list="staffList" placeholder="พิมพ์ชื่อเพื่อค้นหา..." autocomplete="off">
+                <datalist id="staffList">
+                    <option value="นายทรงกลด สุดตา">
+                    <option value="นายสุรชัย สุวรรณราฐ">
+                    <option value="นายบัญชา ฟักเฟื่อง">
+                    <option value="นายพชร สาธร">
+                    <option value="นายไกรสอน คชิมิตร">
+                    <option value="นายนพกร เมืองแก้ว">
+                    <option value="นายนฤเดช เวชบุญ">
+                    <option value="นายสถาพร แจ่มใจ">
+                    <option value="นายอำนาจ แม้นพรม">
+                    <option value="นายบุญฤทธิ์ สายลือนาม">
+                    <option value="นายวุฒิชัย แสงเจริญเกียรติ">
+                    <option value="นายชนสรณ์ เนียมสุภาพ">
+                    <option value="นายตะวัน ทรัพย์อมรพงษ์">
+                    <option value="นายพรชัย โพธิ์ไชย">
+                    <option value="นางโสภาดา จันทร์ทวีสุข">
+                    <option value="นายปิยนันท์ ศรีชุมพวง">
+                </datalist>
+            </div>
+
+            <div class="form-group">
+                <label>หน่วยงานที่แจ้ง</label>
+                <input type="text" name="หน่วยงานที่แจ้ง" list="unitList" placeholder="พิมพ์ชื่อหน่วยงาน / สถานที่..." autocomplete="off">
+                <datalist id="unitList">
+                    <option value="ส่วนกลาง (ม.มหิดล)">
+                    <option value="OP สำนักงานอธิการบดี">
+                    <option value="IC วิทยาลัยนานาชาติ">
+                    <option value="NS คณะพยาบาลศาสตร์">
+                    <option value="AD สถาบันพัฒนาสุขภาพอาเซียน">
+                    <option value="โรงเรียนเตรียมอุดมดนตรี วิทยาลัยดุริยางคศิลป์">
+                    <option value="ลานจอดรถเรือนไทย">
+                    <option value="LC สถาบันวิจัยภาษาและวัฒนธรรมเอเชีย">
+                    <option value="MS วิทยาลัยดุริยางคศิลป์">
+                    <option value="ศูนย์ประชุมและอาคารจอดรถมหิดลสิทธาคาร (P2)">
+                    <option value="อุทยานธรรมชาติวิทยาสิรีรุกขชาติ">
+                    <option value="ศูนย์การเรียนรู้มหิดล (MLC)">
+                    <option value="SC คณะวิทยาศาสตร์ (ศาลายา)">
+                    <option value="GR บัณฑิตวิทยาลัย">
+                    <option value="EG คณะวิศวกรรมศาสตร์">
+                    <option value="ถนนจิตตสมาน">
+                    <option value="LI หอสมุดและคลังความรู้">
+                    <option value="MB สถาบันชีววิทยาศาสตร์โมเลกุล">
+                    <option value="INT สถาบันบริหารจัดการเทคโนโลยีและนวัตกรรม MaSHARES">
+                    <option value="RTEC ห้องปฏิบัติการทดสอบยางล้อ คณะวิทยาศาสตร์">
+                    <option value="Pilot Plant ภาควิชาเทคโนโลยีชีวภาพ คณะวิทยาศาสตร์">
+                    <option value="ลานจอดรถอาคารเจรจานวัตกรรม">
+                    <option value="หอพักนักศึกษา">
+                    <option value="บุคคลภายนอก/อื่นๆ">
+                </datalist>
+            </div>
+
+            <div class="form-group">
+                <label>ชื่อผู้แจ้ง</label>
+                <input type="text" name="ชื่อ รปภ./ผู้แจ้ง" placeholder="เช่น รปภ.สมชาย หรือ นศ.แจ้งเหตุ">
+            </div>
+
+            <div class="form-group">
+                <label>เรื่อง</label>
+                <input type="text" name="ประเภทเหตุการณ์" list="incidentTypes" placeholder="พิมพ์เหตุการณ์ หรือเลือกจากลิสต์..." autocomplete="off">
+                <datalist id="incidentTypes">
+                    <option value="รายงานสถานการณ์ปกติ (ว.4)">
+                    <option value="อุบัติเหตุจราจร (ว.40)">
+                    <option value="เหตุเพลิงไหม้">
+                    <option value="แจ้งสิ่งของสูญหาย/เก็บได้">
+                    <option value="งานจราจร/บังคับล้อ">
+                    <option value="ขอความช่วยเหลือ (รถเสีย, จับสัตว์)">
+                </datalist>
+            </div>
+
+            <div class="form-group">
+                <label>สถานที่</label>
+                <input type="text" name="สถานที่เกิดเหตุ" placeholder="ระบุสถานที่ให้ชัดเจน">
+            </div>
+
+            <div class="form-group full-width">
+                <label>รายละเอียด/ข้อความวิทยุ</label>
+                <textarea name="รายละเอียด/ข้อความ" rows="4" placeholder="พิมพ์สรุปข้อความที่รับแจ้ง..."></textarea>
+            </div>
+
+            <div class="form-group full-width">
+                <label>การดำเนินการของศูนย์ (เลือกได้มากกว่า 1)</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-item"><input type="checkbox" name="การดำเนินการของศูนย์" value="ประสานสายตรวจ"> ประสานงานสายตรวจ</label>
+                    <label class="checkbox-item"><input type="checkbox" name="การดำเนินการของศูนย์" value="ประสานกู้ชีพ/พยาบาล"> ประสานกู้ชีพ/หน่วยพยาบาล</label>
+                    <label class="checkbox-item"><input type="checkbox" name="การดำเนินการของศูนย์" value="แจ้งสถานีตำรวจ"> แจ้งสถานีตำรวจ/หน่วยงานภายนอก</label>
+                    <label class="checkbox-item"><input type="checkbox" name="การดำเนินการของศูนย์" value="รายงานผู้บังคับบัญชา"> รายงานผู้บังคับบัญชาทราบ</label>
+                    <label class="checkbox-item"><input type="checkbox" name="การดำเนินการของศูนย์" value="เรียกรถ taxi"> เรียกรถ taxi</label>
+                </div>
+            </div>
+
+            <div class="form-group full-width">
+                <label>สถานะของเหตุการณ์</label>
+                <select name="สถานะ" style="font-weight: bold;">
+                    <option value="รับแจ้ง">🟡 รับแจ้ง</option>
+                    <option value="กำลังดำเนินการ">🔵 กำลังดำเนินการตรวจสอบ</option>
+                    <option value="ระงับเหตุเรียบร้อย (ปิดงาน)">🟢 ระงับเหตุเรียบร้อย (ปิดงาน)</option>
+                </select>
+            </div>
+        </div>
+
+        <button type="submit" id="submitBtn"><i class="fa-solid fa-paper-plane"></i> บันทึกข้อมูลเข้าระบบ</button>
+        <div id="statusMessage" style="text-align:center; margin-top:15px; font-weight:bold;"></div>
+    </form>
+</div>
+
+<script>
+    // ⚠️ นำลิงก์ Web App URL ของ Google Apps Script มาวางใน ' ' ด้านล่างนี้ครับ
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbzWc03wzCkfUHs3pIucqNs_tz7BguxUlODGOihfiMgHgkQFx5Kc1DRlITg_SDR9lu4/exec';
+
+    window.addEventListener('load', () => {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('bs_datetime').value = now.toISOString().slice(0,16);
+    });
+
+    document.getElementById('baseStationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('submitBtn');
+        const msg = document.getElementById('statusMessage');
+        
+        if (scriptURL === 'ใส่_URL_APPS_SCRIPT_ที่นี่') {
+            alert('กรุณาใส่ลิงก์ Web App URL ของ Apps Script ก่อนครับ');
+            return;
+        }
+        
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึกข้อมูล...';
+        btn.style.backgroundColor = '#64748b';
+        btn.disabled = true;
+
+        let formData = new FormData(this);
+
+        const checkboxes = document.querySelectorAll('input[name="การดำเนินการของศูนย์"]:checked');
+        let actions = [];
+        checkboxes.forEach((cb) => { actions.push(cb.value); });
+        
+        formData.delete('การดำเนินการของศูนย์');
+        if (actions.length > 0) {
+            formData.append('การดำเนินการของศูนย์', actions.join(', '));
+        }
+
+        fetch(scriptURL, { method: 'POST', body: formData })
+            .then(response => {
+                msg.innerHTML = '<span style="color: #059669;"><i class="fa-solid fa-circle-check"></i> บันทึกข้อมูลสำเร็จ!</span>';
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> บันทึกข้อมูลเข้าระบบ';
+                btn.style.backgroundColor = '#059669';
+                btn.disabled = false;
+                
+                this.reset();
+                
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                document.getElementById('bs_datetime').value = now.toISOString().slice(0,16);
+                
+                setTimeout(() => { msg.innerHTML = ''; }, 5000);
+            })
+            .catch(error => {
+                console.error('Error!', error.message);
+                msg.innerHTML = '<span style="color: #dc2626;"><i class="fa-solid fa-circle-xmark"></i> เกิดข้อผิดพลาดในการบันทึก</span>';
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ลองใหม่อีกครั้ง';
+                btn.style.backgroundColor = '#e74c3c';
+                btn.disabled = false;
+            });
+    });
+</script>
+
+</body>
+</html>

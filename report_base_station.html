@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานศูนย์วิทยุสื่อสารประจำวัน</title>
+    
+    <link href="https://fonts.cdnfonts.com/css/th-sarabun-new" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="report_base_station_style.css">
+</head>
+<body>
+
+    <div class="controls-section no-print">
+        <label style="font-weight: 500;">เลือกวันที่รายงาน:</label>
+        <button onclick="changeDate(-1)" class="p-2 text-gray-500 hover:text-blue-600 transition">&#9664;</button>
+        <input type="date" id="reportDate" class="date-picker" onchange="fetchData()">
+        <button onclick="changeDate(1)" class="p-2 text-gray-500 hover:text-blue-600 transition">&#9654;</button>
+        
+        <button onclick="window.print()" class="print-btn ml-4">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            พริ้นต์รายงาน (PDF)
+        </button>
+    </div>
+
+    <div class="a4-paper">
+        <div class="report-header">
+            <div style="display: flex; justify-content: center; width: 100%; margin-bottom: 10px;">
+                <img src="logo-MU_blackwhite.png" alt="มหาวิทยาลัยมหิดล" onerror="this.style.display='none'" style="height: 85px; display: block;">
+            </div>
+            
+            <div class="dept-info">
+                งานจราจรและความปลอดภัย<br>
+                กองกายภาพและสิ่งแวดล้อม<br>
+                โทร. 02-441-4400 ต่อ 1253
+            </div>
+            
+            <div style="font-weight: normal; margin-top: 40px; font-size: 15px; color: #000;">บันทึกรายงานศูนย์วิทยุสื่อสารประจำวัน</div>
+<div id="docDateText" style="font-size: 15px; color: #000;">วันที่ ...</div>
+        </div>
+
+        <table class="table-report">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">เวลา</th>
+                    <th style="width: 25%;">เหตุการณ์ / สถานที่</th>
+                    <th style="width: 20%;">ผู้แจ้ง / หน่วยงาน</th>
+                    <th style="width: 30%;">รายละเอียด และ การดำเนินการ</th>
+                    <th style="width: 15%;">ผู้บันทึก (เบส)</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="5" style="text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</td></tr>
+            </tbody>
+        </table>
+
+        <div id="signatureSection" style="margin-top: 40px; width: 100%; page-break-inside: avoid; break-inside: avoid;"></div>
+    </div>
+
+    <script src="report_base_station_script.js"></script>
+</body>
+</html>
