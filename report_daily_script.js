@@ -272,7 +272,7 @@ window.handleCarData = function(json) {
 
 window.handleRosterData = function(json) {
     if (json && json.table && json.table.rows) {
-        let groups = { 1: [], 2: [], 3: [], 4: [] };
+        let groups = { 1: [], 2: [], 3: [], 4: [], 5: [] };
         
         for (let i = 4; i <= 7; i++) {
             if (json.table.rows[i]) {
@@ -281,6 +281,12 @@ window.handleRosterData = function(json) {
                 if (c && c[2] && c[2].v) groups[2].push(String(c[2].v).trim());
                 if (c && c[3] && c[3].v) groups[3].push(String(c[3].v).trim());
                 if (c && c[4] && c[4].v) groups[4].push(String(c[4].v).trim());
+                
+                // ดึงรายชื่อกลุ่มจราจร (ป้องกันกรณี Index คอลัมน์เคลื่อน)
+                let trafficName = '';
+                if (c[5] && c[5].v) trafficName = String(c[5].v).trim();
+                else if (c[6] && c[6].v) trafficName = String(c[6].v).trim(); 
+                if (trafficName) groups[5].push(trafficName);
             }
         }
 
@@ -314,11 +320,16 @@ window.handleRosterData = function(json) {
             let day = String(d.getDate()).padStart(2, '0');
             let dateKey = `${y}-${m}-${day}`;
 
-            let shiftM = [], shiftA = [], shiftN = [];
+            let shiftM = [], shiftA = [], shiftN = [], shiftT = [];
             let s1 = r.c[1] ? String(r.c[1].v).trim() : "";
             let s2 = r.c[2] ? String(r.c[2].v).trim() : "";
             let s3 = r.c[3] ? String(r.c[3].v).trim() : "";
             let s4 = r.c[4] ? String(r.c[4].v).trim() : "";
+            
+            // อ่านค่าผลัดของกลุ่มจราจร
+            let s5 = '';
+            if (r.c[5] && r.c[5].v) s5 = String(r.c[5].v).trim();
+            else if (r.c[6] && r.c[6].v) s5 = String(r.c[6].v).trim();
 
             if (s1 === 'เช้า') shiftM = shiftM.concat(groups[1]);
             else if (s1 === 'บ่าย') shiftA = shiftA.concat(groups[1]);
@@ -336,7 +347,12 @@ window.handleRosterData = function(json) {
             else if (s4 === 'บ่าย') shiftA = shiftA.concat(groups[4]);
             else if (s4 === 'ดึก') shiftN = shiftN.concat(groups[4]);
 
-            rosterData[dateKey] = { 'เช้า': shiftM, 'บ่าย': shiftA, 'ดึก': shiftN };
+            // แยกจัดกลุ่มของจราจร (ถ้าใน Sheet ไม่ได้เขียนว่า พักกะ ให้ดึงชื่อมาแสดงเลย)
+            if (s5 !== '' && !s5.includes('พัก')) {
+                shiftT = shiftT.concat(groups[5]);
+            }
+
+            rosterData[dateKey] = { 'เช้า': shiftM, 'บ่าย': shiftA, 'ดึก': shiftN, 'จราจร': shiftT };
         }
     }
     flags.roster = true;
@@ -717,45 +733,57 @@ function updateDocumentDates() {
 
 // 🌟 ระบบดึงรายชื่อเข้าตารางเวร (จำนวนแถวยืดหยุ่นตามคนจริง) 🌟
 function updateShiftTableByDate(selectedDate) {
-    const dayData = rosterData[selectedDate] || { 'เช้า': [], 'บ่าย': [], 'ดึก': [] };
+    const dayData = rosterData[selectedDate] || { 'เช้า': [], 'บ่าย': [], 'ดึก': [], 'จราจร': [] };
     
+    // จัดลำดับผลัดใหม่ โดยเอา "จราจร" ไว้ล่างสุด
     const shifts = [
         { id: 'เช้า', label: 'ผลัดเช้า', time: '07.00 - 15.00 น.' },
         { id: 'บ่าย', label: 'ผลัดบ่าย', time: '15.00 - 23.00 น.' },
-        { id: 'ดึก', label: 'ผลัดกลางคืน', time: '23.00 - 07.00 น.' }
+        { id: 'ดึก', label: 'ผลัดกลางคืน', time: '23.00 - 07.00 น.' },
+        { id: 'จราจร', label: 'เจ้าหน้าที่จราจร', time: '08.00 - 16.00 น.' }
     ];
 
     let dashHtml = '';
     let docHtml = '';
 
     shifts.forEach(s => {
-        // 🌟 กรองเอาเฉพาะคนที่มีชื่อจริงๆ ออกมา (ลบค่าว่างและขีดทิ้ง)
         let names = (dayData[s.id] || []).filter(n => n && String(n).trim() !== '' && String(n).trim() !== '-');
         
-        // 🌟 กำหนดจำนวนแถวให้เท่ากับคนที่มีอยู่จริง (ไม่ต้องมีแถว - เผื่อไว้แล้ว)
-        // แต่ถ้ายกเลิกจนหมดเกลี้ยง จะเหลือ 1 แถวเปล่าไว้กันตารางพัง
         let rowCount = Math.max(names.length, 1); 
 
         for (let i = 0; i < rowCount; i++) {
-            let name = names[i] ? String(names[i]) : ''; 
-            name = name.replace(/^(นาย|นาง|นางสาว)\s*/, "").trim();
+            let originalName = names[i] ? String(names[i]).trim() : ''; 
+            
+            // ตัดคำนำหน้าออกเพื่อเอาไปค้นหาหน้าที่ใน dutyMap
+            let cleanName = originalName.replace(/^(นาย|นาง|นางสาว)\s*/, "").trim();
 
             let role = '';
-            if (name !== '') {
-                role = dutyMap[name] || `สายตรวจ ${i + 1}`;
-                name = "นาย" + name; 
+            let displayName = '';
+
+            if (cleanName !== '') {
+                // 🌟 ปรับตรงนี้: ถ้าเป็นกะจราจร ให้หน้าที่เป็น 'จราจร' ทั้งหมดทันที ไม่ใช้สายตรวจ
+                if (s.id === 'จราจร') {
+                    role = 'จราจร';
+                } else {
+                    role = dutyMap[cleanName] || `สายตรวจ ${i + 1}`;
+                }
+                
+                // ใช้ชื่อดั้งเดิมเพื่อรักษาสภาพคำนำหน้า (เช่น นางโสภาดา จะได้ไม่เปลี่ยนเป็นนาย)
+                if (/^(นาย|นาง|นางสาว)/.test(originalName)) {
+                    displayName = originalName;
+                } else {
+                    displayName = "นาย" + cleanName;
+                }
             } else {
                 role = '-';
-                name = '-';
+                displayName = '-';
             }
 
             let rowId = `roster-${s.id}-${i}`;
-
-            // ส่งชื่อไปให้ระบบลบ
-            let clickEvent = name !== '-' ? `ondblclick="removeNameFromShift('${s.id}', '${name}')"` : '';
-            let hoverClassDash = name !== '-' ? 'hover:bg-red-50 cursor-pointer select-none' : '';
-            let hoverClassDoc = name !== '-' ? 'cursor-pointer select-none' : ''; 
-            let tooltip = name !== '-' ? 'title="ดับเบิลคลิกที่นี่เพื่อนำชื่อออก (แถวจะหายไปเลย)"' : '';
+            let clickEvent = displayName !== '-' ? `ondblclick="removeNameFromShift('${s.id}', '${displayName}')"` : '';
+            let hoverClassDash = displayName !== '-' ? 'hover:bg-red-50 cursor-pointer select-none' : '';
+            let hoverClassDoc = displayName !== '-' ? 'cursor-pointer select-none' : ''; 
+            let tooltip = displayName !== '-' ? 'title="ดับเบิลคลิกที่นี่เพื่อนำชื่อออก (แถวจะหายไปเลย)"' : '';
 
             // 1. ตารางหน้า Dashboard 
             dashHtml += `<tr id="dash-${rowId}" class="border-black transition ${hoverClassDash}" ${tooltip} ${clickEvent}>`;
@@ -763,7 +791,7 @@ function updateShiftTableByDate(selectedDate) {
                 dashHtml += `<td rowspan="${rowCount}" class="border border-black px-4 py-1 font-bold align-middle text-center bg-white">${s.label}<br><span class="text-[14px] font-normal text-gray-800">${s.time}</span></td>`;
             }
             dashHtml += `<td class="border border-black px-4 py-1 text-center bg-white">${role}</td>`;
-            dashHtml += `<td class="border border-black px-4 py-1 text-left bg-white font-medium text-blue-700">${name}</td>`;
+            dashHtml += `<td class="border border-black px-4 py-1 text-left bg-white font-medium text-blue-700">${displayName}</td>`;
             dashHtml += `</tr>`;
 
             // 2. ตารางหน้า Document A4
@@ -772,7 +800,7 @@ function updateShiftTableByDate(selectedDate) {
                 docHtml += `<td rowspan="${rowCount}" style="border: 1px solid #000; padding: 2px 8px; text-align: center; vertical-align: middle; font-weight: bold;">${s.label}<br><span style="font-weight: normal; font-size: 14pt;">${s.time}</span></td>`;
             }
             docHtml += `<td style="border: 1px solid #000; padding: 2px 8px; text-align: center;">${role}</td>`;
-            docHtml += `<td style="border: 1px solid #000; padding: 2px 8px; text-align: left;">${name}</td>`;
+            docHtml += `<td style="border: 1px solid #000; padding: 2px 8px; text-align: left;">${displayName}</td>`;
             docHtml += `</tr>`;
         }
     });
@@ -807,7 +835,7 @@ window.removeNameFromShift = function(shiftId, nameToRemove) {
     }
 };
 // ==========================================
-// 🌟 ฟังก์ชันดึงข้อมูลตาราง รปภ. จาก Google Sheet โดยตรง
+// 🌟 ฟังก์ชันดึงข้อมูลตาราง รปภ. และทำให้แก้ไขบนเว็บได้ (Editable)
 // ==========================================
 function loadSecurityGuardData() {
     const sheetId = '1lYRhXtLgec6ISM6Ugt-YKLrh47NRt7ihcVLcD8mI_Yg';
@@ -822,61 +850,39 @@ function loadSecurityGuardData() {
             
             const rows = data.table.rows;
             let html = '';
-            let sumTotal = 0, sumMorning = 0, sumNight = 0;
 
             if (rows.length > 0) {
                 rows.forEach(row => {
                     let unit = row.c[0] ? row.c[0].v : '';
                     if (!unit) return; 
 
-                    // 🌟 1. ย่อชื่อสถาบันให้สั้นลง
+                    // ย่อชื่อสถาบันให้สั้นลง
                     if (unit.includes('โครงการจัดตั้งสถาบันอุทยานธรรมชาติวิทยาสิรีรุกขชาติ')) {
                         unit = 'สิรีรุกขชาติ';
                     }
 
-                    let total = row.c[1] && row.c[1].v != null ? row.c[1].v : '-';
-                    let morning = row.c[2] && row.c[2].v != null ? row.c[2].v : '-';
-                    let night = row.c[3] && row.c[3].v != null ? row.c[3].v : '-';
-                    
-                    // ดึงข้อความหมายเหตุที่พิมพ์ไว้ใน Google Sheet
+                    // จัดการค่าตัวเลข (ถ้าว่างให้เป็น 0 เพื่อให้คำนวณง่าย)
+                    let total = row.c[1] && row.c[1].v != null && !isNaN(row.c[1].v) ? row.c[1].v : 0;
+                    let morning = row.c[2] && row.c[2].v != null && !isNaN(row.c[2].v) ? row.c[2].v : 0;
+                    let night = row.c[3] && row.c[3].v != null && !isNaN(row.c[3].v) ? row.c[3].v : 0;
                     let sheetRemark = row.c[4] && row.c[4].v != null ? row.c[4].v : '';
-                    let finalRemark = sheetRemark;
 
-                    // 🌟 2. ระบบคำนวณคนขาด/ครบ อัตโนมัติ
-                    if (total !== '-' && morning !== '-' && night !== '-') {
-                        let t = Number(total);
-                        let m = Number(morning);
-                        let n = Number(night);
-                        let diff = t - (m + n);
-
-                        if (diff === 0) {
-                            finalRemark = 'ครบ';
-                        } else if (diff > 0) {
-                            // ถ้าขาด ระบบจะพิมพ์ "ขาด X คน" สีแดงให้ทันที
-                            // ส่วนคำว่า "ผลัดเช้า" หรือ "ผลัดดึก" ให้คุณแพรวพิมพ์ใส่ช่องหมายเหตุใน Sheet ได้เลย มันจะเอามาต่อท้ายให้เองครับ
-                            finalRemark = `<span style="color: #dc2626; font-weight: bold;">ขาด ${diff} คน ${sheetRemark}</span>`;
-                        }
-                    }
-
-                    if (!isNaN(total) && total !== '-') sumTotal += Number(total);
-                    if (!isNaN(morning) && morning !== '-') sumMorning += Number(morning);
-                    if (!isNaN(night) && night !== '-') sumNight += Number(night);
-
-                    // 🌟 3. ปรับ padding ให้เหลือ 0px 8px เพื่อให้บรรทัดแคบลงที่สุด
-                    html += `<tr>
+                    // ใส่ contenteditable="true" เพื่อให้คลิกแก้ได้ และ oninput="recalcGuard()" เพื่อคำนวณทันที
+                    html += `<tr class="guard-row">
                         <td style="border: 1px solid #000; padding: 0px 8px; text-align: left;">${unit}</td>
-                        <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${total}</td>
-                        <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${morning}</td>
-                        <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${night}</td>
-                        <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${finalRemark}</td>
+                        <td contenteditable="true" oninput="recalcGuard()" class="edit-total" style="border: 1px solid #000; padding: 0px 8px; text-align: center; cursor: text; outline: none; background-color: rgba(241, 245, 249, 0.4);" title="คลิกเพื่อแก้ไขตัวเลข">${total}</td>
+                        <td contenteditable="true" oninput="recalcGuard()" class="edit-morning" style="border: 1px solid #000; padding: 0px 8px; text-align: center; cursor: text; outline: none; background-color: rgba(241, 245, 249, 0.4);" title="คลิกเพื่อแก้ไขตัวเลข">${morning}</td>
+                        <td contenteditable="true" oninput="recalcGuard()" class="edit-night" style="border: 1px solid #000; padding: 0px 8px; text-align: center; cursor: text; outline: none; background-color: rgba(241, 245, 249, 0.4);" title="คลิกเพื่อแก้ไขตัวเลข">${night}</td>
+                        <td contenteditable="true" class="edit-remark" data-sheet-remark="${sheetRemark}" style="border: 1px solid #000; padding: 0px 8px; text-align: center; cursor: text; outline: none;" title="คลิกเพื่อพิมพ์หมายเหตุเพิ่มเติม"></td>
                     </tr>`;
                 });
 
-                html += `<tr style="font-weight: bold; background-color: #f8fafc;">
+                // แถวสรุปผล (ใช้ ID เพื่อใช้ JavaScript สั่งเปลี่ยนตัวเลขยอดรวม)
+                html += `<tr style="font-weight: bold; background-color: #f1f5f9;">
                     <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">รวมทั้งหมด</td>
-                    <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${sumTotal}</td>
-                    <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${sumMorning}</td>
-                    <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;">${sumNight}</td>
+                    <td id="sum-total" style="border: 1px solid #000; padding: 0px 8px; text-align: center;">0</td>
+                    <td id="sum-morning" style="border: 1px solid #000; padding: 0px 8px; text-align: center;">0</td>
+                    <td id="sum-night" style="border: 1px solid #000; padding: 0px 8px; text-align: center;">0</td>
                     <td style="border: 1px solid #000; padding: 0px 8px; text-align: center;"></td>
                 </tr>`;
 
@@ -885,10 +891,56 @@ function loadSecurityGuardData() {
             }
 
             const tbody = document.getElementById('securityGuardTableBody');
-            if (tbody) tbody.innerHTML = html;
+            if (tbody) {
+                tbody.innerHTML = html;
+                recalcGuard(); // เรียกให้คำนวณและเช็คสถานะครั้งแรกทันทีที่โหลดเสร็จ
+            }
         })
         .catch(error => { console.error('Error:', error); });
 }
+
+// ==========================================
+// 🌟 ฟังก์ชันคำนวณจำนวน รปภ. แบบ Real-time เมื่อมีการแก้ไขตัวเลขบนเว็บ
+// ==========================================
+window.recalcGuard = function() {
+    let sumTotal = 0, sumMorning = 0, sumNight = 0;
+    const rows = document.querySelectorAll('.guard-row');
+
+    rows.forEach(row => {
+        // ดึงค่าจากช่องที่แก้ ถ้าเป็นช่องว่างให้มองเป็น 0
+        let t = Number(row.querySelector('.edit-total').innerText.trim()) || 0;
+        let m = Number(row.querySelector('.edit-morning').innerText.trim()) || 0;
+        let n = Number(row.querySelector('.edit-night').innerText.trim()) || 0;
+
+        sumTotal += t;
+        sumMorning += m;
+        sumNight += n;
+
+        // คำนวณส่วนต่างว่ามาครบไหม
+        let diff = t - (m + n);
+        let remarkCell = row.querySelector('.edit-remark');
+        let sheetRemark = remarkCell.getAttribute('data-sheet-remark');
+
+        // สั่งเปลี่ยนข้อความหมายเหตุอัตโนมัติ
+        if (diff === 0) {
+            remarkCell.innerHTML = 'ครบ';
+        } else if (diff > 0) {
+            remarkCell.innerHTML = `<span style="color: #dc2626; font-weight: bold;">ขาด ${diff} คน ${sheetRemark}</span>`;
+        } else {
+            // กรณีลงตัวเลขคนมาเกินกว่ายอดเต็ม
+            remarkCell.innerHTML = `<span style="color: #ea580c; font-weight: bold;">เกิน ${Math.abs(diff)} คน ${sheetRemark}</span>`;
+        }
+    });
+
+    // อัปเดตยอดรวมบรรทัดล่างสุด
+    const elSumTotal = document.getElementById('sum-total');
+    const elSumMorning = document.getElementById('sum-morning');
+    const elSumNight = document.getElementById('sum-night');
+    
+    if (elSumTotal) elSumTotal.innerText = sumTotal;
+    if (elSumMorning) elSumMorning.innerText = sumMorning;
+    if (elSumNight) elSumNight.innerText = sumNight;
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     loadSecurityGuardData();
