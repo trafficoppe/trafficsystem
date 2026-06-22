@@ -1,12 +1,17 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+    <script>
+        if (!sessionStorage.getItem('loggedInUser')) {
+            window.location.replace('login.html');
+        }
+    </script>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบงานจราจรและป้องกันอัคคีภัย</title>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <link rel="stylesheet" href="main_style.css">
 </head>
 <body>
@@ -67,24 +72,23 @@
             </li>
 
             <li class="has-submenu">
-    <a href="#"><i class="fa-solid fa-file-signature menu-icon"></i> <span class="menu-text" data-th="แบบฟอร์มต่างๆ" data-en="Forms & Requests">แบบฟอร์มต่างๆ</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
-    <ul class="submenu">
-        <li><a href="#" onclick="loadPage('page_forms.html', 'แบบฟอร์มทั่วไป', 'General Forms', this)"><span class="menu-text" data-th="แบบฟอร์มทั่วไป" data-en="General Forms">แบบฟอร์มทั่วไป</span></a></li>
-        <li><a href="#" onclick="loadPage('page_base_station.html', 'บันทึกศูนย์วิทยุสื่อสาร', 'Base Station Log', this)"><span class="menu-text" data-th="บันทึกศูนย์วิทยุสื่อสาร" data-en="Base Station Log">บันทึกศูนย์วิทยุสื่อสาร</span></a></li>
-    </ul>
-</li>
+                <a href="#"><i class="fa-solid fa-file-signature menu-icon"></i> <span class="menu-text" data-th="แบบฟอร์มต่างๆ" data-en="Forms & Requests">แบบฟอร์มต่างๆ</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
+                <ul class="submenu">
+                    <li><a href="#" onclick="loadPage('page_forms.html', 'แบบฟอร์มทั่วไป', 'General Forms', this)"><span class="menu-text" data-th="แบบฟอร์มทั่วไป" data-en="General Forms">แบบฟอร์มทั่วไป</span></a></li>
+                    <li><a href="#" onclick="loadPage('page_base_station.html', 'บันทึกศูนย์วิทยุสื่อสาร', 'Base Station Log', this)"><span class="menu-text" data-th="บันทึกศูนย์วิทยุสื่อสาร" data-en="Base Station Log">บันทึกศูนย์วิทยุสื่อสาร</span></a></li>
+                </ul>
+            </li>
             <li><a href="#" onclick="loadPage('page_lostfound.html', 'แจ้งของหาย/เก็บของได้', 'Lost & Found', this)"><i class="fa-solid fa-box-open menu-icon"></i> <span class="menu-text" data-th="แจ้งของหาย/เก็บของได้" data-en="Lost & Found">แจ้งของหาย/เก็บของได้</span></a></li>
             
             <li class="has-submenu">
-    <a href="#"><i class="fa-solid fa-chart-pie menu-icon"></i> <span class="menu-text" data-th="รายงานและสถิติ" data-en="Reports & Stats">รายงานและสถิติ</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
-    <ul class="submenu">
-        <li><a href="#" onclick="loadPage('report_daily.html', 'รายงานประจำวัน', 'Daily Report', this)"><span class="menu-text" data-th="รายงานประจำวัน" data-en="Daily Report">รายงานประจำวัน</span></a></li>
-        <li><a href="#" onclick="loadPage('report_base_station.html', 'รายงานวิทยุสื่อสาร', 'Base Station Report', this)"><span class="menu-text" data-th="รายงานวิทยุสื่อสาร" data-en="Base Station Report">รายงานวิทยุสื่อสาร</span></a></li>
-        
-        <li><a href="#" onclick="loadPage('report_monthly.html', 'รายงานประจำเดือน', 'Monthly Report', this)"><span class="menu-text" data-th="รายงานประจำเดือน" data-en="Monthly Report">รายงานประจำเดือน</span></a></li>
-        <li><a href="#" onclick="loadPage('report_security.html', 'รายงานตรวจรับ รปภ.', 'Security Audit Report', this)"><span class="menu-text" data-th="รายงานตรวจรับ รปภ." data-en="Security Audit Report">รายงานตรวจรับ รปภ.</span></a></li>
-    </ul>
-</li>
+                <a href="#"><i class="fa-solid fa-chart-pie menu-icon"></i> <span class="menu-text" data-th="รายงานและสถิติ" data-en="Reports & Stats">รายงานและสถิติ</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
+                <ul class="submenu">
+                    <li><a href="#" onclick="loadPage('report_daily.html', 'รายงานประจำวัน', 'Daily Report', this)"><span class="menu-text" data-th="รายงานประจำวัน" data-en="Daily Report">รายงานประจำวัน</span></a></li>
+                    <li><a href="#" onclick="loadPage('report_base_station.html', 'รายงานวิทยุสื่อสาร', 'Base Station Report', this)"><span class="menu-text" data-th="รายงานวิทยุสื่อสาร" data-en="Base Station Report">รายงานวิทยุสื่อสาร</span></a></li>
+                    <li><a href="#" onclick="loadPage('report_monthly.html', 'รายงานประจำเดือน', 'Monthly Report', this)"><span class="menu-text" data-th="รายงานประจำเดือน" data-en="Monthly Report">รายงานประจำเดือน</span></a></li>
+                    <li><a href="#" onclick="loadPage('report_security.html', 'รายงานตรวจรับ รปภ.', 'Security Audit Report', this)"><span class="menu-text" data-th="รายงานตรวจรับ รปภ." data-en="Security Audit Report">รายงานตรวจรับ รปภ.</span></a></li>
+                </ul>
+            </li>
             <li><a href="#" onclick="loadPage('page_print_inspection.html', 'ประวัติการตรวจสภาพ', 'Inspection History', this)"><i class="fa-solid fa-print menu-icon"></i> <span class="menu-text" data-th="ประวัติการตรวจสภาพ" data-en="Inspection History">ประวัติการตรวจสภาพ</span></a></li>
 
             <li>
@@ -106,13 +110,9 @@
             
             <div class="header-center-filters" id="headerFilterSlot"></div>
 
-            <div class="search-container" style="margin-right: 15px;">
-                <input type="text" id="globalSearchInput" placeholder="ค้นหาชื่อ, ขนาด, ทะเบียน...">
-            </div>
-
            <div class="header-right" style="display: flex; align-items: center; gap: 15px;">
-        <span class="dept-name" style="color: white; font-size: 15px; font-weight: 500;">มหาวิทยาลัยมหิดล</span>
-    </div>
+                <span id="displayUserName" style="color: #fcd34d; font-size: 14px; font-weight: bold; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px;">กำลังตรวจสอบ...</span>
+            </div>
         </header>
 
         <div class="content-area">
@@ -168,77 +168,7 @@
         </div>
     </div>
 
-    <div id="refillFormModal" class="modal" style="display: none; z-index: 1050;">
-        <div class="modal-content" style="max-width: 600px; overflow-y: auto; max-height: 90vh;">
-            <span class="close" onclick="document.getElementById('refillFormModal').style.display='none'">&times;</span>
-            <div style="padding: 25px;">
-                <h2 style="color: #2c3e50; border-bottom: 2px solid #27ae60; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">บันทึกการเติมสารถังดับเพลิง</h2>
-                <form id="refillForm">
-                    <input type="hidden" name="sheet_name" value="ประวัติการเติมสารถังดับเพลิง">
-                    <input type="hidden" name="Data_category" value="ประวัติการเติม">
-                    <div class="form-group"><label style="font-weight: 600;">รหัส/ถังที่ (ทะเบียน):</label><input type="text" id="rf_plate" name="ทะเบียน" readonly style="background:#f8f9fa;"></div>
-                    <div class="form-group"><label style="font-weight: 600;">หมายเลขครุภัณฑ์:</label><input type="text" id="rf_equip" name="หมายเลขครุภัณฑ์" readonly style="background:#f8f9fa;"></div>
-                    <div class="form-group"><label style="font-weight: 600;">วันที่เติมสาร: <span style="color:red">*</span></label><input type="date" name="วันที่เติม" id="rf_date" required></div>
-                    <div style="display:flex; gap:15px; flex-wrap: wrap;">
-                        <div class="form-group" style="flex:1;"><label style="font-weight: 600;">น้ำหนักก่อนเติม (Kg.): <span style="color:red">*</span></label><input type="number" step="0.01" name="น้ำหนักก่อนเติม" required></div>
-                        <div class="form-group" style="flex:1;"><label style="font-weight: 600;">น้ำหนักหลังเติม (Kg.): <span style="color:red">*</span></label><input type="number" step="0.01" name="น้ำหนักหลังเติม" required></div>
-                    </div>
-                    <div class="form-group"><label style="font-weight: 600;">สารเคมีที่เติม: <span style="color:red">*</span></label><input type="text" name="สารเคมีที่เติม" required></div>
-                    <div class="form-group"><label style="font-weight: 600;">บริษัทที่ดำเนินการ: <span style="color:red">*</span></label><input type="text" name="บริษัทที่เติม" required></div>
-                    <div class="form-group">
-                        <label style="font-weight: 600;">แนบรูปใบสั่งซื้อ (PO):</label>
-                        <div class="file-upload-wrapper" onclick="document.getElementById('rf_poFile').click()" style="border: 2px dashed #bdc3c7; padding: 20px; text-align: center; border-radius: 8px; background-color: #f9fbfd; cursor: pointer; margin-bottom: 10px;">
-                            <span style="color: #2980b9; font-weight: 500;">คลิกเพื่อเลือกไฟล์</span>
-                            <input type="file" id="rf_poFile" accept="image/*, application/pdf, .pdf" style="display: none;">
-                            <div id="rf_fileNameDisplay" style="margin-top: 10px; color: #27ae60; font-weight: bold;"></div>
-                        </div>
-                        <input type="hidden" name="เอกสารการเติม" id="rf_poFileBase64">
-                        <input type="hidden" name="poFileName" id="rf_poFileName">
-                        <input type="hidden" name="poFileMimeType" id="rf_poFileMimeType">
-                    </div>
-                    <div class="form-group"><label style="font-weight: 600;">หมายเหตุ:</label><textarea name="หมายเหตุ" rows="3"></textarea></div>
-                    <button type="submit" id="rf_submitBtn" style="width: 100%; padding: 15px; background-color: #27ae60; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer;">บันทึกข้อมูลการเติมสาร</button>
-                    <div id="rf_message" style="text-align:center; margin-top:15px; font-weight:bold; font-size: 16px;"></div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div id="cleanFormModal" class="modal" style="display: none; z-index: 1050;">
-        <div class="modal-content" style="max-width: 600px; overflow-y: auto; max-height: 90vh;">
-            <span class="close" onclick="document.getElementById('cleanFormModal').style.display='none'">&times;</span>
-            <div style="padding: 25px;">
-                <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">บันทึกการทำความสะอาดยานพาหนะ</h2>
-                <form id="cleanForm">
-                    <input type="hidden" name="sheet_name" value="การทำความสะอาดยานพาหนะ">
-                    <input type="hidden" name="Data_category" value="Cleaning">
-                    <input type="hidden" name="รุ่นรถ" id="cl_model">
-                    <div class="form-group"><label style="font-weight: 600; color: #34495e;">รหัส/ทะเบียนรถ:</label><input type="text" id="cl_plate" name="ทะเบียน" readonly style="background:#f8f9fa; color:#7f8c8d; cursor:not-allowed;"></div>
-                    <div class="form-group"><label style="font-weight: 600; color: #34495e;">หมายเลขครุภัณฑ์:</label><input type="text" id="cl_equip" name="หมายเลขครุภัณฑ์" readonly style="background:#f8f9fa; color:#7f8c8d; cursor:not-allowed;"></div>
-                    <div class="form-group"><label style="font-weight: 600; color: #34495e;">วันที่ทำความสะอาด: <span style="color:red">*</span></label><input type="date" name="วันที่" id="cl_date" required></div>
-                    <div class="form-group"><label style="font-weight: 600; color: #34495e;">ผู้ดำเนินการล้างรถ: <span style="color:red">*</span></label><input type="text" name="ผู้ดำเนินการ" placeholder="ระบุชื่อผู้รับผิดชอบ" required></div>
-                    <div class="form-group">
-                        <label style="font-weight: 600; color: #34495e;">แนบรูปถ่าย (เลือกได้ 1-5 รูป):</label>
-                        <div class="file-upload-wrapper" onclick="document.getElementById('cl_images').click()" style="border: 2px dashed #3498db; padding: 20px; text-align: center; border-radius: 8px; background-color: #ebf5fb; cursor: pointer; margin-bottom: 10px; transition: 0.3s;">
-                            <span style="color: #2980b9; font-weight: 500; font-size: 16px;">คลิกลากคลุมเพื่อเลือกภาพ (สูงสุด 5 รูป)</span>
-                            <input type="file" id="cl_images" accept="image/*" multiple style="display: none;">
-                            <div id="cl_file_preview" style="margin-top: 10px; font-weight: bold; text-align: left; padding: 0 10px;"></div>
-                        </div>
-                        <input type="hidden" name="imageB64_1" id="cl_b64_1"><input type="hidden" name="imageMime_1" id="cl_m_1"><input type="hidden" name="imageName_1" id="cl_n_1">
-                        <input type="hidden" name="imageB64_2" id="cl_b64_2"><input type="hidden" name="imageMime_2" id="cl_m_2"><input type="hidden" name="imageName_2" id="cl_n_2">
-                        <input type="hidden" name="imageB64_3" id="cl_b64_3"><input type="hidden" name="imageMime_3" id="cl_m_3"><input type="hidden" name="imageName_3" id="cl_n_3">
-                        <input type="hidden" name="imageB64_4" id="cl_b64_4"><input type="hidden" name="imageMime_4" id="cl_m_4"><input type="hidden" name="imageName_4" id="cl_n_4">
-                        <input type="hidden" name="imageB64_5" id="cl_b64_5"><input type="hidden" name="imageMime_5" id="cl_m_5"><input type="hidden" name="imageName_5" id="cl_n_5">
-                    </div>
-                    <div class="form-group"><label style="font-weight: 600; color: #34495e;">หมายเหตุ (ถ้ามี):</label><textarea name="หมายเหตุ" rows="2" placeholder="ระบุรายละเอียดเพิ่มเติม"></textarea></div>
-                    <button type="submit" id="cl_submitBtn" style="width: 100%; padding: 15px; background-color: #3498db; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2);">บันทึกข้อมูลการทำความสะอาด</button>
-                    <div id="cl_message" style="text-align:center; margin-top:15px; font-weight:bold; font-size: 16px;"></div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <script src="main_script.js?v=1"></script>
+    <script src="main_script.js?v=4"></script>
 
 </body>
 </html>

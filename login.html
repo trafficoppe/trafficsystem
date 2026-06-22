@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - ระบบงานจราจรและป้องกันอัคคีภัย</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Prompt', sans-serif;
+            background-color: #f1f5f9;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-box {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+        }
+        .logo-container { margin-bottom: 20px; }
+        .logo-container i { font-size: 50px; color: #059669; }
+        .login-title { font-size: 24px; font-weight: 600; color: #1e293b; margin-bottom: 10px; }
+        .login-subtitle { font-size: 14px; color: #64748b; margin-bottom: 30px; }
+        .form-group { text-align: left; margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 8px; color: #334155; }
+        .form-group input {
+            width: 100%; padding: 12px 15px; border: 1px solid #cbd5e1;
+            border-radius: 8px; font-size: 16px; font-family: 'Prompt', sans-serif;
+            box-sizing: border-box; outline: none; transition: 0.3s;
+        }
+        .form-group input:focus { border-color: #059669; box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1); }
+        .login-btn {
+            width: 100%; padding: 14px; background-color: #059669; color: white;
+            border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s;
+        }
+        .login-btn:hover { background-color: #047857; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.2); }
+        .login-btn:disabled { background-color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+        .error-msg { color: #ef4444; font-size: 14px; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="login-box">
+        <div class="logo-container">
+            <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="login-title">เข้าสู่ระบบ</div>
+        <div class="login-subtitle">กรุณากรอกรหัสพนักงานเพื่อเข้าใช้งาน</div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label>รหัสประจำตัว</label>
+                <input type="password" id="passwordInput" placeholder="กรอกรหัสประจำตัว..." required>
+            </div>
+            <button type="submit" class="login-btn" id="submitBtn">เข้าสู่ระบบ</button>
+            <div id="errorMsg" class="error-msg">❌ รหัสประจำตัวไม่ถูกต้อง หรือไม่พบในระบบ</div>
+        </form>
+    </div>
+
+    <script>
+        const sheetUrl = "https://docs.google.com/spreadsheets/d/1lYRhXtLgec6ISM6Ugt-YKLrh47NRt7ihcVLcD8mI_Yg/gviz/tq?tqx=out:json&gid=1285036850";
+        
+        // 🌟 ตั้งค่าคอลัมน์ให้ตรงกับชีท (อ้างอิงจากภาพล่าสุด)
+        const COL_NAME = 0;   // คอลัมน์ A (ชื่อ-สกุล)
+        const COL_EMP_ID = 2; // คอลัมน์ C (รหัสพนักงาน)
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const pass = document.getElementById('passwordInput').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            const submitBtn = document.getElementById('submitBtn');
+
+            // ==========================================
+            // 🌟 1. ตรวจสอบรหัสพิเศษ (Hardcoded)
+            // ==========================================
+            if (pass === "939") {
+                sessionStorage.setItem('loggedInUser', "รองอธิการกองกายภาพและสิ่งแวดล้อม");
+                window.location.replace('index.html');
+                return; // หยุดการทำงานส่วนอื่น
+            }
+            
+            if (pass === "8826") {
+                sessionStorage.setItem('loggedInUser', "ผู้อำนวยการกองกายภาพและสิ่งแวดล้อม");
+                window.location.replace('index.html');
+                return; // หยุดการทำงานส่วนอื่น
+            }
+
+            // ==========================================
+            // 🌟 2. ถ้ารหัสไม่ใช่รหัสพิเศษ ให้ดึงข้อมูลจาก Google Sheet
+            // ==========================================
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบ...';
+            errorMsg.style.display = 'none';
+
+            fetch(sheetUrl)
+                .then(response => response.text())
+                .then(text => {
+                    const jsonString = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+                    const data = JSON.parse(jsonString);
+                    const rows = data.table.rows;
+
+                    let isLoginSuccess = false;
+                    let employeeName = "พนักงาน (ไม่ทราบชื่อ)";
+
+                    for (let i = 0; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (row && row.c && row.c[COL_EMP_ID] && row.c[COL_EMP_ID].v != null) {
+                            const sheetEmpId = row.c[COL_EMP_ID].v.toString().trim();
+                            
+                            if (pass === sheetEmpId) {
+                                isLoginSuccess = true;
+                                
+                                // 🌟 ดึงข้อมูลเฉพาะคอลัมน์ A (ชื่อ-สกุล) อย่างเดียว
+                                if (row.c[COL_NAME] && row.c[COL_NAME].v != null) {
+                                    employeeName = row.c[COL_NAME].v.toString().trim();
+                                }
+                                break; 
+                            }
+                        }
+                    }
+
+                    if (isLoginSuccess) {
+                        sessionStorage.setItem('loggedInUser', employeeName);
+                        window.location.replace('index.html'); 
+                    } else {
+                        errorMsg.style.display = 'block';
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = 'เข้าสู่ระบบ';
+                    }
+                })
+                .catch(err => {
+                    console.error("Error Fetching Data:", err);
+                    errorMsg.innerHTML = "❌ ระบบมีปัญหาในการเชื่อมต่อฐานข้อมูล";
+                    errorMsg.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'เข้าสู่ระบบ';
+                });
+        });
+    </script>
+</body>
+</html>
