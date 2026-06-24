@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 window.setAppLanguage = function(lang) {
     currentLang = lang;
-    localStorage.setItem('appLang', lang); // ภาษายังเก็บข้ามวันได้
+    localStorage.setItem('appLang', lang); 
     updateLanguageUI(); 
     
     const titleElement = document.getElementById('dynamicPageTitle');
@@ -95,7 +95,7 @@ window.setAppLanguage = function(lang) {
 
 window.toggleAppTheme = function() {
     const isDark = document.body.classList.toggle('dark-mode');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light'); // สีโหมดมืดยังเก็บข้ามวันได้
+    localStorage.setItem('theme', isDark ? 'dark' : 'light'); 
     syncIframeThemeLanguage();
 }
 
@@ -119,6 +119,8 @@ function loadPage(url, thTitle, enTitle, clickedElement) {
             if (url.includes('?')) {
                 const params = new URLSearchParams(url.split('?')[1]);
                 if (params.has('unit')) unit = decodeURIComponent(params.get('unit'));
+                // 🌟 เพิ่มการเช็คค่า 'area' สำหรับหน้า รปภ.
+                if (params.has('area')) unit = decodeURIComponent(params.get('area'));
             }
             frame.contentWindow.applyInstantFilter(unit);
         } else {
@@ -219,6 +221,6 @@ document.getElementById('contentFrame').addEventListener('load', function() {
 // 🌟 ฟังก์ชันสำหรับออกจากระบบ (Logout)
 // ==========================================
 window.logout = function() {
-    sessionStorage.removeItem('loggedInUser'); // ลบข้อมูลการล็อกอินออก
-    window.location.replace('login.html'); // เด้งกลับไปหน้าล็อกอินและเคลียร์ History ป้องกันการกด Back
+    sessionStorage.removeItem('loggedInUser'); 
+    window.location.replace('login.html'); 
 };

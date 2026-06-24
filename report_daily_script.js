@@ -945,3 +945,40 @@ window.recalcGuard = function() {
 document.addEventListener('DOMContentLoaded', () => {
     loadSecurityGuardData();
 });
+// =======================================================
+// 🌟 เสริม: ระบบอัตโนมัติ เปลี่ยน "-" เป็น "วันหยุด" ในวันเสาร์-อาทิตย์
+// =======================================================
+function initWeekendReplacer() {
+    const replaceObserver = new MutationObserver(() => {
+        // 1. หาช่อง input วันที่ (รองรับทั้ง id="dateSelect" และ input type="date" ทั่วไป)
+        const dateInput = document.getElementById('dateSelect') || document.querySelector('input[type="date"]');
+        if (!dateInput || !dateInput.value) return;
+
+        // 2. ตรวจสอบว่าเป็นวันหยุดหรือไม่ (0 = อาทิตย์, 6 = เสาร์)
+        const d = new Date(dateInput.value);
+        const isWeekend = (d.getDay() === 0 || d.getDay() === 6);
+
+        if (isWeekend) {
+            // 3. กวาดหาช่อง <td> ทั้งหมดในตาราง 
+            // (ถ้าอยากให้เปลี่ยนแค่ตารางจราจรตารางเดียว ให้เปลี่ยน 'table td' เป็น '#ไอดีของตารางจราจร td' ครับ)
+            const allCells = document.querySelectorAll('table td'); 
+            
+            allCells.forEach(td => {
+                // ถ้าช่องไหนว่างเปล่าเป็น '-' ให้เสกเป็นคำว่า 'วันหยุด'
+                if (td.innerText.trim() === '-') {
+                    td.innerHTML = '<span style="color: #ea580c; font-weight: bold;">วันหยุด</span>';
+                }
+            });
+        }
+    });
+
+    // เริ่มทำงานตรวจจับเมื่อตารางมีการโหลดข้อมูลใหม่
+    replaceObserver.observe(document.body, { childList: true, subtree: true });
+}
+
+// ตรวจสอบสถานะโหลดหน้าเว็บเพื่อเรียกใช้งานฟังก์ชัน
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWeekendReplacer);
+} else {
+    initWeekendReplacer();
+}
