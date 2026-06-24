@@ -91,12 +91,10 @@ function fetchRealDataOnce() {
                 let rawArea = (row.c[0] && row.c[0].v != null) ? row.c[0].v.toString().trim() : '';
                 let postName = (row.c[1] && row.c[1].v != null) ? row.c[1].v.toString().trim() : 'ไม่ได้ระบุจุด';
                 
-                // 🌟 แก้ปัญหาบรรทัดแรกหาย: กรองเฉพาะคำว่า 'หน่วยงาน' หรือช่องว่างออกแทนการตัด index 0
                 if (rawArea === 'หน่วยงาน' || rawArea === 'พื้นที่รับผิดชอบ' || rawArea === '') return;
 
                 let numGuards = 0;
                 
-                // ค้นหาตัวเลข
                 for (let i = 2; i <= 4; i++) {
                     if (row.c[i] && row.c[i].v !== null) {
                         let val = row.c[i].v;
@@ -138,7 +136,7 @@ function fetchRealDataOnce() {
 }
 
 // ==========================================
-// 🌟 2. ฟังก์ชันวาดหน้าจอ 
+// 🌟 2. ฟังก์ชันวาดหน้าจอ (จัดหัวข้อตารางผลัดเช้า-ดึก ให้อยู่กึ่งกลาง)
 // ==========================================
 function renderDashboard() {
     let areaData = globalGuardData.filter(d => isMatchArea(d.area, currentArea));
@@ -201,10 +199,10 @@ function renderDashboard() {
     let mIndex = 1;
     for (const [post, count] of Object.entries(morningDataMap)) {
         morningRowsHTML += `
-            <tr>
-                <td style="text-align: center; font-weight: 500; color: #64748b; width: 10%; border-right: 1px solid #f1f5f9;">${mIndex++}</td>
-                <td style="font-weight: 500;">${post}</td>
-                <td style="text-align: center; font-weight: bold; color: #ea580c; width: 15%; background: rgba(234, 88, 12, 0.04); font-size: 16px;">${count}</td>
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="text-align: center; font-weight: 600; color: #000; width: 10%; border-right: 1px solid #e2e8f0; padding: 8px 10px;">${mIndex++}</td>
+                <td style="font-weight: 500; color: #000; padding: 8px 20px;">${post}</td>
+                <td style="text-align: center; font-weight: bold; color: #000; width: 20%; border-left: 1px solid #e2e8f0; background: rgba(234, 88, 12, 0.08); padding: 8px 10px; font-size: 16px;">${count}</td>
             </tr>
         `;
     }
@@ -214,56 +212,62 @@ function renderDashboard() {
     let nIndex = 1;
     for (const [post, count] of Object.entries(nightDataMap)) {
         nightRowsHTML += `
-            <tr>
-                <td style="text-align: center; font-weight: 500; color: #64748b; width: 10%; border-right: 1px solid #f1f5f9;">${nIndex++}</td>
-                <td style="font-weight: 500;">${post}</td>
-                <td style="text-align: center; font-weight: bold; color: #4f46e5; width: 15%; background: rgba(79, 70, 229, 0.04); font-size: 16px;">${count}</td>
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="text-align: center; font-weight: 600; color: #000; width: 10%; border-right: 1px solid #e2e8f0; padding: 8px 10px;">${nIndex++}</td>
+                <td style="font-weight: 500; color: #000; padding: 8px 20px;">${post}</td>
+                <td style="text-align: center; font-weight: bold; color: #000; width: 20%; border-left: 1px solid #e2e8f0; background: rgba(79, 70, 229, 0.08); padding: 8px 10px; font-size: 16px;">${count}</td>
             </tr>
         `;
     }
     if (nIndex === 1) nightRowsHTML = `<tr><td colspan="3" style="text-align:center; padding: 30px; color: #64748b;">ไม่พบข้อมูลกำลังพลผลัดกลางคืนในพื้นที่นี้</td></tr>`;
 
-    let contentHTML = '';
+    let contentHTML = '<div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: stretch; margin-bottom: 30px;">';
 
     if (currentShiftFilter === 'all' || currentShiftFilter === 'morning') {
         contentHTML += `
-            <div class="section-card" style="border: 1px solid #fdba74; margin-bottom: 30px; box-shadow: 0 4px 10px -2px rgba(234, 88, 12, 0.1);">
-                <div class="section-header" style="background-color: #fff7ed; color: #ea580c; border-bottom: 1px solid #fdba74; font-size: 18px;">
-                    <i class="fa-solid fa-sun" style="font-size: 20px;"></i> ตารางจุดปฏิบัติงาน - ผลัดเช้า (07.00 - 19.00 น.)
+            <div class="section-card" style="flex: 1 1 calc(50% - 15px); min-width: 300px; display: flex; flex-direction: column; border: 1px solid #fdba74; margin-bottom: 0; box-shadow: 0 4px 10px -2px rgba(234, 88, 12, 0.1);">
+                <div class="section-header" style="background-color: #fff7ed; color: #ea580c; border-bottom: 1px solid #fdba74; font-size: 18px; justify-content: center;">
+                    <i class="fa-solid fa-sun" style="font-size: 20px;"></i> ผลัดเช้า (07.00 - 19.00 น.)
                 </div>
-                <table class="styled-table" style="margin: 0;">
-                    <thead>
-                        <tr>
-                            <th style="text-align: center; width: 10%; background-color: #fff;">ลำดับที่</th>
-                            <th style="background-color: #fff;">จุดปฏิบัติงาน / พื้นที่รับผิดชอบ</th>
-                            <th style="text-align: center; width: 15%; background-color: #fff;">จำนวน (นาย)</th>
-                        </tr>
-                    </thead>
-                    <tbody>${morningRowsHTML}</tbody>
-                </table>
+                <div style="flex-grow: 1; background-color: var(--card-bg, #fff);">
+                    <table style="width: 100%; border-collapse: collapse; margin: 0;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #fdba74;">
+                                <th style="text-align: center; width: 10%; background-color: transparent; color: #000; font-weight: bold; border-right: 1px solid #e2e8f0; padding: 12px 10px;">ลำดับ</th>
+                                <th style="text-align: center; background-color: transparent; color: #000; font-weight: bold; padding: 12px 20px;">จุดปฏิบัติงาน</th>
+                                <th style="text-align: center; width: 20%; background-color: transparent; color: #000; font-weight: bold; border-left: 1px solid #e2e8f0; padding: 12px 10px;">จำนวนคน</th>
+                            </tr>
+                        </thead>
+                        <tbody>${morningRowsHTML}</tbody>
+                    </table>
+                </div>
             </div>
         `;
     }
 
     if (currentShiftFilter === 'all' || currentShiftFilter === 'night') {
         contentHTML += `
-            <div class="section-card" style="border: 1px solid #c7d2fe; box-shadow: 0 4px 10px -2px rgba(79, 70, 229, 0.1);">
-                <div class="section-header" style="background-color: #eef2ff; color: #4f46e5; border-bottom: 1px solid #c7d2fe; font-size: 18px;">
-                    <i class="fa-solid fa-moon" style="font-size: 20px;"></i> ตารางจุดปฏิบัติงาน - ผลัดกลางคืน (19.00 - 07.00 น.)
+            <div class="section-card" style="flex: 1 1 calc(50% - 15px); min-width: 300px; display: flex; flex-direction: column; border: 1px solid #c7d2fe; margin-bottom: 0; box-shadow: 0 4px 10px -2px rgba(79, 70, 229, 0.1);">
+                <div class="section-header" style="background-color: #eef2ff; color: #4f46e5; border-bottom: 1px solid #c7d2fe; font-size: 18px; justify-content: center;">
+                    <i class="fa-solid fa-moon" style="font-size: 20px;"></i> ผลัดกลางคืน (19.00 - 07.00 น.)
                 </div>
-                <table class="styled-table" style="margin: 0;">
-                    <thead>
-                        <tr>
-                            <th style="text-align: center; width: 10%; background-color: #fff;">ลำดับที่</th>
-                            <th style="background-color: #fff;">จุดปฏิบัติงาน / พื้นที่รับผิดชอบ</th>
-                            <th style="text-align: center; width: 15%; background-color: #fff;">จำนวน (นาย)</th>
-                        </tr>
-                    </thead>
-                    <tbody>${nightRowsHTML}</tbody>
-                </table>
+                <div style="flex-grow: 1; background-color: var(--card-bg, #fff);">
+                    <table style="width: 100%; border-collapse: collapse; margin: 0;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #c7d2fe;">
+                                <th style="text-align: center; width: 10%; background-color: transparent; color: #000; font-weight: bold; border-right: 1px solid #e2e8f0; padding: 12px 10px;">ลำดับ</th>
+                                <th style="text-align: center; background-color: transparent; color: #000; font-weight: bold; padding: 12px 20px;">จุดปฏิบัติงาน</th>
+                                <th style="text-align: center; width: 20%; background-color: transparent; color: #000; font-weight: bold; border-left: 1px solid #e2e8f0; padding: 12px 10px;">จำนวนคน</th>
+                            </tr>
+                        </thead>
+                        <tbody>${nightRowsHTML}</tbody>
+                    </table>
+                </div>
             </div>
         `;
     }
+
+    contentHTML += '</div>';
 
     document.getElementById('contentArea').innerHTML = contentHTML;
     applyLanguageUI();

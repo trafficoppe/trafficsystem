@@ -24,11 +24,8 @@
             <li><a href="#" onclick="loadPage('page_dashboard.html', 'หน้าหลัก (Dashboard)', 'Dashboard', this)" class="active"><i class="fa-solid fa-house menu-icon"></i> <span class="menu-text" data-th="หน้าหลัก" data-en="Dashboard">หน้าหลัก</span></a></li>
             
             <li class="has-submenu">
-                <a href="#" onclick="event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('submenu-staff').classList.toggle('show-submenu');" id="menu-staff">
-                    <i class="fa-solid fa-user-tie"></i> 
-                    <span class="menu-text" data-th="บุคลากร/พนักงาน ▾" data-en="Staff ▾">บุคลากร/พนักงาน ▾</span>
-                </a>
-                <ul class="submenu" id="submenu-staff">
+                <a href="#"><i class="fa-solid fa-user-tie menu-icon"></i> <span class="menu-text" data-th="บุคลากร/พนักงาน" data-en="Staff">บุคลากร/พนักงาน</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
+                <ul class="submenu">
                     <li><a href="#" onclick="loadPage('page_staff.html?unit=all', 'บุคลากรทั้งหมด', 'All Staff', this)">บุคลากรทั้งหมด</a></li>
                     <li><a href="#" onclick="loadPage('page_staff.html?unit=ยุทธศาสตร์', 'หน่วยยุทธศาสตร์ฯ', 'Strategic Unit', this)">หน่วยยุทธศาสตร์ฯ</a></li>
                     <li><a href="#" onclick="loadPage('page_staff.html?unit=ปฏิบัติการ', 'หน่วยปฏิบัติการฯ', 'Operations Unit', this)">หน่วยปฏิบัติการฯ</a></li>
@@ -81,14 +78,6 @@
             <li><a href="#" onclick="loadPage('page_lostfound.html', 'แจ้งของหาย/เก็บของได้', 'Lost & Found', this)"><i class="fa-solid fa-box-open menu-icon"></i> <span class="menu-text" data-th="แจ้งของหาย/เก็บของได้" data-en="Lost & Found">แจ้งของหาย/เก็บของได้</span></a></li>
             
             <li class="has-submenu">
-                <a href="#"><i class="fa-solid fa-traffic-light menu-icon"></i> <span class="menu-text" data-th="การจัดการจราจร" data-en="Traffic Management">การจัดการจราจร</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
-                <ul class="submenu">
-                    <li><a href="#" onclick="loadPage('page_parking.html', 'ข้อมูลลานจอดรถ', 'Parking Lots Info', this)"><span class="menu-text" data-th="ข้อมูลลานจอดรถ" data-en="Parking Lots Info">ข้อมูลลานจอดรถ</span></a></li>
-                </ul>
-            </li>
-
-            <!-- 🌟 เริ่ม: นำโค้ดชุดนี้มาวางแทรกตรงนี้ได้เลย 🌟 -->
-            <li class="has-submenu">
                 <a href="#"><i class="fa-solid fa-user-shield menu-icon"></i> <span class="menu-text" data-th="ควบคุมงาน รปภ.เอกชน" data-en="Private Security">ควบคุมงาน รปภ.เอกชน</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
                 <ul class="submenu">
                     <li><a href="#" onclick="loadPage('page_security_guard.html?area=ส่วนกลาง', 'รปภ. ส่วนกลาง', 'Central Security', this)"><span class="menu-text" data-th="ส่วนกลาง" data-en="Central">ส่วนกลาง</span></a></li>
@@ -99,16 +88,7 @@
                     <li><a href="#" onclick="loadPage('page_security_guard.html?area=หอพักนักศึกษา', 'รปภ. หอพักนักศึกษา', 'Dormitory Security', this)"><span class="menu-text" data-th="หอพักนักศึกษา" data-en="Student Dorms">หอพักนักศึกษา</span></a></li>
                 </ul>
             </li>
-            <!-- 🌟 จบ: เมนูควบคุมงาน รปภ.เอกชน 🌟 -->
 
-            <li class="has-submenu">
-                <a href="#"><i class="fa-solid fa-file-signature menu-icon"></i> <span class="menu-text" data-th="แบบฟอร์มต่างๆ" data-en="Forms & Requests">แบบฟอร์มต่างๆ</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
-                <ul class="submenu">
-                    <li><a href="#" onclick="loadPage('page_forms.html', 'แบบฟอร์มทั่วไป', 'General Forms', this)"><span class="menu-text" data-th="แบบฟอร์มทั่วไป" data-en="General Forms">แบบฟอร์มทั่วไป</span></a></li>
-                    <li><a href="#" onclick="loadPage('page_base_station.html', 'บันทึกศูนย์วิทยุสื่อสาร', 'Base Station Log', this)"><span class="menu-text" data-th="บันทึกศูนย์วิทยุสื่อสาร" data-en="Base Station Log">บันทึกศูนย์วิทยุสื่อสาร</span></a></li>
-                </ul>
-            </li>
-            
             <li class="has-submenu">
                 <a href="#"><i class="fa-solid fa-chart-pie menu-icon"></i> <span class="menu-text" data-th="รายงานและสถิติ" data-en="Reports & Stats">รายงานและสถิติ</span> <i class="fa-solid fa-chevron-down arrow-icon"></i></a>
                 <ul class="submenu">

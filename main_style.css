@@ -70,7 +70,21 @@ html, body {
 
 .sidebar-header i { width: 30px; font-size: 20px; }
 
-.sidebar-menu { list-style: none; overflow-y: auto; overflow-x: hidden; flex-grow: 1; padding-top: 15px; }
+.sidebar-menu { 
+    list-style: none; 
+    overflow-y: auto; 
+    overflow-x: hidden; 
+    flex-grow: 1; 
+    padding-top: 15px; 
+    /* 🌟 เพิ่ม 2 บรรทัดนี้เพื่อซ่อน Scrollbar ใน Firefox และ IE/Edge */
+    scrollbar-width: none; 
+    -ms-overflow-style: none; 
+}
+
+/* 🌟 ซ่อน Scrollbar สำหรับ Chrome, Safari และ Edge */
+.sidebar-menu::-webkit-scrollbar {
+    display: none;
+}
 
 .sidebar-menu li a {
     display: flex; align-items: center;
