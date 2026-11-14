@@ -29,4 +29,18 @@ const c = S.cctvStats([['refCode','timestamp','requesterType','fname','status','
 assert.deepStrictEqual(JSON.parse(JSON.stringify(c.monthly)), [{month:'2026-11',count:2}], '18:00 UTC ของ 31 ต.ค. = 1 พ.ย. เวลาไทย');
 assert.ok(!JSON.stringify(c).includes('สมมติ'));
 assert.strictEqual(S.dayKey('13/11/2569 14:26:14', TZ), '2026-11-13');
+// ความพึงพอใจส่วนกลาง (ข้อมูลสมมติ) — ข้อความวันที่แบบ dd/mm/yyyy
+const sc = S.satCentralStats([['วันเวลา','พื้นที่','a','b','c','d','e','ข้อเสนอแนะ'], ['31/10/2026 21:00:00','ส่วนกลาง',5,5,4,4,'5','ข้อความสมมติ ห้ามหลุด'], ['01/11/2026 07:00:00','ส่วนกลาง',3,'',5,5,9], ['02/11/2026 08:00:00','ส่วนกลาง',4,4,4,4,4]], TZ);
+assert.deepStrictEqual(JSON.parse(JSON.stringify(sc.monthly.map(m => [m.month, m.responses]))), [["2026-10", 1], ["2026-11", 2]]);
+assert.strictEqual(sc.monthly[1].topics[1].n, 1, 'ช่องว่างไม่นับ'); assert.strictEqual(sc.monthly[1].topics[4].n, 1, 'คะแนนนอกช่วง 1–5 ไม่นับ');
+assert.ok(!JSON.stringify(sc).includes('ห้ามหลุด'), 'ต้องไม่ส่งข้อความอิสระ');
+// ความพึงพอใจส่วนงาน: ถ่วงน้ำหนักด้วยจำนวนผู้ตอบ, "-" ไม่นับ
+const su = S.satUnitStats([['ts','เดือน','ปี','พื้นที่','n','c1','c2','c3','c4','c5','หมายเหตุ'], ['x','ตุลาคม','2569','A',100,'4','5','-','-','4','สมมติ'], ['x','ตุลาคม','2569','B',1,'5','5','5','-','5',''], ['x','ตุลาคม','2569','C',0,'1','1','1','1','1','']]);
+const o = su.monthly[0];
+assert.strictEqual(o.respondents, 101); assert.strictEqual(o.topics[0].avg, 4.01); assert.strictEqual(o.topics[2].avg, 5); assert.strictEqual(o.topics[3].avg, null); assert.strictEqual(o.topics[3].n, 0);
+// ค่าปรับ: นับเฉพาะประเภท "ปรับ รปภ."
+const HF = ['วันที่เกิดเหตุ','หน่วยงานที่แจ้ง','ประเภทเหตุการณ์','รายละเอียดเหตุการณ์เพิ่มเติม'];
+const f = S.fineStats([HF, ['2026-10-11','ส่วนกลาง','ปรับ รปภ.',''], ['2026-10-12','ส่วนกลาง','อุบัติเหตุทั่วไป','ถูกปรับ 500 บาท'], ['2026-11-01','อาคารสิริวิทยา','ปรับ รปภ.',''], ['2026-09-01','x','บังคับล้อ','']], TZ, 1000);
+assert.strictEqual(f.totalCases, 2); assert.strictEqual(f.amount.total, 2000);
+assert.deepStrictEqual(JSON.parse(JSON.stringify(f.monthly.map(m => [m.month, m.cases]))), [['2026-09', 0], ['2026-10', 1], ['2026-11', 1]]);
 console.log('HubStats: ผ่านทั้งหมด (ข้อมูลสมมติ)');

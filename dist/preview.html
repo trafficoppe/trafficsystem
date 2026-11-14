@@ -9,218 +9,214 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --navy:#0b2a5b; --navy-2:#143a78; --gold:#f2b705; --gold-ink:#7a5a00;
-  --bg:#f4f6fa; --card:#ffffff; --ink:#152033; --muted:#5b6678; --line:#dfe4ec;
-  --ok:#0f7a4b; --ok-bg:#e3f4ec; --warn:#9a5b00; --warn-bg:#fdf0d5; --bad:#a3271f; --bad-bg:#fbe6e4;
-  --info:#1d4f91; --info-bg:#e5eefb; --mute-bg:#eceff4;
-  --c1:#1d4f91; --c2:#d9822b; --c3:#2a9d8f; --c4:#8e6bbf; --c5:#7c8797;
-  --r:14px; --shadow:0 1px 2px rgba(16,32,64,.06),0 4px 14px rgba(16,32,64,.05);
+  --navy:#0b2a5b; --navy-2:#123a78; --gold:#f2b705; --bg:#f3f5f9; --card:#fff; --ink:#152033; --muted:#5d6879; --line:#e1e6ee;
+  --ok:#0f7a4b; --ok-bg:#e3f4ec; --warn:#9a5b00; --warn-bg:#fdf0d5; --bad:#a3271f; --bad-bg:#fbe6e4; --info:#1d4f91; --info-bg:#e7effb; --mute-bg:#eef1f5;
+  --c1:#1d4f91; --c2:#d9822b; --c3:#2a9d8f; --c4:#8e6bbf; --c5:#7c8797; --fine:#b4432f;
+  --r:14px; --sbw:264px; --sbw-mini:72px; --shadow:0 1px 2px rgba(16,32,64,.05),0 6px 18px rgba(16,32,64,.05);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Sarabun","Noto Sans Thai","Leelawadee UI","Thonburi",Tahoma,sans-serif;font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
-.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
-.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;background:#fff;padding:8px 12px;border-radius:8px;z-index:50}
-h1,h2,h3,p{margin:0}
+h1,h2,h3,h4,p{margin:0}
 a{color:var(--info)}
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;background:#fff;padding:8px 12px;border-radius:8px;z-index:90}
+svg.ic{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+[hidden]{display:none!important}
 
-.top{background:linear-gradient(120deg,var(--navy),var(--navy-2));color:#fff;border-bottom:4px solid var(--gold)}
-.top-in{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-top:18px;padding-bottom:18px}
-.brand{display:flex;gap:14px;align-items:center;min-width:0}
-.brand-mark{flex:none;width:46px;height:46px;border-radius:12px;background:var(--gold);color:var(--navy);font-weight:700;display:grid;place-items:center;letter-spacing:.5px}
-.brand h1{font-size:clamp(1.05rem,2.6vw,1.45rem);font-weight:700;line-height:1.3}
-.brand-sub{opacity:.85;font-size:.9rem}
-.stamp{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px 12px;font-size:.88rem;line-height:1.4}
-.stamp b{font-weight:600}
+/* ---------- layout ---------- */
+.app{display:flex;min-height:100vh}
+.sb{position:sticky;top:0;height:100vh;width:var(--sbw);flex:none;background:linear-gradient(180deg,var(--navy),#0a2350);color:#dbe5f7;display:flex;flex-direction:column;transition:width .2s ease;z-index:40}
+.sb-brand{display:flex;gap:12px;align-items:center;padding:18px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sb-logo{flex:none;width:40px;height:40px;border-radius:11px;background:var(--gold);color:var(--navy);font-weight:700;display:grid;place-items:center}
+.sb-name{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.sb-name strong{color:#fff;font-size:.98rem}.sb-name span{font-size:.78rem;opacity:.75}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 8px;scrollbar-width:thin}
+.sb-nav ul{list-style:none;margin:0;padding:0}
+.nav-a,.nav-g{display:flex;align-items:center;gap:12px;width:100%;padding:9px 12px;border-radius:10px;color:#dbe5f7;text-decoration:none;font:inherit;font-size:.94rem;background:none;border:0;cursor:pointer;text-align:left;line-height:1.3}
+.nav-a:hover,.nav-g:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-a[aria-current="page"]{background:#fff;color:var(--navy);font-weight:600}
+.nav-g.has-active{color:#fff;font-weight:600}
+.nav-g .chev{margin-left:auto;transition:transform .2s}
+.nav-g[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.sub{margin:2px 0 6px 22px!important;border-left:1px solid rgba(255,255,255,.18);padding-left:8px!important}
+.sub .nav-a{font-size:.88rem;padding:7px 10px}
+.nav-lbl{min-width:0}
+.sb-foot{padding:12px 16px;font-size:.76rem;opacity:.7;border-top:1px solid rgba(255,255,255,.1)}
+.app.mini .sb{width:var(--sbw-mini)}
+.app.mini .sb-name,.app.mini .nav-lbl,.app.mini .chev,.app.mini .sub,.app.mini .sb-foot{display:none}
+.app.mini .nav-a,.app.mini .nav-g{justify-content:center;padding:10px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:30;display:flex;gap:12px;align-items:center;padding:10px 20px;background:rgba(255,255,255,.95);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.icon-btn{flex:none;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--navy);display:grid;place-items:center;cursor:pointer}
+.tb-title{display:flex;flex-direction:column;min-width:0;flex:1}
+.tb-sys{font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-page{font-size:1.05rem;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stamp{flex:none;font-size:.8rem;color:var(--muted);text-align:right;line-height:1.35}
+.stamp b{color:var(--ink);font-weight:600}
+.view{padding:20px 24px 40px;max-width:1280px;width:100%;outline:none}
+.foot{margin-top:auto;padding:14px 24px;font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);background:#fff}
+.banner{margin:12px 24px 0;padding:10px 14px;border-radius:12px;background:var(--warn-bg);color:var(--warn);border:1px solid #f1d59a;font-size:.92rem}
+.scrim{position:fixed;inset:0;background:rgba(10,20,40,.45);z-index:35}
 
-.filters{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
-.filters-in{display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
-.range{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.92rem}
-.range label{font-weight:600}
-select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
-.btn-ghost{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--ink)}
-.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin;flex:1;min-width:0}
-.chip{flex:none;font:inherit;font-size:.88rem;border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;cursor:pointer;color:var(--ink);white-space:nowrap}
-.chip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
-
-main{padding-top:18px;padding-bottom:40px}
-section{margin-top:26px}
-.sec-head{display:flex;gap:6px 14px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
-.sec-head h2{font-size:1.2rem;font-weight:700;color:var(--navy)}
-.sec-note{color:var(--muted);font-size:.9rem}
+/* ---------- page head / controls ---------- */
+.ph{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.ph h1{font-size:clamp(1.25rem,2.4vw,1.6rem);color:var(--navy);line-height:1.3}
+.ph p{color:var(--muted);font-size:.93rem;margin-top:2px;max-width:760px}
+.ctrls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.9rem}
+.ctrls label{font-weight:600}
+select{font:inherit;font-size:.92rem;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
+.btn-ghost{font:inherit;font-size:.9rem;border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 12px;cursor:pointer;color:var(--ink)}
+.seg{display:inline-flex;background:var(--mute-bg);border-radius:11px;padding:3px;gap:2px}
+.seg button{font:inherit;font-size:.92rem;border:0;background:none;border-radius:9px;padding:7px 14px;cursor:pointer;color:var(--muted);font-weight:600}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.sec{margin-top:24px}
+.sec-h{display:flex;gap:6px 12px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
+.sec-h h2{font-size:1.08rem;color:var(--navy)}
+.sec-h .note{color:var(--muted);font-size:.85rem}
+.sec-h .more{margin-left:auto;font-size:.88rem;font-weight:600;text-decoration:none}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
-.banner{margin-top:4px;padding:10px 14px;border-radius:12px;background:var(--warn-bg);color:var(--warn);border:1px solid #f1d59a;font-size:.92rem}
+.divider{display:flex;align-items:center;gap:12px;margin:34px 0 4px;color:var(--fine);font-weight:700;font-size:1.05rem}
+.divider::after{content:"";flex:1;height:2px;background:linear-gradient(90deg,#efc7bf,transparent)}
 
-.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
-.kpi{padding:14px 16px;display:flex;flex-direction:column;gap:4px;border-top:4px solid var(--c1)}
-.kpi.k2{border-top-color:var(--c2)}.kpi.k3{border-top-color:var(--c3)}.kpi.k4{border-top-color:var(--c4)}.kpi.k5{border-top-color:var(--c5)}
-.kpi-label{font-size:.9rem;color:var(--muted);font-weight:600}
-.kpi-num{font-size:2rem;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--navy)}
-.kpi-num small{font-size:.95rem;font-weight:600;color:var(--muted);margin-left:4px}
-.kpi-sub{font-size:.9rem;color:var(--ink)}
-.kpi-meta{margin-top:auto;padding-top:6px;font-size:.78rem;color:var(--muted);border-top:1px dashed var(--line)}
-.kpi-na{font-size:1.05rem;font-weight:600;color:var(--bad)}
-.tag{display:inline-block;font-size:.74rem;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--mute-bg);color:var(--muted);vertical-align:middle}
-.tag.t-warn{background:var(--warn-bg);color:var(--warn)}
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.kpi{padding:14px 16px 12px 18px;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--accent,var(--c1))}
+.kpi-top{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.88rem;font-weight:600}
+.kpi-top .ic{color:var(--accent,var(--c1))}
+.kpi-num{font-size:1.95rem;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--navy);letter-spacing:-.01em}
+.kpi-num small{font-size:.9rem;font-weight:600;color:var(--muted);margin-left:5px;letter-spacing:0}
+.kpi-na{font-size:1rem;font-weight:700;color:var(--bad);padding:6px 0}
+.kpi-sub{font-size:.88rem;color:var(--ink)}
+.kpi-meta{margin-top:auto;padding-top:8px;font-size:.75rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 8px;align-items:flex-end;justify-content:space-between}
+.kpi-meta a{flex:none;font-weight:600;font-size:.8rem;text-decoration:none;white-space:nowrap}
+.tag{display:inline-block;font-size:.72rem;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--mute-bg);color:var(--muted)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}.tag.bad{background:var(--bad-bg);color:var(--bad)}.tag.ok{background:var(--ok-bg);color:var(--ok)}
 
-.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
-.chart{margin:0;padding:14px 16px}
+/* ---------- charts ---------- */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px}
+.grid2>.kpis{align-content:start}
+.chart{margin:0;padding:14px 16px;min-width:0}
 .chart figcaption{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
-.chart figcaption span{font-size:.8rem;color:var(--muted)}
+.chart figcaption strong{font-size:.98rem}
+.chart figcaption span{font-size:.78rem;color:var(--muted)}
 .chart svg{width:100%;height:auto;display:block}
 .legend{display:flex;gap:4px 12px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:6px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
-.empty{padding:26px 10px;text-align:center;color:var(--muted);font-size:.92rem}
+.empty{padding:24px 10px;text-align:center;color:var(--muted);font-size:.92rem}
 
-.mapcard{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:0;overflow:hidden}
-.map-left{padding:14px 16px;border-right:1px solid var(--line)}
-.map-right{padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
-.map-tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.map-svg svg{width:100%;height:auto;display:block;background:#f7f9fc;border:1px solid var(--line);border-radius:10px}
-.map-svg circle{cursor:pointer;stroke:#fff;stroke-width:1.5}
-.map-svg circle.sel{stroke:var(--ink);stroke-width:3}
-.map-cap{font-size:.8rem;color:var(--muted);margin-top:6px}
-.map-detail{border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.92rem;background:#fafbfd}
-.map-detail .btn{margin-top:8px}
-.map-embed iframe{width:100%;height:220px;border:1px solid var(--line);border-radius:10px}
-.map-list-wrap{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:10px}
-.tbl{width:100%;border-collapse:collapse;font-size:.86rem}
-.tbl th,.tbl td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
-.tbl th{position:sticky;top:0;background:#f1f4f9;font-weight:600}
+/* ---------- tables ---------- */
+.tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+.tbl{width:100%;border-collapse:collapse;font-size:.88rem}
+.tbl th,.tbl td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+.tbl th{position:sticky;top:0;background:#f2f5fa;font-weight:600;color:var(--ink)}
+.tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl tr:last-child td{border-bottom:0}
 .tbl tr.sel td{background:var(--info-bg)}
-.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.tbl tfoot td{font-weight:700;background:#fafbfd}
 
-.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+/* ---------- notes / details ---------- */
+.notes{margin:0;padding-left:18px;font-size:.84rem;color:var(--muted)}
+.notes li{margin:3px 0}
+.notes.warn{color:var(--warn)}
+.box{padding:14px 16px}
+.box h3{font-size:.98rem;color:var(--navy);margin-bottom:6px}
+details.box summary{cursor:pointer;font-weight:600;color:var(--navy)}
+details.box[open] summary{margin-bottom:8px}
+.def{font-size:.84rem;color:var(--ink);background:#f7f9fc;border:1px dashed var(--line);border-radius:10px;padding:8px 12px}
+.src{font-size:.8rem;color:var(--muted);margin-top:6px}
+
+/* ---------- system cards ---------- */
+.sys-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .sys{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
-.sys h3{font-size:1.02rem;font-weight:700;line-height:1.35}
-.sys-desc{font-size:.9rem;color:var(--muted)}
-.pill{align-self:flex-start;font-size:.78rem;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--mute-bg);color:var(--muted)}
+.sys h3{font-size:1rem;line-height:1.35}
+.sys-desc{font-size:.88rem;color:var(--muted)}
+.pill{align-self:flex-start;font-size:.75rem;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--mute-bg);color:var(--muted)}
 .pill.s-connected{background:var(--ok-bg);color:var(--ok)}
 .pill.s-warn,.pill.s-partial{background:var(--warn-bg);color:var(--warn)}
 .pill.s-blocked,.pill.s-unverified{background:var(--bad-bg);color:var(--bad)}
 .pill.s-link{background:var(--info-bg);color:var(--info)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px}
-.stat{background:#f6f8fb;border:1px solid var(--line);border-radius:10px;padding:6px 10px}
-.stat b{display:block;font-size:1.15rem;font-variant-numeric:tabular-nums;color:var(--navy);line-height:1.2}
-.stat span{font-size:.78rem;color:var(--muted)}
-.sys-meta{font-size:.78rem;color:var(--muted)}
-.notes{margin:0;padding-left:18px;font-size:.82rem;color:var(--warn)}
-.notes.plain{color:var(--muted)}
 .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
-.btn{display:inline-block;font:inherit;font-size:.9rem;font-weight:600;text-decoration:none;background:var(--navy);color:#fff;border-radius:9px;padding:7px 12px;border:1px solid var(--navy)}
+.btn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:.88rem;font-weight:600;text-decoration:none;background:var(--navy);color:#fff;border-radius:9px;padding:7px 12px;border:1px solid var(--navy);cursor:pointer}
 .btn.sec{background:#fff;color:var(--navy)}
 .btn small{font-weight:400;opacity:.8}
 
-.about{padding:16px 18px;margin-top:26px}
-.about h2{font-size:1.05rem;color:var(--navy);margin-bottom:6px}
-.about ul{margin:0;padding-left:20px;font-size:.9rem;color:var(--ink)}
-.about li{margin:3px 0}
-.foot{border-top:1px solid var(--line);background:#fff;color:var(--muted);font-size:.84rem;padding:14px 0}
-[hidden]{display:none!important}
+/* ---------- status strip ---------- */
+.status-strip{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 14px;font-size:.88rem}
+.status-strip b{font-variant-numeric:tabular-nums}
 
-@media (max-width:820px){
+/* ---------- map ---------- */
+.mapcard{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);overflow:hidden}
+.map-left{padding:14px 16px;border-right:1px solid var(--line)}
+.map-right{padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.map-tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chip{font:inherit;font-size:.86rem;border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;cursor:pointer;color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.map-svg svg{width:100%;height:auto;display:block;background:#f7f9fc;border:1px solid var(--line);border-radius:10px}
+.map-svg circle{cursor:pointer;stroke:#fff;stroke-width:1.5}
+.map-svg circle.sel{stroke:var(--ink);stroke-width:3}
+.map-cap{font-size:.78rem;color:var(--muted);margin-top:6px}
+.map-detail{border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.9rem;background:#fafbfd}
+.map-detail .btn{margin-top:8px}
+.map-embed iframe{width:100%;height:220px;border:1px solid var(--line);border-radius:10px}
+.map-list-wrap{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.linkish{border:0;background:none;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+
+/* ---------- responsive ---------- */
+@media (max-width:980px){
+  .sb{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .22s ease;box-shadow:0 0 30px rgba(0,0,0,.25)}
+  .app.open .sb{transform:none}
+  .app.mini .sb{width:var(--sbw)}
+  .app.mini .sb-name,.app.mini .nav-lbl,.app.mini .chev,.app.mini .sb-foot{display:revert}
+  .app.mini .sub{display:block}
+  .app.mini .nav-a,.app.mini .nav-g{justify-content:flex-start;padding:9px 12px}
+  .view{padding:16px 14px 32px}
+  .topbar{padding:8px 12px}
+  .banner{margin:10px 14px 0}
+  .stamp{display:none}
   .mapcard{grid-template-columns:1fr}
   .map-left{border-right:0;border-bottom:1px solid var(--line)}
   .map-list-wrap{max-height:260px}
-  .kpi-num{font-size:1.7rem}
-  .filters{position:static}
 }
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media (max-width:520px){
+  .kpi-num{font-size:1.7rem}
+  .grid2{grid-template-columns:1fr}
+  .chart{padding:12px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.sb,.nav-g .chev{transition:none}}
+/* แถบสีของ Sidebar ยาวตลอดหน้า (เมื่อเนื้อหายาวกว่าหน้าจอ) */
+@media (min-width:981px){.app{background:linear-gradient(90deg,#0a2350 0 var(--sbw),transparent var(--sbw))}.app.mini{background:linear-gradient(90deg,#0a2350 0 var(--sbw-mini),transparent var(--sbw-mini))}}
 
 </style>
 </head>
 <body>
-<a class="skip" href="#main">ข้ามไปยังเนื้อหา</a>
-
-<header class="top">
-  <div class="wrap top-in">
-    <div class="brand">
-      <div class="brand-mark" aria-hidden="true">MU</div>
-      <div>
-        <h1>ระบบงานจราจรและความปลอดภัย มหาวิทยาลัยมหิดล</h1>
-        <p class="brand-sub">งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม · วิทยาเขตศาลายา</p>
+<a class="skip" href="#view">ข้ามไปยังเนื้อหา</a>
+<div class="app" id="app">
+  <aside class="sb" id="sidebar" aria-label="เมนูหลัก">
+    <div class="sb-brand">
+      <div class="sb-logo" aria-hidden="true">MU</div>
+      <div class="sb-name"><strong>งานจราจรและความปลอดภัย</strong><span>มหาวิทยาลัยมหิดล ศาลายา</span></div>
+    </div>
+    <nav class="sb-nav" id="nav"></nav>
+    <div class="sb-foot" id="sbFoot">รุ่นทดลอง (Preview)</div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+  <div class="main">
+    <header class="topbar">
+      <button type="button" class="icon-btn" id="navToggle" aria-controls="sidebar" aria-expanded="false" aria-label="เปิด/ปิดเมนู"></button>
+      <div class="tb-title">
+        <span class="tb-sys">ระบบงานจราจรและความปลอดภัย มหาวิทยาลัยมหิดล</span>
+        <span class="tb-page" id="crumb"></span>
       </div>
-    </div>
-    <div class="stamp" id="stamp" role="status">กำลังโหลดข้อมูล…</div>
+      <div class="stamp" id="stamp" role="status">กำลังโหลดข้อมูล…</div>
+    </header>
+    <div id="banner" class="banner" hidden></div>
+    <main id="view" class="view" tabindex="-1"></main>
+    <footer class="foot">หน้ารวมรุ่นทดลอง — ยังไม่ได้เผยแพร่ใช้งานจริง · แสดงเฉพาะสถิติรวม ไม่มีข้อมูลรายบุคคล · ระบบต้นทางทุกระบบยังทำงานตามเดิม</footer>
   </div>
-</header>
-
-<nav class="filters" aria-label="ตัวกรอง">
-  <div class="wrap filters-in">
-    <div class="range">
-      <label for="fFrom">ช่วงเดือน</label>
-      <select id="fFrom" aria-label="เดือนเริ่มต้น"></select>
-      <span aria-hidden="true">ถึง</span>
-      <select id="fTo" aria-label="เดือนสิ้นสุด"></select>
-      <button type="button" class="btn-ghost" id="fReset">ทั้งหมด</button>
-    </div>
-    <div class="chips" id="chips" role="group" aria-label="หมวดข้อมูล"></div>
-  </div>
-</nav>
-
-<main id="main" class="wrap">
-  <div id="banner" class="banner" hidden></div>
-
-  <section aria-labelledby="hKpi">
-    <div class="sec-head">
-      <h2 id="hKpi">สรุปตัวเลขสำคัญ</h2>
-      <p class="sec-note" id="kpiNote"></p>
-    </div>
-    <div class="kpis" id="kpis"></div>
-  </section>
-
-  <section aria-labelledby="hCharts" data-cat="traffic lostfound overview">
-    <div class="sec-head"><h2 id="hCharts">แนวโน้มรายเดือน</h2></div>
-    <div class="charts">
-      <figure class="card chart" data-cat="traffic overview">
-        <figcaption><strong>เหตุการณ์ที่บันทึก แยกประเภท</strong><span id="capInc"></span></figcaption>
-        <div id="chInc"></div>
-      </figure>
-      <figure class="card chart" data-cat="traffic">
-        <figcaption><strong>รถเข้ามหาวิทยาลัย และผู้ไม่สวมหมวกนิรภัย (รายวัน)</strong><span id="capGate"></span></figcaption>
-        <div id="chGate"></div>
-      </figure>
-      <figure class="card chart" data-cat="lostfound">
-        <figcaption><strong>แจ้งของหาย / เก็บของได้ / รับของคืน</strong><span id="capLf"></span></figcaption>
-        <div id="chLf"></div>
-      </figure>
-    </div>
-  </section>
-
-  <section aria-labelledby="hMap" data-cat="traffic overview" id="accident-map">
-    <div class="sec-head">
-      <h2 id="hMap">แผนที่จุดเกิดอุบัติเหตุ</h2>
-      <p class="sec-note" id="mapNote"></p>
-    </div>
-    <div class="card mapcard">
-      <div class="map-left">
-        <div class="map-tools" id="mapTools"></div>
-        <div id="mapSvg" class="map-svg" role="img" aria-label="แผนผังจุดเกิดอุบัติเหตุภายในวิทยาเขตศาลายา"></div>
-        <p class="map-cap">แผนผังตามพิกัดจริง (ทิศเหนืออยู่ด้านบน) — กดจุดเพื่อดูรายละเอียดและเปิดตำแหน่งใน Google Maps</p>
-      </div>
-      <div class="map-right">
-        <div id="mapDetail" class="map-detail"></div>
-        <div id="mapEmbed" class="map-embed" hidden></div>
-        <div class="map-list-wrap"><table class="tbl" id="mapList"></table></div>
-      </div>
-    </div>
-  </section>
-
-  <div id="cats"></div>
-
-  <section class="card about" aria-labelledby="hAbout">
-    <h2 id="hAbout">ที่มาของข้อมูลและการคุ้มครองข้อมูลส่วนบุคคล</h2>
-    <ul id="aboutList"></ul>
-  </section>
-</main>
-
-<footer class="foot">
-  <div class="wrap">
-    <p>หน้ารวมรุ่นทดลอง (Preview) — ยังไม่ได้เผยแพร่ใช้งานจริง · ระบบต้นทางทุกระบบยังทำงานตามเดิมและไม่ถูกแก้ไข</p>
-  </div>
-</footer>
-
+</div>
 <script>
 /* config.js — ค่าตั้งค่าหน้ารวม (ไฟล์นี้เป็นสาธารณะ: ห้ามใส่รหัสผ่าน / Token / ข้อมูลลับ)
  *
@@ -242,24 +238,62 @@ window.HUB_CONFIG = {
 };
 
 window.__HUB_PREVIEW__ = true;
-window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T16:40:00+07:00", "timezone": "Asia/Bangkok", "method": "สถิติรวมคำนวณด้วยสูตรใน Google Sheets (IMPORTRANGE/QUERY) จาก Sheet ต้นทางแบบอ่านอย่างเดียว แล้วบันทึกเป็นไฟล์นี้ ไม่มีข้อมูลรายบุคคล", "stagingSheet": "STAGING – สถิติรวมสำหรับหน้ารวมงานจราจร (ไฟล์ส่วนตัวใน Drive ของผู้ดูแล)", "modules": {"incidents": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “รายงานเหตุการณ์”", "updated": "2026-11-13 14:26", "range": {"from": "2026-07-01", "to": "2026-11-13"}, "total": 68, "injuredTotal": 39, "byType": [{"type": "อุบัติเหตุจากยานพาหนะ", "count": 25, "injuredOrIll": 9}, {"type": "อุบัติเหตุทั่วไป", "count": 12, "injuredOrIll": 10}, {"type": "รับส่งผู้ป่วย", "count": 19, "injuredOrIll": 20}, {"type": "บังคับล้อ", "count": 9, "injuredOrIll": 0}, {"type": "ลักทรัพย์", "count": 1, "injuredOrIll": 0}, {"type": "ปรับ รปภ.", "count": 1, "injuredOrIll": 0}, {"type": "อื่นๆ", "count": 1, "injuredOrIll": 0}], "monthly": [{"month": "2026-07", "byType": {"อุบัติเหตุทั่วไป": 1}}, {"month": "2026-08", "byType": {"อุบัติเหตุจากยานพาหนะ": 8}}, {"month": "2026-09", "byType": {"รับส่งผู้ป่วย": 14, "อุบัติเหตุจากยานพาหนะ": 6, "อุบัติเหตุทั่วไป": 5}}, {"month": "2026-10", "byType": {"บังคับล้อ": 7, "ปรับ รปภ.": 1, "ลักทรัพย์": 1, "อื่นๆ": 1, "อุบัติเหตุจากยานพาหนะ": 7, "อุบัติเหตุทั่วไป": 4}}, {"month": "2026-11", "byType": {"บังคับล้อ": 2, "รับส่งผู้ป่วย": 5, "อุบัติเหตุจากยานพาหนะ": 4, "อุบัติเหตุทั่วไป": 2}}], "definition": "นับ 1 แถว = 1 เหตุการณ์ จำแนกตามคอลัมน์ “ประเภทเหตุการณ์” ใช้ “วันที่เกิดเหตุ” เป็นเดือน; ผู้บาดเจ็บ/ป่วย = ผลรวมคอลัมน์ “จำนวนคนเจ็บ/ป่วย”", "notes": ["แท็บนี้มีข้อมูลตั้งแต่ 1 ก.ค. 2569 เท่านั้น (ข้อมูลก่อนหน้าอยู่ในไฟล์เดิม ‘Copy of รายงานเหตุการณ์ใหม่ล่าสุด (Responses)’ ซึ่งยังไม่ได้รวม)"]}, "accidentMap": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “รายงานเหตุการณ์” คอลัมน์ “พิกัด (Lat, Lng)”", "updated": "2026-11-13 14:26", "box": {"latMin": 13.786, "latMax": 13.803, "lngMin": 100.315, "lngMax": 100.329}, "points": [{"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.788488, "lng": 100.322685, "place": "ประตู 1", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.795186, "lng": 100.321322, "place": "ลานจอดรถสระว่ายน้ำ", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.801225, "lng": 100.318203, "place": "ประตู 6", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.794256, "lng": 100.326948, "place": "ประตู3", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.797003, "lng": 100.32042, "place": "ลานจอดรถ P1", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.792579, "lng": 100.317586, "place": "แยกอาคารคณะสิ่งแวดล้อมและทรัพยากรศาสตร์", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.801254, "lng": 100.320025, "place": "ประตู5ขาออก", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.798721, "lng": 100.318224, "place": "แยกวิทยาลัยศาสนศึกษา", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.791855, "lng": 100.322074, "place": "ถนนผสานเทศไทย ตรงทางขึ้นลานจอดรถ P.2", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.792037, "lng": 100.326948, "place": "ประตู 2 มหาวิทยาลัยมหิดล ศาลายา", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.794732, "lng": 100.326681, "place": "ถนนกันภัย บริเวณทางออกสำนักงานอธิการบดี", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.798053, "lng": 100.322602, "place": "ลานจอดรถP.3", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.800583, "lng": 100.320008, "place": "ประตู 5 ขาออก", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.796802, "lng": 100.32364, "place": "แยกทางเข้าสระน้ำ", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.794184, "lng": 100.326727, "place": "ถนนกันภัย ทางเข้าประตู 3", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.791767, "lng": 100.318111, "place": "ลานจอดรถ 5", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.79803, "lng": 100.322524, "place": "ลานจอดรถ P3", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.796753, "lng": 100.319055, "place": "ด้านข้างสนามเปตอง", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.790839, "lng": 100.322525, "place": "ถนนเทิดจักรี", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.79913, "lng": 100.320272, "place": "ถนนดำรงวิจัย", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.798435, "lng": 100.318197, "place": "หน้าศูนย์สัตว์ทดลองแห่งชาติ", "outOfCampusBox": false}, {"month": "2026-11", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.771335, "lng": 100.319196, "place": "บนลานจอดาออก", "outOfCampusBox": true}, {"month": "2026-11", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.788191, "lng": 100.322757, "place": "หน้าทางเข้าออกวิทยาลัยดุริยางคศิลป์", "outOfCampusBox": false}, {"month": "2026-11", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.796768, "lng": 100.326711, "place": "ทางออกประตู 4", "outOfCampusBox": false}, {"month": "2026-11", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.79009, "lng": 100.322672, "place": "ถนนเทิดจักรี", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุทั่วไป", "lat": 13.794832, "lng": 100.321419, "place": "คณะสิ่งแวดล้อมและทรัพยากรศาสตร์", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุทั่วไป", "lat": 13.792722, "lng": 100.323136, "place": "ลานจอดรถคณะวิทยาศาสตร์", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุทั่วไป", "lat": 13.794416, "lng": 100.326226, "place": "สำนักงานอธิการบดี", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุทั่วไป", "lat": 13.791998, "lng": 100.326912, "place": "ประตู 2", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุทั่วไป", "lat": 13.792903, "lng": 100.317953, "place": "หลังสนามฟุตบอล", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุทั่วไป", "lat": 13.796022, "lng": 100.322214, "place": "วิทยาลัยนานาชาติ", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุทั่วไป", "lat": 13.795095, "lng": 100.322823, "place": "วิทยาลัยดุริยางคศิลป์", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุทั่วไป", "lat": 13.788047, "lng": 100.325325, "place": "ประตูคณะพยาบาลศาสตร์", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุทั่วไป", "lat": 13.796503, "lng": 100.320684, "place": "แยกอาคารอเนกประสงค์ ถนนสายดี", "outOfCampusBox": false}, {"month": "2026-07", "type": "อุบัติเหตุทั่วไป", "lat": 13.78809, "lng": 100.325311, "place": "ประตูคณะพยาบาลศาสตร์", "outOfCampusBox": false}, {"month": "2026-11", "type": "อุบัติเหตุทั่วไป", "lat": 13.795499, "lng": 100.319701, "place": "สนามฟุตซอลหลังหอพัก11", "outOfCampusBox": false}, {"month": "2026-11", "type": "อุบัติเหตุทั่วไป", "lat": 13.796794, "lng": 100.319878, "place": "เส้นทางจักรยานใกล้เคียงสนามแบดมินตัน", "outOfCampusBox": false}], "notes": ["แสดงเฉพาะอุบัติเหตุจากยานพาหนะ (25 จุด) และอุบัติเหตุทั่วไป (12 จุด) — ไม่แสดงเหตุรับส่งผู้ป่วยและไม่แสดงเวลา/รายละเอียดบุคคล", "มี 1 จุด (พ.ย. 2569) ที่พิกัดอยู่นอกกรอบวิทยาเขต ควรตรวจสอบที่ Sheet ต้นทาง"]}, "gate": {"status": "warn", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “จำนวนรถเข้า+หมวกนิรภัย”", "updated": "2026-11-11 09:19", "range": {"from": "2026-10-01", "to": "2026-11-10"}, "days": 39, "totals": {"cars": 350246, "motorcycles": 104391, "noHelmet": 73591}, "monthly": [{"month": "2026-10", "days": 29, "cars": 242812, "motorcycles": 74155, "noHelmet": 59265}, {"month": "2026-11", "days": 10, "cars": 107434, "motorcycles": 30236, "noHelmet": 14326}], "daily": [{"date": "2026-10-01", "cars": 11107, "motorcycles": 6009, "noHelmet": 5032}, {"date": "2026-10-02", "cars": 12102, "motorcycles": 6456, "noHelmet": 5511}, {"date": "2026-10-03", "cars": 3999, "motorcycles": 2864, "noHelmet": 2454}, {"date": "2026-10-04", "cars": 3689, "motorcycles": 2156, "noHelmet": 1707}, {"date": "2026-10-05", "cars": 4658, "motorcycles": 2736, "noHelmet": 2268}, {"date": "2026-10-06", "cars": 5276, "motorcycles": 2766, "noHelmet": 2138}, {"date": "2026-10-07", "cars": 9978, "motorcycles": 5961, "noHelmet": 5054}, {"date": "2026-10-08", "cars": 9875, "motorcycles": 6381, "noHelmet": 5578}, {"date": "2026-10-09", "cars": 9957, "motorcycles": 5948, "noHelmet": 5302}, {"date": "2026-10-10", "cars": 2002, "motorcycles": 3169, "noHelmet": 2210}, {"date": "2026-10-11", "cars": 7172, "motorcycles": 2525, "noHelmet": 1831}, {"date": "2026-10-12", "cars": 12709, "motorcycles": 2726, "noHelmet": 2989}, {"date": "2026-10-13", "cars": 4783, "motorcycles": 1328, "noHelmet": 1006}, {"date": "2026-10-14", "cars": 12252, "motorcycles": 2305, "noHelmet": 2035}, {"date": "2026-10-15", "cars": 12653, "motorcycles": 2722, "noHelmet": 3182}, {"date": "2026-10-16", "cars": 9754, "motorcycles": 3785, "noHelmet": 3659}, {"date": "2026-10-17", "cars": 5808, "motorcycles": 737, "noHelmet": 424}, {"date": "2026-10-18", "cars": 4246, "motorcycles": 673, "noHelmet": 355}, {"date": "2026-10-19", "cars": 12772, "motorcycles": 1158, "noHelmet": 700}, {"date": "2026-10-20", "cars": 12822, "motorcycles": 1222, "noHelmet": 704}, {"date": "2026-10-21", "cars": 12711, "motorcycles": 1261, "noHelmet": 700}, {"date": "2026-10-22", "cars": 12819, "motorcycles": 1188, "noHelmet": 643}, {"date": "2026-10-23", "cars": 4329, "motorcycles": 588, "noHelmet": 285}, {"date": "2026-10-24", "cars": 7178, "motorcycles": 643, "noHelmet": 300}, {"date": "2026-10-25", "cars": 3185, "motorcycles": 535, "noHelmet": 258}, {"date": "2026-10-26", "cars": 7109, "motorcycles": 1630, "noHelmet": 547}, {"date": "2026-10-27", "cars": 7575, "motorcycles": 2213, "noHelmet": 830}, {"date": "2026-10-28", "cars": 7981, "motorcycles": 1089, "noHelmet": 1089}, {"date": "2026-10-29", "cars": 12311, "motorcycles": 1381, "noHelmet": 474}, {"date": "2026-11-01", "cars": 6874, "motorcycles": 754, "noHelmet": 269}, {"date": "2026-11-02", "cars": 12898, "motorcycles": 1195, "noHelmet": 442}, {"date": "2026-11-03", "cars": 13022, "motorcycles": 1085, "noHelmet": 377}, {"date": "2026-11-04", "cars": 13045, "motorcycles": 1159, "noHelmet": 388}, {"date": "2026-11-05", "cars": 12720, "motorcycles": 1097, "noHelmet": 1097}, {"date": "2026-11-06", "cars": 12532, "motorcycles": 6070, "noHelmet": 3069}, {"date": "2026-11-07", "cars": 5461, "motorcycles": 2695, "noHelmet": 1063}, {"date": "2026-11-08", "cars": 5033, "motorcycles": 2616, "noHelmet": 1048}, {"date": "2026-11-09", "cars": 12851, "motorcycles": 6555, "noHelmet": 3178}, {"date": "2026-11-10", "cars": 12998, "motorcycles": 7010, "noHelmet": 3395}], "definition": "ผลรวมประตู 1, 3, 4, 5, 6 ต่อวัน (รถยนต์ / รถจักรยานยนต์ / ผู้ไม่สวมหมวกนิรภัย) ตามคอลัมน์ “วันที่ของข้อมูล”", "notes": ["ตัดแถววันที่ 16–17 ก.ย. 2569 ออก 11 แถว เพราะเป็นข้อมูลทดสอบระบบ (ค่า 50/505 ซ้ำกัน และผู้ไม่สวมหมวกมากกว่าจำนวนรถจักรยานยนต์)", "ไม่มีข้อมูลวันที่ 30–31 ต.ค. 2569", "พบ 4 วันที่จำนวนผู้ไม่สวมหมวก ≥ จำนวนรถจักรยานยนต์ (2026-10-12, 2026-10-15, 2026-10-28, 2026-11-05) ควรตรวจสอบการกรอก"]}, "lostfound": {"status": "ok", "source": "Sheet “แจ้งของหาย” แท็บ “รายการ พ.ศ. 2569 (ปัจจุบัน)”", "updated": "2026-11-14", "range": {"from": "2026-01", "to": "2026-11"}, "total": 670, "byType": {"สิ่งของสูญหาย": 413, "พบสิ่งของ": 140, "รับของคืน": 97, "(ไม่ระบุประเภท)": 20}, "byStatus": {"รับของคืนแล้ว": 161, "ช่วยหาแล้วยังไม่พบ": 392, "เจ้าของยังไม่มารับคืน": 112, "(ว่าง)": 1, "รอดำเนินการ": 4}, "returned": 161, "monthly": [{"month": "2026-01", "byType": {"พบสิ่งของ": 14, "สิ่งของสูญหาย": 47}}, {"month": "2026-02", "byType": {"(ไม่ระบุประเภท)": 10, "พบสิ่งของ": 2, "สิ่งของสูญหาย": 29}}, {"month": "2026-03", "byType": {"(ไม่ระบุประเภท)": 5, "พบสิ่งของ": 2, "สิ่งของสูญหาย": 26}}, {"month": "2026-04", "byType": {"(ไม่ระบุประเภท)": 5, "พบสิ่งของ": 7, "รับของคืน": 1, "สิ่งของสูญหาย": 17}}, {"month": "2026-05", "byType": {"พบสิ่งของ": 10, "รับของคืน": 9, "สิ่งของสูญหาย": 13}}, {"month": "2026-06", "byType": {"พบสิ่งของ": 4, "รับของคืน": 4, "สิ่งของสูญหาย": 7}}, {"month": "2026-07", "byType": {"พบสิ่งของ": 10, "รับของคืน": 13, "สิ่งของสูญหาย": 16}}, {"month": "2026-08", "byType": {"พบสิ่งของ": 16, "รับของคืน": 13, "สิ่งของสูญหาย": 53}}, {"month": "2026-09", "byType": {"พบสิ่งของ": 35, "รับของคืน": 36, "สิ่งของสูญหาย": 105}}, {"month": "2026-10", "byType": {"พบสิ่งของ": 34, "รับของคืน": 16, "สิ่งของสูญหาย": 74}}, {"month": "2026-11", "byType": {"พบสิ่งของ": 6, "รับของคืน": 5, "สิ่งของสูญหาย": 26}}], "history": {"2568": 131, "2567": 48}, "definition": "นับจากแท็บรวมรายปีที่ระบบ Lost & Found สร้างไว้ (ไม่มีชื่อ/เบอร์โทร); “รับของคืนแล้ว” = ทุกประเภทที่สถานะเป็นรับของคืนแล้ว", "notes": ["มี 20 รายการที่ไม่ระบุประเภท (ก.พ.–เม.ย. 2569) จากแบบฟอร์มเดิม"]}, "cctv": {"status": "ok", "source": "Sheet “CCTV Request System - มหาวิทยาลัยมหิดล” แท็บ “CCTV_Requests”", "updated": "2026-11-11 20:10", "range": {"from": "2026-04", "to": "2026-11"}, "total": 11, "byStatus": {"ปิดเคส": 11}, "byRequester": {"นักศึกษา": 5, "บุคลากร": 5, "บุคคลทั่วไป": 1}, "footage": {"พบภาพ": 4, "ไม่พบภาพ": 2, "ไม่ได้ระบุ": 5}, "monthly": [{"month": "2026-04", "count": 1}, {"month": "2026-05", "count": 1}, {"month": "2026-09", "count": 3}, {"month": "2026-10", "count": 1}, {"month": "2026-11", "count": 5}], "byUnit": {"ส่วนกลาง (งานจราจรฯ)": 11, "MLC": 0, "LA": 0, "PMH": 0}, "notes": ["คำขอเดิมทั้ง 11 รายการเป็นพื้นที่ส่วนกลาง (ประตู ถนน ลานจอด กองกายภาพฯ) ยังไม่มีคำขอของ MLC / LA / PMH ในระบบ"]}, "borrow": {"status": "warn", "source": "Sheet “ระบบยืมของงานจราจรฯ 21.4.69” แท็บ Borrow_Data / Return_Data / Vehicle_Booking / Inventory_Master", "updated": "2026-05-24", "range": {"from": "2026-04-21", "to": "2026-05-24"}, "borrowRequests": 8, "borrowByStatus": {"รับของคืนแล้ว": 8}, "returnRecords": 8, "returnByStatus": {"รอยืนยัน": 4, "รับของคืนแล้ว": 3, "ยืนยันแล้ว": 1}, "golfCartBookings": 0, "inventory": {"items": 15, "totalStock": 180, "markedBorrowed": 19}, "notes": ["มีเพียง 8 รายการช่วง 21 เม.ย.–24 พ.ค. 2569 (ช่วงทดลองระบบ) — ยังไม่ควรใช้เป็นสถิติทางการ", "ข้อมูลไม่สอดคล้องกัน: Borrow_Data ระบุคืนครบ 8 รายการ แต่ Return_Data ยังมี ‘รอยืนยัน’ 4 รายการ และ Inventory_Master ยังนับว่าถูกยืมอยู่ 19 ชิ้น"]}, "fire": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “ข้อมูลถังดับเพลิง” และ “บันทึกการตรวจ”", "updated": "2026-09-11 10:40", "extinguishers": 47, "byType": {"คาร์บอนไดออกไซด์ (CO2)": 18, "ผงเคมีแห้ง (Dry Chemical)": 12, "สารเคมีสูตรน้ำ (Water-Based)": 12, "น้ำ (Water)": 3, "น้ำยาเหลวระเหย (Halotron)": 2}, "byUnit": {"งานจราจรและความปลอดภัย": 34, "สถานีไฟฟ้าย่อยมหิดล": 4, "อาคารศาลายา กองกายภาพฯ": 3, "มหิดลสิทธาคาร": 2, "อาคารบำบัดน้ำเสีย": 2, "ศูนย์การเรียนรู้มหิดล": 1, "อาคารสิริวิทยา": 1}, "inspections": 86, "inspectionResult": {"ปกติ": 76, "ชำรุด": 10}, "extinguishersInspected": 39, "definition": "จำนวนถัง = จำนวนแถวในทะเบียนถัง; การตรวจ = จำนวนแถวบันทึกการตรวจ จำแนกตามคอลัมน์ “สรุปผล”", "notes": ["“อัปเดตล่าสุด” คือเวลาของแถวสุดท้ายในบันทึกการตรวจ", "ถังที่ถูกตรวจแล้ว 39 จาก 47 ถัง (นับเลขถังไม่ซ้ำ)"]}, "guardScan": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “แสกนจุดเอกชน”", "updated": "2026-11-14 16:37", "range": {"from": "2026-11-04", "to": "2026-11-14"}, "scans": 10030, "byStatus": {"ปกติ": 10027, "ไม่ปกติ": 3}, "scanPoints": 113, "byUnit": {"โครงการจัดตั้งสถาบันอุทยานธรรมชาติฯ": 2645, "มหิดลสิทธาคาร": 1780, "ส่วนกลาง - โซน 1": 1593, "อาคารสิริวิทยา": 1408, "ศูนย์การเรียนรู้มหิดล": 1347, "ส่วนกลาง - โซน 2": 1257}, "notes": ["นับทุกแถวที่มีจุดสแกน ไม่แสดงชื่อ รปภ."]}, "satisfactionCentral": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “ความพึงพอใจการให้บริการรปภ.เอกชน”", "updated": "2026-11-14 15:20", "responses": 63, "scale": "1–5", "avg": {"การรักษาความปลอดภัย": 4.63, "การจัดการจราจร": 4.59, "การให้บริการ": 4.68, "การแต่งกาย": 4.75, "ความสุภาพ": 4.7}}, "satisfactionUnit": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “คะแนนความพึงพอใจรปภ.ส่วนงาน”", "updated": "2026-11", "records": 13, "respondents": 787, "scale": "1–5", "byMonth": {"กันยายน 2569": 2, "ตุลาคม 2569": 9, "พฤศจิกายน 2569": 2}, "avg": {"การรักษาความปลอดภัย": 4.79, "การจัดการจราจร": 4.86, "การให้บริการ": 4.85, "การแต่งกาย": 4.72, "ความสุภาพ": 4.73}, "notes": ["ค่าเฉลี่ยคิดจากรายการที่กรอกเป็นตัวเลข (หัวข้อการแต่งกายมีตัวเลขเพียง 4 จาก 13 รายการ)"]}, "graduationParking": {"status": "ok", "source": "Sheet “รปภ. แบบสำรวจรถลานจอด ปริญญา ปี 69 (ปีการศึกษา 68)” แท็บ “SUMMARY_2569”", "updated": "2026-10-06", "lots": 50, "capacity": 5027, "days": [{"date": "2026-10-03", "lots": 50, "capacity": 5027, "latestCount": 1822, "occupancyPercent": 36.2}, {"date": "2026-10-05", "lots": 50, "capacity": 5027, "latestCount": 2087, "occupancyPercent": 41.5}, {"date": "2026-10-06", "lots": 50, "capacity": 5027, "latestCount": 1925, "occupancyPercent": 38.3}], "definition": "รวม ‘จำนวนรถล่าสุดที่บันทึก’ ของลานจอดทั้ง 50 ลานในแต่ละวันงาน เทียบกับความจุรวม (ไม่ใช่ค่าสูงสุดของวัน)"}, "vehicleRegistration": {"status": "partial", "source": "Sheet “MU ฐานข้อมูลลงทะเบียนยานพาหนะบุคลากร…” และ “…นักศึกษา…” แท็บ Registrations / Registrations_Motorcycle", "updated": "2026-11-10", "rows": {"บุคลากร – รถยนต์": 5471, "บุคลากร – รถจักรยานยนต์": 975, "นักศึกษา – รถยนต์": 1275, "นักศึกษา – รถจักรยานยนต์": null}, "notes": ["นับจากเลขแถวสุดท้ายที่มีข้อมูล (1 แถว = 1 รายการลงทะเบียน) ยังไม่ได้ตัดรายการซ้ำ/ยกเลิก", "นักศึกษา–รถจักรยานยนต์: ยังไม่มีข้อมูลยืนยัน", "Sheet เป็นแบบ Private — ต้องกด Allow access ใน Sheet STAGING ก่อนจึงจะคำนวณสถิติแยกวิทยาเขต/สถานะอนุมัติได้"]}, "ruenthai": {"status": "blocked", "source": "Sheet “ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย (RuenThai Parking)” แท็บ “RuenThai_Survey”", "notes": ["Sheet เป็นแบบ Private — สูตรรวมสถิติยังเชื่อมต่อไม่ได้จนกว่าเจ้าของจะกด Allow access ใน Sheet STAGING"]}, "graduationGuardGps": {"status": "blocked", "source": "Sheet “ระบบรายงานผลการปฏิบัติงาน รปภ.เอกชน ปริญญา 2569 (2568) GPS” แท็บ “Reports”", "notes": ["Sheet แชร์เฉพาะโดเมน — สูตรรวมสถิติยังเชื่อมต่อไม่ได้จนกว่าเจ้าของจะกด Allow access ใน Sheet STAGING"]}, "eventIncident": {"status": "unverified", "source": "Apps Script ของ Event-incident-report (ไม่พบ Sheet ปลายทางในสิทธิ์ที่มี)", "notes": ["ยังระบุ Sheet ที่บันทึกไม่ได้"]}, "helmetQuiz": {"status": "unverified", "source": "Apps Script ที่ฝังใน -helmet/script.js (ไม่พบ Sheet ปลายทางในสิทธิ์ที่มี)", "notes": ["ยังระบุ Sheet ที่บันทึกไม่ได้"]}}}, "systems": {"schema": 1, "categories": [{"id": "overview", "name": "ภาพรวมและรายงาน", "icon": "chart", "systems": [{"id": "dashboard-ai", "name": "Dashboard งานจราจรและความปลอดภัย (AI)", "desc": "แดชบอร์ดสถิติอุบัติเหตุ/ผู้บาดเจ็บที่ใช้รายงานผู้บริหารในปัจจุบัน", "status": "connected", "stat": "incidents", "links": [{"label": "เปิด Dashboard", "url": "https://trafficoppe.github.io/Main-AI-v1/", "verified": true, "kind": "open"}], "note": "ต้องกรอกรหัสพนักงานที่หน้าเข้าสู่ระบบ; หน้ารวมนี้อ่านสถิติจากแหล่งเดียวกันโดยไม่แก้ Dashboard เดิม", "source": "Main-AI-v1 + DashboardAI → แท็บ รายงานเหตุการณ์"}, {"id": "pdf-monthly", "name": "PDF รายงานสถิติจราจรและความปลอดภัยรายเดือน (OPPE-01-F-11-01)", "desc": "สร้างเอกสาร PDF สรุปสถิติรายเดือนจากฐานข้อมูลงานจราจร ของหาย และ CCTV", "status": "link", "stat": null, "links": [{"label": "เปิดระบบสร้าง PDF", "url": "https://trafficoppe.github.io/PDF-OPPE-01-F-11-01--/", "verified": true, "kind": "open"}], "note": "เป็นเครื่องมือสร้างเอกสาร ไม่มีสถิติของตัวเอง", "source": "อ่าน 8 แท็บจาก 3 Sheet ผ่านลิงก์ CSV"}, {"id": "pdf-daily", "name": "PDF รายงานเหตุการณ์ประจำวัน", "desc": "สร้างเอกสาร PDF รายงานเหตุการณ์ประจำวันพร้อมตารางเวรและจำนวนรถเข้า", "status": "link", "stat": null, "links": [{"label": "เปิดระบบสร้าง PDF", "url": "https://trafficoppe.github.io/PDF-report-AI-v1/", "verified": true, "kind": "open"}], "note": "เป็นเครื่องมือสร้างเอกสาร ไม่มีสถิติของตัวเอง", "source": "อ่าน 4 แท็บจากฐานข้อมูลงานจราจร ผ่านลิงก์ CSV"}, {"id": "old-hub", "name": "ระบบสถิติเดิม (trafficsystem)", "desc": "หน้ารวมรุ่นเก่า เลิกใช้เป็นหน้าหลักแล้ว เก็บไว้อ้างอิง", "status": "legacy", "stat": null, "links": [{"label": "เปิดระบบเดิม", "url": "https://trafficoppe.github.io/trafficsystem/index.html", "verified": true, "kind": "open"}], "note": "อ้างอิง Sheet รุ่นเก่าที่ไม่ได้อัปเดตแล้ว", "source": null}]}, {"id": "traffic", "name": "งานจราจรและแจ้งเหตุ", "icon": "alert", "systems": [{"id": "incident-report", "name": "ระบบรายงานเหตุการณ์/แจ้งเหตุ (AI)", "desc": "แบบฟอร์มบันทึกเหตุการณ์ อุบัติเหตุ และการรับส่งผู้ป่วย พร้อมพิกัดจุดเกิดเหตุ", "status": "connected", "stat": "incidents", "links": [{"label": "เปิดแบบฟอร์มรายงานเหตุการณ์", "url": "https://trafficoppe.github.io/report-incident-AI-v1/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ รายงานเหตุการณ์"}, {"id": "gate-tracker", "name": "บันทึกจำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัย", "desc": "แบบฟอร์มบันทึกจำนวนรถยนต์/รถจักรยานยนต์ และผู้ไม่สวมหมวกนิรภัย แยกประตู 1, 3, 4, 5, 6", "status": "warn", "stat": "gate", "links": [{"label": "เปิดแบบฟอร์ม", "url": "https://trafficoppe.github.io/Form-Gate-Tracker-AI-v1/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ จำนวนรถเข้า+หมวกนิรภัย"}, {"id": "event-incident", "name": "รายงานเหตุการณ์สำหรับกิจกรรมพิเศษ", "desc": "แบบฟอร์มและแดชบอร์ดรายงานเหตุการณ์ช่วงกิจกรรมพิเศษ", "status": "unverified", "stat": "eventIncident", "links": [{"label": "เปิดแบบฟอร์ม", "url": "https://trafficoppe.github.io/Event-incident-report/", "verified": true, "kind": "open"}, {"label": "เปิดแดชบอร์ดกิจกรรม", "url": "https://trafficoppe.github.io/Event-incident-report/dashboard.html", "verified": true, "kind": "open"}], "note": "ยังระบุ Sheet ที่บันทึกข้อมูลไม่ได้ (ซอร์ส Apps Script ไม่อยู่ในสิทธิ์ที่เข้าถึง)", "source": null}, {"id": "helmet-quiz", "name": "แบบทดสอบโครงการรณรงค์สวมหมวกนิรภัย 100%", "desc": "สื่อวิดีโอและแบบทดสอบความรู้การสวมหมวกนิรภัย", "status": "unverified", "stat": "helmetQuiz", "links": [{"label": "เปิดแบบทดสอบ", "url": "https://trafficoppe.github.io/-helmet/", "verified": false, "kind": "open"}], "note": "ส่งผลไปยัง Apps Script แต่ยังระบุ Sheet ปลายทางไม่ได้", "source": null}]}, {"id": "cctv", "name": "กล้องวงจรปิด", "icon": "camera", "systems": [{"id": "cctv", "name": "ระบบขอดูกล้องวงจรปิด (CCTV)", "desc": "แบบคำขอดูภาพกล้องวงจรปิด พร้อมเอกสารประกอบและการติดตามสถานะ", "status": "connected", "stat": "cctv", "links": [{"label": "แบบคำขอ (ส่วนกลาง – ระบบปัจจุบัน)", "url": "https://trafficoppe.github.io/trafficoppe/", "verified": false, "kind": "open"}], "note": "กำลังเตรียมรุ่นแยกหน่วยงาน MLC / LA / PMH ใน branch cctv-multi-unit (ยังไม่เปิดใช้)", "source": "แท็บ CCTV_Requests"}]}, {"id": "vehicle", "name": "ยานพาหนะและลานจอดรถ", "icon": "car", "systems": [{"id": "veh-staff", "name": "ลงทะเบียนยานพาหนะบุคลากร", "desc": "แบบลงทะเบียนรถยนต์/รถจักรยานยนต์ของบุคลากร", "status": "partial", "stat": "vehicleRegistration", "links": [{"label": "เปิดแบบลงทะเบียนบุคลากร", "url": "https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbwVhzioMgBzI5LBoLO4anTl1qcTe8lrKXSoYGllLSFx_ybbd0Tko78vZPAd-QmBl9Cq/exec", "verified": true, "kind": "open"}], "note": "ต้องเข้าสู่ระบบด้วยบัญชี mahidol.ac.th จึงฝังในหน้านี้ไม่ได้", "source": "ฐานข้อมูลลงทะเบียนยานพาหนะบุคลากร"}, {"id": "veh-student", "name": "ลงทะเบียนยานพาหนะนักศึกษา", "desc": "แบบลงทะเบียนรถยนต์/รถจักรยานยนต์ของนักศึกษา", "status": "partial", "stat": "vehicleRegistration", "links": [], "note": "ยังไม่มีลิงก์หน้าแบบฟอร์มสำหรับผู้ใช้ที่ยืนยันได้ (มีเฉพาะลิงก์แก้ไขสคริปต์)", "source": "ฐานข้อมูลลงทะเบียนยานพาหนะนักศึกษา"}, {"id": "ruenthai", "name": "แบบสำรวจการจอดรถลานจอดเรือนไทย", "desc": "แบบสำรวจ/ลงทะเบียนผู้ใช้ลานจอดรถเรือนไทย", "status": "blocked", "stat": "ruenthai", "links": [{"label": "เปิดแบบสำรวจ", "url": "https://ruenthai-parking-survey.pages.dev", "verified": true, "kind": "open"}], "note": null, "source": "RuenThai_Survey"}]}, {"id": "graduation", "name": "งานปริญญา", "icon": "cap", "systems": [{"id": "grad-parking", "name": "รายงานจำนวนรถในลานจอด พิธีพระราชทานปริญญาบัตร ปีการศึกษา 2568", "desc": "เจ้าหน้าที่บันทึกจำนวนรถในลานจอดแต่ละรอบระหว่างวันงาน", "status": "connected", "stat": "graduationParking", "links": [{"label": "เปิดระบบบันทึกจำนวนรถ", "url": "https://trafficoppe.github.io/mu-graduation-parking-count/", "verified": false, "kind": "open"}], "note": "ต้องเข้าสู่ระบบ Google ตามที่ผู้ดูแลกำหนด", "source": "SUMMARY_2569"}, {"id": "grad-guard-report", "name": "รายงานผลการปฏิบัติงาน รปภ. ช่วงงานปริญญา (GPS)", "desc": "รปภ.เอกชนรายงานผลการปฏิบัติงานพร้อมพิกัดและภาพถ่าย", "status": "blocked", "stat": "graduationGuardGps", "links": [{"label": "เปิดระบบรายงานผล", "url": "https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbzn86oqYMYzjb5YmdjeKZueLVb8UWR5eMDMQWTTIzDhwWko7gQhgf6bov_XljvyIwIR/exec", "verified": true, "kind": "open"}, {"label": "ค้นหาข้อมูลเจ้าหน้าที่", "url": "https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbyAX7zwgdHsXgn-VoaYPka8UA3525W10FF2L1wpkBySozBLRZMMW4l7s9k7bHf05cBY/exec", "verified": true, "kind": "open"}], "note": "ต้องเข้าสู่ระบบด้วยบัญชี mahidol.ac.th จึงฝังในหน้านี้ไม่ได้", "source": "Reports"}]}, {"id": "guard", "name": "งาน รปภ.", "icon": "shield", "systems": [{"id": "guard-scan", "name": "สแกนจุดตรวจ รปภ.เอกชน", "desc": "รปภ.เอกชนสแกนจุดตรวจตามรอบ แยกหน่วยงาน/โซน", "status": "connected", "stat": "guardScan", "links": [{"label": "เปิดแบบฟอร์มสแกนจุด", "url": "https://trafficoppe.github.io/NPsecurity-guard-scan/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ แสกนจุดเอกชน"}, {"id": "guard-feedback-central", "name": "แบบประเมินความพึงพอใจ รปภ.เอกชนส่วนกลาง", "desc": "ผู้ใช้บริการให้คะแนน 5 ด้าน (1–5)", "status": "connected", "stat": "satisfactionCentral", "links": [{"label": "เปิดแบบประเมิน", "url": "https://trafficoppe.github.io/NPcentral-guard-feedback/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ ความพึงพอใจการให้บริการรปภ.เอกชน"}, {"id": "guard-feedback-unit", "name": "แบบประเมินความพึงพอใจ รปภ.เอกชนส่วนงาน", "desc": "ส่วนงานบันทึกผลประเมินรายเดือนพร้อมจำนวนผู้ตอบ", "status": "connected", "stat": "satisfactionUnit", "links": [{"label": "เปิดแบบบันทึกผลประเมิน", "url": "https://trafficoppe.github.io/NPsecurity-feedback/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ คะแนนความพึงพอใจรปภ.ส่วนงาน"}, {"id": "guard-shift", "name": "รายชื่อประจำจุด รปภ.เอกชน", "desc": "บันทึกรายชื่อ รปภ.ประจำจุดรายผลัด", "status": "link", "stat": null, "links": [{"label": "เปิดแบบฟอร์ม", "url": "https://trafficoppe.github.io/guard-shift-tracker/", "verified": true, "kind": "open"}], "note": "ข้อมูลเป็นรายชื่อบุคคล จึงไม่นำสถิติขึ้นหน้ารวม", "source": null}, {"id": "pdf-guard", "name": "PDF รายงานการตรวจการปฏิบัติหน้าที่ รปภ.เอกชนส่วนกลาง", "desc": "สร้างเอกสารลงชื่อ/ตรวจการปฏิบัติหน้าที่", "status": "link", "stat": null, "links": [{"label": "เปิดระบบสร้าง PDF", "url": "https://trafficoppe.github.io/PDF-NPsecurity-report/", "verified": true, "kind": "open"}], "note": "เป็นเครื่องมือสร้างเอกสาร", "source": null}, {"id": "pdf-guard-monthly", "name": "PDF สรุปผลประเมินและควบคุมงานจ้างเหมา รปภ. ประจำเดือน (OPPE-01-F-10-01)", "desc": "สร้างเอกสารสรุปผลรายเดือนจากข้อมูลสแกนจุดและความพึงพอใจ", "status": "link", "stat": null, "links": [{"label": "เปิดระบบสร้าง PDF", "url": "https://trafficoppe.github.io/PDF-OPPE-01-F-10-01/", "verified": true, "kind": "open"}], "note": "เป็นเครื่องมือสร้างเอกสาร", "source": null}]}, {"id": "borrow", "name": "อุปกรณ์และรถกอล์ฟ", "icon": "box", "systems": [{"id": "borrow", "name": "ระบบยืม-คืนอุปกรณ์และรถกอล์ฟ", "desc": "ยื่นคำขอยืมอุปกรณ์จราจร/จองรถกอล์ฟ และแจ้งคืน", "status": "warn", "stat": "borrow", "links": [{"label": "เปิดระบบยืม-คืน", "url": "https://trafficoppe.github.io/borrowform/", "verified": false, "kind": "open"}], "note": "ระบบยังไม่สมบูรณ์ — ข้อเสนอปรับปรุงอยู่ใน branch borrow-v2-proposal", "source": "Borrow_Data / Return_Data"}]}, {"id": "safety", "name": "ความปลอดภัย (AED / ถังดับเพลิง)", "icon": "heart", "systems": [{"id": "aed-map", "name": "แผนที่ตรวจสอบความพร้อมใช้งาน AED", "desc": "ตำแหน่งเครื่อง AED ภายในวิทยาเขตศาลายา บน Google My Maps", "status": "link", "stat": null, "links": [{"label": "เปิดแผนที่ AED", "url": "https://www.google.com/maps/d/u/0/viewer?mid=1ut0hZAkMPrVLSq5DDCWfj1CScKtPdnU&femb=1&ll=13.794197821033412%2C100.32132264629175&z=15", "verified": true, "kind": "open"}], "note": "ไม่มีข้อมูลยืนยันจำนวนเครื่องในรูปแบบที่ระบบอ่านได้ จึงแสดงเป็นลิงก์", "source": null}, {"id": "fire", "name": "ระบบตรวจถังดับเพลิง", "desc": "ตรวจสภาพถังดับเพลิงรายถังด้วยมือถือ และบันทึกการเติม", "status": "connected", "stat": "fire", "links": [{"label": "เปิดระบบตรวจถังดับเพลิง", "url": "https://trafficoppe.github.io/-v1/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ ข้อมูลถังดับเพลิง / บันทึกการตรวจ"}]}, {"id": "lostfound", "name": "ของหาย / เก็บของได้", "icon": "search", "systems": [{"id": "lostfound", "name": "ระบบแจ้งของหาย / เก็บของได้ / รับของคืน", "desc": "แจ้งของหาย แจ้งเก็บของได้ และติดตามการรับคืน", "status": "connected", "stat": "lostfound", "links": [{"label": "เปิดระบบ Lost & Found", "url": "https://trafficoppe.github.io/lostfound/", "verified": false, "kind": "open"}], "note": null, "source": "แท็บ รายการ พ.ศ. 2569 (ปัจจุบัน)"}]}]}};
+window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:00+07:00", "timezone": "Asia/Bangkok", "method": "สถิติรวมคำนวณด้วยสูตรใน Google Sheets (IMPORTRANGE/QUERY) จาก Sheet ต้นทางแบบอ่านอย่างเดียว แล้วบันทึกเป็นไฟล์นี้ ไม่มีข้อมูลรายบุคคล", "stagingSheet": "STAGING – สถิติรวมสำหรับหน้ารวมงานจราจร (ไฟล์ส่วนตัวใน Drive ของผู้ดูแล)", "modules": {"incidents": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “รายงานเหตุการณ์”", "updated": "2026-11-13 14:26", "range": {"from": "2026-07-01", "to": "2026-11-13"}, "total": 68, "injuredTotal": 39, "byType": [{"type": "อุบัติเหตุจากยานพาหนะ", "count": 25, "injuredOrIll": 9}, {"type": "อุบัติเหตุทั่วไป", "count": 12, "injuredOrIll": 10}, {"type": "รับส่งผู้ป่วย", "count": 19, "injuredOrIll": 20}, {"type": "บังคับล้อ", "count": 9, "injuredOrIll": 0}, {"type": "ลักทรัพย์", "count": 1, "injuredOrIll": 0}, {"type": "ปรับ รปภ.", "count": 1, "injuredOrIll": 0}, {"type": "อื่นๆ", "count": 1, "injuredOrIll": 0}], "monthly": [{"month": "2026-07", "byType": {"อุบัติเหตุทั่วไป": 1}}, {"month": "2026-08", "byType": {"อุบัติเหตุจากยานพาหนะ": 8}}, {"month": "2026-09", "byType": {"รับส่งผู้ป่วย": 14, "อุบัติเหตุจากยานพาหนะ": 6, "อุบัติเหตุทั่วไป": 5}}, {"month": "2026-10", "byType": {"บังคับล้อ": 7, "ปรับ รปภ.": 1, "ลักทรัพย์": 1, "อื่นๆ": 1, "อุบัติเหตุจากยานพาหนะ": 7, "อุบัติเหตุทั่วไป": 4}}, {"month": "2026-11", "byType": {"บังคับล้อ": 2, "รับส่งผู้ป่วย": 5, "อุบัติเหตุจากยานพาหนะ": 4, "อุบัติเหตุทั่วไป": 2}}], "definition": "นับ 1 แถว = 1 เหตุการณ์ จำแนกตามคอลัมน์ “ประเภทเหตุการณ์” ใช้ “วันที่เกิดเหตุ” เป็นเดือน; ผู้บาดเจ็บ/ป่วย = ผลรวมคอลัมน์ “จำนวนคนเจ็บ/ป่วย”", "notes": ["แท็บนี้มีข้อมูลตั้งแต่ 1 ก.ค. 2569 เท่านั้น (ข้อมูลก่อนหน้าอยู่ในไฟล์เดิม ‘Copy of รายงานเหตุการณ์ใหม่ล่าสุด (Responses)’ ซึ่งยังไม่ได้รวม)"]}, "accidentMap": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “รายงานเหตุการณ์” คอลัมน์ “พิกัด (Lat, Lng)”", "updated": "2026-11-13 14:26", "box": {"latMin": 13.786, "latMax": 13.803, "lngMin": 100.315, "lngMax": 100.329}, "points": [{"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.788488, "lng": 100.322685, "place": "ประตู 1", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.795186, "lng": 100.321322, "place": "ลานจอดรถสระว่ายน้ำ", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.801225, "lng": 100.318203, "place": "ประตู 6", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.794256, "lng": 100.326948, "place": "ประตู3", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.797003, "lng": 100.32042, "place": "ลานจอดรถ P1", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.792579, "lng": 100.317586, "place": "แยกอาคารคณะสิ่งแวดล้อมและทรัพยากรศาสตร์", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.801254, "lng": 100.320025, "place": "ประตู5ขาออก", "outOfCampusBox": false}, {"month": "2026-08", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.798721, "lng": 100.318224, "place": "แยกวิทยาลัยศาสนศึกษา", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.791855, "lng": 100.322074, "place": "ถนนผสานเทศไทย ตรงทางขึ้นลานจอดรถ P.2", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.792037, "lng": 100.326948, "place": "ประตู 2 มหาวิทยาลัยมหิดล ศาลายา", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.794732, "lng": 100.326681, "place": "ถนนกันภัย บริเวณทางออกสำนักงานอธิการบดี", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.798053, "lng": 100.322602, "place": "ลานจอดรถP.3", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.800583, "lng": 100.320008, "place": "ประตู 5 ขาออก", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.796802, "lng": 100.32364, "place": "แยกทางเข้าสระน้ำ", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.794184, "lng": 100.326727, "place": "ถนนกันภัย ทางเข้าประตู 3", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.791767, "lng": 100.318111, "place": "ลานจอดรถ 5", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.79803, "lng": 100.322524, "place": "ลานจอดรถ P3", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.796753, "lng": 100.319055, "place": "ด้านข้างสนามเปตอง", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.790839, "lng": 100.322525, "place": "ถนนเทิดจักรี", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.79913, "lng": 100.320272, "place": "ถนนดำรงวิจัย", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.798435, "lng": 100.318197, "place": "หน้าศูนย์สัตว์ทดลองแห่งชาติ", "outOfCampusBox": false}, {"month": "2026-11", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.771335, "lng": 100.319196, "place": "บนลานจอดาออก", "outOfCampusBox": true}, {"month": "2026-11", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.788191, "lng": 100.322757, "place": "หน้าทางเข้าออกวิทยาลัยดุริยางคศิลป์", "outOfCampusBox": false}, {"month": "2026-11", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.796768, "lng": 100.326711, "place": "ทางออกประตู 4", "outOfCampusBox": false}, {"month": "2026-11", "type": "อุบัติเหตุจากยานพาหนะ", "lat": 13.79009, "lng": 100.322672, "place": "ถนนเทิดจักรี", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุทั่วไป", "lat": 13.794832, "lng": 100.321419, "place": "คณะสิ่งแวดล้อมและทรัพยากรศาสตร์", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุทั่วไป", "lat": 13.792722, "lng": 100.323136, "place": "ลานจอดรถคณะวิทยาศาสตร์", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุทั่วไป", "lat": 13.794416, "lng": 100.326226, "place": "สำนักงานอธิการบดี", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุทั่วไป", "lat": 13.791998, "lng": 100.326912, "place": "ประตู 2", "outOfCampusBox": false}, {"month": "2026-09", "type": "อุบัติเหตุทั่วไป", "lat": 13.792903, "lng": 100.317953, "place": "หลังสนามฟุตบอล", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุทั่วไป", "lat": 13.796022, "lng": 100.322214, "place": "วิทยาลัยนานาชาติ", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุทั่วไป", "lat": 13.795095, "lng": 100.322823, "place": "วิทยาลัยดุริยางคศิลป์", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุทั่วไป", "lat": 13.788047, "lng": 100.325325, "place": "ประตูคณะพยาบาลศาสตร์", "outOfCampusBox": false}, {"month": "2026-10", "type": "อุบัติเหตุทั่วไป", "lat": 13.796503, "lng": 100.320684, "place": "แยกอาคารอเนกประสงค์ ถนนสายดี", "outOfCampusBox": false}, {"month": "2026-07", "type": "อุบัติเหตุทั่วไป", "lat": 13.78809, "lng": 100.325311, "place": "ประตูคณะพยาบาลศาสตร์", "outOfCampusBox": false}, {"month": "2026-11", "type": "อุบัติเหตุทั่วไป", "lat": 13.795499, "lng": 100.319701, "place": "สนามฟุตซอลหลังหอพัก11", "outOfCampusBox": false}, {"month": "2026-11", "type": "อุบัติเหตุทั่วไป", "lat": 13.796794, "lng": 100.319878, "place": "เส้นทางจักรยานใกล้เคียงสนามแบดมินตัน", "outOfCampusBox": false}], "notes": ["แสดงเฉพาะอุบัติเหตุจากยานพาหนะ (25 จุด) และอุบัติเหตุทั่วไป (12 จุด) — ไม่แสดงเหตุรับส่งผู้ป่วยและไม่แสดงเวลา/รายละเอียดบุคคล", "มี 1 จุด (พ.ย. 2569) ที่พิกัดอยู่นอกกรอบวิทยาเขต ควรตรวจสอบที่ Sheet ต้นทาง"]}, "gate": {"status": "warn", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “จำนวนรถเข้า+หมวกนิรภัย”", "updated": "2026-11-11 09:19", "range": {"from": "2026-10-01", "to": "2026-11-10"}, "days": 39, "totals": {"cars": 350246, "motorcycles": 104391, "noHelmet": 73591}, "monthly": [{"month": "2026-10", "days": 29, "cars": 242812, "motorcycles": 74155, "noHelmet": 59265}, {"month": "2026-11", "days": 10, "cars": 107434, "motorcycles": 30236, "noHelmet": 14326}], "daily": [{"date": "2026-10-01", "cars": 11107, "motorcycles": 6009, "noHelmet": 5032}, {"date": "2026-10-02", "cars": 12102, "motorcycles": 6456, "noHelmet": 5511}, {"date": "2026-10-03", "cars": 3999, "motorcycles": 2864, "noHelmet": 2454}, {"date": "2026-10-04", "cars": 3689, "motorcycles": 2156, "noHelmet": 1707}, {"date": "2026-10-05", "cars": 4658, "motorcycles": 2736, "noHelmet": 2268}, {"date": "2026-10-06", "cars": 5276, "motorcycles": 2766, "noHelmet": 2138}, {"date": "2026-10-07", "cars": 9978, "motorcycles": 5961, "noHelmet": 5054}, {"date": "2026-10-08", "cars": 9875, "motorcycles": 6381, "noHelmet": 5578}, {"date": "2026-10-09", "cars": 9957, "motorcycles": 5948, "noHelmet": 5302}, {"date": "2026-10-10", "cars": 2002, "motorcycles": 3169, "noHelmet": 2210}, {"date": "2026-10-11", "cars": 7172, "motorcycles": 2525, "noHelmet": 1831}, {"date": "2026-10-12", "cars": 12709, "motorcycles": 2726, "noHelmet": 2989}, {"date": "2026-10-13", "cars": 4783, "motorcycles": 1328, "noHelmet": 1006}, {"date": "2026-10-14", "cars": 12252, "motorcycles": 2305, "noHelmet": 2035}, {"date": "2026-10-15", "cars": 12653, "motorcycles": 2722, "noHelmet": 3182}, {"date": "2026-10-16", "cars": 9754, "motorcycles": 3785, "noHelmet": 3659}, {"date": "2026-10-17", "cars": 5808, "motorcycles": 737, "noHelmet": 424}, {"date": "2026-10-18", "cars": 4246, "motorcycles": 673, "noHelmet": 355}, {"date": "2026-10-19", "cars": 12772, "motorcycles": 1158, "noHelmet": 700}, {"date": "2026-10-20", "cars": 12822, "motorcycles": 1222, "noHelmet": 704}, {"date": "2026-10-21", "cars": 12711, "motorcycles": 1261, "noHelmet": 700}, {"date": "2026-10-22", "cars": 12819, "motorcycles": 1188, "noHelmet": 643}, {"date": "2026-10-23", "cars": 4329, "motorcycles": 588, "noHelmet": 285}, {"date": "2026-10-24", "cars": 7178, "motorcycles": 643, "noHelmet": 300}, {"date": "2026-10-25", "cars": 3185, "motorcycles": 535, "noHelmet": 258}, {"date": "2026-10-26", "cars": 7109, "motorcycles": 1630, "noHelmet": 547}, {"date": "2026-10-27", "cars": 7575, "motorcycles": 2213, "noHelmet": 830}, {"date": "2026-10-28", "cars": 7981, "motorcycles": 1089, "noHelmet": 1089}, {"date": "2026-10-29", "cars": 12311, "motorcycles": 1381, "noHelmet": 474}, {"date": "2026-11-01", "cars": 6874, "motorcycles": 754, "noHelmet": 269}, {"date": "2026-11-02", "cars": 12898, "motorcycles": 1195, "noHelmet": 442}, {"date": "2026-11-03", "cars": 13022, "motorcycles": 1085, "noHelmet": 377}, {"date": "2026-11-04", "cars": 13045, "motorcycles": 1159, "noHelmet": 388}, {"date": "2026-11-05", "cars": 12720, "motorcycles": 1097, "noHelmet": 1097}, {"date": "2026-11-06", "cars": 12532, "motorcycles": 6070, "noHelmet": 3069}, {"date": "2026-11-07", "cars": 5461, "motorcycles": 2695, "noHelmet": 1063}, {"date": "2026-11-08", "cars": 5033, "motorcycles": 2616, "noHelmet": 1048}, {"date": "2026-11-09", "cars": 12851, "motorcycles": 6555, "noHelmet": 3178}, {"date": "2026-11-10", "cars": 12998, "motorcycles": 7010, "noHelmet": 3395}], "definition": "ผลรวมประตู 1, 3, 4, 5, 6 ต่อวัน (รถยนต์ / รถจักรยานยนต์ / ผู้ไม่สวมหมวกนิรภัย) ตามคอลัมน์ “วันที่ของข้อมูล”", "notes": ["ตัดแถววันที่ 16–17 ก.ย. 2569 ออก 11 แถว เพราะเป็นข้อมูลทดสอบระบบ (ค่า 50/505 ซ้ำกัน และผู้ไม่สวมหมวกมากกว่าจำนวนรถจักรยานยนต์)", "ไม่มีข้อมูลวันที่ 30–31 ต.ค. 2569", "พบ 4 วันที่จำนวนผู้ไม่สวมหมวก ≥ จำนวนรถจักรยานยนต์ (2026-10-12, 2026-10-15, 2026-10-28, 2026-11-05) ควรตรวจสอบการกรอก"]}, "lostfound": {"status": "ok", "source": "Sheet “แจ้งของหาย” แท็บ “รายการ พ.ศ. 2569 (ปัจจุบัน)”", "updated": "2026-11-14", "range": {"from": "2026-01", "to": "2026-11"}, "total": 670, "byType": {"สิ่งของสูญหาย": 413, "พบสิ่งของ": 140, "รับของคืน": 97, "(ไม่ระบุประเภท)": 20}, "byStatus": {"รับของคืนแล้ว": 161, "ช่วยหาแล้วยังไม่พบ": 392, "เจ้าของยังไม่มารับคืน": 112, "(ว่าง)": 1, "รอดำเนินการ": 4}, "returned": 161, "monthly": [{"month": "2026-01", "byType": {"พบสิ่งของ": 14, "สิ่งของสูญหาย": 47}}, {"month": "2026-02", "byType": {"(ไม่ระบุประเภท)": 10, "พบสิ่งของ": 2, "สิ่งของสูญหาย": 29}}, {"month": "2026-03", "byType": {"(ไม่ระบุประเภท)": 5, "พบสิ่งของ": 2, "สิ่งของสูญหาย": 26}}, {"month": "2026-04", "byType": {"(ไม่ระบุประเภท)": 5, "พบสิ่งของ": 7, "รับของคืน": 1, "สิ่งของสูญหาย": 17}}, {"month": "2026-05", "byType": {"พบสิ่งของ": 10, "รับของคืน": 9, "สิ่งของสูญหาย": 13}}, {"month": "2026-06", "byType": {"พบสิ่งของ": 4, "รับของคืน": 4, "สิ่งของสูญหาย": 7}}, {"month": "2026-07", "byType": {"พบสิ่งของ": 10, "รับของคืน": 13, "สิ่งของสูญหาย": 16}}, {"month": "2026-08", "byType": {"พบสิ่งของ": 16, "รับของคืน": 13, "สิ่งของสูญหาย": 53}}, {"month": "2026-09", "byType": {"พบสิ่งของ": 35, "รับของคืน": 36, "สิ่งของสูญหาย": 105}}, {"month": "2026-10", "byType": {"พบสิ่งของ": 34, "รับของคืน": 16, "สิ่งของสูญหาย": 74}}, {"month": "2026-11", "byType": {"พบสิ่งของ": 6, "รับของคืน": 5, "สิ่งของสูญหาย": 26}}], "history": {"2568": 131, "2567": 48}, "definition": "นับจากแท็บรวมรายปีที่ระบบ Lost & Found สร้างไว้ (ไม่มีชื่อ/เบอร์โทร); “รับของคืนแล้ว” = ทุกประเภทที่สถานะเป็นรับของคืนแล้ว", "notes": ["มี 20 รายการที่ไม่ระบุประเภท (ก.พ.–เม.ย. 2569) จากแบบฟอร์มเดิม"]}, "cctv": {"status": "ok", "source": "Sheet “CCTV Request System - มหาวิทยาลัยมหิดล” แท็บ “CCTV_Requests”", "updated": "2026-11-11 20:10", "range": {"from": "2026-04", "to": "2026-11"}, "total": 11, "byStatus": {"ปิดเคส": 11}, "byRequester": {"นักศึกษา": 5, "บุคลากร": 5, "บุคคลทั่วไป": 1}, "footage": {"พบภาพ": 4, "ไม่พบภาพ": 2, "ไม่ได้ระบุ": 5}, "monthly": [{"month": "2026-04", "count": 1}, {"month": "2026-05", "count": 1}, {"month": "2026-09", "count": 3}, {"month": "2026-10", "count": 1}, {"month": "2026-11", "count": 5}], "byUnit": {"ส่วนกลาง (งานจราจรฯ)": 11, "MLC": 0, "LA": 0, "PMH": 0}, "notes": ["คำขอเดิมทั้ง 11 รายการเป็นพื้นที่ส่วนกลาง (ประตู ถนน ลานจอด กองกายภาพฯ) ยังไม่มีคำขอของ MLC / LA / PMH ในระบบ"]}, "borrow": {"status": "warn", "source": "Sheet “ระบบยืมของงานจราจรฯ 21.4.69” แท็บ Borrow_Data / Return_Data / Vehicle_Booking / Inventory_Master", "updated": "2026-05-24", "range": {"from": "2026-04-21", "to": "2026-05-24"}, "borrowRequests": 8, "borrowByStatus": {"รับของคืนแล้ว": 8}, "returnRecords": 8, "returnByStatus": {"รอยืนยัน": 4, "รับของคืนแล้ว": 3, "ยืนยันแล้ว": 1}, "golfCartBookings": 0, "inventory": {"items": 15, "totalStock": 180, "markedBorrowed": 19}, "notes": ["มีเพียง 8 รายการช่วง 21 เม.ย.–24 พ.ค. 2569 (ช่วงทดลองระบบ) — ยังไม่ควรใช้เป็นสถิติทางการ", "ข้อมูลไม่สอดคล้องกัน: Borrow_Data ระบุคืนครบ 8 รายการ แต่ Return_Data ยังมี ‘รอยืนยัน’ 4 รายการ และ Inventory_Master ยังนับว่าถูกยืมอยู่ 19 ชิ้น"]}, "fire": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “ข้อมูลถังดับเพลิง” และ “บันทึกการตรวจ”", "updated": "2026-09-11 10:40", "extinguishers": 47, "byType": {"คาร์บอนไดออกไซด์ (CO2)": 18, "ผงเคมีแห้ง (Dry Chemical)": 12, "สารเคมีสูตรน้ำ (Water-Based)": 12, "น้ำ (Water)": 3, "น้ำยาเหลวระเหย (Halotron)": 2}, "byUnit": {"งานจราจรและความปลอดภัย": 34, "สถานีไฟฟ้าย่อยมหิดล": 4, "อาคารศาลายา กองกายภาพฯ": 3, "มหิดลสิทธาคาร": 2, "อาคารบำบัดน้ำเสีย": 2, "ศูนย์การเรียนรู้มหิดล": 1, "อาคารสิริวิทยา": 1}, "inspections": 86, "inspectionResult": {"ปกติ": 76, "ชำรุด": 10}, "extinguishersInspected": 39, "definition": "จำนวนถัง = จำนวนแถวในทะเบียนถัง; การตรวจ = จำนวนแถวบันทึกการตรวจ จำแนกตามคอลัมน์ “สรุปผล”", "notes": ["“อัปเดตล่าสุด” คือเวลาของแถวสุดท้ายในบันทึกการตรวจ", "ถังที่ถูกตรวจแล้ว 39 จาก 47 ถัง (นับเลขถังไม่ซ้ำ)"]}, "guardScan": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “แสกนจุดเอกชน”", "updated": "2026-11-14 16:37", "range": {"from": "2026-11-04", "to": "2026-11-14"}, "scans": 10030, "byStatus": {"ปกติ": 10027, "ไม่ปกติ": 3}, "scanPoints": 113, "byUnit": {"โครงการจัดตั้งสถาบันอุทยานธรรมชาติฯ": 2645, "มหิดลสิทธาคาร": 1780, "ส่วนกลาง - โซน 1": 1593, "อาคารสิริวิทยา": 1408, "ศูนย์การเรียนรู้มหิดล": 1347, "ส่วนกลาง - โซน 2": 1257}, "notes": ["นับทุกแถวที่มีจุดสแกน ไม่แสดงชื่อ รปภ."]}, "satisfactionCentral": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “ความพึงพอใจการให้บริการรปภ.เอกชน”", "updated": "2026-11-14 15:20", "responses": 63, "scale": "1–5", "avg": {"การรักษาความปลอดภัย": 4.63, "การจัดการจราจร": 4.59, "การให้บริการ": 4.68, "การแต่งกาย": 4.75, "ความสุภาพ": 4.7}}, "satisfactionUnit": {"status": "ok", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “คะแนนความพึงพอใจรปภ.ส่วนงาน”", "updated": "2026-11-09 12:05", "records": 13, "respondents": 787, "scale": "1–5", "byMonth": {"กันยายน 2569": 2, "ตุลาคม 2569": 9, "พฤศจิกายน 2569": 2}, "avg": {"การรักษาความปลอดภัย": 4.66, "การจัดการจราจร": 4.7, "การให้บริการ": 4.69, "การแต่งกาย": 4.64, "ความสุภาพ": 4.42}, "notes": ["ค่าเฉลี่ยถ่วงน้ำหนักด้วยจำนวนผู้ตอบ (แก้ไข 14 พ.ย. 2569 18:09 — รุ่นก่อนเฉลี่ยรายแถวโดยไม่ถ่วงน้ำหนัก)", "ด้านการแต่งกายมีคะแนนจาก 3 พื้นที่ (396 ผู้ตอบ) เพราะพื้นที่อื่นไม่มีคำถามด้านนี้"]}, "graduationParking": {"status": "ok", "source": "Sheet “รปภ. แบบสำรวจรถลานจอด ปริญญา ปี 69 (ปีการศึกษา 68)” แท็บ “SUMMARY_2569”", "updated": "2026-10-06", "lots": 50, "capacity": 5027, "days": [{"date": "2026-10-03", "lots": 50, "capacity": 5027, "latestCount": 1822, "occupancyPercent": 36.2}, {"date": "2026-10-05", "lots": 50, "capacity": 5027, "latestCount": 2087, "occupancyPercent": 41.5}, {"date": "2026-10-06", "lots": 50, "capacity": 5027, "latestCount": 1925, "occupancyPercent": 38.3}], "definition": "รวม ‘จำนวนรถล่าสุดที่บันทึก’ ของลานจอดทั้ง 50 ลานในแต่ละวันงาน เทียบกับความจุรวม (ไม่ใช่ค่าสูงสุดของวัน)"}, "vehicleRegistration": {"status": "partial", "source": "Sheet “MU ฐานข้อมูลลงทะเบียนยานพาหนะบุคลากร…” และ “…นักศึกษา…” แท็บ Registrations / Registrations_Motorcycle", "updated": "2026-11-10", "rows": {"บุคลากร – รถยนต์": 5471, "บุคลากร – รถจักรยานยนต์": 975, "นักศึกษา – รถยนต์": 1275, "นักศึกษา – รถจักรยานยนต์": null}, "notes": ["นับจากเลขแถวสุดท้ายที่มีข้อมูล (1 แถว = 1 รายการลงทะเบียน) ยังไม่ได้ตัดรายการซ้ำ/ยกเลิก", "นักศึกษา–รถจักรยานยนต์: ยังไม่มีข้อมูลยืนยัน", "Sheet เป็นแบบ Private — ต้องกด Allow access ใน Sheet STAGING ก่อนจึงจะคำนวณสถิติแยกวิทยาเขต/สถานะอนุมัติได้"]}, "ruenthai": {"status": "blocked", "source": "Sheet “ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย (RuenThai Parking)” แท็บ “RuenThai_Survey”", "notes": ["Sheet เป็นแบบ Private — สูตรรวมสถิติยังเชื่อมต่อไม่ได้จนกว่าเจ้าของจะกด Allow access ใน Sheet STAGING"]}, "graduationGuardGps": {"status": "blocked", "source": "Sheet “ระบบรายงานผลการปฏิบัติงาน รปภ.เอกชน ปริญญา 2569 (2568) GPS” แท็บ “Reports”", "notes": ["Sheet แชร์เฉพาะโดเมน — สูตรรวมสถิติยังเชื่อมต่อไม่ได้จนกว่าเจ้าของจะกด Allow access ใน Sheet STAGING"]}, "eventIncident": {"status": "unverified", "source": "Apps Script ของ Event-incident-report (ไม่พบ Sheet ปลายทางในสิทธิ์ที่มี)", "notes": ["ยังระบุ Sheet ที่บันทึกไม่ได้"]}, "helmetQuiz": {"status": "unverified", "source": "Apps Script ที่ฝังใน -helmet/script.js (ไม่พบ Sheet ปลายทางในสิทธิ์ที่มี)", "notes": ["ยังระบุ Sheet ที่บันทึกไม่ได้"]}, "guardSatisfaction": {"status": "ok", "computedAt": "2026-11-14 18:09", "central": {"name": "รปภ.ส่วนกลาง", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “ความพึงพอใจการให้บริการรปภ.เอกชน”", "updated": "2026-11-14 15:20", "form": "NPcentral-guard-feedback (ผู้ใช้บริการตอบเอง 1 คน/ครั้ง)", "scale": "1–5 (จำนวนเต็ม: 1 = ปรับปรุง, 5 = ดีมาก)", "unitOfN": "คำตอบ", "topics": ["การรักษาความปลอดภัย", "การจัดการจราจร", "การให้บริการ", "การแต่งกาย", "ความสุภาพ"], "totalResponses": 63, "monthly": [{"month": "2026-10", "responses": 9, "overall": 4.38, "topics": [{"name": "การรักษาความปลอดภัย", "avg": 4.33, "n": 9}, {"name": "การจัดการจราจร", "avg": 4.33, "n": 9}, {"name": "การให้บริการ", "avg": 4.44, "n": 9}, {"name": "การแต่งกาย", "avg": 4.44, "n": 9}, {"name": "ความสุภาพ", "avg": 4.33, "n": 9}], "dateRange": {"from": "2026-10-22", "to": "2026-10-31"}, "scoreDistribution": {"2": 2, "3": 6, "4": 10, "5": 27}}, {"month": "2026-11", "responses": 54, "overall": 4.72, "topics": [{"name": "การรักษาความปลอดภัย", "avg": 4.69, "n": 54}, {"name": "การจัดการจราจร", "avg": 4.63, "n": 54}, {"name": "การให้บริการ", "avg": 4.72, "n": 54}, {"name": "การแต่งกาย", "avg": 4.8, "n": 54}, {"name": "ความสุภาพ", "avg": 4.76, "n": 54}], "dateRange": {"from": "2026-11-01", "to": "2026-11-14"}, "scoreDistribution": {"1": 1, "2": 1, "3": 12, "4": 45, "5": 211}}], "definition": "ค่าเฉลี่ยแต่ละด้าน = ผลรวมคะแนนด้านนั้น ÷ จำนวนคำตอบ; คะแนนรวม = ผลรวมคะแนนทุกข้อ ÷ (จำนวนคำตอบ × 5 ด้าน); เดือน = วันที่ส่งคำตอบ", "notes": ["แบบประเมินนี้ไม่มีช่องประเภทผู้ตอบ จึงแยกกลุ่มผู้ตอบไม่ได้", "เริ่มมีคำตอบวันที่ 22 ต.ค. 2569 — เดือน ต.ค. จึงเป็นข้อมูลบางส่วนของเดือน (9 คำตอบ)", "วันที่ 2 พ.ย. 2569 มีคำตอบ 42 รายการในช่วงเวลาใกล้กัน (น่าจะเป็นการเก็บแบบสอบถามพร้อมกัน) ไม่พบหลักฐานว่าเป็นรายการซ้ำหรือทดสอบ จึงนับทั้งหมด", "โครงการ Apps Script ที่ระบุไว้ (“สคริปแสกนจุดเอกชน”) มีโค้ดบันทึกเฉพาะแท็บแสกนจุดเอกชน — แบบฟอร์มนี้ส่งไปยัง deployment อื่นที่ยังเข้าไม่ถึง แต่ชื่อแท็บและคอลัมน์ตรงกับช่องในแบบฟอร์ม"]}, "unit": {"name": "รปภ.ส่วนงาน", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “คะแนนความพึงพอใจรปภ.ส่วนงาน”", "updated": "2026-11-09 12:05", "form": "NPsecurity-feedback (ส่วนงานบันทึกผลสรุปรายเดือน พร้อมจำนวนผู้ตอบ)", "scale": "0–5 (ทศนิยม 2 ตำแหน่ง เป็นค่าเฉลี่ยของคำถามในด้านนั้น)", "unitOfN": "ผู้ตอบ (ตามที่ส่วนงานกรอก)", "topics": ["การรักษาความปลอดภัย", "การจัดการจราจร", "การให้บริการ", "การแต่งกาย", "ความสุภาพ"], "totalRespondents": 787, "totalRecords": 13, "monthly": [{"month": "2026-09", "records": 2, "respondents": 125, "overall": 4.61, "topics": [{"name": "การรักษาความปลอดภัย", "avg": 4.88, "n": 125}, {"name": "การจัดการจราจร", "avg": 5.0, "n": 125}, {"name": "การให้บริการ", "avg": 4.52, "n": 125}, {"name": "การแต่งกาย", "avg": 4.9, "n": 5}, {"name": "ความสุภาพ", "avg": 4.04, "n": 125}], "byArea": [{"area": "ศูนย์การเรียนรู้มหิดล", "records": 1, "respondents": 5, "overall": 4.96, "topics": [5.0, 5.0, 5.0, 4.9, 4.9]}, {"area": "อาคารสิริวิทยา", "records": 1, "respondents": 120, "overall": 4.59, "topics": [4.87, 5.0, 4.5, null, 4.0]}]}, {"month": "2026-10", "records": 9, "respondents": 660, "overall": 4.62, "topics": [{"name": "การรักษาความปลอดภัย", "avg": 4.6, "n": 517}, {"name": "การจัดการจราจร", "avg": 4.62, "n": 537}, {"name": "การให้บริการ", "avg": 4.73, "n": 550}, {"name": "การแต่งกาย", "avg": 4.63, "n": 391}, {"name": "ความสุภาพ", "avg": 4.5, "n": 550}], "byArea": [{"area": "มหิดลสิทธาคาร", "records": 1, "respondents": 110, "overall": 4.55, "topics": [4.6, 4.5, null, null, null]}, {"area": "ศูนย์การเรียนรู้มหิดล", "records": 1, "respondents": 125, "overall": 5.0, "topics": [5.0, 5.0, 5.0, 5.0, 5.0]}, {"area": "สิริรุกขชาติ", "records": 1, "respondents": 143, "overall": 4.25, "topics": [null, 4.0, 5.0, 4.0, 4.0]}, {"area": "หอพักนักศึกษา", "records": 1, "respondents": 123, "overall": 4.58, "topics": [4.0, null, 4.33, 5.0, 5.0]}, {"area": "อาคารสิริวิทยา", "records": 5, "respondents": 159, "overall": 4.62, "topics": [4.76, 4.97, 4.58, null, 4.18]}]}, {"month": "2026-11", "records": 2, "respondents": 2, "overall": 4.95, "topics": [{"name": "การรักษาความปลอดภัย", "avg": 4.82, "n": 2}, {"name": "การจัดการจราจร", "avg": 5.0, "n": 2}, {"name": "การให้บริการ", "avg": 5.0, "n": 2}, {"name": "การแต่งกาย", "avg": null, "n": 0}, {"name": "ความสุภาพ", "avg": 5.0, "n": 2}], "byArea": [{"area": "อาคารสิริวิทยา", "records": 2, "respondents": 2, "overall": 4.95, "topics": [4.82, 5.0, 5.0, null, 5.0]}]}], "questionsByArea": {"ส่วนกลาง": [["การรักษาความปลอดภัยและการตรวจตรา", "C1"], ["การจัดการจราจรและอำนวยความสะดวก", "C2"], ["ความกระตือรือร้นในการให้บริการ", "C3"], ["การแต่งกายเรียบร้อย", "C4"], ["ความสุภาพอ่อนน้อม", "C5"]], "หอพักนักศึกษา": [["การปฏิบัติหน้าที่อย่างเคร่งครัด", "C1"], ["ความสม่ำเสมอของการอยู่ประจำจุด", "C1"], ["ความสม่ำเสมอของการตรวจตรา", "C1"], ["ความสะดวกในการติดต่อขอความช่วยเหลือต่าง ๆ", "C3"], ["การพูดจาในการประสานงาน", "C5"], ["การแต่งกาย", "C4"], ["การมีน้ำใจในการให้บริการช่วยเหลือ", "C3"], ["ความกระตือรือร้น/ความพร้อมในการปฏิบัติงาน", "C3"]], "มหิดลสิทธาคาร": [["การควบคุมการเข้าออกอาคาร", "C1"], ["การรายงานเหตุการณ์", "C1"], ["ความสม่ำเสมอในการตรวจบริเวณ", "C1"], ["ความรู้เรื่องการระงับเหตุ", "C1"], ["จัดระเบียบการจราจรทางเข้า-ออก", "C2"], ["ความสามารถบังคับใช้กฎจราจร", "C2"], ["ปฏิบัติหน้าที่ได้อย่างถูกต้อง", "C1"]], "อาคารสิริวิทยา": [["ความกระตือรือร้นในการปฏิบัติหน้าที่", "C3"], ["การให้บริการด้วยความสุภาพเรียบร้อย", "C5"], ["ความสม่ำเสมอในการตรวจตราความเรียบร้อย", "C1"], ["การบริการอำนวยความสะดวกให้บุคลากร", "C3"], ["ความน่าเชื่อถือต่อการปฏิบัติหน้าที่", "C1"], ["การรับแจ้งสิ่งของสูญหาย/ติดตามของคืน", "C1"], ["การขอความร่วมมือช่วยเหลือจากส่วนงาน", "C3"], ["การมีส่วนร่วมกับโครงการ/กิจกรรม", "C3"], ["ความเชื่อมั่นต่อระบบ/มาตรการความปลอดภัย", "C1"], ["ความเหมาะสมของอัตรากำลัง รปภ.", "C1"], ["การควบคุมดูแลความปลอดภัยรถยนต์ลานจอด", "C1"], ["การควบคุมตรวจสอบทรัพย์สินการสูญหาย", "C1"], ["การออกตรวจพื้นที่สุ่มเสี่ยงและสแกนจุด", "C1"], ["อำนวยความสะดวกบริเวณทางข้ามม้าลาย", "C2"], ["อำนวยการจราจร รถเข้า-ออกลานจอด", "C2"], ["อำนวยความสะดวกรถพื้นที่จอดรถหลังอาคาร", "C2"]], "สิริรุกขชาติ": [["รปภ. อำนวยความสะดวกในการจอดรถ", "C2"], ["รปภ. แต่งกายเรียบร้อย", "C4"], ["รปภ. มีความสุภาพ อ่อนน้อม", "C5"], ["รปภ. มีความกระตือรือร้น", "C3"]], "ศูนย์การเรียนรู้มหิดล": [["การแต่งกาย และการใช้วาจาสุภาพ", "C4+C5"], ["ความสม่ำเสมอในการตรวจรอบอาคาร และอยู่ประจำจุด", "C1"], ["การอำนวยความสะดวกต่อนักศึกษา/บุคลากร", "C3"], ["รปภ. มีความน่าเชื่อถือ", "C1"], ["การให้บริการแจ้งสิ่งของสูญหาย", "C1"], ["การจัดระเบียบจราจร ทางเข้า-ออก", "C2"], ["การให้ความช่วยเหลือจัดกิจกรรม/ขนย้ายสิ่งของ", "C3"], ["การเปิด-ปิดห้องประชุม และตรวจสอบอาคาร", "C1"]]}, "definition": "ค่าเฉลี่ยแต่ละด้าน = Σ(จำนวนผู้ตอบ × คะแนนด้าน) ÷ Σ(จำนวนผู้ตอบของรายการที่มีคะแนนด้านนั้น); คะแนนรวม = Σ(ผู้ตอบ × คะแนน) ทุกด้าน ÷ Σ ผู้ตอบที่มีคะแนน; เดือน = ช่อง “เดือน/ปี (พ.ศ.)” ที่ส่วนงานเลือก", "notes": ["คำถามของแต่ละพื้นที่ไม่เหมือนกัน (4–16 ข้อ) ระบบรวมคำถามเป็น 5 ด้าน; ค่า “-” หมายถึงพื้นที่นั้นไม่มีคำถามในด้านนั้น จึงไม่นำมาคิด", "อาคารสิริวิทยา เดือน ต.ค. 2569 มี 5 รายการ (127, 10, 1, 1 และ 20 คน) ระบบไม่มีรหัสรอบการเก็บข้อมูล จึงนับทุกรายการ", "มี 2 รายการของอาคารสิริวิทยา เดือน ต.ค. (1 คน คะแนนเท่ากันทุกด้าน บันทึกห่างกัน 1 นาที 40 วินาที) ที่อาจเป็นการส่งซ้ำ — ไม่มีหลักฐานพอจะตัดออก จึงนับไว้ (ถ้าตัด 1 รายการ ผู้ตอบเดือน ต.ค. = 659 และคะแนนเปลี่ยนไม่ถึง 0.01)", "ศูนย์การเรียนรู้มหิดล เดือน ก.ย. 2569 บันทึกย้อนหลังเมื่อ 27 ต.ค. 2569 (นับเป็นเดือน ก.ย. ตามช่องเดือนที่เลือก)", "แบบรายงาน PDF OPPE-01-F-10-01 ใช้ค่าเฉลี่ยแบบไม่ถ่วงน้ำหนัก ตัวเลขจึงอาจต่างจากหน้านี้ในเดือนที่พื้นที่เดียวมีหลายรายการ"]}, "comparability": "สองระบบใช้ชื่อด้านเหมือนกัน แต่คำถาม ผู้ตอบ และสเกลต่างกัน (ส่วนกลาง = คำตอบรายคน 1–5; ส่วนงาน = ค่าเฉลี่ยรายพื้นที่ 0–5) จึงแสดงแยกและไม่รวมเป็นคะแนนเดียว"}, "guardFines": {"status": "warn", "source": "Sheet “ฐานข้อมูลงานจราจร” แท็บ “รายงานเหตุการณ์” (คอลัมน์ “ประเภทเหตุการณ์”, “วันที่เกิดเหตุ”, “หน่วยงานที่แจ้ง”)", "updated": "2026-11-13 14:26", "range": {"from": "2026-07-01", "to": "2026-11-13"}, "totalCases": 1, "monthly": [{"month": "2026-07", "cases": 0, "amountByRate": 0, "byUnit": {}}, {"month": "2026-08", "cases": 0, "amountByRate": 0, "byUnit": {}}, {"month": "2026-09", "cases": 0, "amountByRate": 0, "byUnit": {}}, {"month": "2026-10", "cases": 1, "amountByRate": 1000, "byUnit": {"ส่วนกลาง": 1}}, {"month": "2026-11", "cases": 0, "amountByRate": 0, "byUnit": {}}], "amount": {"ratePerCase": 1000, "total": 1000, "verified": false, "rateSource": "สูตรในแบบรายงาน OPPE-01-F-10-01 (1 เคส × 1,000 บาท) — Sheet ไม่มีช่องยอดเงิน"}, "definition": "นับเฉพาะแถวที่ “ประเภทเหตุการณ์” เป็น “ปรับ รปภ.” ตามวันที่เกิดเหตุ; ไม่นับเหตุการณ์ประเภทอื่น แม้รายละเอียดจะกล่าวถึงการปรับหรือจำนวนเงิน", "notes": ["Sheet ไม่มีช่องยอดเงินค่าปรับ (ช่องทรัพย์สินเสียหายของรายการนี้เป็น “-”) ยอดเงินจึงคิดตามอัตราในแบบรายงานเดิม และต้องยืนยันอัตรากับสัญญาจ้าง", "มี 4 แถวประเภทอื่นที่รายละเอียดกล่าวถึงคำว่า “ปรับ” และ 2 แถวกล่าวถึง “บาท” — ไม่นับเป็นค่าปรับ", "แท็บนี้มีข้อมูลตั้งแต่ 1 ก.ค. 2569; ข้อมูลค่าปรับก่อนหน้า (ถ้ามี) อยู่ในไฟล์เดิมที่ยังไม่ได้รวม"]}}}, "systems": {"schema": 1, "categories": [{"id": "overview", "name": "ภาพรวมและรายงาน", "icon": "chart", "systems": [{"id": "dashboard-ai", "name": "Dashboard งานจราจรและความปลอดภัย (AI)", "desc": "แดชบอร์ดสถิติอุบัติเหตุ/ผู้บาดเจ็บที่ใช้รายงานผู้บริหารในปัจจุบัน", "status": "connected", "stat": "incidents", "links": [{"label": "เปิด Dashboard", "url": "https://trafficoppe.github.io/Main-AI-v1/", "verified": true, "kind": "open"}], "note": "ต้องกรอกรหัสพนักงานที่หน้าเข้าสู่ระบบ; หน้ารวมนี้อ่านสถิติจากแหล่งเดียวกันโดยไม่แก้ Dashboard เดิม", "source": "Main-AI-v1 + DashboardAI → แท็บ รายงานเหตุการณ์"}, {"id": "pdf-monthly", "name": "PDF รายงานสถิติจราจรและความปลอดภัยรายเดือน (OPPE-01-F-11-01)", "desc": "สร้างเอกสาร PDF สรุปสถิติรายเดือนจากฐานข้อมูลงานจราจร ของหาย และ CCTV", "status": "link", "stat": null, "links": [{"label": "เปิดระบบสร้าง PDF", "url": "https://trafficoppe.github.io/PDF-OPPE-01-F-11-01--/", "verified": true, "kind": "open"}], "note": "เป็นเครื่องมือสร้างเอกสาร ไม่มีสถิติของตัวเอง", "source": "อ่าน 8 แท็บจาก 3 Sheet ผ่านลิงก์ CSV"}, {"id": "pdf-daily", "name": "PDF รายงานเหตุการณ์ประจำวัน", "desc": "สร้างเอกสาร PDF รายงานเหตุการณ์ประจำวันพร้อมตารางเวรและจำนวนรถเข้า", "status": "link", "stat": null, "links": [{"label": "เปิดระบบสร้าง PDF", "url": "https://trafficoppe.github.io/PDF-report-AI-v1/", "verified": true, "kind": "open"}], "note": "เป็นเครื่องมือสร้างเอกสาร ไม่มีสถิติของตัวเอง", "source": "อ่าน 4 แท็บจากฐานข้อมูลงานจราจร ผ่านลิงก์ CSV"}, {"id": "old-hub", "name": "ระบบสถิติเดิม (trafficsystem)", "desc": "หน้ารวมรุ่นเก่า เลิกใช้เป็นหน้าหลักแล้ว เก็บไว้อ้างอิง", "status": "legacy", "stat": null, "links": [{"label": "เปิดระบบเดิม", "url": "https://trafficoppe.github.io/trafficsystem/index.html", "verified": true, "kind": "open"}], "note": "อ้างอิง Sheet รุ่นเก่าที่ไม่ได้อัปเดตแล้ว", "source": null}]}, {"id": "traffic", "name": "งานจราจรและแจ้งเหตุ", "icon": "alert", "systems": [{"id": "incident-report", "name": "ระบบรายงานเหตุการณ์/แจ้งเหตุ (AI)", "desc": "แบบฟอร์มบันทึกเหตุการณ์ อุบัติเหตุ และการรับส่งผู้ป่วย พร้อมพิกัดจุดเกิดเหตุ", "status": "connected", "stat": "incidents", "links": [{"label": "เปิดแบบฟอร์มรายงานเหตุการณ์", "url": "https://trafficoppe.github.io/report-incident-AI-v1/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ รายงานเหตุการณ์"}, {"id": "gate-tracker", "name": "บันทึกจำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัย", "desc": "แบบฟอร์มบันทึกจำนวนรถยนต์/รถจักรยานยนต์ และผู้ไม่สวมหมวกนิรภัย แยกประตู 1, 3, 4, 5, 6", "status": "warn", "stat": "gate", "links": [{"label": "เปิดแบบฟอร์ม", "url": "https://trafficoppe.github.io/Form-Gate-Tracker-AI-v1/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ จำนวนรถเข้า+หมวกนิรภัย"}, {"id": "event-incident", "name": "รายงานเหตุการณ์สำหรับกิจกรรมพิเศษ", "desc": "แบบฟอร์มและแดชบอร์ดรายงานเหตุการณ์ช่วงกิจกรรมพิเศษ", "status": "unverified", "stat": "eventIncident", "links": [{"label": "เปิดแบบฟอร์ม", "url": "https://trafficoppe.github.io/Event-incident-report/", "verified": true, "kind": "open"}, {"label": "เปิดแดชบอร์ดกิจกรรม", "url": "https://trafficoppe.github.io/Event-incident-report/dashboard.html", "verified": true, "kind": "open"}], "note": "ยังระบุ Sheet ที่บันทึกข้อมูลไม่ได้ (ซอร์ส Apps Script ไม่อยู่ในสิทธิ์ที่เข้าถึง)", "source": null}, {"id": "helmet-quiz", "name": "แบบทดสอบโครงการรณรงค์สวมหมวกนิรภัย 100%", "desc": "สื่อวิดีโอและแบบทดสอบความรู้การสวมหมวกนิรภัย", "status": "unverified", "stat": "helmetQuiz", "links": [{"label": "เปิดแบบทดสอบ", "url": "https://trafficoppe.github.io/-helmet/", "verified": false, "kind": "open"}], "note": "ส่งผลไปยัง Apps Script แต่ยังระบุ Sheet ปลายทางไม่ได้", "source": null}]}, {"id": "cctv", "name": "กล้องวงจรปิด", "icon": "camera", "systems": [{"id": "cctv", "name": "ระบบขอดูกล้องวงจรปิด (CCTV)", "desc": "แบบคำขอดูภาพกล้องวงจรปิด พร้อมเอกสารประกอบและการติดตามสถานะ", "status": "connected", "stat": "cctv", "links": [{"label": "แบบคำขอ (ส่วนกลาง – ระบบปัจจุบัน)", "url": "https://trafficoppe.github.io/trafficoppe/", "verified": false, "kind": "open"}], "note": "กำลังเตรียมรุ่นแยกหน่วยงาน MLC / LA / PMH ใน branch cctv-multi-unit (ยังไม่เปิดใช้)", "source": "แท็บ CCTV_Requests"}]}, {"id": "vehicle", "name": "ยานพาหนะและลานจอดรถ", "icon": "car", "systems": [{"id": "veh-staff", "name": "ลงทะเบียนยานพาหนะบุคลากร", "desc": "แบบลงทะเบียนรถยนต์/รถจักรยานยนต์ของบุคลากร", "status": "partial", "stat": "vehicleRegistration", "links": [{"label": "เปิดแบบลงทะเบียนบุคลากร", "url": "https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbwVhzioMgBzI5LBoLO4anTl1qcTe8lrKXSoYGllLSFx_ybbd0Tko78vZPAd-QmBl9Cq/exec", "verified": true, "kind": "open"}], "note": "ต้องเข้าสู่ระบบด้วยบัญชี mahidol.ac.th จึงฝังในหน้านี้ไม่ได้", "source": "ฐานข้อมูลลงทะเบียนยานพาหนะบุคลากร"}, {"id": "veh-student", "name": "ลงทะเบียนยานพาหนะนักศึกษา", "desc": "แบบลงทะเบียนรถยนต์/รถจักรยานยนต์ของนักศึกษา", "status": "partial", "stat": "vehicleRegistration", "links": [], "note": "ยังไม่มีลิงก์หน้าแบบฟอร์มสำหรับผู้ใช้ที่ยืนยันได้ (มีเฉพาะลิงก์แก้ไขสคริปต์)", "source": "ฐานข้อมูลลงทะเบียนยานพาหนะนักศึกษา"}, {"id": "ruenthai", "name": "แบบสำรวจการจอดรถลานจอดเรือนไทย", "desc": "แบบสำรวจ/ลงทะเบียนผู้ใช้ลานจอดรถเรือนไทย", "status": "blocked", "stat": "ruenthai", "links": [{"label": "เปิดแบบสำรวจ", "url": "https://ruenthai-parking-survey.pages.dev", "verified": true, "kind": "open"}], "note": null, "source": "RuenThai_Survey"}]}, {"id": "graduation", "name": "งานปริญญา", "icon": "cap", "systems": [{"id": "grad-parking", "name": "รายงานจำนวนรถในลานจอด พิธีพระราชทานปริญญาบัตร ปีการศึกษา 2568", "desc": "เจ้าหน้าที่บันทึกจำนวนรถในลานจอดแต่ละรอบระหว่างวันงาน", "status": "connected", "stat": "graduationParking", "links": [{"label": "เปิดระบบบันทึกจำนวนรถ", "url": "https://trafficoppe.github.io/mu-graduation-parking-count/", "verified": false, "kind": "open"}], "note": "ต้องเข้าสู่ระบบ Google ตามที่ผู้ดูแลกำหนด", "source": "SUMMARY_2569"}, {"id": "grad-guard-report", "name": "รายงานผลการปฏิบัติงาน รปภ. ช่วงงานปริญญา (GPS)", "desc": "รปภ.เอกชนรายงานผลการปฏิบัติงานพร้อมพิกัดและภาพถ่าย", "status": "blocked", "stat": "graduationGuardGps", "links": [{"label": "เปิดระบบรายงานผล", "url": "https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbzn86oqYMYzjb5YmdjeKZueLVb8UWR5eMDMQWTTIzDhwWko7gQhgf6bov_XljvyIwIR/exec", "verified": true, "kind": "open"}, {"label": "ค้นหาข้อมูลเจ้าหน้าที่", "url": "https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbyAX7zwgdHsXgn-VoaYPka8UA3525W10FF2L1wpkBySozBLRZMMW4l7s9k7bHf05cBY/exec", "verified": true, "kind": "open"}], "note": "ต้องเข้าสู่ระบบด้วยบัญชี mahidol.ac.th จึงฝังในหน้านี้ไม่ได้", "source": "Reports"}]}, {"id": "guard", "name": "งาน รปภ.", "icon": "shield", "systems": [{"id": "guard-scan", "name": "สแกนจุดตรวจ รปภ.เอกชน", "desc": "รปภ.เอกชนสแกนจุดตรวจตามรอบ แยกหน่วยงาน/โซน", "status": "connected", "stat": "guardScan", "links": [{"label": "เปิดแบบฟอร์มสแกนจุด", "url": "https://trafficoppe.github.io/NPsecurity-guard-scan/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ แสกนจุดเอกชน"}, {"id": "guard-feedback-central", "name": "แบบประเมินความพึงพอใจ รปภ.เอกชนส่วนกลาง", "desc": "ผู้ใช้บริการให้คะแนน 5 ด้าน (1–5)", "status": "connected", "stat": "satisfactionCentral", "links": [{"label": "เปิดแบบประเมิน", "url": "https://trafficoppe.github.io/NPcentral-guard-feedback/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ ความพึงพอใจการให้บริการรปภ.เอกชน"}, {"id": "guard-feedback-unit", "name": "แบบประเมินความพึงพอใจ รปภ.เอกชนส่วนงาน", "desc": "ส่วนงานบันทึกผลประเมินรายเดือนพร้อมจำนวนผู้ตอบ", "status": "connected", "stat": "satisfactionUnit", "links": [{"label": "เปิดแบบบันทึกผลประเมิน", "url": "https://trafficoppe.github.io/NPsecurity-feedback/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ คะแนนความพึงพอใจรปภ.ส่วนงาน"}, {"id": "guard-shift", "name": "รายชื่อประจำจุด รปภ.เอกชน", "desc": "บันทึกรายชื่อ รปภ.ประจำจุดรายผลัด", "status": "link", "stat": null, "links": [{"label": "เปิดแบบฟอร์ม", "url": "https://trafficoppe.github.io/guard-shift-tracker/", "verified": true, "kind": "open"}], "note": "ข้อมูลเป็นรายชื่อบุคคล จึงไม่นำสถิติขึ้นหน้ารวม", "source": null}, {"id": "pdf-guard", "name": "PDF รายงานการตรวจการปฏิบัติหน้าที่ รปภ.เอกชนส่วนกลาง", "desc": "สร้างเอกสารลงชื่อ/ตรวจการปฏิบัติหน้าที่", "status": "link", "stat": null, "links": [{"label": "เปิดระบบสร้าง PDF", "url": "https://trafficoppe.github.io/PDF-NPsecurity-report/", "verified": true, "kind": "open"}], "note": "เป็นเครื่องมือสร้างเอกสาร", "source": null}, {"id": "pdf-guard-monthly", "name": "PDF สรุปผลประเมินและควบคุมงานจ้างเหมา รปภ. ประจำเดือน (OPPE-01-F-10-01)", "desc": "สร้างเอกสารสรุปผลรายเดือนจากข้อมูลสแกนจุดและความพึงพอใจ", "status": "link", "stat": null, "links": [{"label": "เปิดระบบสร้าง PDF", "url": "https://trafficoppe.github.io/PDF-OPPE-01-F-10-01/", "verified": true, "kind": "open"}], "note": "เป็นเครื่องมือสร้างเอกสาร", "source": null}]}, {"id": "borrow", "name": "อุปกรณ์และรถกอล์ฟ", "icon": "box", "systems": [{"id": "borrow", "name": "ระบบยืม-คืนอุปกรณ์และรถกอล์ฟ", "desc": "ยื่นคำขอยืมอุปกรณ์จราจร/จองรถกอล์ฟ และแจ้งคืน", "status": "warn", "stat": "borrow", "links": [{"label": "เปิดระบบยืม-คืน", "url": "https://trafficoppe.github.io/borrowform/", "verified": false, "kind": "open"}], "note": "ระบบยังไม่สมบูรณ์ — ข้อเสนอปรับปรุงอยู่ใน branch borrow-v2-proposal", "source": "Borrow_Data / Return_Data"}]}, {"id": "safety", "name": "ความปลอดภัย (AED / ถังดับเพลิง)", "icon": "heart", "systems": [{"id": "aed-map", "name": "แผนที่ตรวจสอบความพร้อมใช้งาน AED", "desc": "ตำแหน่งเครื่อง AED ภายในวิทยาเขตศาลายา บน Google My Maps", "status": "link", "stat": null, "links": [{"label": "เปิดแผนที่ AED", "url": "https://www.google.com/maps/d/u/0/viewer?mid=1ut0hZAkMPrVLSq5DDCWfj1CScKtPdnU&femb=1&ll=13.794197821033412%2C100.32132264629175&z=15", "verified": true, "kind": "open"}], "note": "ไม่มีข้อมูลยืนยันจำนวนเครื่องในรูปแบบที่ระบบอ่านได้ จึงแสดงเป็นลิงก์", "source": null}, {"id": "fire", "name": "ระบบตรวจถังดับเพลิง", "desc": "ตรวจสภาพถังดับเพลิงรายถังด้วยมือถือ และบันทึกการเติม", "status": "connected", "stat": "fire", "links": [{"label": "เปิดระบบตรวจถังดับเพลิง", "url": "https://trafficoppe.github.io/-v1/", "verified": true, "kind": "open"}], "note": null, "source": "แท็บ ข้อมูลถังดับเพลิง / บันทึกการตรวจ"}]}, {"id": "lostfound", "name": "ของหาย / เก็บของได้", "icon": "search", "systems": [{"id": "lostfound", "name": "ระบบแจ้งของหาย / เก็บของได้ / รับของคืน", "desc": "แจ้งของหาย แจ้งเก็บของได้ และติดตามการรับคืน", "status": "connected", "stat": "lostfound", "links": [{"label": "เปิดระบบ Lost & Found", "url": "https://trafficoppe.github.io/lostfound/", "verified": false, "kind": "open"}], "note": null, "source": "แท็บ รายการ พ.ศ. 2569 (ปัจจุบัน)"}]}]}};
 </script>
 <script>
-/* hub.js — หน้ารวมระบบงานจราจรและความปลอดภัย ม.มหิดล
+/* hub.js — ระบบงานจราจรและความปลอดภัย มหาวิทยาลัยมหิดล (หน้ารวม รุ่นทดลอง)
+ * โครงสร้าง: Sidebar + พื้นที่เนื้อหากลาง เปลี่ยนหน้าด้วย #hash (ปุ่มย้อนกลับของเบราว์เซอร์ใช้ได้)
  * อ่านเฉพาะ "สถิติรวม" (data/stats.json หรือ Stats API) และบัญชีระบบ (data/systems.json)
- * ไม่มีการอ่าน Google Sheet ดิบ ไม่มีชื่อบุคคล/เบอร์โทร/ทะเบียนรถ และไม่มีการเขียนข้อมูลกลับไปยังระบบใด */
+ * ไม่อ่าน Google Sheet ดิบ ไม่มีชื่อบุคคล/เบอร์โทร/ทะเบียนรถ/ข้อความอิสระ และไม่เขียนข้อมูลกลับไปยังระบบใด */
 (function () {
   'use strict';
   var CFG = window.HUB_CONFIG || {};
   var TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-  var STATUS = {
-    connected: 'เชื่อมต่อสถิติแล้ว', warn: 'เชื่อมต่อแล้ว · มีข้อสังเกต', partial: 'เชื่อมต่อได้บางส่วน',
-    blocked: 'ยังเชื่อมต่อไม่ได้', unverified: 'ไม่มีข้อมูลยืนยัน', link: 'ลิงก์ระบบ (ไม่มีสถิติ)', legacy: 'เลิกใช้เป็นหน้าหลัก'
-  };
-  var C = { c1: '#1d4f91', c2: '#d9822b', c3: '#2a9d8f', c4: '#8e6bbf', c5: '#7c8797' };
+  var TH_MF = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  var STATUS = { connected: 'เชื่อมต่อสถิติแล้ว', warn: 'เชื่อมต่อแล้ว · มีข้อสังเกต', partial: 'เชื่อมต่อได้บางส่วน', blocked: 'ยังเชื่อมต่อไม่ได้', unverified: 'ไม่มีข้อมูลยืนยัน', link: 'ลิงก์ระบบ (ไม่มีสถิติ)', legacy: 'เลิกใช้เป็นหน้าหลัก' };
+  var C = { c1: '#1d4f91', c2: '#d9822b', c3: '#2a9d8f', c4: '#8e6bbf', c5: '#7c8797', fine: '#b4432f' };
   var V = 'อุบัติเหตุจากยานพาหนะ', G = 'อุบัติเหตุทั่วไป', P = 'รับส่งผู้ป่วย';
-  var state = { from: null, to: null, cat: 'all', mapType: 'all', sel: -1 };
-  var DATA = null, MONTHS = [], liveMode = false;
+  var state = { from: null, to: null, mapType: 'all', sel: -1, satSrc: 'central', satMonth: null };
+  var DATA = null, MONTHS = [], liveMode = false, SYS = {};
+
+  /* ---------- ไอคอน (เส้น 24×24 ชุดเดียวกันทั้งหน้า) ---------- */
+  var ICON = {
+    menu: 'M4 6h16M4 12h16M4 18h16', chev: 'M9 6l6 6-6 6', home: 'M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10',
+    alert: 'M12 3l9.5 17H2.5L12 3zM12 10v4M12 17.5v.01', camera: 'M4 7h3l2-2h6l2 2h3v12H4zM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
+    car: 'M5 16l1.5-6h11L19 16M3 16h18v3H3zM7 19v1.5M17 19v1.5M7 13h.01M17 13h.01', cap: 'M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5M22 9v6',
+    shield: 'M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z', box: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10',
+    search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4', heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10zM8 11h2l1-2 2 4 1-2h2',
+    file: 'M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6', grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', map: 'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14',
+    users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21c0-4 3-6 7-6s7 2 7 6M17 7a3 3 0 0 1 0 6M22 21c0-3-2-5-5-5.5', star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+    coin: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9.5c0-1 1.3-1.8 3-1.8s3 .8 3 1.8-1.3 1.6-3 1.8-3 .8-3 1.9 1.3 1.8 3 1.8 3-.8 3-1.8M12 6v1.7M12 16.3V18',
+    scan: 'M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M7 12h10', calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', helmet: 'M4 15a8 8 0 0 1 16 0v2H4zM12 7v8M3 17h18',
+    ext: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6', back: 'M15 6l-6 6 6 6', collapse: 'M15 6l-6 6 6 6M20 4v16'
+  };
+  function ic(name, size) {
+    var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', 'ic'); s.setAttribute('aria-hidden', 'true');
+    if (size) { s.style.width = size + 'px'; s.style.height = size + 'px'; }
+    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', ICON[name] || ''); s.appendChild(p); return s;
+  }
+
+  /* ---------- เมนู ---------- */
+  var NAV = [
+    { id: 'dashboard', label: 'หน้าหลัก / Dashboard', icon: 'home' },
+    { group: 'g-traffic', label: 'งานจราจรและแจ้งเหตุ', icon: 'alert', children: [
+      { id: 'traffic', label: 'สถิติแจ้งเหตุและอุบัติเหตุ' }, { id: 'accident-map', label: 'แผนที่จุดเกิดอุบัติเหตุ' }, { id: 'gate', label: 'รถเข้าและหมวกนิรภัย' }] },
+    { id: 'cctv', label: 'กล้องวงจรปิด (CCTV)', icon: 'camera' },
+    { id: 'vehicle', label: 'ยานพาหนะและลานจอดรถ', icon: 'car' },
+    { id: 'graduation', label: 'งานปริญญา', icon: 'cap' },
+    { group: 'g-guard', label: 'งาน รปภ.', icon: 'shield', children: [
+      { id: 'guard-satisfaction', label: 'แบบประเมินความพึงพอใจ' }, { id: 'guard-fines', label: 'สรุปค่าปรับ/การตรวจรับ' }, { id: 'guard-scan', label: 'รายงานการปฏิบัติงานและการสแกนจุด' }] },
+    { id: 'borrow', label: 'ยืม-คืนอุปกรณ์และรถกอล์ฟ', icon: 'box' },
+    { id: 'lostfound', label: 'ของหาย / เก็บของได้', icon: 'search' },
+    { id: 'safety', label: 'ความปลอดภัย: AED และถังดับเพลิง', icon: 'heart' },
+    { id: 'reports', label: 'รายงานและเอกสาร PDF', icon: 'file' },
+    { id: 'systems', label: 'ระบบทั้งหมด', icon: 'grid' }
+  ];
+  var PAGE_TITLE = {}; NAV.forEach(function (n) { if (n.id) PAGE_TITLE[n.id] = n.label; (n.children || []).forEach(function (c) { PAGE_TITLE[c.id] = c.label; c.parent = n; }); });
+  PAGE_TITLE['guard-satisfaction'] = 'Dashboard ตรวจรับงาน รปภ. — ความพึงพอใจ';
 
   /* ---------- helpers ---------- */
   function $(id) { return document.getElementById(id); }
@@ -267,12 +301,11 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T16:40:0
     var n = document.createElement(tag), k;
     for (k in (attrs || {})) {
       if (attrs[k] == null || attrs[k] === false) continue;
-      if (k === 'text') n.textContent = attrs[k];
-      else if (k === 'class') n.className = attrs[k];
-      else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), attrs[k]);
-      else n.setAttribute(k, attrs[k]);
+      if (k === 'text') n.textContent = attrs[k]; else if (k === 'class') n.className = attrs[k];
+      else if (k === 'style') n.setAttribute('style', attrs[k]);
+      else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), attrs[k]); else n.setAttribute(k, attrs[k]);
     }
-    (kids || []).forEach(function (c) { if (c != null) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    (kids || []).forEach(function (c) { if (c != null && c !== false) n.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c); });
     return n;
   }
   function svg(tag, attrs, kids) {
@@ -281,24 +314,21 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T16:40:0
     (kids || []).forEach(function (c) { if (c) n.appendChild(c); });
     return n;
   }
-  function num(x) { return (x == null || isNaN(x)) ? '–' : Number(x).toLocaleString('th-TH'); }
+  function num(x, d) { if (x == null || isNaN(x)) return '–'; return Number(x).toLocaleString('th-TH', d != null ? { minimumFractionDigits: d, maximumFractionDigits: d } : undefined); }
   function mLabel(m) { var p = m.split('-'); return TH_M[+p[1] - 1] + ' ' + String(+p[0] + 543).slice(2); }
-  function dLabel(s) { // 'YYYY-MM-DD HH:MM' | 'YYYY-MM-DD' | 'YYYY-MM'
+  function mFull(m) { var p = m.split('-'); return TH_MF[+p[1] - 1] + ' ' + (+p[0] + 543); }
+  function dLabel(s) {
     if (!s) return 'ไม่ทราบ';
     var d = s.split(' ')[0].split('-'), t = s.split(' ')[1];
-    var out = (d[2] ? (+d[2]) + ' ' : '') + TH_M[+d[1] - 1] + ' ' + (+d[0] + 543);
-    return out + (t ? ' ' + t + ' น.' : '');
+    return (d[2] ? (+d[2]) + ' ' : '') + TH_M[+d[1] - 1] + ' ' + (+d[0] + 543) + (t ? ' ' + t + ' น.' : '');
   }
   function inRange(m) { return (!state.from || m >= state.from) && (!state.to || m <= state.to); }
   function mod(k) { return (DATA.stats.modules || {})[k] || null; }
   function sumMonthly(list, pick) { return (list || []).filter(function (r) { return inRange(r.month); }).reduce(function (a, r) { return a + (pick(r) || 0); }, 0); }
   function sumObj(o) { var s = 0, k; for (k in o) s += o[k] || 0; return s; }
-  function rangeText() {
-    if (!MONTHS.length) return '';
-    var a = state.from || MONTHS[0], b = state.to || MONTHS[MONTHS.length - 1];
-    return a === b ? mLabel(a) : mLabel(a) + ' – ' + mLabel(b);
-  }
+  function rangeText() { if (!MONTHS.length) return ''; var a = state.from || MONTHS[0], b = state.to || MONTHS[MONTHS.length - 1]; return a === b ? mFull(a) : mLabel(a) + ' – ' + mLabel(b); }
   function mapsUrl(p) { return 'https://www.google.com/maps/search/?api=1&query=' + p.lat + ',' + p.lng; }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
 
   /* ---------- data ---------- */
   function getJson(u) { return fetch(u, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(u + ' → HTTP ' + r.status); return r.json(); }); }
@@ -315,234 +345,171 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T16:40:0
   }
   function showBanner(t) { var b = $('banner'); b.textContent = t; b.hidden = false; }
 
-  /* ---------- header / filters ---------- */
-  function renderStamp() {
-    var g = DATA.stats.generatedAt || '', s = $('stamp');
-    s.textContent = '';
-    s.appendChild(el('b', { text: 'ข้อมูล ณ ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) }));
-    s.appendChild(el('br'));
-    s.appendChild(document.createTextNode(liveMode ? 'อ่านสดจาก Stats API (เฉพาะยอดรวม)' : 'ไฟล์สถิติรวม (snapshot) · เขตเวลา Asia/Bangkok'));
+  /* ---------- โครงหน้า: Sidebar ---------- */
+  var openGroups = {};
+  function buildNav() {
+    var nav = $('nav'), ul = el('ul'); nav.textContent = '';
+    NAV.forEach(function (n) {
+      if (!n.children) { ul.appendChild(el('li', {}, [navLink(n.id, n.label, n.icon)])); return; }
+      var subId = 'sub-' + n.group, open = !!openGroups[n.group];
+      var btn = el('button', { type: 'button', class: 'nav-g', 'aria-expanded': String(open), 'aria-controls': subId, 'data-group': n.group, title: n.label,
+        onclick: function () {
+          if ($('app').classList.contains('mini') && window.innerWidth > 980) { location.hash = '#' + n.children[0].id; return; }
+          openGroups[n.group] = !openGroups[n.group]; buildNav(); markActive();
+        } }, [ic(n.icon), el('span', { class: 'nav-lbl', text: n.label }), ic('chev')]);
+      var sub = el('ul', { class: 'sub', id: subId, hidden: open ? null : 'hidden' });
+      n.children.forEach(function (c) { sub.appendChild(el('li', {}, [navLink(c.id, c.label)])); });
+      ul.appendChild(el('li', {}, [btn, sub]));
+    });
+    nav.appendChild(ul);
   }
-  function collectMonths() {
-    var set = {};
-    ['incidents', 'gate', 'lostfound', 'cctv'].forEach(function (k) { ((mod(k) || {}).monthly || []).forEach(function (r) { set[r.month] = 1; }); });
-    MONTHS = Object.keys(set).sort();
+  function navLink(id, label, icon) {
+    return el('a', { class: 'nav-a', href: '#' + id, 'data-page': id, title: label, onclick: closeMobileNav }, [icon ? ic(icon) : null, el('span', { class: 'nav-lbl', text: label })]);
   }
-  function renderFilters() {
-    var f = $('fFrom'), t = $('fTo');
-    [f, t].forEach(function (s) { s.textContent = ''; MONTHS.forEach(function (m) { s.appendChild(el('option', { value: m, text: mLabel(m) })); }); });
-    f.value = MONTHS[0]; t.value = MONTHS[MONTHS.length - 1];
-    function ch() { state.from = f.value; state.to = t.value; if (state.from > state.to) { state.to = state.from; t.value = state.to; } renderAll(); }
+  function markActive() {
+    var page = currentPage();
+    Array.prototype.forEach.call(document.querySelectorAll('.nav-a'), function (a) { if (a.getAttribute('data-page') === page) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    Array.prototype.forEach.call(document.querySelectorAll('.nav-g'), function (b) {
+      var g = NAV.filter(function (n) { return n.group === b.getAttribute('data-group'); })[0];
+      b.classList.toggle('has-active', g.children.some(function (c) { return c.id === page; }));
+    });
+  }
+  function setupShell() {
+    var app = $('app'), tg = $('navToggle'), scrim = $('scrim');
+    tg.appendChild(ic('menu', 22));
+    if (store('hub.mini') === '1') app.classList.add('mini');
+    tg.onclick = function () {
+      if (window.innerWidth <= 980) { var o = !app.classList.contains('open'); app.classList.toggle('open', o); scrim.hidden = !o; tg.setAttribute('aria-expanded', String(o)); }
+      else { var m = !app.classList.contains('mini'); app.classList.toggle('mini', m); store('hub.mini', m ? '1' : '0'); tg.setAttribute('aria-expanded', String(!m)); }
+    };
+    scrim.onclick = closeMobileNav;
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMobileNav(); });
+    tg.setAttribute('aria-expanded', String(window.innerWidth > 980 && !app.classList.contains('mini')));
+  }
+  function closeMobileNav() { var app = $('app'); if (app.classList.contains('open')) { app.classList.remove('open'); $('scrim').hidden = true; $('navToggle').setAttribute('aria-expanded', 'false'); } }
+
+  /* ---------- router ---------- */
+  var PAGES = {};
+  function currentPage() { var h = (location.hash || '').replace('#', ''); return PAGES[h] ? h : 'dashboard'; }
+  function route(first) {
+    var page = currentPage();
+    NAV.forEach(function (n) { if (n.children && n.children.some(function (c) { return c.id === page; })) openGroups[n.group] = true; });
+    buildNav(); markActive();
+    $('crumb').textContent = PAGE_TITLE[page] || '';
+    document.title = (page === 'dashboard' ? '' : (PAGE_TITLE[page] + ' · ')) + 'ระบบงานจราจรและความปลอดภัย มหาวิทยาลัยมหิดล';
+    var view = $('view'); view.textContent = '';
+    try { PAGES[page](view); } catch (e) { view.appendChild(el('div', { class: 'card box' }, [el('strong', { text: 'แสดงหน้านี้ไม่สำเร็จ' }), el('p', { text: String(e && e.message || e) })])); if (window.console) console.error(e); }
+    if (!first) { window.scrollTo(0, 0); view.focus({ preventScroll: true }); }
+  }
+
+  /* ---------- ชิ้นส่วนหน้า ---------- */
+  function pageHead(title, desc, ctrls) {
+    return el('div', { class: 'ph' }, [el('div', {}, [el('h1', { text: title }), desc ? el('p', { text: desc }) : null]), ctrls || null]);
+  }
+  function section(title, opts, kids) {
+    opts = opts || {};
+    return el('section', { class: 'sec', 'aria-label': title }, [el('div', { class: 'sec-h' }, [el('h2', { text: title }), opts.note ? el('span', { class: 'note', text: opts.note }) : null,
+      opts.more ? el('a', { class: 'more', href: '#' + opts.more, text: 'ดูรายละเอียด →' }) : null])].concat(kids));
+  }
+  function rangeCtrl() {
+    var f = el('select', { 'aria-label': 'เดือนเริ่มต้น' }), t = el('select', { 'aria-label': 'เดือนสิ้นสุด' });
+    [f, t].forEach(function (s) { MONTHS.forEach(function (m) { s.appendChild(el('option', { value: m, text: mLabel(m) })); }); });
+    f.value = state.from; t.value = state.to;
+    function ch() { state.from = f.value; state.to = t.value; if (state.from > state.to) state.to = state.from; route(true); }
     f.onchange = ch; t.onchange = ch;
-    $('fReset').onclick = function () { f.value = MONTHS[0]; t.value = MONTHS[MONTHS.length - 1]; ch(); };
-    state.from = f.value; state.to = t.value;
-    var chips = $('chips'); chips.textContent = '';
-    [{ id: 'all', name: 'ทั้งหมด' }].concat(DATA.systems.categories).forEach(function (c) {
-      chips.appendChild(el('button', { type: 'button', class: 'chip', 'aria-pressed': String(state.cat === c.id), text: c.name, onclick: function () { state.cat = c.id; Array.prototype.forEach.call(chips.children, function (b) { b.setAttribute('aria-pressed', 'false'); }); this.setAttribute('aria-pressed', 'true'); applyCat(); } }));
-    });
+    return el('div', { class: 'ctrls' }, [ic('calendar'), el('label', { text: 'ช่วงเดือน' }), f, el('span', { text: 'ถึง' }), t,
+      el('button', { type: 'button', class: 'btn-ghost', text: 'ทั้งหมด', onclick: function () { state.from = MONTHS[0]; state.to = MONTHS[MONTHS.length - 1]; route(true); } })]);
   }
-  function applyCat() {
-    Array.prototype.forEach.call(document.querySelectorAll('[data-cat]'), function (n) {
-      n.hidden = state.cat !== 'all' && n.getAttribute('data-cat').split(' ').indexOf(state.cat) < 0;
-    });
+  function kpi(o) {
+    var b = [el('div', { class: 'kpi-top' }, [o.icon ? ic(o.icon, 18) : null, el('span', { text: o.label })])];
+    if (o.na) b.push(el('div', { class: 'kpi-na', text: o.na }));
+    else b.push(el('div', { class: 'kpi-num' }, [o.value, o.unit ? el('small', { text: o.unit }) : null]));
+    if (o.sub) b.push(el('div', { class: 'kpi-sub', text: o.sub }));
+    if (o.tag) b.push(el('div', {}, [el('span', { class: 'tag ' + (o.tagTone || 'warn'), text: o.tag })]));
+    var metaTxt = [o.scope, o.source ? 'ที่มา: ' + o.source : null, o.updated ? 'อัปเดต ' + dLabel(o.updated) : null].filter(Boolean).join(' · ');
+    b.push(el('div', { class: 'kpi-meta' }, [el('span', { text: metaTxt }), o.more ? el('a', { href: '#' + o.more, text: 'ดูรายละเอียด →' }) : null]));
+    return el('article', { class: 'card kpi', style: '--accent:' + (o.color || C.c1) }, b);
   }
-
-  /* ---------- KPI ---------- */
-  function kpiCard(o) {
-    var body = [el('div', { class: 'kpi-label', text: o.label })];
-    if (o.na) body.push(el('div', { class: 'kpi-na', text: o.na }));
-    else body.push(el('div', { class: 'kpi-num' }, [document.createTextNode(o.value), o.unit ? el('small', { text: o.unit }) : null]));
-    if (o.sub) body.push(el('div', { class: 'kpi-sub', text: o.sub }));
-    var meta = el('div', { class: 'kpi-meta' }, [document.createTextNode((o.scope ? o.scope + ' · ' : '') + 'ที่มา: ' + o.source + ' · อัปเดตล่าสุด ' + dLabel(o.updated))]);
-    if (o.flag) meta.appendChild(el('div', {}, [el('span', { class: 'tag t-warn', text: o.flag })]));
-    body.push(meta);
-    return el('article', { class: 'card kpi ' + (o.tone || ''), 'data-cat': o.cats }, body);
+  function kpiGrid(list) { return el('div', { class: 'kpis' }, list.map(kpi)); }
+  function figure(title, caption, body) { var f = el('figure', { class: 'card chart' }, [el('figcaption', {}, [el('strong', { text: title }), caption ? el('span', { text: caption }) : null])]); f.appendChild(body); return f; }
+  function notesList(list, tone) { return list && list.length ? el('ul', { class: 'notes' + (tone ? ' ' + tone : '') }, list.map(function (n) { return el('li', { text: n }); })) : null; }
+  function srcLine(m) { return m ? el('p', { class: 'src', text: 'ที่มา: ' + m.source + (m.updated ? ' · อัปเดตล่าสุด ' + dLabel(m.updated) : '') }) : null; }
+  function infoBox(title, m, extra) {
+    if (!m) return null;
+    return el('div', { class: 'card box' }, [el('h3', { text: title }), m.definition ? el('p', { class: 'def', text: 'นิยาม: ' + m.definition }) : null, srcLine(m), notesList(m.notes, 'warn'), extra || null]);
   }
-  function renderKpis() {
-    var box = $('kpis'), rt = rangeText(), k = []; box.textContent = '';
-    var inc = mod('incidents'), gate = mod('gate'), lf = mod('lostfound'), cctv = mod('cctv'), gr = mod('graduationParking'),
-      gs = mod('guardScan'), sc = mod('satisfactionCentral'), su = mod('satisfactionUnit'), fire = mod('fire'), vr = mod('vehicleRegistration');
-    if (inc) {
-      var t = function (name) { return sumMonthly(inc.monthly, function (r) { return r.byType[name]; }); };
-      var total = sumMonthly(inc.monthly, function (r) { return sumObj(r.byType); });
-      k.push({ label: 'เหตุการณ์ที่บันทึก', value: num(total), unit: 'เหตุ', sub: 'อุบัติเหตุยานพาหนะ ' + num(t(V)) + ' · อุบัติเหตุทั่วไป ' + num(t(G)) + ' · รับส่งผู้ป่วย ' + num(t(P)), scope: rt, source: 'รายงานเหตุการณ์', updated: inc.updated, cats: 'overview traffic' });
-      var bi = {}; inc.byType.forEach(function (r) { bi[r.type] = r.injuredOrIll; });
-      k.push({ label: 'ผู้บาดเจ็บ / ผู้ป่วยที่บันทึก', value: num(inc.injuredTotal), unit: 'คน', sub: 'จากอุบัติเหตุยานพาหนะ ' + num(bi[V]) + ' · อุบัติเหตุทั่วไป ' + num(bi[G]) + ' · รับส่งผู้ป่วย ' + num(bi[P]), scope: dLabel(inc.range.from) + ' – ' + dLabel(inc.range.to) + ' (ไม่กรองตามเดือน)', source: 'รายงานเหตุการณ์', updated: inc.updated, cats: 'overview traffic', tone: 'k2' });
-    }
-    if (gate) {
-      var cars = sumMonthly(gate.monthly, function (r) { return r.cars; }), mo = sumMonthly(gate.monthly, function (r) { return r.motorcycles; }),
-        nh = sumMonthly(gate.monthly, function (r) { return r.noHelmet; }), days = sumMonthly(gate.monthly, function (r) { return r.days; });
-      if (days) {
-        k.push({ label: 'รถเข้ามหาวิทยาลัย (5 ประตู)', value: num(cars + mo), unit: 'คัน', sub: 'รถยนต์ ' + num(cars) + ' · รถจักรยานยนต์ ' + num(mo) + ' · ' + num(days) + ' วันที่มีข้อมูล', scope: rt, source: 'จำนวนรถเข้า+หมวกนิรภัย', updated: gate.updated, cats: 'traffic', tone: 'k3', flag: 'ตัดข้อมูลทดสอบ 16–17 ก.ย. ออกแล้ว' });
-        k.push({ label: 'ผู้ไม่สวมหมวกนิรภัย', value: num(nh), unit: 'ราย', sub: 'คิดเป็น ' + (mo ? (100 * nh / mo).toFixed(1) : '–') + '% ของรถจักรยานยนต์ที่นับได้', scope: rt, source: 'จำนวนรถเข้า+หมวกนิรภัย', updated: gate.updated, cats: 'traffic', tone: 'k2', flag: 'มีวันที่ค่าผิดสังเกต ควรตรวจการกรอก' });
-      } else k.push({ label: 'รถเข้ามหาวิทยาลัย / หมวกนิรภัย', na: 'ไม่มีข้อมูลในช่วงที่เลือก', scope: rt, source: 'จำนวนรถเข้า+หมวกนิรภัย', updated: gate.updated, cats: 'traffic', tone: 'k3' });
-    }
-    if (lf) {
-      var lt = function (name) { return sumMonthly(lf.monthly, function (r) { return r.byType[name]; }); };
-      k.push({ label: 'แจ้งของหาย', value: num(lt('สิ่งของสูญหาย')), unit: 'รายการ', sub: 'เก็บของได้ ' + num(lt('พบสิ่งของ')) + ' · แบบฟอร์มรับของคืน ' + num(lt('รับของคืน')) + ' · สถานะ “รับของคืนแล้ว” ทั้งปี ' + num(lf.returned), scope: rt, source: 'แจ้งของหาย (รายการ พ.ศ. 2569)', updated: lf.updated, cats: 'lostfound', tone: 'k4' });
-    }
-    if (cctv) {
-      var cn = sumMonthly(cctv.monthly, function (r) { return r.count; });
-      k.push({ label: 'คำขอดูกล้องวงจรปิด', value: num(cn), unit: 'คำขอ', sub: 'ทั้งหมด ' + num(cctv.total) + ' คำขอ ปิดเคสแล้ว ' + num(cctv.byStatus['ปิดเคส']) + ' · พบภาพ ' + num(cctv.footage['พบภาพ']) + ' ไม่พบ ' + num(cctv.footage['ไม่พบภาพ']), scope: rt, source: 'CCTV_Requests', updated: cctv.updated, cats: 'cctv' });
-    }
-    if (gr) {
-      var best = gr.days.slice().sort(function (a, b) { return b.latestCount - a.latestCount; })[0];
-      k.push({ label: 'รถในลานจอดช่วงงานปริญญา', value: num(best.latestCount), unit: 'คัน', sub: 'วันที่ ' + dLabel(best.date) + ' · ' + best.occupancyPercent + '% ของความจุ ' + num(gr.capacity) + ' คัน (' + gr.lots + ' ลาน)', scope: 'วันที่มากที่สุดจาก 3 วันงาน (ไม่กรองตามเดือน)', source: 'SUMMARY_2569', updated: gr.updated, cats: 'graduation vehicle', tone: 'k3' });
-    }
-    if (gs) k.push({ label: 'สแกนจุดตรวจ รปภ.เอกชน', value: num(gs.scans), unit: 'ครั้ง', sub: 'ผลไม่ปกติ ' + num(gs.byStatus['ไม่ปกติ']) + ' ครั้ง · ' + num(gs.scanPoints) + ' จุดสแกน', scope: dLabel(gs.range.from) + ' – ' + dLabel(gs.range.to) + ' (ไม่กรองตามเดือน)', source: 'แสกนจุดเอกชน', updated: gs.updated, cats: 'guard graduation', tone: 'k5' });
-    if (sc) {
-      var a = Object.keys(sc.avg).map(function (x) { return sc.avg[x]; }), mean = a.reduce(function (p, c) { return p + c; }, 0) / a.length;
-      var ua = su ? Object.keys(su.avg).map(function (x) { return su.avg[x]; }) : [], um = ua.length ? ua.reduce(function (p, c) { return p + c; }, 0) / ua.length : null;
-      k.push({ label: 'ความพึงพอใจ รปภ.เอกชน (ส่วนกลาง)', value: mean.toFixed(2), unit: '/ 5', sub: num(sc.responses) + ' ผู้ตอบ' + (um ? ' · ส่วนงานเฉลี่ย ' + um.toFixed(2) + ' (' + num(su.respondents) + ' ผู้ตอบ)' : ''), scope: 'เฉลี่ย 5 ด้าน ทุกช่วงข้อมูล (ไม่กรองตามเดือน)', source: 'ความพึงพอใจการให้บริการรปภ.เอกชน', updated: sc.updated, cats: 'guard', tone: 'k5' });
-    }
-    if (fire) k.push({ label: 'ถังดับเพลิงในทะเบียน', value: num(fire.extinguishers), unit: 'ถัง', sub: 'ตรวจแล้ว ' + num(fire.extinguishersInspected) + ' ถัง · ผลตรวจชำรุด ' + num(fire.inspectionResult['ชำรุด']) + ' จาก ' + num(fire.inspections) + ' ครั้ง', scope: 'ทุกช่วงข้อมูล (ไม่กรองตามเดือน)', source: 'ข้อมูลถังดับเพลิง / บันทึกการตรวจ', updated: fire.updated, cats: 'safety', tone: 'k2' });
-    if (vr) {
-      var rows = vr.rows, tot = 0, parts = [];
-      Object.keys(rows).forEach(function (n) { if (rows[n] != null) { tot += rows[n]; parts.push(n + ' ' + num(rows[n])); } });
-      k.push({ label: 'รายการลงทะเบียนยานพาหนะ', value: num(tot), unit: 'รายการ', sub: parts.join(' · '), scope: 'นับแถวในฐานข้อมูล (ไม่กรองตามเดือน)', source: 'ฐานข้อมูลลงทะเบียนยานพาหนะ', updated: vr.updated, cats: 'vehicle', tone: 'k4', flag: 'ยังไม่รวมนักศึกษา–รถจักรยานยนต์' });
-    }
-    k.forEach(function (o) { box.appendChild(kpiCard(o)); });
-    $('kpiNote').textContent = 'ช่วงที่เลือก: ' + rt + ' — ตัวเลขที่ระบุว่า “ไม่กรองตามเดือน” มาจากแหล่งข้อมูลที่ไม่มีอนุกรมรายเดือน';
+  function table(head, rows, opts) {
+    opts = opts || {};
+    var t = el('table', { class: 'tbl' }), tr = el('tr');
+    head.forEach(function (h, i) { tr.appendChild(el('th', { class: (opts.num || []).indexOf(i) >= 0 ? 'num' : null, text: h })); });
+    t.appendChild(el('thead', {}, [tr]));
+    var tb = el('tbody');
+    rows.forEach(function (r) { var x = el('tr'); r.forEach(function (c, i) { x.appendChild(el('td', { class: (opts.num || []).indexOf(i) >= 0 ? 'num' : null }, [c == null ? '–' : (c.nodeType ? c : String(c))])); }); tb.appendChild(x); });
+    t.appendChild(tb);
+    if (opts.foot) { var f = el('tr'); opts.foot.forEach(function (c, i) { f.appendChild(el('td', { class: (opts.num || []).indexOf(i) >= 0 ? 'num' : null, text: c == null ? '' : String(c) })); }); t.appendChild(el('tfoot', {}, [f])); }
+    return el('div', { class: 'tbl-wrap' }, [t]);
   }
 
-  /* ---------- charts (SVG, ไม่ใช้ไลบรารีภายนอก) ---------- */
-  function bars(box, cols, series, opt) {
-    opt = opt || {}; box.textContent = '';
-    if (!cols.length) { box.appendChild(el('div', { class: 'empty', text: 'ไม่มีข้อมูลในช่วงที่เลือก' })); return; }
-    var W = 560, H = 240, L = 44, R = 10, T = 16, B = 30, pw = W - L - R, ph = H - T - B;
+  /* ---------- กราฟ (SVG ในหน้า ไม่ใช้ไลบรารีภายนอก) ---------- */
+  function niceTop(max, int) { max = Math.max(max, 1); var st = Math.pow(10, Math.floor(Math.log10(max))); if (max / st < 2) st /= 5; else if (max / st < 5) st /= 2; if (int && st < 1) st = 1; return { top: Math.ceil(max / st) * st, step: st }; }
+  function fmtTick(v) { return v >= 1000 ? (v / 1000) + 'k' : String(Math.round(v * 100) / 100); }
+  function bars(cols, series, opt) {
+    opt = opt || {}; var box = el('div');
+    if (!cols.length) { box.appendChild(el('div', { class: 'empty', text: 'ไม่มีข้อมูลในช่วงที่เลือก' })); return box; }
+    var W = opt.w || 560, H = opt.h || 240, L = 44, R = opt.line2 ? 34 : 10, T = 18, B = 30, pw = W - L - R, ph = H - T - B;
     var totals = cols.map(function (_, i) { return series.reduce(function (a, s) { return a + (s.values[i] || 0); }, 0); });
-    var max = Math.max.apply(null, totals.concat(opt.line ? opt.line.values : [0]).concat([1]));
-    var step = Math.pow(10, Math.floor(Math.log10(max))); if (max / step < 2) step /= 5; else if (max / step < 5) step /= 2;
-    var top = Math.ceil(max / step) * step, root = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': opt.aria || 'แผนภูมิแท่ง' });
-    for (var v = 0; v <= top + 1e-9; v += step) {
+    var sc = niceTop(Math.max.apply(null, totals.concat(opt.line ? opt.line.values : [0])), opt.int), top = sc.top;
+    var root = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': opt.aria || 'แผนภูมิแท่ง' });
+    for (var v = 0; v <= top + 1e-9; v += sc.step) {
       var y = T + ph - ph * v / top;
-      root.appendChild(svg('line', { x1: L, x2: W - R, y1: y, y2: y, stroke: '#e4e8ef' }));
-      root.appendChild(svg('text', { x: L - 6, y: y + 4, 'text-anchor': 'end', 'font-size': 10, fill: '#5b6678', text: v >= 1000 ? (v / 1000) + 'k' : String(v) }));
+      root.appendChild(svg('line', { x1: L, x2: W - R, y1: y, y2: y, stroke: '#e6eaf0' }));
+      root.appendChild(svg('text', { x: L - 6, y: y + 4, 'text-anchor': 'end', 'font-size': 10, fill: '#5d6879', text: fmtTick(v) }));
     }
-    var bw = pw / cols.length, w = Math.min(46, bw * 0.7), every = Math.ceil(cols.length / 12);
+    var bw = pw / cols.length, w = Math.min(46, bw * 0.66), every = Math.ceil(cols.length / 12);
     cols.forEach(function (c, i) {
       var x = L + bw * i + (bw - w) / 2, acc = 0;
       series.forEach(function (s) {
         var val = s.values[i] || 0; if (!val) return;
-        var h = ph * val / top, yy = T + ph - ph * (acc + val) / top;
-        var r = svg('rect', { x: x, y: yy, width: w, height: Math.max(h - 1, 0.5), rx: 2, fill: s.color });
+        var yy = T + ph - ph * (acc + val) / top, r = svg('rect', { x: x, y: yy, width: w, height: Math.max(ph * val / top - 1, 0.5), rx: 3, fill: s.color });
         r.appendChild(svg('title', { text: c.full + ' · ' + s.name + ': ' + num(val) })); root.appendChild(r); acc += val;
       });
-      if (cols.length <= 14 && totals[i]) root.appendChild(svg('text', { x: x + w / 2, y: T + ph - ph * totals[i] / top - 4, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 600, fill: '#152033', text: totals[i] >= 10000 ? (totals[i] / 1000).toFixed(0) + 'k' : num(totals[i]) }));
-      if (i % every === 0) root.appendChild(svg('text', { x: x + w / 2, y: H - 10, 'text-anchor': 'middle', 'font-size': 10, fill: '#5b6678', text: c.label }));
+      if (cols.length <= 14 && totals[i]) root.appendChild(svg('text', { x: x + w / 2, y: opt.line2 ? T + ph - 5 : T + ph - ph * totals[i] / top - 4, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 600, fill: '#152033', text: totals[i] >= 10000 ? (totals[i] / 1000).toFixed(0) + 'k' : num(totals[i]) }));
+      if (i % every === 0) root.appendChild(svg('text', { x: x + w / 2, y: H - 10, 'text-anchor': 'middle', 'font-size': 10, fill: '#5d6879', text: c.label }));
     });
-    if (opt.line) {
-      var pts = opt.line.values.map(function (val, i) { return (L + bw * i + bw / 2) + ',' + (T + ph - ph * val / top); }).join(' ');
-      root.appendChild(svg('polyline', { points: pts, fill: 'none', stroke: opt.line.color, 'stroke-width': 2 }));
+    if (opt.line) root.appendChild(svg('polyline', { points: opt.line.values.map(function (val, i) { return (L + bw * i + bw / 2) + ',' + (T + ph - ph * val / top); }).join(' '), fill: 'none', stroke: opt.line.color, 'stroke-width': 2 }));
+    if (opt.line2) { // เส้นแกนขวา (คะแนน 0–5)
+      var top2 = opt.line2.max, pts = [];
+      [0, 1, 2, 3, 4, 5].forEach(function (t) { if (t <= top2) root.appendChild(svg('text', { x: W - R + 6, y: T + ph - ph * t / top2 + 4, 'font-size': 10, fill: opt.line2.color, text: String(t) })); });
+      opt.line2.values.forEach(function (val, i) { if (val == null) return; var cx = L + bw * i + bw / 2, cy = T + ph - ph * val / top2; pts.push(cx + ',' + cy);
+        root.appendChild(svg('circle', { cx: cx, cy: cy, r: 4.5, fill: opt.line2.color, stroke: '#fff', 'stroke-width': 1.5 }));
+        root.appendChild(svg('text', { x: cx, y: cy - 9, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: opt.line2.color, text: val.toFixed(2) })); });
+      if (pts.length > 1) root.insertBefore(svg('polyline', { points: pts.join(' '), fill: 'none', stroke: opt.line2.color, 'stroke-width': 2 }), root.firstChild.nextSibling);
     }
     box.appendChild(root);
     var lg = el('div', { class: 'legend' });
-    series.concat(opt.line ? [opt.line] : []).forEach(function (s) { lg.appendChild(el('span', {}, [el('i', { style: 'background:' + s.color }), s.name])); });
+    series.concat(opt.line ? [opt.line] : []).concat(opt.line2 ? [opt.line2] : []).forEach(function (s) { lg.appendChild(el('span', {}, [el('i', { style: 'background:' + s.color }), s.name])); });
     box.appendChild(lg);
+    return box;
   }
-  function renderCharts() {
-    var inc = mod('incidents'), gate = mod('gate'), lf = mod('lostfound');
-    if (inc) {
-      var rows = inc.monthly.filter(function (r) { return inRange(r.month); }), other = function (r) { return sumObj(r.byType) - (r.byType[V] || 0) - (r.byType[G] || 0) - (r.byType[P] || 0); };
-      bars($('chInc'), rows.map(function (r) { return { label: mLabel(r.month), full: mLabel(r.month) }; }), [
-        { name: V, color: C.c1, values: rows.map(function (r) { return r.byType[V] || 0; }) },
-        { name: G, color: C.c2, values: rows.map(function (r) { return r.byType[G] || 0; }) },
-        { name: P, color: C.c3, values: rows.map(function (r) { return r.byType[P] || 0; }) },
-        { name: 'เหตุอื่น (บังคับล้อ ลักทรัพย์ ฯลฯ)', color: C.c5, values: rows.map(other) }], { aria: 'จำนวนเหตุการณ์รายเดือนแยกประเภท' });
-      $('capInc').textContent = 'ที่มา: รายงานเหตุการณ์ · อัปเดต ' + dLabel(inc.updated);
-    }
-    if (gate) {
-      var d = gate.daily.filter(function (r) { return inRange(r.date.slice(0, 7)); });
-      bars($('chGate'), d.map(function (r) { return { label: (+r.date.slice(8)) + ' ' + TH_M[+r.date.slice(5, 7) - 1], full: dLabel(r.date) }; }), [
-        { name: 'รถยนต์', color: C.c1, values: d.map(function (r) { return r.cars; }) },
-        { name: 'รถจักรยานยนต์', color: C.c3, values: d.map(function (r) { return r.motorcycles; }) }],
-        { line: { name: 'ผู้ไม่สวมหมวกนิรภัย (เส้น)', color: C.c2, values: d.map(function (r) { return r.noHelmet; }) }, aria: 'จำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัยรายวัน' });
-      $('capGate').textContent = 'ที่มา: จำนวนรถเข้า+หมวกนิรภัย · อัปเดต ' + dLabel(gate.updated) + ' · ไม่รวมข้อมูลทดสอบ 16–17 ก.ย.';
-    }
-    if (lf) {
-      var m = lf.monthly.filter(function (r) { return inRange(r.month); });
-      bars($('chLf'), m.map(function (r) { return { label: mLabel(r.month), full: mLabel(r.month) }; }), [
-        { name: 'สิ่งของสูญหาย', color: C.c4, values: m.map(function (r) { return r.byType['สิ่งของสูญหาย'] || 0; }) },
-        { name: 'พบสิ่งของ', color: C.c3, values: m.map(function (r) { return r.byType['พบสิ่งของ'] || 0; }) },
-        { name: 'รับของคืน', color: C.c1, values: m.map(function (r) { return r.byType['รับของคืน'] || 0; }) },
-        { name: 'ไม่ระบุประเภท', color: C.c5, values: m.map(function (r) { return r.byType['(ไม่ระบุประเภท)'] || 0; }) }], { aria: 'จำนวนรายการของหายรายเดือนแยกประเภท' });
-      $('capLf').textContent = 'ที่มา: แจ้งของหาย (รายการ พ.ศ. 2569) · อัปเดต ' + dLabel(lf.updated);
-    }
-  }
-
-
-  /* ---------- (ทางเลือก) Google Maps JavaScript API — ทำงานเมื่อใส่ googleMapsApiKey ใน config.js เท่านั้น ---------- */
-  var gmState = { loading: false, map: null, markers: [] };
-  function useGoogleMap() { return !!CFG.googleMapsApiKey && !window.__HUB_PREVIEW__; }
-  function renderGoogleMap(box, pts, b) {
-    if (!(window.google && google.maps)) {
-      if (!gmState.loading) {
-        gmState.loading = true;
-        window.__hubGmReady = function () { renderMap(); };
-        var sc = document.createElement('script');
-        sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(CFG.googleMapsApiKey) + '&callback=__hubGmReady';
-        sc.async = true; sc.onerror = function () { CFG.googleMapsApiKey = ''; showBanner('โหลด Google Maps ไม่สำเร็จ — แสดงแผนผังในหน้าแทน'); renderMap(); };
-        document.head.appendChild(sc);
+  /** แท่งแนวนอน — items: [{label, value, note, color}] ; max = ค่าสูงสุดของแกน */
+  function hbars(items, max, opt) {
+    opt = opt || {}; var box = el('div');
+    if (!items.length) { box.appendChild(el('div', { class: 'empty', text: 'ไม่มีข้อมูล' })); return box; }
+    var W = 560, rowH = 38, L = opt.labelW || 170, R = 96, T = 6, H = T + rowH * items.length + 18, pw = W - L - R;
+    var root = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': opt.aria || 'แผนภูมิแท่งแนวนอน' });
+    if (!opt.ticks) { var nt = niceTop(max, true); max = nt.top; } var ticks = opt.ticks || (function () { var a = []; for (var t0 = 0; t0 <= max + 1e-9; t0 += nt.step) a.push(t0); return a.length > 7 ? a.filter(function (_, i) { return i % 2 === 0; }) : a; })();
+    ticks.forEach(function (t) { var x = L + pw * t / max; root.appendChild(svg('line', { x1: x, x2: x, y1: T, y2: H - 18, stroke: '#e6eaf0' })); root.appendChild(svg('text', { x: x, y: H - 4, 'text-anchor': 'middle', 'font-size': 10, fill: '#5d6879', text: fmtTick(t) })); });
+    items.forEach(function (it, i) {
+      var y = T + rowH * i, has = it.value != null;
+      root.appendChild(svg('text', { x: L - 8, y: y + rowH / 2 + 4, 'text-anchor': 'end', 'font-size': 12, fill: '#152033', text: it.label }));
+      if (has) {
+        var r = svg('rect', { x: L, y: y + 9, width: Math.max(pw * it.value / max, 1), height: rowH - 18, rx: 4, fill: it.color || C.c1 });
+        r.appendChild(svg('title', { text: it.label + ': ' + (opt.dec != null ? it.value.toFixed(opt.dec) : num(it.value)) + (it.note ? ' (' + it.note + ')' : '') })); root.appendChild(r);
       }
-      box.appendChild(el('div', { class: 'empty', text: 'กำลังโหลด Google Maps…' })); return;
-    }
-    var div = el('div', { style: 'height:520px;border-radius:10px;border:1px solid #dfe4ec' }); box.appendChild(div);
-    var map = new google.maps.Map(div, { center: { lat: (b.latMin + b.latMax) / 2, lng: (b.lngMin + b.lngMax) / 2 }, zoom: 16, mapTypeControl: false, streetViewControl: false });
-    pts.forEach(function (p) {
-      var mk = new google.maps.Marker({ position: { lat: p.lat, lng: p.lng }, map: map, title: p.type + ' · ' + p.place + ' · ' + mLabel(p.month),
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: p.type === V ? C.c1 : C.c2, fillOpacity: .9, strokeColor: '#fff', strokeWeight: 1.5 } });
-      mk.addListener('click', function () { state.sel = p.i; renderMap(); });
+      root.appendChild(svg('text', { x: has ? L + pw * it.value / max + 6 : L + 4, y: y + rowH / 2 + 1, 'font-size': 12, 'font-weight': 700, fill: has ? '#152033' : '#a3271f', text: has ? (opt.dec != null ? it.value.toFixed(opt.dec) : num(it.value)) : 'ไม่มีคำถามด้านนี้' }));
+      if (it.note) root.appendChild(svg('text', { x: has ? L + pw * it.value / max + 6 : L + 4, y: y + rowH / 2 + 13, 'font-size': 10, fill: '#5d6879', text: it.note }));
     });
-  }
-
-  /* ---------- accident map ---------- */
-  function mapPoints() {
-    var am = mod('accidentMap'); if (!am) return [];
-    return am.points.map(function (p, i) { p.i = i; return p; }).filter(function (p) { return inRange(p.month) && (state.mapType === 'all' || p.type === state.mapType); });
-  }
-  function renderMap() {
-    var am = mod('accidentMap'), tools = $('mapTools'), box = $('mapSvg'), list = $('mapList');
-    tools.textContent = ''; box.textContent = ''; list.textContent = '';
-    if (!am) { box.appendChild(el('div', { class: 'empty', text: 'ยังเชื่อมต่อข้อมูลพิกัดไม่ได้' })); return; }
-    [['all', 'ทุกประเภท'], [V, 'ยานพาหนะ'], [G, 'ทั่วไป']].forEach(function (o) {
-      tools.appendChild(el('button', { type: 'button', class: 'chip', 'aria-pressed': String(state.mapType === o[0]), text: o[1], onclick: function () { state.mapType = o[0]; state.sel = -1; renderMap(); } }));
-    });
-    var pts = mapPoints(), b = am.box, W = 500, H = 640, pad = 18;
-    var px = function (lng) { return pad + (W - 2 * pad) * (lng - b.lngMin) / (b.lngMax - b.lngMin); }, py = function (lat) { return pad + (H - 2 * pad) * (b.latMax - lat) / (b.latMax - b.latMin); };
-    var root = svg('svg', { viewBox: '0 0 ' + W + ' ' + H }), i, useG = useGoogleMap();
-    for (i = 0; i <= 4; i++) {
-      root.appendChild(svg('line', { x1: pad + (W - 2 * pad) * i / 4, x2: pad + (W - 2 * pad) * i / 4, y1: pad, y2: H - pad, stroke: '#e1e6ee' }));
-      root.appendChild(svg('line', { y1: pad + (H - 2 * pad) * i / 4, y2: pad + (H - 2 * pad) * i / 4, x1: pad, x2: W - pad, stroke: '#e1e6ee' }));
-    }
-    var mPerDegLng = 111320 * Math.cos(13.795 * Math.PI / 180), sb = (W - 2 * pad) * (500 / mPerDegLng) / (b.lngMax - b.lngMin);
-    root.appendChild(svg('line', { x1: pad + 6, x2: pad + 6 + sb, y1: H - pad - 8, y2: H - pad - 8, stroke: '#152033', 'stroke-width': 2 }));
-    root.appendChild(svg('text', { x: pad + 6, y: H - pad - 14, 'font-size': 11, fill: '#152033', text: '500 ม.' }));
-    root.appendChild(svg('text', { x: W - pad - 6, y: pad + 16, 'font-size': 12, 'text-anchor': 'end', fill: '#152033', 'font-weight': 600, text: 'N ↑' }));
-    var shown = pts.filter(function (p) { return !p.outOfCampusBox; });
-    shown.forEach(function (p) {
-      var c = svg('circle', { cx: px(p.lng), cy: py(p.lat), r: 7, fill: p.type === V ? C.c1 : C.c2, 'fill-opacity': .85, tabindex: 0, role: 'button', 'aria-label': p.type + ' ' + p.place + ' ' + mLabel(p.month), class: p.i === state.sel ? 'sel' : '', onclick: function () { state.sel = p.i; renderMap(); }, onkeydown: function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); state.sel = p.i; renderMap(); } } });
-      c.appendChild(svg('title', { text: p.type + ' · ' + p.place + ' · ' + mLabel(p.month) })); root.appendChild(c);
-    });
-    if (useG) renderGoogleMap(box, pts, b); else box.appendChild(root);
-    box.appendChild(el('div', { class: 'legend' }, [el('span', {}, [el('i', { style: 'background:' + C.c1 }), V]), el('span', {}, [el('i', { style: 'background:' + C.c2 }), G])]));
-    $('mapNote').textContent = num(pts.length) + ' จุดในช่วง ' + rangeText() + ' · ที่มา: รายงานเหตุการณ์ · อัปเดต ' + dLabel(am.updated);
-    var det = $('mapDetail'), sel = am.points[state.sel], emb = $('mapEmbed'); det.textContent = ''; emb.textContent = ''; emb.hidden = true;
-    if (sel && pts.indexOf(sel) >= 0) {
-      det.appendChild(el('div', {}, [el('strong', { text: sel.place })]));
-      det.appendChild(el('div', { text: sel.type + ' · ' + mLabel(sel.month) + ' · พิกัด ' + sel.lat.toFixed(6) + ', ' + sel.lng.toFixed(6) + (sel.outOfCampusBox ? ' (อยู่นอกกรอบวิทยาเขต ควรตรวจสอบ)' : '') }));
-      det.appendChild(el('a', { class: 'btn', href: mapsUrl(sel), target: '_blank', rel: 'noopener', text: 'เปิดตำแหน่งนี้ใน Google Maps' }));
-      if (CFG.allowMapEmbed && !window.__HUB_PREVIEW__) { emb.hidden = false; emb.appendChild(el('iframe', { title: 'Google Maps: ' + sel.place, loading: 'lazy', referrerpolicy: 'no-referrer', src: 'https://www.google.com/maps?q=' + sel.lat + ',' + sel.lng + '&z=17&output=embed' })); }
-    } else det.appendChild(el('div', { text: 'เลือกจุดบนแผนผังหรือในตาราง เพื่อดูตำแหน่งและเปิดใน Google Maps' }));
-    list.appendChild(el('thead', {}, [el('tr', {}, [el('th', { text: 'เดือน' }), el('th', { text: 'ประเภท / สถานที่' }), el('th', { text: 'แผนที่' })])]));
-    var tb = el('tbody');
-    pts.slice().sort(function (a, c) { return a.month < c.month ? 1 : a.month > c.month ? -1 : 0; }).forEach(function (p) {
-      tb.appendChild(el('tr', { class: p.i === state.sel ? 'sel' : '' }, [
-        el('td', { text: mLabel(p.month) }),
-        el('td', {}, [el('span', { class: 'dot', style: 'background:' + (p.type === V ? C.c1 : C.c2) }), el('button', { type: 'button', class: 'btn-ghost', style: 'padding:1px 6px;border:0;background:none;text-align:left;cursor:pointer;font:inherit', text: p.place + (p.outOfCampusBox ? ' (นอกกรอบ)' : ''), onclick: function () { state.sel = p.i; renderMap(); } })]),
-        el('td', {}, [el('a', { href: mapsUrl(p), target: '_blank', rel: 'noopener', text: 'เปิด' })])]));
-    });
-    if (!pts.length) tb.appendChild(el('tr', {}, [el('td', { colspan: 3, class: 'empty', text: 'ไม่มีจุดในช่วงที่เลือก' })]));
-    list.appendChild(tb);
+    box.appendChild(root); return box;
   }
 
   /* ---------- system cards ---------- */
@@ -556,8 +523,8 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T16:40:0
       case 'borrow': return [[m.borrowRequests, 'คำขอยืมอุปกรณ์'], [m.returnByStatus['รอยืนยัน'], 'แจ้งคืน รอยืนยัน'], [m.golfCartBookings, 'จองรถกอล์ฟ'], [m.inventory.items, 'ชนิดอุปกรณ์']];
       case 'fire': return [[m.extinguishers, 'ถังในทะเบียน'], [m.extinguishersInspected, 'ถังที่ตรวจแล้ว'], [m.inspectionResult['ปกติ'], 'ผลตรวจปกติ (ครั้ง)'], [m.inspectionResult['ชำรุด'], 'ผลตรวจชำรุด (ครั้ง)']];
       case 'guardScan': return [[m.scans, 'การสแกน'], [m.byStatus['ไม่ปกติ'], 'ผลไม่ปกติ'], [m.scanPoints, 'จุดสแกน'], [Object.keys(m.byUnit).length, 'หน่วยงาน/โซน']];
-      case 'satisfactionCentral': return [[m.responses, 'ผู้ตอบ']].concat(Object.keys(m.avg).map(function (x) { return [m.avg[x].toFixed(2), x]; }));
-      case 'satisfactionUnit': return [[m.records, 'รายการบันทึก'], [m.respondents, 'ผู้ตอบรวม']].concat(Object.keys(m.avg).slice(0, 3).map(function (x) { return [m.avg[x].toFixed(2), x]; }));
+      case 'satisfactionCentral': return [[m.responses, 'คำตอบ']].concat(Object.keys(m.avg).slice(0, 3).map(function (x) { return [m.avg[x].toFixed(2), x]; }));
+      case 'satisfactionUnit': return [[m.respondents, 'ผู้ตอบรวม']].concat(Object.keys(m.avg).slice(0, 3).map(function (x) { return [m.avg[x].toFixed(2), x]; }));
       case 'graduationParking': return [[m.lots, 'ลานจอด'], [m.capacity, 'ความจุรวม (คัน)']].concat(m.days.map(function (d) { return [d.latestCount, dLabel(d.date).replace(/ \d{4}$/, '') + ' (' + d.occupancyPercent + '%)']; }));
       case 'vehicleRegistration': return Object.keys(m.rows).map(function (x) { return [m.rows[x], x]; });
       default: return [];
@@ -565,38 +532,451 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T16:40:0
   }
   function sysCard(s) {
     var m = s.stat ? mod(s.stat) : null, kids = [el('span', { class: 'pill s-' + s.status, text: STATUS[s.status] || s.status }), el('h3', { text: s.name }), el('p', { class: 'sys-desc', text: s.desc })];
-    var st = (s.stat && s.id !== 'veh-student') ? statsFor(s.stat) : (s.id === 'veh-student' ? statsFor(s.stat).slice(2) : []);
-    if (s.id === 'veh-staff') st = st.slice(0, 2);
-    if (st.length) kids.push(el('div', { class: 'stats' }, st.map(function (x) { return el('div', { class: 'stat' }, [el('b', { text: x[0] == null ? 'ไม่มีข้อมูลยืนยัน' : (typeof x[0] === 'number' ? num(x[0]) : x[0]) }), el('span', { text: x[1] })]); })));
-    else if (s.status === 'blocked' || s.status === 'unverified') kids.push(el('div', { class: 'stat' }, [el('b', { text: s.status === 'blocked' ? 'ยังเชื่อมต่อไม่ได้' : 'ไม่มีข้อมูลยืนยัน' }), el('span', { text: 'ยังไม่แสดงสถิติจนกว่าจะยืนยันแหล่งข้อมูลได้' })]));
-    if (m && (m.updated || m.source)) kids.push(el('div', { class: 'sys-meta', text: 'ที่มา: ' + (m.source || '-') + (m.updated ? ' · อัปเดตล่าสุด ' + dLabel(m.updated) : '') }));
-    if (m && m.definition) kids.push(el('div', { class: 'sys-meta', text: 'นิยาม: ' + m.definition }));
-    if (m && m.notes && m.notes.length) kids.push(el('ul', { class: 'notes' }, m.notes.map(function (n) { return el('li', { text: n }); })));
-    if (s.note) kids.push(el('ul', { class: 'notes plain' }, [el('li', { text: s.note })]));
-    if (s.links.length) kids.push(el('div', { class: 'btns' }, s.links.map(function (l, i) { return el('a', { class: 'btn' + (i ? ' sec' : ''), href: l.url, target: '_blank', rel: 'noopener' }, [l.label, l.verified ? null : el('small', { text: ' (ยังไม่ได้ยืนยันลิงก์)' })]); })));
-    else kids.push(el('div', { class: 'sys-meta', text: 'ไม่มีลิงก์สำหรับผู้ใช้ที่ยืนยันได้' }));
+    var st = s.stat ? statsFor(s.stat) : [];
+    if (s.id === 'veh-staff') st = st.slice(0, 2); if (s.id === 'veh-student') st = st.slice(2);
+    if (st.length) kids.push(el('div', { class: 'kpis', style: 'grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px' }, st.map(function (x) {
+      return el('div', { style: 'background:#f6f8fb;border:1px solid var(--line);border-radius:10px;padding:6px 10px' }, [el('b', { style: 'display:block;font-size:1.1rem;color:var(--navy);font-variant-numeric:tabular-nums', text: x[0] == null ? 'ไม่มีข้อมูลยืนยัน' : (typeof x[0] === 'number' ? num(x[0]) : x[0]) }), el('span', { style: 'font-size:.76rem;color:var(--muted)', text: x[1] })]); })));
+    else if (s.status === 'blocked' || s.status === 'unverified') kids.push(el('p', { class: 'kpi-na', text: s.status === 'blocked' ? 'ยังเชื่อมต่อไม่ได้' : 'ไม่มีข้อมูลยืนยัน' }));
+    if (m && (m.updated || m.source)) kids.push(el('p', { class: 'src', text: 'ที่มา: ' + (m.source || '-') + (m.updated ? ' · อัปเดตล่าสุด ' + dLabel(m.updated) : '') }));
+    if (s.note) kids.push(notesList([s.note]));
+    if (s.links.length) kids.push(el('div', { class: 'btns' }, s.links.map(function (l, i) { return el('a', { class: 'btn' + (i ? ' sec' : ''), href: l.url, target: '_blank', rel: 'noopener' }, [l.label, l.verified ? null : el('small', { text: '(ยังไม่ได้ยืนยันลิงก์)' }), ic('ext', 15)]); })));
+    else kids.push(el('p', { class: 'src', text: 'ไม่มีลิงก์สำหรับผู้ใช้ที่ยืนยันได้' }));
     return el('article', { class: 'card sys' }, kids);
   }
-  function renderCats() {
-    var box = $('cats'); box.textContent = '';
-    DATA.systems.categories.forEach(function (c) {
-      box.appendChild(el('section', { 'data-cat': c.id, id: 'cat-' + c.id, 'aria-label': c.name }, [
-        el('div', { class: 'sec-head' }, [el('h2', { text: c.name }), el('p', { class: 'sec-note', text: c.systems.length + ' ระบบ' })]),
-        el('div', { class: 'cat-grid' }, c.systems.map(sysCard))]));
+  function systemsSection(ids, title) {
+    var list = ids.map(function (id) { return SYS[id]; }).filter(Boolean);
+    return list.length ? section(title || 'ระบบและแบบฟอร์มที่เกี่ยวข้อง', { note: list.length + ' ระบบ' }, [el('div', { class: 'sys-grid' }, list.map(sysCard))]) : null;
+  }
+
+  /* ======================================================================
+   * หน้า Dashboard ภาพรวม
+   * ==================================================================== */
+  function latestMonthOf(list) { return list && list.length ? list[list.length - 1] : null; }
+  PAGES.dashboard = function (v) {
+    var rt = rangeText(), inc = mod('incidents'), gate = mod('gate'), lf = mod('lostfound'), cctv = mod('cctv'), gr = mod('graduationParking'), vr = mod('vehicleRegistration'),
+      gs = mod('guardScan'), sat = mod('guardSatisfaction'), fines = mod('guardFines'), fire = mod('fire');
+    v.appendChild(pageHead('ภาพรวมงานจราจรและความปลอดภัย', 'ตัวเลขสำคัญจากระบบที่ยืนยันแหล่งข้อมูลได้ · กดการ์ดหรือเมนูด้านซ้ายเพื่อดูรายละเอียด', rangeCtrl()));
+
+    var k1 = [];
+    if (inc) {
+      var t = function (n) { return sumMonthly(inc.monthly, function (r) { return r.byType[n]; }); }, total = sumMonthly(inc.monthly, function (r) { return sumObj(r.byType); });
+      k1.push({ icon: 'alert', label: 'เหตุการณ์ที่บันทึก', value: num(total), unit: 'เหตุ', sub: 'อุบัติเหตุยานพาหนะ ' + num(t(V)) + ' · ทั่วไป ' + num(t(G)) + ' · รับส่งผู้ป่วย ' + num(t(P)), updated: inc.updated, more: 'traffic' });
+      var bi = {}; inc.byType.forEach(function (r) { bi[r.type] = r.injuredOrIll; });
+      k1.push({ icon: 'users', label: 'ผู้บาดเจ็บ / ผู้ป่วย', value: num(inc.injuredTotal), unit: 'คน', sub: 'ยานพาหนะ ' + num(bi[V]) + ' · ทั่วไป ' + num(bi[G]) + ' · รับส่งผู้ป่วย ' + num(bi[P]), scope: 'ทั้งช่วงข้อมูล', updated: inc.updated, color: C.c2, more: 'traffic' });
+    }
+    if (gate) {
+      var cars = sumMonthly(gate.monthly, function (r) { return r.cars; }), mo = sumMonthly(gate.monthly, function (r) { return r.motorcycles; }), nh = sumMonthly(gate.monthly, function (r) { return r.noHelmet; }), days = sumMonthly(gate.monthly, function (r) { return r.days; });
+      if (days) {
+        k1.push({ icon: 'car', label: 'รถเข้ามหาวิทยาลัย (5 ประตู)', value: num(cars + mo), unit: 'คัน', sub: 'รถยนต์ ' + num(cars) + ' · รถจักรยานยนต์ ' + num(mo) + ' · ' + days + ' วันที่มีข้อมูล', updated: gate.updated, color: C.c3, more: 'gate' });
+        k1.push({ icon: 'helmet', label: 'ผู้ไม่สวมหมวกนิรภัย', value: num(nh), unit: 'ราย', sub: 'เท่ากับ ' + (100 * nh / mo).toFixed(1) + '% ของจำนวนรถจักรยานยนต์ที่นับได้', tag: 'มีวันที่ค่าผิดสังเกต ควรตรวจการกรอก', updated: gate.updated, color: C.c2, more: 'gate' });
+      } else k1.push({ icon: 'car', label: 'รถเข้ามหาวิทยาลัย / หมวกนิรภัย', na: 'ไม่มีข้อมูลในช่วงที่เลือก', scope: rt, color: C.c3, more: 'gate' });
+    }
+    v.appendChild(section('งานจราจรและแจ้งเหตุ', { note: 'ตามช่วงเดือนที่เลือก: ' + rt, more: 'traffic' }, [kpiGrid(k1)]));
+
+    var k2 = [];
+    if (lf) {
+      var lt = function (n) { return sumMonthly(lf.monthly, function (r) { return r.byType[n]; }); };
+      k2.push({ icon: 'search', label: 'ของหาย / เก็บของได้', value: num(lt('สิ่งของสูญหาย')), unit: 'แจ้งหาย', sub: 'เก็บของได้ ' + num(lt('พบสิ่งของ')) + ' · แบบฟอร์มรับของคืน ' + num(lt('รับของคืน')) + ' · สถานะรับคืนแล้วทั้งปี ' + num(lf.returned), updated: lf.updated, color: C.c4, more: 'lostfound' });
+    }
+    if (cctv) k2.push({ icon: 'camera', label: 'คำขอดูกล้องวงจรปิด', value: num(sumMonthly(cctv.monthly, function (r) { return r.count; })), unit: 'คำขอ', sub: 'ทั้งหมด ' + cctv.total + ' · ปิดเคส ' + cctv.byStatus['ปิดเคส'] + ' · พบภาพ ' + cctv.footage['พบภาพ'] + ' / ไม่พบ ' + cctv.footage['ไม่พบภาพ'], updated: cctv.updated, more: 'cctv' });
+    if (gr) { var best = gr.days.slice().sort(function (a, b) { return b.latestCount - a.latestCount; })[0];
+      k2.push({ icon: 'cap', label: 'รถในลานจอดช่วงงานปริญญา', value: num(best.latestCount), unit: 'คัน', sub: dLabel(best.date) + ' · ' + best.occupancyPercent + '% ของความจุ ' + num(gr.capacity) + ' คัน', scope: 'วันที่มากที่สุดจาก 3 วันงาน', updated: null, color: C.c3, more: 'graduation' }); }
+    if (vr) { var tot = 0; Object.keys(vr.rows).forEach(function (n) { if (vr.rows[n] != null) tot += vr.rows[n]; });
+      k2.push({ icon: 'car', label: 'รายการลงทะเบียนยานพาหนะ', value: num(tot), unit: 'รายการ', sub: 'บุคลากร ' + num(vr.rows['บุคลากร – รถยนต์'] + vr.rows['บุคลากร – รถจักรยานยนต์']) + ' · นักศึกษา (รถยนต์) ' + num(vr.rows['นักศึกษา – รถยนต์']), tag: 'ยังไม่รวมนักศึกษา–รถจักรยานยนต์', updated: vr.updated, color: C.c4, more: 'vehicle' }); }
+    v.appendChild(section('บริการ ยานพาหนะ และลานจอด', {}, [kpiGrid(k2)]));
+
+    var k3 = [];
+    if (sat) {
+      var lc = latestMonthOf(sat.central.monthly), lu = latestMonthOf(sat.unit.monthly);
+      if (lc) k3.push({ icon: 'star', label: 'ความพึงพอใจ รปภ.ส่วนกลาง', value: lc.overall.toFixed(2), unit: '/ 5', sub: mFull(lc.month) + ' (เดือนล่าสุด) · ' + num(lc.responses) + ' คำตอบ', updated: sat.central.updated, color: C.c5, more: 'guard-satisfaction' });
+      var uOct = sat.unit.monthly.slice().sort(function (a, b) { return b.respondents - a.respondents; })[0];
+      if (lu) k3.push({ icon: 'star', label: 'ความพึงพอใจ รปภ.ส่วนงาน', value: uOct.overall.toFixed(2), unit: '/ 5', sub: mFull(uOct.month) + ' · ' + num(uOct.respondents) + ' ผู้ตอบ · ' + uOct.byArea.length + ' พื้นที่ (ถ่วงน้ำหนัก)', tag: lu.month !== uOct.month ? mLabel(lu.month) + ' มีเพียง ' + lu.respondents + ' ผู้ตอบ' : null, tagTone: 'warn', updated: sat.unit.updated, color: C.c5, more: 'guard-satisfaction' });
+    }
+    if (fines) { var fc = sumMonthly(fines.monthly, function (r) { return r.cases; });
+      k3.push({ icon: 'coin', label: 'ค่าปรับ รปภ.', value: num(fc), unit: 'เคส', sub: num(fc * fines.amount.ratePerCase) + ' บาท (' + num(fines.amount.ratePerCase) + ' บาท/เคส ตามแบบรายงานเดิม)', tag: 'อัตรารอยืนยัน', updated: fines.updated, color: C.fine, more: 'guard-fines' }); }
+    if (gs) k3.push({ icon: 'scan', label: 'สแกนจุดตรวจ รปภ.เอกชน', value: num(gs.scans), unit: 'ครั้ง', sub: 'ไม่ปกติ ' + gs.byStatus['ไม่ปกติ'] + ' ครั้ง · ' + gs.scanPoints + ' จุด · ' + dLabel(gs.range.from).replace(/ 2569$/, '') + '–' + dLabel(gs.range.to).replace(/ 2569$/, ''), updated: gs.updated, color: C.c5, more: 'guard-scan' });
+    if (fire) k3.push({ icon: 'heart', label: 'ถังดับเพลิง', value: num(fire.extinguishers), unit: 'ถัง', sub: 'ตรวจแล้ว ' + fire.extinguishersInspected + ' ถัง · ผลชำรุด ' + fire.inspectionResult['ชำรุด'] + ' จาก ' + fire.inspections + ' ครั้ง', updated: fire.updated, color: C.c2, more: 'safety' });
+    v.appendChild(section('งาน รปภ. และความปลอดภัย', { more: 'guard-satisfaction' }, [kpiGrid(k3)]));
+
+    var ch = el('div', { class: 'grid2' });
+    if (inc) ch.appendChild(figure('เหตุการณ์รายเดือน แยกประเภท', 'ที่มา: รายงานเหตุการณ์ · อัปเดต ' + dLabel(inc.updated), incidentChart()));
+    if (gate) ch.appendChild(figure('รถเข้าและผู้ไม่สวมหมวกนิรภัย รายเดือน', 'ผลรวม 5 ประตู · ไม่รวมข้อมูลทดสอบ 16–17 ก.ย.', gateMonthChart()));
+    if (lf) ch.appendChild(figure('ของหาย / เก็บของได้ / รับของคืน', 'ที่มา: แจ้งของหาย (รายการ พ.ศ. 2569)', lfChart()));
+    if (sat) ch.appendChild(figure('ความพึงพอใจ รปภ.ส่วนกลาง รายเดือน', 'แท่ง = จำนวนคำตอบ · จุด = คะแนนเฉลี่ยรวม (แกนขวา 0–5)', satTrend('central')));
+    v.appendChild(section('แนวโน้ม', { note: 'ตามช่วงเดือนที่เลือก (ยกเว้นกราฟความพึงพอใจ)' }, [ch]));
+
+    var cnt = {}; DATA.systems.categories.forEach(function (c) { c.systems.forEach(function (s) { cnt[s.status] = (cnt[s.status] || 0) + 1; }); });
+    v.appendChild(section('สถานะการเชื่อมต่อข้อมูล', { more: 'systems' }, [el('div', { class: 'card status-strip' }, Object.keys(STATUS).filter(function (k) { return cnt[k]; }).map(function (k) {
+      return el('span', {}, [el('span', { class: 'pill s-' + k, text: STATUS[k] }), ' ', el('b', { text: cnt[k] }), ' ระบบ']); }))]));
+  };
+  function incidentChart() {
+    var inc = mod('incidents'), rows = inc.monthly.filter(function (r) { return inRange(r.month); });
+    var other = function (r) { return sumObj(r.byType) - (r.byType[V] || 0) - (r.byType[G] || 0) - (r.byType[P] || 0); };
+    return bars(rows.map(function (r) { return { label: mLabel(r.month), full: mFull(r.month) }; }), [
+      { name: V, color: C.c1, values: rows.map(function (r) { return r.byType[V] || 0; }) }, { name: G, color: C.c2, values: rows.map(function (r) { return r.byType[G] || 0; }) },
+      { name: P, color: C.c3, values: rows.map(function (r) { return r.byType[P] || 0; }) }, { name: 'เหตุอื่น (บังคับล้อ ลักทรัพย์ ปรับ รปภ. ฯลฯ)', color: C.c5, values: rows.map(other) }], { aria: 'จำนวนเหตุการณ์รายเดือน' });
+  }
+  function gateMonthChart() {
+    var rows = mod('gate').monthly.filter(function (r) { return inRange(r.month); });
+    return bars(rows.map(function (r) { return { label: mLabel(r.month) + ' (' + r.days + ' วัน)', full: mFull(r.month) }; }), [
+      { name: 'รถยนต์', color: C.c1, values: rows.map(function (r) { return r.cars; }) }, { name: 'รถจักรยานยนต์', color: C.c3, values: rows.map(function (r) { return r.motorcycles; }) }],
+      { line: { name: 'ผู้ไม่สวมหมวกนิรภัย (เส้น)', color: C.c2, values: rows.map(function (r) { return r.noHelmet; }) }, aria: 'รถเข้ารายเดือน' });
+  }
+  function gateDailyChart() {
+    var d = mod('gate').daily.filter(function (r) { return inRange(r.date.slice(0, 7)); });
+    return bars(d.map(function (r) { return { label: (+r.date.slice(8)) + ' ' + TH_M[+r.date.slice(5, 7) - 1], full: dLabel(r.date) }; }), [
+      { name: 'รถยนต์', color: C.c1, values: d.map(function (r) { return r.cars; }) }, { name: 'รถจักรยานยนต์', color: C.c3, values: d.map(function (r) { return r.motorcycles; }) }],
+      { line: { name: 'ผู้ไม่สวมหมวกนิรภัย (เส้น)', color: C.c2, values: d.map(function (r) { return r.noHelmet; }) }, aria: 'รถเข้ารายวัน', w: 1000, h: 300 });
+  }
+  function lfChart() {
+    var m = mod('lostfound').monthly.filter(function (r) { return inRange(r.month); });
+    return bars(m.map(function (r) { return { label: mLabel(r.month), full: mFull(r.month) }; }), [
+      { name: 'สิ่งของสูญหาย', color: C.c4, values: m.map(function (r) { return r.byType['สิ่งของสูญหาย'] || 0; }) }, { name: 'พบสิ่งของ', color: C.c3, values: m.map(function (r) { return r.byType['พบสิ่งของ'] || 0; }) },
+      { name: 'รับของคืน', color: C.c1, values: m.map(function (r) { return r.byType['รับของคืน'] || 0; }) }, { name: 'ไม่ระบุประเภท', color: C.c5, values: m.map(function (r) { return r.byType['(ไม่ระบุประเภท)'] || 0; }) }], { aria: 'ของหายรายเดือน' });
+  }
+  function satTrend(src) {
+    var s = mod('guardSatisfaction')[src], rows = s.monthly;
+    return bars(rows.map(function (r) { return { label: mLabel(r.month), full: mFull(r.month) }; }),
+      [{ name: 'จำนวน' + s.unitOfN.split(' ')[0], color: '#c9d4e6', values: rows.map(function (r) { return src === 'central' ? r.responses : r.respondents; }) }],
+      { line2: { name: 'คะแนนเฉลี่ยรวม', color: C.c1, max: 5, values: rows.map(function (r) { return r.overall; }) }, aria: 'แนวโน้มความพึงพอใจรายเดือน', h: 230 });
+  }
+
+  /* ======================================================================
+   * หน้า Dashboard ตรวจรับงาน รปภ. — ความพึงพอใจ (+ ส่วนค่าปรับแยก)
+   * ==================================================================== */
+  PAGES['guard-satisfaction'] = function (v) {
+    var sat = mod('guardSatisfaction');
+    if (!sat) { v.appendChild(pageHead('Dashboard ตรวจรับงาน รปภ.')); v.appendChild(el('div', { class: 'card box' }, [el('p', { class: 'kpi-na', text: 'ยังเชื่อมต่อไม่ได้' })])); return; }
+    var src = sat[state.satSrc], months = src.monthly.map(function (r) { return r.month; });
+    if (months.indexOf(state.satMonth) < 0) state.satMonth = months[months.length - 1];
+    var years = []; months.forEach(function (m) { if (years.indexOf(m.slice(0, 4)) < 0) years.push(m.slice(0, 4)); });
+    var ySel = el('select', { 'aria-label': 'ปี พ.ศ.' }), mSel = el('select', { 'aria-label': 'เดือน' });
+    years.forEach(function (y) { ySel.appendChild(el('option', { value: y, text: 'พ.ศ. ' + (+y + 543) })); });
+    ySel.value = state.satMonth.slice(0, 4);
+    months.filter(function (m) { return m.slice(0, 4) === ySel.value; }).forEach(function (m) { mSel.appendChild(el('option', { value: m, text: TH_MF[+m.slice(5) - 1] })); });
+    mSel.value = state.satMonth;
+    ySel.onchange = function () { state.satMonth = months.filter(function (m) { return m.slice(0, 4) === ySel.value; }).pop(); route(true); };
+    mSel.onchange = function () { state.satMonth = mSel.value; route(true); };
+    var seg = el('div', { class: 'seg', role: 'group', 'aria-label': 'เลือกแบบประเมิน' }, [['central', 'รปภ.ส่วนกลาง'], ['unit', 'รปภ.ส่วนงาน']].map(function (o) {
+      return el('button', { type: 'button', 'aria-pressed': String(state.satSrc === o[0]), text: o[1], onclick: function () { state.satSrc = o[0]; state.satMonth = null; route(true); } }); }));
+    v.appendChild(pageHead('Dashboard ตรวจรับงาน รปภ.เอกชน', 'สรุปผลแบบประเมินความพึงพอใจรายเดือน และสถิติค่าปรับ รปภ. สำหรับการประชุมตรวจรับ', el('div', { class: 'ctrls' }, [seg, ic('calendar'), ySel, mSel])));
+
+    var cur = src.monthly.filter(function (r) { return r.month === state.satMonth; })[0], isC = state.satSrc === 'central';
+    var nOf = function (r) { return isC ? r.responses : r.respondents; };
+    var ranked = cur.topics.filter(function (t) { return t.avg != null; }).slice().sort(function (a, b) { return b.avg - a.avg; });
+    var prev = src.monthly[src.monthly.indexOf(cur) - 1];
+    var k = [
+      { icon: 'star', label: 'คะแนนเฉลี่ยรวม', value: cur.overall.toFixed(2), unit: '/ 5', sub: prev ? 'เดือนก่อน (' + mLabel(prev.month) + ') ' + prev.overall.toFixed(2) + ' · ' + (cur.overall - prev.overall >= 0 ? '+' : '') + (cur.overall - prev.overall).toFixed(2) : 'ยังไม่มีเดือนก่อนหน้าให้เปรียบเทียบ', scope: src.name + ' · ' + mFull(cur.month), color: C.c1 },
+      { icon: 'users', label: isC ? 'จำนวนคำตอบ (N)' : 'จำนวนผู้ตอบ (N)', value: num(nOf(cur)), unit: isC ? 'คำตอบ' : 'คน', sub: isC ? 'ช่วงวันที่ ' + dLabel(cur.dateRange.from).replace(/ \d{4}$/, '') + ' – ' + dLabel(cur.dateRange.to) : 'จาก ' + cur.records + ' รายการบันทึก · ' + cur.byArea.length + ' พื้นที่', scope: isC ? '1 คำตอบ = ผู้ใช้บริการ 1 คน/ครั้ง' : 'ตามจำนวนที่ส่วนงานกรอก', color: C.c3, tag: nOf(cur) < 30 ? 'N น้อย (' + nOf(cur) + ') ควรระวังการตีความ' : null },
+      { icon: 'star', label: 'ด้านที่คะแนนสูงสุด', value: ranked[0].avg.toFixed(2), unit: '/ 5', sub: ranked[0].name + ' (N = ' + num(ranked[0].n) + ')', color: C.c3 },
+      { icon: 'alert', label: 'ด้านที่คะแนนต่ำสุด', value: ranked[ranked.length - 1].avg.toFixed(2), unit: '/ 5', sub: ranked[ranked.length - 1].name + ' (N = ' + num(ranked[ranked.length - 1].n) + ')', color: C.c2 }];
+    v.appendChild(section('ผลประเมินความพึงพอใจ — ' + src.name + ' ' + mFull(cur.month), { note: 'สเกล ' + src.scale }, [kpiGrid(k)]));
+
+    var g = el('div', { class: 'grid2' });
+    g.appendChild(figure('คะแนนเฉลี่ยแยกตามด้าน', mFull(cur.month) + ' · N = จำนวน' + src.unitOfN.split(' ')[0] + 'ที่ใช้คำนวณแต่ละด้าน', hbars(cur.topics.map(function (t, i) {
+      return { label: t.name, value: t.avg, note: t.avg != null ? 'N = ' + num(t.n) : null, color: [C.c1, C.c3, C.c4, C.c2, C.c5][i] }; }), 5, { dec: 2, ticks: [0, 1, 2, 3, 4, 5], aria: 'คะแนนรายด้าน' })));
+    g.appendChild(figure('แนวโน้มรายเดือน — ' + src.name, 'แท่ง = จำนวน' + src.unitOfN.split(' ')[0] + ' (แกนซ้าย) · จุด = คะแนนเฉลี่ยรวม (แกนขวา 0–5)', satTrend(state.satSrc)));
+    v.appendChild(el('div', { class: 'sec' }, [g]));
+
+    if (isC) {
+      var dist = cur.scoreDistribution, totalAns = sumObj(dist), hi = (dist['4'] || 0) + (dist['5'] || 0), lo = (dist['1'] || 0) + (dist['2'] || 0);
+      v.appendChild(section('การกระจายคะแนนทุกข้อ — ' + mFull(cur.month), { note: num(totalAns) + ' คะแนน = ' + num(cur.responses) + ' คำตอบ × 5 ด้าน' }, [el('div', { class: 'grid2' }, [
+        figure('จำนวนครั้งที่ให้แต่ละคะแนน', 'นับทุกข้อทุกด้านรวมกัน', hbars(['5', '4', '3', '2', '1'].map(function (s) {
+          return { label: s + ' คะแนน' + (s === '5' ? ' (ดีมาก)' : s === '1' ? ' (ปรับปรุง)' : ''), value: dist[s] || 0, note: ((dist[s] || 0) / totalAns * 100).toFixed(1) + '%', color: +s >= 4 ? C.c3 : +s === 3 ? C.c5 : C.c2 }; }),
+          Math.max.apply(null, Object.keys(dist).map(function (k2) { return dist[k2]; })), { labelW: 130, aria: 'การกระจายคะแนน' })),
+        kpiGrid([{ icon: 'star', label: 'สัดส่วนคะแนน 4–5', value: (100 * hi / totalAns).toFixed(1), unit: '%', sub: num(hi) + ' จาก ' + num(totalAns) + ' คะแนน', color: C.c3 },
+                 { icon: 'alert', label: 'คะแนน 1–2 (ควรติดตาม)', value: num(lo), unit: 'ครั้ง', sub: (100 * lo / totalAns).toFixed(1) + '% ของคะแนนทั้งหมด', color: C.c2 }])])]));
+    } else {
+      v.appendChild(section('แยกตามพื้นที่รับผิดชอบ — ' + mFull(cur.month), { note: 'คะแนนเป็นค่าที่ส่วนงานสรุปมา · “–” = พื้นที่นั้นไม่มีคำถามด้านนี้' }, [table(['พื้นที่', 'รายการ', 'ผู้ตอบ', 'คะแนนรวม'].concat(src.topics),
+        cur.byArea.map(function (a) { return [a.area, a.records, num(a.respondents), a.overall.toFixed(2)].concat(a.topics.map(function (x) { return x == null ? '–' : x.toFixed(2); })); }),
+        { num: [1, 2, 3, 4, 5, 6, 7, 8], foot: ['รวม (ถ่วงน้ำหนัก)', cur.records, num(cur.respondents), cur.overall.toFixed(2)].concat(cur.topics.map(function (t) { return t.avg == null ? '–' : t.avg.toFixed(2); })) })]));
+    }
+    var monthsTbl = table(['เดือน', isC ? 'คำตอบ (N)' : 'ผู้ตอบ (N)'].concat(isC ? [] : ['รายการ']).concat(['คะแนนรวม']).concat(src.topics),
+      src.monthly.map(function (r) { return [mFull(r.month), num(nOf(r))].concat(isC ? [] : [r.records]).concat([r.overall.toFixed(2)]).concat(r.topics.map(function (t) { return t.avg == null ? '–' : t.avg.toFixed(2) + ' (' + num(t.n) + ')'; })); }),
+      { num: isC ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6, 7, 8] });
+    v.appendChild(section('ตารางสรุปรายเดือน — ' + src.name, { note: 'ตัวเลขในวงเล็บ = N ของด้านนั้น' }, [monthsTbl]));
+
+    var qExtra = null;
+    if (!isC) {
+      qExtra = el('details', { class: 'box', style: 'padding:8px 0 0' }, [el('summary', { text: 'คำถามของแต่ละพื้นที่ และด้านที่ใช้คำนวณ (จากแบบฟอร์ม NPsecurity-feedback)' })]);
+      var cat = { C1: src.topics[0], C2: src.topics[1], C3: src.topics[2], C4: src.topics[3], C5: src.topics[4], 'C4+C5': src.topics[3] + ' + ' + src.topics[4] };
+      Object.keys(src.questionsByArea).forEach(function (area) {
+        qExtra.appendChild(el('p', { style: 'margin:10px 0 4px;font-weight:600', text: area + ' (' + src.questionsByArea[area].length + ' ข้อ)' }));
+        qExtra.appendChild(el('ol', { class: 'notes', style: 'color:var(--ink)' }, src.questionsByArea[area].map(function (q) { return el('li', { text: q[0] + ' → ' + cat[q[1]] }); })));
+      });
+    }
+    v.appendChild(section('วิธีคำนวณและข้อสังเกต', {}, [el('div', { class: 'grid2' }, [
+      infoBox(src.name + ' — ' + src.form, src, qExtra),
+      el('div', { class: 'card box' }, [el('h3', { text: 'การเปรียบเทียบสองระบบ' }), el('p', { class: 'def', text: sat.comparability }),
+        el('p', { class: 'src', text: 'คำนวณจากข้อมูลต้นทางเมื่อ ' + dLabel(sat.computedAt) + ' · ไม่ใช้ตัวเลขจากภาพตัวอย่างหรือสรุปเดิม' })])])]));
+
+    /* ---- ส่วนค่าปรับ (แยกจากคะแนนความพึงพอใจ) ---- */
+    var fines = mod('guardFines');
+    v.appendChild(el('div', { class: 'divider', role: 'heading', 'aria-level': '2' }, [ic('coin'), 'ค่าปรับ รปภ. — ข้อมูลแยกจากผลประเมิน']));
+    if (!fines) { v.appendChild(el('p', { class: 'kpi-na', text: 'ยังเชื่อมต่อไม่ได้' })); return; }
+    var fm = fines.monthly.filter(function (r) { return r.month === state.satMonth; })[0];
+    v.appendChild(el('div', { class: 'sec' }, [kpiGrid([
+      fm ? { icon: 'coin', label: 'เคสค่าปรับ ' + mFull(state.satMonth), value: num(fm.cases), unit: 'เคส', sub: fm.cases ? Object.keys(fm.byUnit).map(function (u) { return u + ' ' + fm.byUnit[u]; }).join(' · ') : 'ไม่มีรายการ “ปรับ รปภ.” ในเดือนนี้', updated: fines.updated, color: C.fine, more: 'guard-fines' }
+         : { icon: 'coin', label: 'เคสค่าปรับ ' + mFull(state.satMonth), na: 'ไม่มีข้อมูลรายงานเหตุการณ์ของเดือนนี้', color: C.fine, more: 'guard-fines' },
+      { icon: 'coin', label: 'ยอดค่าปรับ ' + mFull(state.satMonth), value: fm ? num(fm.amountByRate) : '–', unit: 'บาท', sub: 'คำนวณ ' + (fm ? fm.cases : 0) + ' เคส × ' + num(fines.amount.ratePerCase) + ' บาท', tag: 'Sheet ไม่มีช่องยอดเงิน · อัตรารอยืนยัน', color: C.fine, more: 'guard-fines' },
+      { icon: 'calendar', label: 'เคสค่าปรับทั้งช่วงข้อมูล', value: num(fines.totalCases), unit: 'เคส', sub: dLabel(fines.range.from).replace(/ \d{4}$/, '') + ' – ' + dLabel(fines.range.to), updated: fines.updated, color: C.fine, more: 'guard-fines' }])]));
+  };
+
+  /* ======================================================================
+   * หน้า สรุปค่าปรับ รปภ.
+   * ==================================================================== */
+  PAGES['guard-fines'] = function (v) {
+    var f = mod('guardFines');
+    v.appendChild(pageHead('สรุปค่าปรับ รปภ. / การตรวจรับ', 'นับเฉพาะรายการประเภท “ปรับ รปภ.” จากแท็บรายงานเหตุการณ์ แยกตามเดือนที่เกิดเหตุ'));
+    if (!f) { v.appendChild(el('p', { class: 'kpi-na', text: 'ยังเชื่อมต่อไม่ได้' })); return; }
+    var units = {}; f.monthly.forEach(function (r) { Object.keys(r.byUnit).forEach(function (u) { units[u] = (units[u] || 0) + r.byUnit[u]; }); });
+    v.appendChild(kpiGrid([
+      { icon: 'coin', label: 'เคสค่าปรับรวม', value: num(f.totalCases), unit: 'เคส', scope: dLabel(f.range.from) + ' – ' + dLabel(f.range.to), updated: f.updated, color: C.fine },
+      { icon: 'coin', label: 'ยอดค่าปรับรวม (ตามอัตราแบบรายงานเดิม)', value: num(f.amount.total), unit: 'บาท', sub: f.totalCases + ' เคส × ' + num(f.amount.ratePerCase) + ' บาท', tag: 'อัตรารอยืนยันตามสัญญาจ้าง', color: C.fine },
+      { icon: 'calendar', label: 'เดือนที่มีข้อมูล', value: num(f.monthly.length), unit: 'เดือน', sub: 'เดือนที่มีค่าปรับ ' + f.monthly.filter(function (r) { return r.cases; }).length + ' เดือน', color: C.c5 },
+      { icon: 'shield', label: 'หน่วยงานที่ถูกปรับ', value: num(Object.keys(units).length), unit: 'หน่วย', sub: Object.keys(units).map(function (u) { return u + ' ' + units[u] + ' เคส'; }).join(' · ') || '–', color: C.c5 }]));
+    var g = el('div', { class: 'grid2' });
+    var cols = f.monthly.map(function (r) { return { label: mLabel(r.month), full: mFull(r.month) }; });
+    g.appendChild(figure('จำนวนเคสค่าปรับรายเดือน', 'ที่มา: รายงานเหตุการณ์ (ประเภท “ปรับ รปภ.”)', bars(cols, [{ name: 'เคสค่าปรับ', color: C.fine, values: f.monthly.map(function (r) { return r.cases; }) }], { aria: 'เคสค่าปรับรายเดือน', h: 220, int: true })));
+    g.appendChild(figure('ยอดค่าปรับรายเดือน (บาท)', 'คำนวณจากจำนวนเคส × ' + num(f.amount.ratePerCase) + ' บาท', bars(cols, [{ name: 'ยอดค่าปรับ (บาท)', color: '#d98c7d', values: f.monthly.map(function (r) { return r.amountByRate; }) }], { aria: 'ยอดค่าปรับรายเดือน', h: 220 })));
+    v.appendChild(el('div', { class: 'sec' }, [g]));
+    v.appendChild(section('ตารางรายเดือน', {}, [table(['เดือน', 'เคสค่าปรับ', 'ยอดค่าปรับ (บาท)', 'หน่วยงาน'], f.monthly.map(function (r) {
+      return [mFull(r.month), num(r.cases), num(r.amountByRate), Object.keys(r.byUnit).map(function (u) { return u + ' ' + r.byUnit[u]; }).join(', ') || '–']; }),
+      { num: [1, 2], foot: ['รวม', num(f.totalCases), num(f.amount.total), ''] })]));
+    v.appendChild(section('นิยามและข้อจำกัด', {}, [infoBox('ค่าปรับ รปภ.', f, el('p', { class: 'src', text: 'แหล่งอัตรา: ' + f.amount.rateSource }))]));
+    v.appendChild(systemsSection(['pdf-guard-monthly', 'incident-report']));
+  };
+
+  /* ======================================================================
+   * หน้ารายละเอียดหมวดอื่น
+   * ==================================================================== */
+  PAGES.traffic = function (v) {
+    var inc = mod('incidents');
+    v.appendChild(pageHead('สถิติแจ้งเหตุและอุบัติเหตุ', 'เหตุการณ์ที่เจ้าหน้าที่บันทึกในระบบรายงานเหตุการณ์ แยกประเภทและเดือนที่เกิดเหตุ', rangeCtrl()));
+    if (inc) {
+      var tot = sumMonthly(inc.monthly, function (r) { return sumObj(r.byType); }), t = function (n) { return sumMonthly(inc.monthly, function (r) { return r.byType[n]; }); };
+      v.appendChild(kpiGrid([
+        { icon: 'alert', label: 'เหตุการณ์ทั้งหมด', value: num(tot), unit: 'เหตุ', scope: rangeText(), updated: inc.updated },
+        { icon: 'car', label: V, value: num(t(V)), unit: 'เหตุ', scope: rangeText(), color: C.c1 },
+        { icon: 'alert', label: G, value: num(t(G)), unit: 'เหตุ', scope: rangeText(), color: C.c2 },
+        { icon: 'heart', label: P, value: num(t(P)), unit: 'ครั้ง', scope: rangeText(), color: C.c3 }]));
+      var g = el('div', { class: 'grid2' });
+      g.appendChild(figure('เหตุการณ์รายเดือน แยกประเภท', 'ที่มา: รายงานเหตุการณ์ · อัปเดต ' + dLabel(inc.updated), incidentChart()));
+      g.appendChild(figure('สรุปตามประเภท (ทั้งช่วงข้อมูล)', dLabel(inc.range.from) + ' – ' + dLabel(inc.range.to), table(['ประเภทเหตุการณ์', 'จำนวนเหตุ', 'ผู้บาดเจ็บ/ป่วย (คน)'], inc.byType.map(function (r) { return [r.type, num(r.count), num(r.injuredOrIll)]; }), { num: [1, 2], foot: ['รวม', num(inc.total), num(inc.injuredTotal)] })));
+      v.appendChild(el('div', { class: 'sec' }, [g]));
+      v.appendChild(section('นิยามและที่มา', { more: 'accident-map' }, [infoBox('รายงานเหตุการณ์', inc)]));
+    }
+    v.appendChild(systemsSection(['incident-report', 'dashboard-ai', 'event-incident']));
+  };
+  PAGES.gate = function (v) {
+    var gate = mod('gate');
+    v.appendChild(pageHead('รถเข้ามหาวิทยาลัยและผู้ไม่สวมหมวกนิรภัย', 'จำนวนที่เจ้าหน้าที่นับที่ประตู 1, 3, 4, 5, 6 รายวัน', rangeCtrl()));
+    if (gate) {
+      var cars = sumMonthly(gate.monthly, function (r) { return r.cars; }), mo = sumMonthly(gate.monthly, function (r) { return r.motorcycles; }), nh = sumMonthly(gate.monthly, function (r) { return r.noHelmet; }), days = sumMonthly(gate.monthly, function (r) { return r.days; });
+      v.appendChild(kpiGrid(days ? [
+        { icon: 'car', label: 'รถยนต์', value: num(cars), unit: 'คัน', scope: rangeText() + ' · ' + days + ' วัน', updated: gate.updated },
+        { icon: 'car', label: 'รถจักรยานยนต์', value: num(mo), unit: 'คัน', scope: rangeText(), color: C.c3 },
+        { icon: 'helmet', label: 'ผู้ไม่สวมหมวกนิรภัย', value: num(nh), unit: 'ราย', sub: (100 * nh / mo).toFixed(1) + '% ของรถจักรยานยนต์ที่นับได้', color: C.c2, tag: 'มีวันที่ค่าผิดสังเกต' },
+        { icon: 'calendar', label: 'เฉลี่ยต่อวัน', value: num(Math.round((cars + mo) / days)), unit: 'คัน/วัน', sub: 'รถยนต์ + รถจักรยานยนต์', color: C.c5 }] : [{ label: 'รถเข้ามหาวิทยาลัย', na: 'ไม่มีข้อมูลในช่วงที่เลือก' }]));
+      v.appendChild(el('div', { class: 'sec' }, [figure('รายวัน', 'ที่มา: จำนวนรถเข้า+หมวกนิรภัย · อัปเดต ' + dLabel(gate.updated), gateDailyChart())]));
+      v.appendChild(section('สรุปรายเดือน', {}, [table(['เดือน', 'วันที่มีข้อมูล', 'รถยนต์', 'รถจักรยานยนต์', 'ไม่สวมหมวก', '% ไม่สวมหมวก'], gate.monthly.map(function (r) { return [mFull(r.month), r.days, num(r.cars), num(r.motorcycles), num(r.noHelmet), (100 * r.noHelmet / r.motorcycles).toFixed(1) + '%']; }), { num: [1, 2, 3, 4, 5] })]));
+      v.appendChild(section('นิยามและข้อสังเกต', {}, [infoBox('จำนวนรถเข้า + หมวกนิรภัย', gate)]));
+    }
+    v.appendChild(systemsSection(['gate-tracker', 'helmet-quiz']));
+  };
+  PAGES['accident-map'] = function (v) {
+    v.appendChild(pageHead('แผนที่จุดเกิดอุบัติเหตุ', 'พิกัดจริงจากรายงานเหตุการณ์ เฉพาะอุบัติเหตุจากยานพาหนะและอุบัติเหตุทั่วไป ไม่แสดงเวลาและข้อมูลบุคคล', rangeCtrl()));
+    v.appendChild(el('p', { class: 'src', id: 'mapNote' }));
+    v.appendChild(el('div', { class: 'card mapcard', style: 'margin-top:8px' }, [
+      el('div', { class: 'map-left' }, [el('div', { class: 'map-tools', id: 'mapTools' }), el('div', { id: 'mapSvg', class: 'map-svg', role: 'img', 'aria-label': 'แผนผังจุดเกิดอุบัติเหตุภายในวิทยาเขตศาลายา' }), el('p', { class: 'map-cap', text: 'แผนผังตามพิกัดจริง (ทิศเหนืออยู่ด้านบน) — กดจุดเพื่อดูตำแหน่งและเปิดใน Google Maps' })]),
+      el('div', { class: 'map-right' }, [el('div', { id: 'mapDetail', class: 'map-detail' }), el('div', { id: 'mapEmbed', class: 'map-embed', hidden: 'hidden' }), el('div', { class: 'map-list-wrap' }, [el('table', { class: 'tbl', id: 'mapList' })])])]));
+    var am = mod('accidentMap'); if (am) v.appendChild(section('ข้อสังเกต', {}, [infoBox('พิกัดอุบัติเหตุ', am)]));
+    renderMap();
+  };
+  PAGES.cctv = function (v) {
+    var m = mod('cctv');
+    v.appendChild(pageHead('กล้องวงจรปิด (CCTV)', 'คำขอดูภาพกล้องวงจรปิดและผลการให้บริการ', rangeCtrl()));
+    if (m) {
+      v.appendChild(kpiGrid([
+        { icon: 'camera', label: 'คำขอในช่วงที่เลือก', value: num(sumMonthly(m.monthly, function (r) { return r.count; })), unit: 'คำขอ', scope: rangeText(), updated: m.updated },
+        { icon: 'shield', label: 'ปิดเคสแล้ว', value: num(m.byStatus['ปิดเคส']), unit: 'จาก ' + m.total, sub: 'ทุกช่วงข้อมูล', color: C.c3 },
+        { icon: 'search', label: 'พบภาพ / ไม่พบภาพ', value: m.footage['พบภาพ'] + ' / ' + m.footage['ไม่พบภาพ'], unit: 'คำขอ', sub: 'ไม่ได้ระบุผล ' + m.footage['ไม่ได้ระบุ'] + ' คำขอ', color: C.c4 },
+        { icon: 'users', label: 'ผู้ขอ', value: num(m.byRequester['นักศึกษา']), unit: 'นักศึกษา', sub: 'บุคลากร ' + m.byRequester['บุคลากร'] + ' · บุคคลทั่วไป ' + m.byRequester['บุคคลทั่วไป'], color: C.c5 }]));
+      var g = el('div', { class: 'grid2' });
+      var rows = m.monthly.filter(function (r) { return inRange(r.month); });
+      g.appendChild(figure('คำขอรายเดือน', 'ที่มา: CCTV_Requests · อัปเดต ' + dLabel(m.updated), bars(rows.map(function (r) { return { label: mLabel(r.month), full: mFull(r.month) }; }), [{ name: 'คำขอ', color: C.c1, values: rows.map(function (r) { return r.count; }) }], { h: 220, int: true })));
+      g.appendChild(figure('คำขอแยกหน่วยงาน', 'รุ่นแยกหน่วยงาน MLC / LA / PMH ยังไม่เปิดใช้ (branch cctv-multi-unit)', hbars(Object.keys(m.byUnit).map(function (u) { return { label: u, value: m.byUnit[u], color: C.c1 }; }), Math.max(1, m.total), { labelW: 180 })));
+      v.appendChild(el('div', { class: 'sec' }, [g]));
+      v.appendChild(section('ข้อสังเกต', {}, [infoBox('คำขอดูกล้องวงจรปิด', m)]));
+    }
+    v.appendChild(systemsSection(['cctv']));
+  };
+  PAGES.vehicle = function (v) {
+    var vr = mod('vehicleRegistration'), rt = mod('ruenthai');
+    v.appendChild(pageHead('ยานพาหนะและลานจอดรถ', 'การลงทะเบียนยานพาหนะบุคลากร/นักศึกษา และแบบสำรวจลานจอดรถเรือนไทย'));
+    if (vr) v.appendChild(kpiGrid(Object.keys(vr.rows).map(function (n, i) { return vr.rows[n] == null ? { icon: 'car', label: n, na: 'ไม่มีข้อมูลยืนยัน', color: C.c5 } : { icon: 'car', label: n, value: num(vr.rows[n]), unit: 'รายการ', updated: vr.updated, color: [C.c1, C.c3, C.c4, C.c5][i] }; })));
+    v.appendChild(section('ที่มาและข้อจำกัด', {}, [el('div', { class: 'grid2' }, [infoBox('ลงทะเบียนยานพาหนะ', vr), rt ? infoBox('ลานจอดรถเรือนไทย — ยังเชื่อมต่อไม่ได้', rt) : null])]));
+    v.appendChild(systemsSection(['veh-staff', 'veh-student', 'ruenthai']));
+  };
+  PAGES.graduation = function (v) {
+    var gr = mod('graduationParking'), gps = mod('graduationGuardGps');
+    v.appendChild(pageHead('งานปริญญา', 'ลานจอดรถและงาน รปภ. ช่วงพิธีพระราชทานปริญญาบัตร ปีการศึกษา 2568'));
+    if (gr) {
+      v.appendChild(kpiGrid(gr.days.map(function (d, i) { return { icon: 'cap', label: 'รถในลานจอด ' + dLabel(d.date), value: num(d.latestCount), unit: 'คัน', sub: d.occupancyPercent + '% ของความจุ ' + num(d.capacity) + ' คัน (' + d.lots + ' ลาน)', updated: gr.updated, color: [C.c1, C.c3, C.c4][i] }; })));
+      v.appendChild(el('div', { class: 'sec' }, [figure('อัตราการใช้ลานจอดรวม', 'ที่มา: SUMMARY_2569 · จำนวนรถล่าสุดที่บันทึกของแต่ละลาน', hbars(gr.days.map(function (d) { return { label: dLabel(d.date), value: d.occupancyPercent, note: num(d.latestCount) + ' / ' + num(d.capacity) + ' คัน', color: C.c3 }; }), 100, { ticks: [0, 25, 50, 75, 100], labelW: 120 }))]));
+    }
+    v.appendChild(section('นิยามและสถานะ', {}, [el('div', { class: 'grid2' }, [infoBox('ลานจอดงานปริญญา', gr), gps ? infoBox('รายงาน รปภ. งานปริญญา (GPS) — ยังเชื่อมต่อไม่ได้', gps) : null])]));
+    v.appendChild(systemsSection(['grad-parking', 'grad-guard-report']));
+  };
+  PAGES['guard-scan'] = function (v) {
+    var gs = mod('guardScan');
+    v.appendChild(pageHead('รายงานการปฏิบัติงานและการสแกนจุด', 'การสแกนจุดตรวจของ รปภ.เอกชน แยกหน่วยงาน/โซน (ไม่แสดงชื่อ รปภ.)'));
+    if (gs) {
+      v.appendChild(kpiGrid([
+        { icon: 'scan', label: 'การสแกนทั้งหมด', value: num(gs.scans), unit: 'ครั้ง', scope: dLabel(gs.range.from) + ' – ' + dLabel(gs.range.to), updated: gs.updated },
+        { icon: 'alert', label: 'ผลไม่ปกติ', value: num(gs.byStatus['ไม่ปกติ']), unit: 'ครั้ง', sub: 'ปกติ ' + num(gs.byStatus['ปกติ']) + ' ครั้ง', color: C.c2 },
+        { icon: 'map', label: 'จุดสแกน', value: num(gs.scanPoints), unit: 'จุด', color: C.c3 },
+        { icon: 'shield', label: 'หน่วยงาน/โซน', value: num(Object.keys(gs.byUnit).length), unit: 'หน่วย', color: C.c5 }]));
+      v.appendChild(el('div', { class: 'sec' }, [figure('การสแกนแยกหน่วยงาน/โซน', 'ที่มา: แสกนจุดเอกชน · อัปเดต ' + dLabel(gs.updated), hbars(Object.keys(gs.byUnit).map(function (u) { return { label: u, value: gs.byUnit[u], color: C.c1 }; }), Math.max.apply(null, Object.keys(gs.byUnit).map(function (u) { return gs.byUnit[u]; })), { labelW: 220 }))]));
+      v.appendChild(section('ข้อสังเกต', {}, [infoBox('สแกนจุด รปภ.เอกชน', gs)]));
+    }
+    v.appendChild(systemsSection(['guard-scan', 'guard-shift', 'pdf-guard', 'grad-guard-report']));
+  };
+  PAGES.borrow = function (v) {
+    var m = mod('borrow');
+    v.appendChild(pageHead('ยืม-คืนอุปกรณ์และรถกอล์ฟ', 'คำขอยืมอุปกรณ์จราจร การแจ้งคืน และการจองรถกอล์ฟ'));
+    if (m) {
+      v.appendChild(kpiGrid([
+        { icon: 'box', label: 'คำขอยืมอุปกรณ์', value: num(m.borrowRequests), unit: 'รายการ', sub: 'รับของคืนแล้ว ' + m.borrowByStatus['รับของคืนแล้ว'], scope: dLabel(m.range.from) + ' – ' + dLabel(m.range.to), updated: m.updated, tag: 'ข้อมูลช่วงทดลองระบบ' },
+        { icon: 'alert', label: 'แจ้งคืน รอยืนยัน', value: num(m.returnByStatus['รอยืนยัน']), unit: 'รายการ', sub: 'จาก ' + m.returnRecords + ' บันทึกการคืน', tag: 'ไม่ตรงกับ Borrow_Data', color: C.c2 },
+        { icon: 'car', label: 'จองรถกอล์ฟ', value: num(m.golfCartBookings), unit: 'รายการ', color: C.c3 },
+        { icon: 'box', label: 'อุปกรณ์ในคลัง', value: num(m.inventory.totalStock), unit: 'ชิ้น', sub: m.inventory.items + ' ชนิด · Sheet ระบุถูกยืม ' + m.inventory.markedBorrowed + ' ชิ้น', color: C.c5 }]));
+      v.appendChild(section('ข้อสังเกต', {}, [infoBox('ระบบยืม-คืน', m)]));
+    }
+    v.appendChild(systemsSection(['borrow']));
+  };
+  PAGES.lostfound = function (v) {
+    var lf = mod('lostfound');
+    v.appendChild(pageHead('ของหาย / เก็บของได้ / รับของคืน', 'สถิติรวมจากระบบ Lost & Found (ไม่แสดงข้อมูลผู้แจ้ง)', rangeCtrl()));
+    if (lf) {
+      var lt = function (n) { return sumMonthly(lf.monthly, function (r) { return r.byType[n]; }); };
+      v.appendChild(kpiGrid([
+        { icon: 'search', label: 'แจ้งของหาย', value: num(lt('สิ่งของสูญหาย')), unit: 'รายการ', scope: rangeText(), updated: lf.updated, color: C.c4 },
+        { icon: 'box', label: 'เก็บของได้', value: num(lt('พบสิ่งของ')), unit: 'รายการ', scope: rangeText(), color: C.c3 },
+        { icon: 'file', label: 'แบบฟอร์มรับของคืน', value: num(lt('รับของคืน')), unit: 'รายการ', scope: rangeText(), color: C.c1 },
+        { icon: 'shield', label: 'สถานะ “รับของคืนแล้ว”', value: num(lf.returned), unit: 'รายการ', sub: 'รอเจ้าของมารับ ' + lf.byStatus['เจ้าของยังไม่มารับคืน'] + ' · ช่วยหาแล้วยังไม่พบ ' + lf.byStatus['ช่วยหาแล้วยังไม่พบ'], scope: 'ทั้งปี 2569', color: C.c5 }]));
+      var g = el('div', { class: 'grid2' });
+      g.appendChild(figure('รายเดือนแยกประเภท', 'ที่มา: แจ้งของหาย · อัปเดต ' + dLabel(lf.updated), lfChart()));
+      g.appendChild(figure('สถานะการดำเนินการ (ทั้งปี 2569)', lf.total + ' รายการ', hbars(Object.keys(lf.byStatus).map(function (s) { return { label: s, value: lf.byStatus[s], color: s === 'รับของคืนแล้ว' ? C.c3 : C.c5 }; }), Math.max.apply(null, Object.keys(lf.byStatus).map(function (s) { return lf.byStatus[s]; })), { labelW: 190 })));
+      v.appendChild(el('div', { class: 'sec' }, [g]));
+      v.appendChild(section('นิยาม', {}, [infoBox('Lost & Found', lf)]));
+    }
+    v.appendChild(systemsSection(['lostfound']));
+  };
+  PAGES.safety = function (v) {
+    var f = mod('fire');
+    v.appendChild(pageHead('ความปลอดภัย: AED และถังดับเพลิง', 'ทะเบียนและผลตรวจถังดับเพลิง และแผนที่เครื่อง AED'));
+    if (f) {
+      v.appendChild(kpiGrid([
+        { icon: 'heart', label: 'ถังดับเพลิงในทะเบียน', value: num(f.extinguishers), unit: 'ถัง', updated: f.updated, color: C.c2 },
+        { icon: 'shield', label: 'ถังที่ตรวจแล้ว', value: num(f.extinguishersInspected), unit: 'ถัง', sub: 'จาก ' + f.extinguishers + ' ถัง', color: C.c3 },
+        { icon: 'file', label: 'การตรวจทั้งหมด', value: num(f.inspections), unit: 'ครั้ง', sub: 'ปกติ ' + f.inspectionResult['ปกติ'] + ' · ชำรุด ' + f.inspectionResult['ชำรุด'], color: C.c1 },
+        { icon: 'map', label: 'เครื่อง AED', na: 'ไม่มีข้อมูลยืนยัน (ดูแผนที่ต้นทาง)', color: C.c5 }]));
+      var g = el('div', { class: 'grid2' });
+      g.appendChild(figure('ถังดับเพลิงแยกชนิด', 'ที่มา: ข้อมูลถังดับเพลิง', hbars(Object.keys(f.byType).map(function (t) { return { label: t.replace(/ \(.*\)/, ''), value: f.byType[t], color: C.c2 }; }), 20, { labelW: 150, ticks: [0, 5, 10, 15, 20] })));
+      g.appendChild(figure('ถังดับเพลิงแยกหน่วยงาน', 'ที่มา: ข้อมูลถังดับเพลิง', hbars(Object.keys(f.byUnit).map(function (t) { return { label: t, value: f.byUnit[t], color: C.c1 }; }), 35, { labelW: 190, ticks: [0, 10, 20, 30] })));
+      v.appendChild(el('div', { class: 'sec' }, [g]));
+      v.appendChild(section('นิยาม', {}, [infoBox('ถังดับเพลิง', f)]));
+    }
+    v.appendChild(systemsSection(['fire', 'aed-map']));
+  };
+  PAGES.reports = function (v) {
+    v.appendChild(pageHead('รายงานและเอกสาร PDF', 'เครื่องมือสร้างเอกสารรายงานและ Dashboard เดิม (เปิดในระบบต้นทาง)'));
+    v.appendChild(systemsSection(['dashboard-ai', 'pdf-monthly', 'pdf-daily', 'pdf-guard-monthly', 'pdf-guard', 'old-hub'], 'รายงานและเอกสาร'));
+  };
+  PAGES.systems = function (v) {
+    v.appendChild(pageHead('ระบบทั้งหมด', DATA.systems.categories.reduce(function (a, c) { return a + c.systems.length; }, 0) + ' ระบบ ใน ' + DATA.systems.categories.length + ' หมวด พร้อมสถานะการเชื่อมต่อข้อมูล'));
+    DATA.systems.categories.forEach(function (c) { v.appendChild(section(c.name, { note: c.systems.length + ' ระบบ' }, [el('div', { class: 'sys-grid' }, c.systems.map(sysCard))])); });
+    v.appendChild(section('ที่มาของข้อมูลและการคุ้มครองข้อมูลส่วนบุคคล', {}, [el('div', { class: 'card box' }, [notesList([DATA.stats.method,
+      'หน้านี้แสดงเฉพาะสถิติรวม ไม่แสดงชื่อ เบอร์โทร ทะเบียนรถ รายละเอียดผู้แจ้งเหตุ ข้อความอิสระ หรือภาพถ่าย และไม่มีรหัสผ่าน/API key อยู่ในหน้าเว็บ',
+      'ตัวเลขทุกตัวระบุแหล่งข้อมูลและเวลาอัปเดตล่าสุด ระบบที่ยังยืนยันแหล่งข้อมูลไม่ได้แสดงสถานะ “ยังเชื่อมต่อไม่ได้” หรือ “ไม่มีข้อมูลยืนยัน” แทนตัวเลข',
+      'วันที่และเดือนตีความตามเขตเวลา Asia/Bangkok และแสดงปีเป็น พ.ศ.'])])]));
+  };
+
+  /* ---------- แผนที่อุบัติเหตุ ---------- */
+  var gmState = { loading: false };
+  function useGoogleMap() { return !!CFG.googleMapsApiKey && !window.__HUB_PREVIEW__; }
+  function renderGoogleMap(box, pts, b) {
+    if (!(window.google && google.maps)) {
+      if (!gmState.loading) {
+        gmState.loading = true; window.__hubGmReady = function () { renderMap(); };
+        var sc = document.createElement('script'); sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(CFG.googleMapsApiKey) + '&callback=__hubGmReady'; sc.async = true;
+        sc.onerror = function () { CFG.googleMapsApiKey = ''; showBanner('โหลด Google Maps ไม่สำเร็จ — แสดงแผนผังในหน้าแทน'); renderMap(); }; document.head.appendChild(sc);
+      }
+      box.appendChild(el('div', { class: 'empty', text: 'กำลังโหลด Google Maps…' })); return;
+    }
+    var div = el('div', { style: 'height:520px;border-radius:10px;border:1px solid #dfe4ec' }); box.appendChild(div);
+    var map = new google.maps.Map(div, { center: { lat: (b.latMin + b.latMax) / 2, lng: (b.lngMin + b.lngMax) / 2 }, zoom: 16, mapTypeControl: false, streetViewControl: false });
+    pts.forEach(function (p) {
+      var mk = new google.maps.Marker({ position: { lat: p.lat, lng: p.lng }, map: map, title: p.type + ' · ' + p.place + ' · ' + mLabel(p.month), icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: p.type === V ? C.c1 : C.c2, fillOpacity: .9, strokeColor: '#fff', strokeWeight: 1.5 } });
+      mk.addListener('click', function () { state.sel = p.i; renderMap(); });
     });
   }
-  function renderAbout() {
-    var ul = $('aboutList'); ul.textContent = '';
-    [DATA.stats.method,
-      'หน้านี้แสดงเฉพาะสถิติรวม ไม่แสดงชื่อ เบอร์โทร ทะเบียนรถ รายละเอียดผู้แจ้งเหตุ หรือภาพถ่าย และไม่มีรหัสผ่าน/API key อยู่ในหน้าเว็บ',
-      'ตัวเลขทุกตัวระบุแหล่งข้อมูลและเวลาอัปเดตล่าสุดของแหล่งนั้น ระบบที่ยังยืนยันแหล่งข้อมูลไม่ได้จะแสดงสถานะ “ยังเชื่อมต่อไม่ได้” หรือ “ไม่มีข้อมูลยืนยัน” แทนตัวเลข',
-      'วันที่และเดือนตีความตามเขตเวลา Asia/Bangkok และแสดงปีเป็น พ.ศ.',
-      'ตัวกรองช่วงเดือนมีผลกับ: เหตุการณ์, รถเข้า/หมวกนิรภัย, ของหาย, คำขอ CCTV และแผนที่อุบัติเหตุ'].forEach(function (t) { ul.appendChild(el('li', { text: t })); });
+  function mapPoints() { var am = mod('accidentMap'); if (!am) return []; return am.points.map(function (p, i) { p.i = i; return p; }).filter(function (p) { return inRange(p.month) && (state.mapType === 'all' || p.type === state.mapType); }); }
+  function renderMap() {
+    var am = mod('accidentMap'), tools = $('mapTools'), box = $('mapSvg'), list = $('mapList'); if (!box) return;
+    tools.textContent = ''; box.textContent = ''; list.textContent = '';
+    if (!am) { box.appendChild(el('div', { class: 'empty', text: 'ยังเชื่อมต่อข้อมูลพิกัดไม่ได้' })); return; }
+    [['all', 'ทุกประเภท'], [V, 'ยานพาหนะ'], [G, 'ทั่วไป']].forEach(function (o) { tools.appendChild(el('button', { type: 'button', class: 'chip', 'aria-pressed': String(state.mapType === o[0]), text: o[1], onclick: function () { state.mapType = o[0]; state.sel = -1; renderMap(); } })); });
+    var pts = mapPoints(), b = am.box, W = 500, H = 640, pad = 18;
+    var px = function (lng) { return pad + (W - 2 * pad) * (lng - b.lngMin) / (b.lngMax - b.lngMin); }, py = function (lat) { return pad + (H - 2 * pad) * (b.latMax - lat) / (b.latMax - b.latMin); };
+    var root = svg('svg', { viewBox: '0 0 ' + W + ' ' + H }), i;
+    for (i = 0; i <= 4; i++) { root.appendChild(svg('line', { x1: pad + (W - 2 * pad) * i / 4, x2: pad + (W - 2 * pad) * i / 4, y1: pad, y2: H - pad, stroke: '#e1e6ee' })); root.appendChild(svg('line', { y1: pad + (H - 2 * pad) * i / 4, y2: pad + (H - 2 * pad) * i / 4, x1: pad, x2: W - pad, stroke: '#e1e6ee' })); }
+    var sb = (W - 2 * pad) * (500 / (111320 * Math.cos(13.795 * Math.PI / 180))) / (b.lngMax - b.lngMin);
+    root.appendChild(svg('line', { x1: pad + 6, x2: pad + 6 + sb, y1: H - pad - 8, y2: H - pad - 8, stroke: '#152033', 'stroke-width': 2 }));
+    root.appendChild(svg('text', { x: pad + 6, y: H - pad - 14, 'font-size': 11, fill: '#152033', text: '500 ม.' }));
+    root.appendChild(svg('text', { x: W - pad - 6, y: pad + 16, 'font-size': 12, 'text-anchor': 'end', fill: '#152033', 'font-weight': 600, text: 'N ↑' }));
+    pts.filter(function (p) { return !p.outOfCampusBox; }).forEach(function (p) {
+      var c = svg('circle', { cx: px(p.lng), cy: py(p.lat), r: 7, fill: p.type === V ? C.c1 : C.c2, 'fill-opacity': .85, tabindex: 0, role: 'button', 'aria-label': p.type + ' ' + p.place + ' ' + mLabel(p.month), class: p.i === state.sel ? 'sel' : '',
+        onclick: function () { state.sel = p.i; renderMap(); }, onkeydown: function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); state.sel = p.i; renderMap(); } } });
+      c.appendChild(svg('title', { text: p.type + ' · ' + p.place + ' · ' + mLabel(p.month) })); root.appendChild(c);
+    });
+    if (useGoogleMap()) renderGoogleMap(box, pts, b); else box.appendChild(root);
+    box.appendChild(el('div', { class: 'legend' }, [el('span', {}, [el('i', { style: 'background:' + C.c1 }), V]), el('span', {}, [el('i', { style: 'background:' + C.c2 }), G])]));
+    var note = $('mapNote'); if (note) note.textContent = num(pts.length) + ' จุดในช่วง ' + rangeText() + ' · ที่มา: รายงานเหตุการณ์ คอลัมน์ “พิกัด (Lat, Lng)” · อัปเดต ' + dLabel(am.updated);
+    var det = $('mapDetail'), sel = am.points[state.sel], emb = $('mapEmbed'); det.textContent = ''; emb.textContent = ''; emb.hidden = true;
+    if (sel && pts.indexOf(sel) >= 0) {
+      det.appendChild(el('div', {}, [el('strong', { text: sel.place })]));
+      det.appendChild(el('div', { text: sel.type + ' · ' + mFull(sel.month) + ' · พิกัด ' + sel.lat.toFixed(6) + ', ' + sel.lng.toFixed(6) + (sel.outOfCampusBox ? ' (อยู่นอกกรอบวิทยาเขต ควรตรวจสอบ)' : '') }));
+      det.appendChild(el('a', { class: 'btn', href: mapsUrl(sel), target: '_blank', rel: 'noopener' }, ['เปิดตำแหน่งนี้ใน Google Maps', ic('ext', 15)]));
+      if (CFG.allowMapEmbed && !window.__HUB_PREVIEW__) { emb.hidden = false; emb.appendChild(el('iframe', { title: 'Google Maps: ' + sel.place, loading: 'lazy', referrerpolicy: 'no-referrer', src: 'https://www.google.com/maps?q=' + sel.lat + ',' + sel.lng + '&z=17&output=embed' })); }
+    } else det.appendChild(el('div', { text: 'เลือกจุดบนแผนผังหรือในตาราง เพื่อดูตำแหน่งและเปิดใน Google Maps' }));
+    list.appendChild(el('thead', {}, [el('tr', {}, [el('th', { text: 'เดือน' }), el('th', { text: 'ประเภท / สถานที่' }), el('th', { text: 'แผนที่' })])]));
+    var tb = el('tbody');
+    pts.slice().sort(function (a, c) { return a.month < c.month ? 1 : a.month > c.month ? -1 : 0; }).forEach(function (p) {
+      tb.appendChild(el('tr', { class: p.i === state.sel ? 'sel' : '' }, [el('td', { text: mLabel(p.month) }),
+        el('td', {}, [el('span', { class: 'dot', style: 'background:' + (p.type === V ? C.c1 : C.c2) }), el('button', { type: 'button', class: 'linkish', text: p.place + (p.outOfCampusBox ? ' (นอกกรอบ)' : ''), onclick: function () { state.sel = p.i; renderMap(); } })]),
+        el('td', {}, [el('a', { href: mapsUrl(p), target: '_blank', rel: 'noopener', text: 'เปิด' })])]));
+    });
+    if (!pts.length) tb.appendChild(el('tr', {}, [el('td', { colspan: 3, class: 'empty', text: 'ไม่มีจุดในช่วงที่เลือก' })]));
+    list.appendChild(tb);
   }
-  function renderAll() { renderKpis(); renderCharts(); renderMap(); applyCat(); }
 
+  /* ---------- เริ่มทำงาน ---------- */
+  function renderStamp() {
+    var g = DATA.stats.generatedAt || '', s = $('stamp'); s.textContent = '';
+    s.appendChild(el('b', { text: 'ข้อมูล ณ ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) })); s.appendChild(el('br'));
+    s.appendChild(document.createTextNode(liveMode ? 'อ่านสดจาก Stats API (ยอดรวม)' : 'ไฟล์สถิติรวม · เวลาไทย'));
+  }
+  function collectMonths() {
+    var set = {}; ['incidents', 'gate', 'lostfound', 'cctv'].forEach(function (k) { ((mod(k) || {}).monthly || []).forEach(function (r) { set[r.month] = 1; }); });
+    MONTHS = Object.keys(set).sort(); state.from = MONTHS[0]; state.to = MONTHS[MONTHS.length - 1];
+  }
+  setupShell();
   load().then(function (d) {
-    DATA = d; collectMonths(); renderStamp(); renderFilters(); renderCats(); renderAbout(); renderAll();
+    DATA = d; DATA.systems.categories.forEach(function (c) { c.systems.forEach(function (s) { SYS[s.id] = s; }); });
+    collectMonths(); renderStamp(); route(true);
+    window.addEventListener('hashchange', function () { route(false); });
   }).catch(function (e) {
     $('stamp').textContent = 'โหลดข้อมูลไม่สำเร็จ';
     showBanner('ยังเชื่อมต่อไฟล์สถิติรวมไม่ได้: ' + e.message + ' — หน้านี้จะไม่แสดงตัวเลขใด ๆ จนกว่าจะโหลดข้อมูลจริงได้');

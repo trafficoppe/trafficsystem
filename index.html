@@ -10,96 +10,31 @@
 <link rel="stylesheet" href="assets/hub.css">
 </head>
 <body>
-<a class="skip" href="#main">ข้ามไปยังเนื้อหา</a>
-
-<header class="top">
-  <div class="wrap top-in">
-    <div class="brand">
-      <div class="brand-mark" aria-hidden="true">MU</div>
-      <div>
-        <h1>ระบบงานจราจรและความปลอดภัย มหาวิทยาลัยมหิดล</h1>
-        <p class="brand-sub">งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม · วิทยาเขตศาลายา</p>
+<a class="skip" href="#view">ข้ามไปยังเนื้อหา</a>
+<div class="app" id="app">
+  <aside class="sb" id="sidebar" aria-label="เมนูหลัก">
+    <div class="sb-brand">
+      <div class="sb-logo" aria-hidden="true">MU</div>
+      <div class="sb-name"><strong>งานจราจรและความปลอดภัย</strong><span>มหาวิทยาลัยมหิดล ศาลายา</span></div>
+    </div>
+    <nav class="sb-nav" id="nav"></nav>
+    <div class="sb-foot" id="sbFoot">รุ่นทดลอง (Preview)</div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+  <div class="main">
+    <header class="topbar">
+      <button type="button" class="icon-btn" id="navToggle" aria-controls="sidebar" aria-expanded="false" aria-label="เปิด/ปิดเมนู"></button>
+      <div class="tb-title">
+        <span class="tb-sys">ระบบงานจราจรและความปลอดภัย มหาวิทยาลัยมหิดล</span>
+        <span class="tb-page" id="crumb"></span>
       </div>
-    </div>
-    <div class="stamp" id="stamp" role="status">กำลังโหลดข้อมูล…</div>
+      <div class="stamp" id="stamp" role="status">กำลังโหลดข้อมูล…</div>
+    </header>
+    <div id="banner" class="banner" hidden></div>
+    <main id="view" class="view" tabindex="-1"></main>
+    <footer class="foot">หน้ารวมรุ่นทดลอง — ยังไม่ได้เผยแพร่ใช้งานจริง · แสดงเฉพาะสถิติรวม ไม่มีข้อมูลรายบุคคล · ระบบต้นทางทุกระบบยังทำงานตามเดิม</footer>
   </div>
-</header>
-
-<nav class="filters" aria-label="ตัวกรอง">
-  <div class="wrap filters-in">
-    <div class="range">
-      <label for="fFrom">ช่วงเดือน</label>
-      <select id="fFrom" aria-label="เดือนเริ่มต้น"></select>
-      <span aria-hidden="true">ถึง</span>
-      <select id="fTo" aria-label="เดือนสิ้นสุด"></select>
-      <button type="button" class="btn-ghost" id="fReset">ทั้งหมด</button>
-    </div>
-    <div class="chips" id="chips" role="group" aria-label="หมวดข้อมูล"></div>
-  </div>
-</nav>
-
-<main id="main" class="wrap">
-  <div id="banner" class="banner" hidden></div>
-
-  <section aria-labelledby="hKpi">
-    <div class="sec-head">
-      <h2 id="hKpi">สรุปตัวเลขสำคัญ</h2>
-      <p class="sec-note" id="kpiNote"></p>
-    </div>
-    <div class="kpis" id="kpis"></div>
-  </section>
-
-  <section aria-labelledby="hCharts" data-cat="traffic lostfound overview">
-    <div class="sec-head"><h2 id="hCharts">แนวโน้มรายเดือน</h2></div>
-    <div class="charts">
-      <figure class="card chart" data-cat="traffic overview">
-        <figcaption><strong>เหตุการณ์ที่บันทึก แยกประเภท</strong><span id="capInc"></span></figcaption>
-        <div id="chInc"></div>
-      </figure>
-      <figure class="card chart" data-cat="traffic">
-        <figcaption><strong>รถเข้ามหาวิทยาลัย และผู้ไม่สวมหมวกนิรภัย (รายวัน)</strong><span id="capGate"></span></figcaption>
-        <div id="chGate"></div>
-      </figure>
-      <figure class="card chart" data-cat="lostfound">
-        <figcaption><strong>แจ้งของหาย / เก็บของได้ / รับของคืน</strong><span id="capLf"></span></figcaption>
-        <div id="chLf"></div>
-      </figure>
-    </div>
-  </section>
-
-  <section aria-labelledby="hMap" data-cat="traffic overview" id="accident-map">
-    <div class="sec-head">
-      <h2 id="hMap">แผนที่จุดเกิดอุบัติเหตุ</h2>
-      <p class="sec-note" id="mapNote"></p>
-    </div>
-    <div class="card mapcard">
-      <div class="map-left">
-        <div class="map-tools" id="mapTools"></div>
-        <div id="mapSvg" class="map-svg" role="img" aria-label="แผนผังจุดเกิดอุบัติเหตุภายในวิทยาเขตศาลายา"></div>
-        <p class="map-cap">แผนผังตามพิกัดจริง (ทิศเหนืออยู่ด้านบน) — กดจุดเพื่อดูรายละเอียดและเปิดตำแหน่งใน Google Maps</p>
-      </div>
-      <div class="map-right">
-        <div id="mapDetail" class="map-detail"></div>
-        <div id="mapEmbed" class="map-embed" hidden></div>
-        <div class="map-list-wrap"><table class="tbl" id="mapList"></table></div>
-      </div>
-    </div>
-  </section>
-
-  <div id="cats"></div>
-
-  <section class="card about" aria-labelledby="hAbout">
-    <h2 id="hAbout">ที่มาของข้อมูลและการคุ้มครองข้อมูลส่วนบุคคล</h2>
-    <ul id="aboutList"></ul>
-  </section>
-</main>
-
-<footer class="foot">
-  <div class="wrap">
-    <p>หน้ารวมรุ่นทดลอง (Preview) — ยังไม่ได้เผยแพร่ใช้งานจริง · ระบบต้นทางทุกระบบยังทำงานตามเดิมและไม่ถูกแก้ไข</p>
-  </div>
-</footer>
-
+</div>
 <script src="config.js"></script>
 <script src="assets/hub.js"></script>
 </body>

@@ -23,7 +23,10 @@ var HUB = {
   /* ID ของ Sheet ต้นทางไม่อยู่ในไฟล์นี้ — ตั้งใน Project Settings → Script properties:
      MASTER_SHEET_ID (ฐานข้อมูลงานจราจร), LOSTFOUND_SHEET_ID (แจ้งของหาย), CCTV_SHEET_ID (CCTV Request System) */
   GATE_TEST_BEFORE: '2026-10-01',                               // แถวก่อนวันที่นี้เป็นข้อมูลทดสอบระบบ
-  CAMPUS_BOX: { latMin: 13.7860, latMax: 13.8030, lngMin: 100.3150, lngMax: 100.3290 }
+  CAMPUS_BOX: { latMin: 13.7860, latMax: 13.8030, lngMin: 100.3150, lngMax: 100.3290 },
+  /* อัตราค่าปรับต่อเคส ตามสูตรแบบรายงาน PDF-OPPE-01-F-10-01 (Sheet ไม่มีช่องยอดเงิน) — แก้ให้ตรงสัญญาจ้างก่อนใช้งานจริง */
+  FINE_RATE_PER_CASE: 1000,
+  SAT_TOPICS: ['การรักษาความปลอดภัย', 'การจัดการจราจร', 'การให้บริการ', 'การแต่งกาย', 'ความสุภาพ']
 };
 var T_VEHICLE = 'อุบัติเหตุจากยานพาหนะ', T_GENERAL = 'อุบัติเหตุทั่วไป';
 
@@ -47,7 +50,9 @@ function buildStats_() {
     lostfound: function () { return lostFoundStats(readTab_(sheetId_('LOSTFOUND_SHEET_ID'), 'รายการ พ.ศ. 2569 (ปัจจุบัน)'), HUB.TZ); },
     cctv: function () { return cctvStats(readTab_(sheetId_('CCTV_SHEET_ID'), 'CCTV_Requests')); },
     fire: function () { return fireStats(readTab_(sheetId_('MASTER_SHEET_ID'), 'ข้อมูลถังดับเพลิง'), readTab_(sheetId_('MASTER_SHEET_ID'), 'บันทึกการตรวจ'), HUB.TZ); },
-    guardScan: function () { return guardScanStats(readTab_(sheetId_('MASTER_SHEET_ID'), 'แสกนจุดเอกชน'), HUB.TZ); }
+    guardScan: function () { return guardScanStats(readTab_(sheetId_('MASTER_SHEET_ID'), 'แสกนจุดเอกชน'), HUB.TZ); },
+    guardSatisfaction: function () { return { status: 'ok', central: satCentralStats(readTab_(sheetId_('MASTER_SHEET_ID'), 'ความพึงพอใจการให้บริการรปภ.เอกชน'), HUB.TZ), unit: satUnitStats(readTab_(sheetId_('MASTER_SHEET_ID'), 'คะแนนความพึงพอใจรปภ.ส่วนงาน')) }; },
+    guardFines: function () { return fineStats(readTab_(sheetId_('MASTER_SHEET_ID'), 'รายงานเหตุการณ์'), HUB.TZ, HUB.FINE_RATE_PER_CASE); }
   };
   Object.keys(jobs).forEach(function (k) {
     try { out.modules[k] = jobs[k](); }
@@ -190,4 +195,56 @@ function guardScanStats(rows, tz) {
     byStatus: byStatus, scanPoints: Object.keys(pts).length, byUnit: byUnit };
 }
 
-if (typeof module !== 'undefined') module.exports = { incidentStats: incidentStats, accidentPoints: accidentPoints, gateStats: gateStats, lostFoundStats: lostFoundStats, cctvStats: cctvStats, fireStats: fireStats, guardScanStats: guardScanStats, dayKey: dayKey, HUB: HUB };
+
+/* ---------- ความพึงพอใจ รปภ. ---------- */
+var TH_MONTH = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+/** ปัดทศนิยม 2 ตำแหน่งแบบปัดครึ่งขึ้น (กันผลต่างจากเลขทศนิยมฐานสอง เช่น 4.815 → 4.82) */
+function r2_(x) { return Math.round((x + 1e-9) * 100) / 100; }
+function score_(v, lo, hi) { var s = String(v == null ? '' : v).trim(); if (s === '' || s === '-') return null; var n = Number(s); return isFinite(n) && n >= lo && n <= hi ? n : null; }
+/** ส่วนกลาง: 1 แถว = 1 คำตอบ (วันเวลา, พื้นที่, 5 ด้าน 1–5) — ไม่อ่านคอลัมน์ข้อเสนอแนะ */
+function satCentralStats(rows, tz) {
+  var by = {}, T = HUB.SAT_TOPICS;
+  rows.slice(1).forEach(function (r) {
+    var d = dayKey(r[0], tz); if (!d) return;
+    var o = by[d.slice(0, 7)] = by[d.slice(0, 7)] || { month: d.slice(0, 7), responses: 0, sum: [0, 0, 0, 0, 0], n: [0, 0, 0, 0, 0], from: d, to: d, scoreDistribution: {} };
+    o.responses++; if (d < o.from) o.from = d; if (d > o.to) o.to = d;
+    for (var i = 0; i < 5; i++) { var v = score_(r[2 + i], 1, 5); if (v == null) continue; o.sum[i] += v; o.n[i]++; o.scoreDistribution[v] = (o.scoreDistribution[v] || 0) + 1; }
+  });
+  return { name: 'รปภ.ส่วนกลาง', scale: '1–5', unitOfN: 'คำตอบ', topics: T, monthly: Object.keys(by).sort().map(function (m) {
+    var o = by[m], all = o.sum.reduce(function (a, b) { return a + b; }, 0), alln = o.n.reduce(function (a, b) { return a + b; }, 0);
+    return { month: m, responses: o.responses, overall: alln ? r2_(all / alln) : null, dateRange: { from: o.from, to: o.to }, scoreDistribution: o.scoreDistribution,
+      topics: T.map(function (t, i) { return { name: t, avg: o.n[i] ? r2_(o.sum[i] / o.n[i]) : null, n: o.n[i] }; }) }; }) };
+}
+/** ส่วนงาน: 1 แถว = ผลสรุป 1 พื้นที่/เดือน — ถ่วงน้ำหนักด้วยจำนวนผู้ตอบ ; "-" = ไม่มีคำถามด้านนั้น (ไม่นับเป็น 0) — ไม่อ่านคอลัมน์หมายเหตุ */
+function satUnitStats(rows) {
+  var by = {}, T = HUB.SAT_TOPICS;
+  rows.slice(1).forEach(function (r) {
+    var mi = TH_MONTH.indexOf(String(r[1] || '').trim()), y = Number(r[2]), w = Number(r[4]) || 0; if (mi < 0 || !y || w <= 0) return;
+    var m = (y > 2400 ? y - 543 : y) + '-' + ('0' + (mi + 1)).slice(-2), area = String(r[3] || '').trim() || 'ไม่ระบุ';
+    var o = by[m] = by[m] || { month: m, records: 0, respondents: 0, wv: [0, 0, 0, 0, 0], ww: [0, 0, 0, 0, 0], areas: {} };
+    var a = o.areas[area] = o.areas[area] || { area: area, records: 0, respondents: 0, wv: [0, 0, 0, 0, 0], ww: [0, 0, 0, 0, 0] };
+    o.records++; o.respondents += w; a.records++; a.respondents += w;
+    for (var i = 0; i < 5; i++) { var v = score_(r[5 + i], 0, 5); if (v == null) continue; o.wv[i] += v * w; o.ww[i] += w; a.wv[i] += v * w; a.ww[i] += w; }
+  });
+  var avg = function (x, y) { return y ? r2_(x / y) : null; }, sum = function (a) { return a.reduce(function (p, c) { return p + c; }, 0); };
+  return { name: 'รปภ.ส่วนงาน', scale: '0–5', unitOfN: 'ผู้ตอบ', topics: T, monthly: Object.keys(by).sort().map(function (m) {
+    var o = by[m];
+    return { month: m, records: o.records, respondents: o.respondents, overall: avg(sum(o.wv), sum(o.ww)), topics: T.map(function (t, i) { return { name: t, avg: avg(o.wv[i], o.ww[i]), n: o.ww[i] }; }),
+      byArea: Object.keys(o.areas).sort().map(function (k) { var a = o.areas[k]; return { area: k, records: a.records, respondents: a.respondents, overall: avg(sum(a.wv), sum(a.ww)), topics: a.wv.map(function (x, i) { return avg(x, a.ww[i]); }) }; }) }; }) };
+}
+/* ---------- ค่าปรับ รปภ. — เฉพาะ “ประเภทเหตุการณ์” = “ปรับ รปภ.” ---------- */
+function fineStats(rows, tz, rate) {
+  var h = rows[0], cDate = col_(h, 'วันที่เกิดเหตุ'), cType = col_(h, 'ประเภทเหตุการณ์'), cUnit = col_(h, 'หน่วยงานที่แจ้ง'), months = {}, total = 0, min = '', max = '';
+  rows.slice(1).forEach(function (r) {
+    var d = dayKey(r[cDate], tz); if (!d) return;
+    if (!min || d < min) min = d; if (d > max) max = d;
+    months[d.slice(0, 7)] = months[d.slice(0, 7)] || { month: d.slice(0, 7), cases: 0, byUnit: {} };
+    if (String(r[cType] || '').trim() !== 'ปรับ รปภ.') return;          // ไม่นับประเภทอื่น
+    var m = months[d.slice(0, 7)], u = String(r[cUnit] || '').trim() || 'ไม่ระบุ'; m.cases++; m.byUnit[u] = (m.byUnit[u] || 0) + 1; total++;
+  });
+  var list = Object.keys(months).sort().map(function (k) { var m = months[k]; m.amountByRate = m.cases * rate; return m; });
+  return { status: 'warn', source: 'Sheet “ฐานข้อมูลงานจราจร” แท็บ “รายงานเหตุการณ์”', range: { from: min, to: max }, totalCases: total, monthly: list,
+    amount: { ratePerCase: rate, total: total * rate, verified: false, rateSource: 'สูตรในแบบรายงาน OPPE-01-F-10-01 — Sheet ไม่มีช่องยอดเงิน' } };
+}
+
+if (typeof module !== 'undefined') module.exports = { satCentralStats: satCentralStats, satUnitStats: satUnitStats, fineStats: fineStats, incidentStats: incidentStats, accidentPoints: accidentPoints, gateStats: gateStats, lostFoundStats: lostFoundStats, cctvStats: cctvStats, fireStats: fireStats, guardScanStats: guardScanStats, dayKey: dayKey, HUB: HUB };
