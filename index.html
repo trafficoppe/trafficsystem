@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>ระบบงานจราจรและความปลอดภัย มหาวิทยาลัยมหิดล</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%230b7a5a' d='M12 2l9 3.4v6.3c0 5-3.8 9-9 10.3-5.2-1.300-9-5.300-9-10.300V5.400z'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/hub.css">
@@ -14,11 +15,13 @@
 <div class="app" id="app">
   <aside class="sb" id="sidebar" aria-label="เมนูหลัก">
     <div class="sb-brand">
-      <div class="sb-logo" aria-hidden="true">MU</div>
-      <div class="sb-name"><strong>งานจราจรและความปลอดภัย</strong><span>มหาวิทยาลัยมหิดล ศาลายา</span></div>
+      <a class="sb-logo" id="sbLogo" href="#dashboard" aria-label="หน้าหลัก ระบบงานจราจรและความปลอดภัย"></a>
+      <div class="sb-name"><strong>งานจราจรและความปลอดภัย</strong><span>มหาวิทยาลัยมหิดล</span></div>
+      <button type="button" class="sb-pin" id="sbPin" aria-pressed="false"></button>
+      <button type="button" class="sb-close" id="sbClose" aria-label="ปิดเมนู"></button>
     </div>
-    <nav class="sb-nav" id="nav"></nav>
-    <div class="sb-foot" id="sbFoot">รุ่นทดลอง (Preview)</div>
+    <nav class="sb-nav" id="nav" aria-label="หมวดงาน"></nav>
+    <div class="sb-foot" id="sbFoot"><span class="sb-foot-txt">รุ่นทดลอง (Preview) · ไม่ใช่ระบบใช้งานจริง</span></div>
   </aside>
   <div class="scrim" id="scrim" hidden></div>
   <div class="main">
@@ -32,9 +35,10 @@
     </header>
     <div id="banner" class="banner" hidden></div>
     <main id="view" class="view" tabindex="-1"></main>
-    <footer class="foot">หน้ารวมรุ่นทดลอง — ยังไม่ได้เผยแพร่ใช้งานจริง · แสดงเฉพาะสถิติรวม ไม่มีข้อมูลรายบุคคล · ระบบต้นทางทุกระบบยังทำงานตามเดิม</footer>
+    <footer class="foot">หน้ารวมรุ่นทดลอง (Preview) — ยังไม่ได้เผยแพร่ใช้งานจริง · แสดงเฉพาะสถิติรวม ไม่มีข้อมูลรายบุคคล · ระบบต้นทางทุกระบบยังทำงานตามเดิม</footer>
   </div>
 </div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
 <script src="config.js"></script>
 <script src="assets/hub.js"></script>
 </body>

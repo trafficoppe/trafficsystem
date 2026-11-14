@@ -16,8 +16,8 @@ cats = [
     [L("เปิดระบบสร้าง PDF", GP+"PDF-OPPE-01-F-11-01--/")], "เป็นเครื่องมือสร้างเอกสาร ไม่มีสถิติของตัวเอง", "อ่าน 8 แท็บจาก 3 Sheet ผ่านลิงก์ CSV"),
   S("pdf-daily", "PDF รายงานเหตุการณ์ประจำวัน", "สร้างเอกสาร PDF รายงานเหตุการณ์ประจำวันพร้อมตารางเวรและจำนวนรถเข้า", "link", None,
     [L("เปิดระบบสร้าง PDF", GP+"PDF-report-AI-v1/")], "เป็นเครื่องมือสร้างเอกสาร ไม่มีสถิติของตัวเอง", "อ่าน 4 แท็บจากฐานข้อมูลงานจราจร ผ่านลิงก์ CSV"),
-  S("old-hub", "ระบบสถิติเดิม (trafficsystem)", "หน้ารวมรุ่นเก่า เลิกใช้เป็นหน้าหลักแล้ว เก็บไว้อ้างอิง", "legacy", None,
-    [L("เปิดระบบเดิม", GP+"trafficsystem/index.html")], "อ้างอิง Sheet รุ่นเก่าที่ไม่ได้อัปเดตแล้ว", None)]),
+  S("old-hub", "ระบบงานจราจรเดิม (trafficsystem – branch main)", "ระบบเดิมที่มีเมนูบุคลากร ตรวจพื้นที่ ตารางเวร ยานพาหนะ อุปกรณ์ดับเพลิง แบบฟอร์ม รปภ.เอกชน และรายงาน หน้ารวมรุ่นใหม่ลิงก์ไปยังระบบนี้สำหรับงานที่มีข้อมูลรายบุคคล", "legacy", None,
+    [L("เปิดระบบเดิม", GP+"trafficsystem/index.html")], "ต้องเข้าสู่ระบบด้วยรหัสพนักงานตามหน้าเดิม · หน้ารายงานบางหน้าอ้างอิง Sheet รุ่นเก่า (เช่น รายงานตรวจรับ รปภ. อ่านสำเนารายงานเหตุการณ์ที่แถวล่าสุดคือ 11 ต.ค. 2569)", None)]),
  dict(id="traffic", name="งานจราจรและแจ้งเหตุ", icon="alert", systems=[
   S("incident-report", "ระบบรายงานเหตุการณ์/แจ้งเหตุ (AI)", "แบบฟอร์มบันทึกเหตุการณ์ อุบัติเหตุ และการรับส่งผู้ป่วย พร้อมพิกัดจุดเกิดเหตุ", "connected", "incidents",
     [L("เปิดแบบฟอร์มรายงานเหตุการณ์", GP+"report-incident-AI-v1/")], None, "แท็บ รายงานเหตุการณ์"),
@@ -26,10 +26,10 @@ cats = [
   S("event-incident", "รายงานเหตุการณ์สำหรับกิจกรรมพิเศษ", "แบบฟอร์มและแดชบอร์ดรายงานเหตุการณ์ช่วงกิจกรรมพิเศษ", "unverified", "eventIncident",
     [L("เปิดแบบฟอร์ม", GP+"Event-incident-report/"), L("เปิดแดชบอร์ดกิจกรรม", GP+"Event-incident-report/dashboard.html")], "ยังระบุ Sheet ที่บันทึกข้อมูลไม่ได้ (ซอร์ส Apps Script ไม่อยู่ในสิทธิ์ที่เข้าถึง)", None),
   S("helmet-quiz", "แบบทดสอบโครงการรณรงค์สวมหมวกนิรภัย 100%", "สื่อวิดีโอและแบบทดสอบความรู้การสวมหมวกนิรภัย", "unverified", "helmetQuiz",
-    [L("เปิดแบบทดสอบ", GP+"-helmet/", False)], "ส่งผลไปยัง Apps Script แต่ยังระบุ Sheet ปลายทางไม่ได้", None)]),
+    [L("เปิดแบบทดสอบ", GP+"-helmet/")], "ส่งผลไปยัง Apps Script แต่ยังระบุ Sheet ปลายทางไม่ได้", None)]),
  dict(id="cctv", name="กล้องวงจรปิด", icon="camera", systems=[
   S("cctv", "ระบบขอดูกล้องวงจรปิด (CCTV)", "แบบคำขอดูภาพกล้องวงจรปิด พร้อมเอกสารประกอบและการติดตามสถานะ", "connected", "cctv",
-    [L("แบบคำขอ (ส่วนกลาง – ระบบปัจจุบัน)", GP+"trafficoppe/", False)],
+    [L("แบบคำขอ (ส่วนกลาง – ระบบปัจจุบัน)", GP+"trafficoppe/")],
     "กำลังเตรียมรุ่นแยกหน่วยงาน MLC / LA / PMH ใน branch cctv-multi-unit (ยังไม่เปิดใช้)", "แท็บ CCTV_Requests")]),
  dict(id="vehicle", name="ยานพาหนะและลานจอดรถ", icon="car", systems=[
   S("veh-staff", "ลงทะเบียนยานพาหนะบุคลากร", "แบบลงทะเบียนรถยนต์/รถจักรยานยนต์ของบุคลากร", "partial", "vehicleRegistration",
@@ -41,7 +41,7 @@ cats = [
     [L("เปิดแบบสำรวจ", "https://ruenthai-parking-survey.pages.dev")], None, "RuenThai_Survey")]),
  dict(id="graduation", name="งานปริญญา", icon="cap", systems=[
   S("grad-parking", "รายงานจำนวนรถในลานจอด พิธีพระราชทานปริญญาบัตร ปีการศึกษา 2568", "เจ้าหน้าที่บันทึกจำนวนรถในลานจอดแต่ละรอบระหว่างวันงาน", "connected", "graduationParking",
-    [L("เปิดระบบบันทึกจำนวนรถ", GP+"mu-graduation-parking-count/", False)], "ต้องเข้าสู่ระบบ Google ตามที่ผู้ดูแลกำหนด", "SUMMARY_2569"),
+    [L("เปิดระบบบันทึกจำนวนรถ", GP+"mu-graduation-parking-count/")], "ต้องเข้าสู่ระบบ Google ตามที่ผู้ดูแลกำหนด", "SUMMARY_2569"),
   S("grad-guard-report", "รายงานผลการปฏิบัติงาน รปภ. ช่วงงานปริญญา (GPS)", "รปภ.เอกชนรายงานผลการปฏิบัติงานพร้อมพิกัดและภาพถ่าย", "blocked", "graduationGuardGps",
     [L("เปิดระบบรายงานผล", "https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbzn86oqYMYzjb5YmdjeKZueLVb8UWR5eMDMQWTTIzDhwWko7gQhgf6bov_XljvyIwIR/exec"),
      L("ค้นหาข้อมูลเจ้าหน้าที่", "https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbyAX7zwgdHsXgn-VoaYPka8UA3525W10FF2L1wpkBySozBLRZMMW4l7s9k7bHf05cBY/exec")],
@@ -61,7 +61,7 @@ cats = [
     [L("เปิดระบบสร้าง PDF", GP+"PDF-OPPE-01-F-10-01/")], "เป็นเครื่องมือสร้างเอกสาร", None)]),
  dict(id="borrow", name="อุปกรณ์และรถกอล์ฟ", icon="box", systems=[
   S("borrow", "ระบบยืม-คืนอุปกรณ์และรถกอล์ฟ", "ยื่นคำขอยืมอุปกรณ์จราจร/จองรถกอล์ฟ และแจ้งคืน", "warn", "borrow",
-    [L("เปิดระบบยืม-คืน", GP+"borrowform/", False)], "ระบบยังไม่สมบูรณ์ — ข้อเสนอปรับปรุงอยู่ใน branch borrow-v2-proposal", "Borrow_Data / Return_Data")]),
+    [L("เปิดระบบยืม-คืน", GP+"borrowform/")], "ระบบยังไม่สมบูรณ์ — ข้อเสนอปรับปรุงอยู่ใน branch borrow-v2-proposal", "Borrow_Data / Return_Data")]),
  dict(id="safety", name="ความปลอดภัย (AED / ถังดับเพลิง)", icon="heart", systems=[
   S("aed-map", "แผนที่ตรวจสอบความพร้อมใช้งาน AED", "ตำแหน่งเครื่อง AED ภายในวิทยาเขตศาลายา บน Google My Maps", "link", None,
     [L("เปิดแผนที่ AED", "https://www.google.com/maps/d/u/0/viewer?mid=1ut0hZAkMPrVLSq5DDCWfj1CScKtPdnU&femb=1&ll=13.794197821033412%2C100.32132264629175&z=15")],
@@ -70,7 +70,7 @@ cats = [
     [L("เปิดระบบตรวจถังดับเพลิง", GP+"-v1/")], None, "แท็บ ข้อมูลถังดับเพลิง / บันทึกการตรวจ")]),
  dict(id="lostfound", name="ของหาย / เก็บของได้", icon="search", systems=[
   S("lostfound", "ระบบแจ้งของหาย / เก็บของได้ / รับของคืน", "แจ้งของหาย แจ้งเก็บของได้ และติดตามการรับคืน", "connected", "lostfound",
-    [L("เปิดระบบ Lost & Found", GP+"lostfound/", False)], None, "แท็บ รายการ พ.ศ. 2569 (ปัจจุบัน)")]),
+    [L("เปิดระบบ Lost & Found", GP+"lostfound/")], None, "แท็บ รายการ พ.ศ. 2569 (ปัจจุบัน)")]),
 ]
 out = pathlib.Path(__file__).resolve().parent.parent / "data" / "systems.json"
 out.write_text(json.dumps(dict(schema=1, categories=cats), ensure_ascii=False, indent=1), encoding="utf-8")

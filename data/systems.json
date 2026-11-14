@@ -59,8 +59,8 @@
     },
     {
      "id": "old-hub",
-     "name": "ระบบสถิติเดิม (trafficsystem)",
-     "desc": "หน้ารวมรุ่นเก่า เลิกใช้เป็นหน้าหลักแล้ว เก็บไว้อ้างอิง",
+     "name": "ระบบงานจราจรเดิม (trafficsystem – branch main)",
+     "desc": "ระบบเดิมที่มีเมนูบุคลากร ตรวจพื้นที่ ตารางเวร ยานพาหนะ อุปกรณ์ดับเพลิง แบบฟอร์ม รปภ.เอกชน และรายงาน หน้ารวมรุ่นใหม่ลิงก์ไปยังระบบนี้สำหรับงานที่มีข้อมูลรายบุคคล",
      "status": "legacy",
      "stat": null,
      "links": [
@@ -71,7 +71,7 @@
        "kind": "open"
       }
      ],
-     "note": "อ้างอิง Sheet รุ่นเก่าที่ไม่ได้อัปเดตแล้ว",
+     "note": "ต้องเข้าสู่ระบบด้วยรหัสพนักงานตามหน้าเดิม · หน้ารายงานบางหน้าอ้างอิง Sheet รุ่นเก่า (เช่น รายงานตรวจรับ รปภ. อ่านสำเนารายงานเหตุการณ์ที่แถวล่าสุดคือ 11 ต.ค. 2569)",
      "source": null
     }
    ]
@@ -148,7 +148,7 @@
       {
        "label": "เปิดแบบทดสอบ",
        "url": "https://trafficoppe.github.io/-helmet/",
-       "verified": false,
+       "verified": true,
        "kind": "open"
       }
      ],
@@ -172,7 +172,7 @@
       {
        "label": "แบบคำขอ (ส่วนกลาง – ระบบปัจจุบัน)",
        "url": "https://trafficoppe.github.io/trafficoppe/",
-       "verified": false,
+       "verified": true,
        "kind": "open"
       }
      ],
@@ -247,7 +247,7 @@
       {
        "label": "เปิดระบบบันทึกจำนวนรถ",
        "url": "https://trafficoppe.github.io/mu-graduation-parking-count/",
-       "verified": false,
+       "verified": true,
        "kind": "open"
       }
      ],
@@ -403,7 +403,7 @@
       {
        "label": "เปิดระบบยืม-คืน",
        "url": "https://trafficoppe.github.io/borrowform/",
-       "verified": false,
+       "verified": true,
        "kind": "open"
       }
      ],
@@ -468,7 +468,7 @@
       {
        "label": "เปิดระบบ Lost & Found",
        "url": "https://trafficoppe.github.io/lostfound/",
-       "verified": false,
+       "verified": true,
        "kind": "open"
       }
      ],
