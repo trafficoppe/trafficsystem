@@ -1,0 +1,481 @@
+{
+ "schema": 1,
+ "categories": [
+  {
+   "id": "overview",
+   "name": "ภาพรวมและรายงาน",
+   "icon": "chart",
+   "systems": [
+    {
+     "id": "dashboard-ai",
+     "name": "Dashboard งานจราจรและความปลอดภัย (AI)",
+     "desc": "แดชบอร์ดสถิติอุบัติเหตุ/ผู้บาดเจ็บที่ใช้รายงานผู้บริหารในปัจจุบัน",
+     "status": "connected",
+     "stat": "incidents",
+     "links": [
+      {
+       "label": "เปิด Dashboard",
+       "url": "https://trafficoppe.github.io/Main-AI-v1/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": "ต้องกรอกรหัสพนักงานที่หน้าเข้าสู่ระบบ; หน้ารวมนี้อ่านสถิติจากแหล่งเดียวกันโดยไม่แก้ Dashboard เดิม",
+     "source": "Main-AI-v1 + DashboardAI → แท็บ รายงานเหตุการณ์"
+    },
+    {
+     "id": "pdf-monthly",
+     "name": "PDF รายงานสถิติจราจรและความปลอดภัยรายเดือน (OPPE-01-F-11-01)",
+     "desc": "สร้างเอกสาร PDF สรุปสถิติรายเดือนจากฐานข้อมูลงานจราจร ของหาย และ CCTV",
+     "status": "link",
+     "stat": null,
+     "links": [
+      {
+       "label": "เปิดระบบสร้าง PDF",
+       "url": "https://trafficoppe.github.io/PDF-OPPE-01-F-11-01--/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": "เป็นเครื่องมือสร้างเอกสาร ไม่มีสถิติของตัวเอง",
+     "source": "อ่าน 8 แท็บจาก 3 Sheet ผ่านลิงก์ CSV"
+    },
+    {
+     "id": "pdf-daily",
+     "name": "PDF รายงานเหตุการณ์ประจำวัน",
+     "desc": "สร้างเอกสาร PDF รายงานเหตุการณ์ประจำวันพร้อมตารางเวรและจำนวนรถเข้า",
+     "status": "link",
+     "stat": null,
+     "links": [
+      {
+       "label": "เปิดระบบสร้าง PDF",
+       "url": "https://trafficoppe.github.io/PDF-report-AI-v1/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": "เป็นเครื่องมือสร้างเอกสาร ไม่มีสถิติของตัวเอง",
+     "source": "อ่าน 4 แท็บจากฐานข้อมูลงานจราจร ผ่านลิงก์ CSV"
+    },
+    {
+     "id": "old-hub",
+     "name": "ระบบสถิติเดิม (trafficsystem)",
+     "desc": "หน้ารวมรุ่นเก่า เลิกใช้เป็นหน้าหลักแล้ว เก็บไว้อ้างอิง",
+     "status": "legacy",
+     "stat": null,
+     "links": [
+      {
+       "label": "เปิดระบบเดิม",
+       "url": "https://trafficoppe.github.io/trafficsystem/index.html",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": "อ้างอิง Sheet รุ่นเก่าที่ไม่ได้อัปเดตแล้ว",
+     "source": null
+    }
+   ]
+  },
+  {
+   "id": "traffic",
+   "name": "งานจราจรและแจ้งเหตุ",
+   "icon": "alert",
+   "systems": [
+    {
+     "id": "incident-report",
+     "name": "ระบบรายงานเหตุการณ์/แจ้งเหตุ (AI)",
+     "desc": "แบบฟอร์มบันทึกเหตุการณ์ อุบัติเหตุ และการรับส่งผู้ป่วย พร้อมพิกัดจุดเกิดเหตุ",
+     "status": "connected",
+     "stat": "incidents",
+     "links": [
+      {
+       "label": "เปิดแบบฟอร์มรายงานเหตุการณ์",
+       "url": "https://trafficoppe.github.io/report-incident-AI-v1/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": null,
+     "source": "แท็บ รายงานเหตุการณ์"
+    },
+    {
+     "id": "gate-tracker",
+     "name": "บันทึกจำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัย",
+     "desc": "แบบฟอร์มบันทึกจำนวนรถยนต์/รถจักรยานยนต์ และผู้ไม่สวมหมวกนิรภัย แยกประตู 1, 3, 4, 5, 6",
+     "status": "warn",
+     "stat": "gate",
+     "links": [
+      {
+       "label": "เปิดแบบฟอร์ม",
+       "url": "https://trafficoppe.github.io/Form-Gate-Tracker-AI-v1/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": null,
+     "source": "แท็บ จำนวนรถเข้า+หมวกนิรภัย"
+    },
+    {
+     "id": "event-incident",
+     "name": "รายงานเหตุการณ์สำหรับกิจกรรมพิเศษ",
+     "desc": "แบบฟอร์มและแดชบอร์ดรายงานเหตุการณ์ช่วงกิจกรรมพิเศษ",
+     "status": "unverified",
+     "stat": "eventIncident",
+     "links": [
+      {
+       "label": "เปิดแบบฟอร์ม",
+       "url": "https://trafficoppe.github.io/Event-incident-report/",
+       "verified": true,
+       "kind": "open"
+      },
+      {
+       "label": "เปิดแดชบอร์ดกิจกรรม",
+       "url": "https://trafficoppe.github.io/Event-incident-report/dashboard.html",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": "ยังระบุ Sheet ที่บันทึกข้อมูลไม่ได้ (ซอร์ส Apps Script ไม่อยู่ในสิทธิ์ที่เข้าถึง)",
+     "source": null
+    },
+    {
+     "id": "helmet-quiz",
+     "name": "แบบทดสอบโครงการรณรงค์สวมหมวกนิรภัย 100%",
+     "desc": "สื่อวิดีโอและแบบทดสอบความรู้การสวมหมวกนิรภัย",
+     "status": "unverified",
+     "stat": "helmetQuiz",
+     "links": [
+      {
+       "label": "เปิดแบบทดสอบ",
+       "url": "https://trafficoppe.github.io/-helmet/",
+       "verified": false,
+       "kind": "open"
+      }
+     ],
+     "note": "ส่งผลไปยัง Apps Script แต่ยังระบุ Sheet ปลายทางไม่ได้",
+     "source": null
+    }
+   ]
+  },
+  {
+   "id": "cctv",
+   "name": "กล้องวงจรปิด",
+   "icon": "camera",
+   "systems": [
+    {
+     "id": "cctv",
+     "name": "ระบบขอดูกล้องวงจรปิด (CCTV)",
+     "desc": "แบบคำขอดูภาพกล้องวงจรปิด พร้อมเอกสารประกอบและการติดตามสถานะ",
+     "status": "connected",
+     "stat": "cctv",
+     "links": [
+      {
+       "label": "แบบคำขอ (ส่วนกลาง – ระบบปัจจุบัน)",
+       "url": "https://trafficoppe.github.io/trafficoppe/",
+       "verified": false,
+       "kind": "open"
+      }
+     ],
+     "note": "กำลังเตรียมรุ่นแยกหน่วยงาน MLC / LA / PMH ใน branch cctv-multi-unit (ยังไม่เปิดใช้)",
+     "source": "แท็บ CCTV_Requests"
+    }
+   ]
+  },
+  {
+   "id": "vehicle",
+   "name": "ยานพาหนะและลานจอดรถ",
+   "icon": "car",
+   "systems": [
+    {
+     "id": "veh-staff",
+     "name": "ลงทะเบียนยานพาหนะบุคลากร",
+     "desc": "แบบลงทะเบียนรถยนต์/รถจักรยานยนต์ของบุคลากร",
+     "status": "partial",
+     "stat": "vehicleRegistration",
+     "links": [
+      {
+       "label": "เปิดแบบลงทะเบียนบุคลากร",
+       "url": "https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbwVhzioMgBzI5LBoLO4anTl1qcTe8lrKXSoYGllLSFx_ybbd0Tko78vZPAd-QmBl9Cq/exec",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": "ต้องเข้าสู่ระบบด้วยบัญชี mahidol.ac.th จึงฝังในหน้านี้ไม่ได้",
+     "source": "ฐานข้อมูลลงทะเบียนยานพาหนะบุคลากร"
+    },
+    {
+     "id": "veh-student",
+     "name": "ลงทะเบียนยานพาหนะนักศึกษา",
+     "desc": "แบบลงทะเบียนรถยนต์/รถจักรยานยนต์ของนักศึกษา",
+     "status": "partial",
+     "stat": "vehicleRegistration",
+     "links": [],
+     "note": "ยังไม่มีลิงก์หน้าแบบฟอร์มสำหรับผู้ใช้ที่ยืนยันได้ (มีเฉพาะลิงก์แก้ไขสคริปต์)",
+     "source": "ฐานข้อมูลลงทะเบียนยานพาหนะนักศึกษา"
+    },
+    {
+     "id": "ruenthai",
+     "name": "แบบสำรวจการจอดรถลานจอดเรือนไทย",
+     "desc": "แบบสำรวจ/ลงทะเบียนผู้ใช้ลานจอดรถเรือนไทย",
+     "status": "blocked",
+     "stat": "ruenthai",
+     "links": [
+      {
+       "label": "เปิดแบบสำรวจ",
+       "url": "https://ruenthai-parking-survey.pages.dev",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": null,
+     "source": "RuenThai_Survey"
+    }
+   ]
+  },
+  {
+   "id": "graduation",
+   "name": "งานปริญญา",
+   "icon": "cap",
+   "systems": [
+    {
+     "id": "grad-parking",
+     "name": "รายงานจำนวนรถในลานจอด พิธีพระราชทานปริญญาบัตร ปีการศึกษา 2568",
+     "desc": "เจ้าหน้าที่บันทึกจำนวนรถในลานจอดแต่ละรอบระหว่างวันงาน",
+     "status": "connected",
+     "stat": "graduationParking",
+     "links": [
+      {
+       "label": "เปิดระบบบันทึกจำนวนรถ",
+       "url": "https://trafficoppe.github.io/mu-graduation-parking-count/",
+       "verified": false,
+       "kind": "open"
+      }
+     ],
+     "note": "ต้องเข้าสู่ระบบ Google ตามที่ผู้ดูแลกำหนด",
+     "source": "SUMMARY_2569"
+    },
+    {
+     "id": "grad-guard-report",
+     "name": "รายงานผลการปฏิบัติงาน รปภ. ช่วงงานปริญญา (GPS)",
+     "desc": "รปภ.เอกชนรายงานผลการปฏิบัติงานพร้อมพิกัดและภาพถ่าย",
+     "status": "blocked",
+     "stat": "graduationGuardGps",
+     "links": [
+      {
+       "label": "เปิดระบบรายงานผล",
+       "url": "https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbzn86oqYMYzjb5YmdjeKZueLVb8UWR5eMDMQWTTIzDhwWko7gQhgf6bov_XljvyIwIR/exec",
+       "verified": true,
+       "kind": "open"
+      },
+      {
+       "label": "ค้นหาข้อมูลเจ้าหน้าที่",
+       "url": "https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbyAX7zwgdHsXgn-VoaYPka8UA3525W10FF2L1wpkBySozBLRZMMW4l7s9k7bHf05cBY/exec",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": "ต้องเข้าสู่ระบบด้วยบัญชี mahidol.ac.th จึงฝังในหน้านี้ไม่ได้",
+     "source": "Reports"
+    }
+   ]
+  },
+  {
+   "id": "guard",
+   "name": "งาน รปภ.",
+   "icon": "shield",
+   "systems": [
+    {
+     "id": "guard-scan",
+     "name": "สแกนจุดตรวจ รปภ.เอกชน",
+     "desc": "รปภ.เอกชนสแกนจุดตรวจตามรอบ แยกหน่วยงาน/โซน",
+     "status": "connected",
+     "stat": "guardScan",
+     "links": [
+      {
+       "label": "เปิดแบบฟอร์มสแกนจุด",
+       "url": "https://trafficoppe.github.io/NPsecurity-guard-scan/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": null,
+     "source": "แท็บ แสกนจุดเอกชน"
+    },
+    {
+     "id": "guard-feedback-central",
+     "name": "แบบประเมินความพึงพอใจ รปภ.เอกชนส่วนกลาง",
+     "desc": "ผู้ใช้บริการให้คะแนน 5 ด้าน (1–5)",
+     "status": "connected",
+     "stat": "satisfactionCentral",
+     "links": [
+      {
+       "label": "เปิดแบบประเมิน",
+       "url": "https://trafficoppe.github.io/NPcentral-guard-feedback/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": null,
+     "source": "แท็บ ความพึงพอใจการให้บริการรปภ.เอกชน"
+    },
+    {
+     "id": "guard-feedback-unit",
+     "name": "แบบประเมินความพึงพอใจ รปภ.เอกชนส่วนงาน",
+     "desc": "ส่วนงานบันทึกผลประเมินรายเดือนพร้อมจำนวนผู้ตอบ",
+     "status": "connected",
+     "stat": "satisfactionUnit",
+     "links": [
+      {
+       "label": "เปิดแบบบันทึกผลประเมิน",
+       "url": "https://trafficoppe.github.io/NPsecurity-feedback/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": null,
+     "source": "แท็บ คะแนนความพึงพอใจรปภ.ส่วนงาน"
+    },
+    {
+     "id": "guard-shift",
+     "name": "รายชื่อประจำจุด รปภ.เอกชน",
+     "desc": "บันทึกรายชื่อ รปภ.ประจำจุดรายผลัด",
+     "status": "link",
+     "stat": null,
+     "links": [
+      {
+       "label": "เปิดแบบฟอร์ม",
+       "url": "https://trafficoppe.github.io/guard-shift-tracker/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": "ข้อมูลเป็นรายชื่อบุคคล จึงไม่นำสถิติขึ้นหน้ารวม",
+     "source": null
+    },
+    {
+     "id": "pdf-guard",
+     "name": "PDF รายงานการตรวจการปฏิบัติหน้าที่ รปภ.เอกชนส่วนกลาง",
+     "desc": "สร้างเอกสารลงชื่อ/ตรวจการปฏิบัติหน้าที่",
+     "status": "link",
+     "stat": null,
+     "links": [
+      {
+       "label": "เปิดระบบสร้าง PDF",
+       "url": "https://trafficoppe.github.io/PDF-NPsecurity-report/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": "เป็นเครื่องมือสร้างเอกสาร",
+     "source": null
+    },
+    {
+     "id": "pdf-guard-monthly",
+     "name": "PDF สรุปผลประเมินและควบคุมงานจ้างเหมา รปภ. ประจำเดือน (OPPE-01-F-10-01)",
+     "desc": "สร้างเอกสารสรุปผลรายเดือนจากข้อมูลสแกนจุดและความพึงพอใจ",
+     "status": "link",
+     "stat": null,
+     "links": [
+      {
+       "label": "เปิดระบบสร้าง PDF",
+       "url": "https://trafficoppe.github.io/PDF-OPPE-01-F-10-01/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": "เป็นเครื่องมือสร้างเอกสาร",
+     "source": null
+    }
+   ]
+  },
+  {
+   "id": "borrow",
+   "name": "อุปกรณ์และรถกอล์ฟ",
+   "icon": "box",
+   "systems": [
+    {
+     "id": "borrow",
+     "name": "ระบบยืม-คืนอุปกรณ์และรถกอล์ฟ",
+     "desc": "ยื่นคำขอยืมอุปกรณ์จราจร/จองรถกอล์ฟ และแจ้งคืน",
+     "status": "warn",
+     "stat": "borrow",
+     "links": [
+      {
+       "label": "เปิดระบบยืม-คืน",
+       "url": "https://trafficoppe.github.io/borrowform/",
+       "verified": false,
+       "kind": "open"
+      }
+     ],
+     "note": "ระบบยังไม่สมบูรณ์ — ข้อเสนอปรับปรุงอยู่ใน branch borrow-v2-proposal",
+     "source": "Borrow_Data / Return_Data"
+    }
+   ]
+  },
+  {
+   "id": "safety",
+   "name": "ความปลอดภัย (AED / ถังดับเพลิง)",
+   "icon": "heart",
+   "systems": [
+    {
+     "id": "aed-map",
+     "name": "แผนที่ตรวจสอบความพร้อมใช้งาน AED",
+     "desc": "ตำแหน่งเครื่อง AED ภายในวิทยาเขตศาลายา บน Google My Maps",
+     "status": "link",
+     "stat": null,
+     "links": [
+      {
+       "label": "เปิดแผนที่ AED",
+       "url": "https://www.google.com/maps/d/u/0/viewer?mid=1ut0hZAkMPrVLSq5DDCWfj1CScKtPdnU&femb=1&ll=13.794197821033412%2C100.32132264629175&z=15",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": "ไม่มีข้อมูลยืนยันจำนวนเครื่องในรูปแบบที่ระบบอ่านได้ จึงแสดงเป็นลิงก์",
+     "source": null
+    },
+    {
+     "id": "fire",
+     "name": "ระบบตรวจถังดับเพลิง",
+     "desc": "ตรวจสภาพถังดับเพลิงรายถังด้วยมือถือ และบันทึกการเติม",
+     "status": "connected",
+     "stat": "fire",
+     "links": [
+      {
+       "label": "เปิดระบบตรวจถังดับเพลิง",
+       "url": "https://trafficoppe.github.io/-v1/",
+       "verified": true,
+       "kind": "open"
+      }
+     ],
+     "note": null,
+     "source": "แท็บ ข้อมูลถังดับเพลิง / บันทึกการตรวจ"
+    }
+   ]
+  },
+  {
+   "id": "lostfound",
+   "name": "ของหาย / เก็บของได้",
+   "icon": "search",
+   "systems": [
+    {
+     "id": "lostfound",
+     "name": "ระบบแจ้งของหาย / เก็บของได้ / รับของคืน",
+     "desc": "แจ้งของหาย แจ้งเก็บของได้ และติดตามการรับคืน",
+     "status": "connected",
+     "stat": "lostfound",
+     "links": [
+      {
+       "label": "เปิดระบบ Lost & Found",
+       "url": "https://trafficoppe.github.io/lostfound/",
+       "verified": false,
+       "kind": "open"
+      }
+     ],
+     "note": null,
+     "source": "แท็บ รายการ พ.ศ. 2569 (ปัจจุบัน)"
+    }
+   ]
+  }
+ ]
+}
