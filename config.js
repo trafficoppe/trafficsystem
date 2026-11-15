@@ -9,6 +9,10 @@ window.HUB_CONFIG = {
   rosterApiUrl: "",
   /* URL ของ Backend ผู้ช่วย AI (รับเฉพาะสถิติรวม) — เว้นว่าง = แสดงสถานะ "ยังไม่เชื่อมต่อ" */
   aiApiUrl: "",
+  /* โหมดระบบภายใน: เปิด (true) เฉพาะเมื่อเว็บไซต์อยู่หลังระบบยืนยันตัวตนแล้ว (เช่น Cloudflare Access)
+     เมื่อเปิด หน้า “แจ้งของหาย / เก็บของได้” จะดึงรายการและรูปภาพสดจากระบบ Lost & Found (lostfoundApiUrl) — ไม่มีข้อมูลรายการเก็บใน Repository นี้ */
+  internalMode: false,
+  lostfoundApiUrl: "",
   /* Google Maps JavaScript API key (ไม่บังคับ) — เว้นว่าง = ใช้แผนผังในหน้า + ลิงก์ Google Maps */
   googleMapsApiKey: "",
   allowMapEmbed: true

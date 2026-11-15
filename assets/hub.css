@@ -327,3 +327,26 @@ html[data-theme="dark"] .sh-M{background:#4a3a10;color:#ffe29a}html[data-theme="
 }
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.sb,.main,.nav-g .chev,.kg{transition:none}}
 @media print{.sb,.topbar,.scrim,.foot{display:none}.main{margin:0}.view{padding:0}}
+
+/* ---------- รอบ 4 ---------- */
+.ministats{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:10px}
+.ministats div{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:7px 11px;min-width:0}
+.ministats b{display:block;font-size:1.3rem;line-height:1.2;font-variant-numeric:tabular-nums}
+.ministats span{display:block;font-size:.76rem;color:var(--muted);line-height:1.25}
+.sec>.ministats{margin-bottom:14px}
+.flag{font-size:.86rem;color:var(--muted);margin:0 0 10px}
+.map-mini{cursor:pointer;max-width:420px;margin:0 auto;width:100%}
+.map-mini>svg{max-height:330px}
+.lf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.lf-item{overflow:hidden;display:flex;flex-direction:column}
+.lf-pic{display:grid;place-items:center;width:100%;aspect-ratio:4/3;background:var(--card2);border:0;border-bottom:1px solid var(--line);padding:0;cursor:zoom-in;overflow:hidden}
+.lf-pic img{width:100%;height:100%;object-fit:contain;display:block}
+.lf-pic.none{cursor:default;color:var(--muted);font-size:.84rem;text-align:center;padding:10px}
+.lf-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px}
+.lf-body h3{font-size:.98rem;line-height:1.35;margin-top:4px}
+.lf-body p{font-size:.86rem}
+.lf-st{font-weight:700;color:var(--brand-ink);margin-top:4px}
+.lightbox{position:fixed;inset:0;z-index:400;background:rgba(6,18,14,.82);display:grid;place-items:center;padding:16px}
+.lb-in{background:var(--card);border-radius:14px;padding:14px;max-width:min(96vw,1100px);max-height:94vh;display:flex;flex-direction:column;gap:10px;align-items:center}
+.lb-in img{max-width:100%;max-height:74vh;object-fit:contain;border-radius:8px}
+.lb-in p{font-size:.9rem;text-align:center}
