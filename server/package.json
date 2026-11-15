@@ -1,0 +1,1 @@
+{ "name": "hub-server-preview", "private": true, "type": "module", "description": "บริการข้อมูลภายในของหน้ารวม (ยังไม่ได้ Deploy) — ดู server/README.md", "scripts": { "test": "node tests/server.test.mjs" } }

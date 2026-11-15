@@ -1331,7 +1331,7 @@
         'ทำ Backend แยกสำหรับหน้ารวม (Apps Script ใหม่ หรือ Cloudflare Worker) ที่ป้อนให้ AI เฉพาะสถิติรวมชุดเดียวกับ data/stats.json',
         'เก็บ API key เป็นค่าลับฝั่งเซิร์ฟเวอร์ (Script Properties / Worker Secret) ไม่ใส่ในหน้าเว็บหรือ Repository',
         'จำกัดผู้ใช้ด้วยการยืนยันตัวตน (เช่น Cloudflare Access) และจำกัดจำนวนคำถาม',
-        'เมื่อ Backend พร้อม ใส่ URL ใน config.js (aiApiUrl) — ตัวอย่างโค้ดอยู่ที่ proposals/ai-stats-worker.js (ยังไม่ได้ Deploy)'])])])]));
+        'โค้ดบริการอยู่ที่ server/functions/api/chat.js (ตรวจ JWT ของ Cloudflare Access จำกัดจำนวนคำถาม และตรวจตัวเลขในคำตอบ) — ทดสอบ local ด้วยข้อมูลจำลองแล้ว ยังไม่ได้ Deploy และยังไม่เคยเรียกบริการ AI จริง', 'เมื่อผู้ดูแล Deploy และตั้งค่าลับแล้ว ใส่ URL ใน config.js (aiApiUrl)'])])])]));
     v.appendChild(systemsSection(['dashboard-ai'], 'ระบบ AI เดิม'));
   };
 
@@ -1643,7 +1643,7 @@
     var seg = el('div', { class: 'seg period', role: 'group', 'aria-label': 'ช่วงข้อมูลของส่วนบน' }, [['today', 'วันนี้'], ['month', 'เดือนนี้'], ['year', 'ปีนี้'], ['custom', 'กำหนดช่วง']].map(function (x) {
       return el('button', { type: 'button', 'aria-pressed': String(state.period === x[0]), text: x[1], onclick: function () { state.period = x[0]; route(true); } }); }));
     v.appendChild(el('div', { class: 'dash-head' }, [el('div', {}, [el('h1', { text: 'ภาพรวมงานจราจรและความปลอดภัย' }),
-      el('div', { class: 'dash-meta' }, [el('span', { class: 'upd' }, [ic('calendar'), 'วันนี้ ' + dLabel(t)]), el('span', { text: 'ตรวจข้อมูลล่าสุด ' + stampTxt(gen) })])]), el('div', { class: 'dash-ctl' }, [seg, state.period === 'custom' ? rangeCtrl() : null])]));
+      el('div', { class: 'dash-meta' }, [el('span', { class: 'upd' }, [ic('calendar'), 'วันนี้ ' + dLabel(t)]), el('span', { class: 'dash-chk', text: 'ตรวจข้อมูลล่าสุด ' + stampTxt(gen) })])]), el('div', { class: 'dash-ctl' }, [seg, state.period === 'custom' ? rangeCtrl() : null])]));
     var cards = [nowIncidents(Q), nowLostFound(Q), nowGate(Q), nowAnywheel(Q), nowTram(Q), nowCctv(Q), nowAssets(Q), nowGuard(Q)].filter(Boolean);
     v.appendChild(el('section', { class: 'sec', 'aria-label': 'ข้อมูล' + Q.label }, [el('div', { class: 'sec-h' }, [el('h2', { text: Q.kind === 'today' ? 'ข้อมูลวันนี้' : 'ข้อมูล' + Q.label }), el('span', { class: 'note', text: Q.kind === 'today' ? dLabel(t) + ' · เรื่องที่ยังไม่มีข้อมูลวันนี้จะแสดงข้อมูลล่าสุดพร้อมป้ายวันที่' : '' })]), el('div', { class: 'nows' }, cards.map(nowCard))]));
     /* แนวโน้มรายเดือน — ใช้ช่วงของปีนี้ (หรือช่วงที่กำหนดเอง) ไม่ขึ้นกับปุ่ม “วันนี้/เดือนนี้” */
@@ -1744,8 +1744,10 @@
     };
     run(false); return host;
   }
+  /* รูปที่แสดงได้: Drive (แปลงเป็น thumbnail จาก ID) หรือ URL https บนโดเมนที่ต้นทางใช้จริงเท่านั้น (GitHub user-attachments ของ Vehicle_List, googleusercontent) — URL อื่นถือว่า “ไม่มีภาพ” */
+  var IMG_HOSTS = /^https:\/\/(github\.com\/user-attachments\/assets\/|(?:user-images|private-user-images|raw)\.githubusercontent\.com\/|lh[3-6]\.googleusercontent\.com\/|trafficoppe\.github\.io\/)[^\s"'<>]*$/;
   function driveId(u) { var s = String(u || ''), m = /(?:\/d\/|[?&]id=)([-\w]{20,})/.exec(s); return m ? m[1] : /^[-\w]{25,}$/.test(s) ? s : ''; }
-  function imgSrc(u, sz) { var id = driveId(u); if (id) return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=' + (sz || 'w400'); return /^https:\/\//.test(String(u || '')) ? String(u) : ''; }
+  function imgSrc(u, sz) { var id = driveId(u); if (id) return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=' + (sz || 'w400'); return IMG_HOSTS.test(String(u || '')) ? String(u) : ''; }
   function imgsOf(r) { return ['img1', 'img2', 'img3', 'img4', 'photo', 'url'].map(function (k) { return r[k]; }).filter(function (u) { return imgSrc(u); }); }
   function pic(u, alt, cls) {
     var src = imgSrc(u, 'w400');
@@ -2011,6 +2013,9 @@
           .then(function (x) { btn.disabled = false;
             if (x.s === 401 || x.s === 403) { msg.classList.add('bad'); msg.textContent = 'ยังไม่ได้บันทึก — บัญชีนี้ยังไม่ได้เข้าสู่ระบบหรือไม่มีสิทธิ์บันทึก'; }
             else if (x.s >= 200 && x.s < 300 && x.j && x.j.ok === true) { msg.classList.add('ok'); msg.textContent = 'บันทึกแล้ว' + (x.j.ref ? ' · เลขอ้างอิง ' + x.j.ref : ''); form.reset(); }
+            else if (x.s === 503 && x.j && x.j.code === 'write-disabled') { msg.classList.add('warn'); msg.textContent = 'ยังไม่ได้บันทึก — บริการบันทึกข้อมูลยังไม่เปิดใช้งาน'; }
+            else if (x.s === 422) { msg.classList.add('bad'); msg.textContent = 'ยังไม่ได้บันทึก — บริการตรวจพบข้อมูลไม่ถูกต้อง' + (x.j && x.j.fields ? ': ' + x.j.fields.join(', ') : ''); }
+            else if (x.s === 429) { msg.classList.add('bad'); msg.textContent = 'ยังไม่ได้บันทึก — ส่งถี่เกินกำหนด รอสักครู่แล้วลองใหม่'; }
             else { msg.classList.add('bad'); msg.textContent = 'ยังไม่ได้บันทึก — บริการตอบกลับผิดพลาด (HTTP ' + x.s + ') ลองใหม่อีกครั้ง'; } },
           function () { btn.disabled = false; msg.classList.add('bad'); msg.textContent = 'ยังไม่ได้บันทึก — เชื่อมต่อบริการบันทึกข้อมูลไม่ได้ ข้อมูลที่กรอกยังอยู่ในหน้านี้'; });
       };
@@ -2033,6 +2038,13 @@
     var send = el('button', { type: 'submit', class: 'btn', text: 'ส่ง' }), quick = el('div', { class: 'chat-quick' });
     var bubble = svg('svg', { viewBox: '0 0 24 24', width: 26, height: 26, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' }, [svg('path', { d: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z' }), svg('path', { d: 'M9 11h.01M12 11h.01M15 11h.01' })]);
     var fab = el('button', { type: 'button', id: 'chatFab', class: 'chat-fab', 'aria-label': 'เปิดผู้ช่วย AI ถามสถิติ', 'aria-expanded': 'false', 'aria-controls': 'chatPanel' }, [bubble]);
+    /* จอแคบ: ปุ่มลอยหลบลงเมื่อเลื่อนลงอ่านข้อมูล (ไม่บังตัวเลขในการ์ด) และกลับมาเมื่อเลื่อนขึ้น อยู่บนสุด หรือถึงท้ายหน้า (ท้ายหน้ามีพื้นที่ว่างเผื่อไว้) */
+    var lastY = window.pageYOffset || 0;
+    window.addEventListener('scroll', function () {
+      var y = window.pageYOffset || 0, end = window.innerHeight + y >= document.documentElement.scrollHeight - 96;
+      if (y < 24 || end || y < lastY - 6) fab.classList.remove('fab-away'); else if (y > lastY + 6) fab.classList.add('fab-away');
+      lastY = y;
+    }, { passive: true });
     var closeB = el('button', { type: 'button', class: 'chat-x', 'aria-label': 'ปิดผู้ช่วย AI', text: '×' }), scope = el('span', { class: 'chat-scope' });
     var form = el('form', { class: 'chat-form' }, [inp, send]);
     var panel = el('section', { id: 'chatPanel', class: 'chat-panel', hidden: '', 'aria-label': 'ผู้ช่วย AI ถามสถิติ' }, [el('div', { class: 'chat-h' }, [el('div', {}, [el('strong', { text: 'ผู้ช่วยถามสถิติ' }), scope]), closeB]), log, quick, form]);
@@ -2048,6 +2060,7 @@
         .then(function (x) {
           if (x.s === 401 || x.s === 403) return fail('ยังไม่ได้เข้าสู่ระบบ หรือบัญชีนี้ไม่มีสิทธิ์ใช้ผู้ช่วย AI');
           if (x.s === 429) return fail('ถามถี่เกินกำหนด — รอสักครู่แล้วลองใหม่');
+          if (x.s === 503) return fail('บริการผู้ช่วย AI ยังตั้งค่าไม่ครบ จึงยังตอบไม่ได้');
           if (!x.j || x.j.status !== 'success' || typeof x.j.reply !== 'string') return fail('ผู้ช่วย AI ตอบกลับผิดพลาด (HTTP ' + x.s + ')');
           wait.remove(); chat.hist.push({ role: 'User', text: text }); chat.hist.push({ role: 'AI', text: x.j.reply });
           add('ai', x.j.reply, x.j.sources && x.j.sources.length ? el('p', { class: 'chat-src', text: 'แหล่งข้อมูล: ' + x.j.sources.join(' · ') + (x.j.asOf ? ' · ข้อมูล ณ ' + x.j.asOf : '') }) : null);
@@ -2072,8 +2085,8 @@
   }
 
   function renderStamp() {
-    var g = DATA.stats.generatedAt || '', s = $('stamp'); s.textContent = '';
-    s.appendChild(el('b', { text: 'ข้อมูล ณ ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) })); s.appendChild(el('br'));
+    var g = DATA.stats.generatedAt || '', g2 = (DATA.extra || {}).generatedAt || '', s = $('stamp'); if (g2 > g) g = g2; s.textContent = '';   /* เวลาที่ตรวจแหล่งข้อมูลครั้งล่าสุด (แต่ละเรื่องมีวันที่ของตัวเองกำกับในหน้า) */
+    s.appendChild(el('b', { text: 'ตรวจข้อมูลล่าสุด ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) })); s.appendChild(el('br'));
     s.appendChild(document.createTextNode(liveMode ? 'อ่านสดจาก Stats API (ยอดรวม)' : 'ไฟล์สถิติรวม · เวลาไทย'));
   }
   function collectMonths() {

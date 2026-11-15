@@ -100,7 +100,7 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   await page.click('.seg.period button:text-is("เดือนนี้")'); await page.waitForTimeout(350);
   c = await nowCard(page, 'เหตุการณ์และอุบัติเหตุ');
   ok('เดือนนี้: เหตุการณ์ 13 · ผู้บาดเจ็บ/ป่วย 9 (นับจากข้อมูลรายวัน)', /13 เหตุการณ์/.test(c) && /ยานพาหนะ 4/.test(c) && /ผู้บาดเจ็บ\/ป่วย 9 คน/.test(c), c);
-  c = await nowCard(page, 'Lost & Found'); ok('เดือนนี้: แจ้งหาย 26 · เก็บได้ 6 · สถานะรับคืนแล้ว 7 (ไม่บวกแบบรับคืน)', /26 แจ้งของหาย/.test(c) && /เก็บของได้ 6/.test(c) && /สถานะรับคืนแล้ว 7/.test(c), c);
+  c = await nowCard(page, 'Lost & Found'); ok('เดือนนี้: แจ้งหาย 27 · เก็บได้ 6 · สถานะรับคืนแล้ว 7 (ไม่บวกแบบรับคืน) — ค่าคาดหวังนับจากแท็บ LF_New โดยตรงเมื่อ 15 พ.ย. 18:17 น. (รายการที่ 27 บันทึก 14 พ.ย. 20:34 น.)', /27 แจ้งของหาย/.test(c) && /เก็บของได้ 6/.test(c) && /สถานะรับคืนแล้ว 7/.test(c), c);
   c = await nowCard(page, 'รถเข้าและหมวกนิรภัย'); ok('เดือนนี้: รถเข้า ' + (GNOV.cars + GNOV.motorcycles).toLocaleString('en-US') + ' คัน จาก ' + GNOV.days + ' วันที่มีข้อมูล (เรียกว่า “คันเข้า”)', c.includes((GNOV.cars + GNOV.motorcycles).toLocaleString('en-US') + ' คันเข้า') && c.includes(GNOV.days + ' วัน') && !/เข้าออก/.test(c), c);
   await page.click('.seg.period button:text-is("ปีนี้")'); await page.waitForTimeout(350);
   c = await nowCard(page, 'เหตุการณ์และอุบัติเหตุ'); ok('ปีนี้: เหตุการณ์ 68 · ผู้บาดเจ็บ/ป่วย 39', /68 เหตุการณ์/.test(c) && /39 คน/.test(c), c);
@@ -299,6 +299,9 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   ok('มือถือ หน้าแรก: ไม่ล้นจอ · ไม่มีตาราง · 8 การ์ด', (await overflow()) === '' && await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1) && await T(page, '#view table').count() === 0 && await T(page, '.now').count() === 8, await overflow());
   await page.screenshot({ path: OUT + '/17_mobile_dashboard_top.png' }); await page.screenshot({ path: OUT + '/18_mobile_dashboard_full.png', fullPage: true });
   const fabBox = await T(page, '#chatFab').boundingBox(); ok('มือถือ: ปุ่มผู้ช่วย AI อยู่มุมล่างขวา ไม่ทับการ์ดเมื่อเลื่อนสุด', fabBox.x > 300 && fabBox.y > 760 && await page.evaluate(() => { document.documentElement.style.scrollBehavior = 'auto'; window.scrollTo(0, document.body.scrollHeight); const f = document.getElementById('chatFab').getBoundingClientRect(), last = Array.from(document.querySelectorAll('.trend')).pop().getBoundingClientRect(); return last.bottom <= f.top + 2; }));
+  ok('มือถือ: เลื่อนลงอ่านข้อมูล → ปุ่มผู้ช่วย AI หลบออก (ไม่บังตัวเลขในการ์ด) · เลื่อนขึ้น → กลับมา', await page.evaluate(async () => { const f = document.getElementById('chatFab'), w = (ms) => new Promise(r => setTimeout(r, ms));
+    window.scrollTo(0, 0); await w(120); const top = !f.classList.contains('fab-away'); window.scrollTo(0, 500); await w(120); window.scrollTo(0, 900); await w(350); const away = f.classList.contains('fab-away') && getComputedStyle(f).pointerEvents === 'none' && +getComputedStyle(f).opacity < 0.05;
+    window.scrollTo(0, 820); await w(350); const back = !f.classList.contains('fab-away'); return top && away && back; }));
   await page.evaluate(() => window.scrollTo(0, 0)); await page.tap('#chatFab'); await page.waitForTimeout(250);
   ok('มือถือ: หน้าต่างผู้ช่วย AI เป็นแผ่นล่างเต็มความกว้าง ปิดได้', (await T(page, '#chatPanel').boundingBox()).width >= 388); await page.tap('.chat-x');
   const c2 = T(page, '.trend >> nth=0').locator('g.col').nth(2); await c2.scrollIntoViewIfNeeded(); await c2.tap(); await page.waitForTimeout(200); const tb = await T(page, '#tip').boundingBox();
