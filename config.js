@@ -12,8 +12,10 @@ window.HUB_CONFIG = {
   /* โหมดระบบภายใน: เปิด (true) เฉพาะเมื่อเว็บไซต์อยู่หลังระบบยืนยันตัวตนแล้ว (เช่น Cloudflare Access)
      เมื่อเปิด หน้า “แจ้งของหาย / เก็บของได้” จะดึงรายการและรูปภาพสดจากระบบ Lost & Found (lostfoundApiUrl) — ไม่มีข้อมูลรายการเก็บใน Repository นี้ */
   internalMode: false,
-  lostfoundApiUrl: "",
-  /* Google Maps JavaScript API key (ไม่บังคับ) — เว้นว่าง = ใช้แผนผังในหน้า + ลิงก์ Google Maps */
+  /* API สาธารณะของระบบ Lost & Found (ค่าเดียวกับ assets/lf-data.js ใน Repository trafficoppe/lostfound — ไม่ใช่ความลับ)
+     หน้ารวมเรียกเฉพาะ GET ?action=getPublicData (อ่านอย่างเดียว ไม่มีชื่อ/เบอร์โทรผู้แจ้ง) และเรียกเฉพาะเมื่อ internalMode เป็น true */
+  lostfoundApiUrl: "https://script.google.com/macros/s/AKfycbxrI-qgAvb0Zy-aKWDtTaHKM3etKDeedFVpOMoECxH3-x2uGCTQG_Fw70a1JR8F4BNM/exec",
+  /* Google Maps JavaScript API key (ไม่บังคับ) — เว้นว่าง = ใช้แผนที่ OpenStreetMap (เมื่อเปิดผ่าน http/https) */
   googleMapsApiKey: "",
   allowMapEmbed: true
 };
