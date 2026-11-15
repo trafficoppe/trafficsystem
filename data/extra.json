@@ -1,6 +1,6 @@
 {
  "schema": 2,
- "generatedAt": "2026-11-15T18:20:00+07:00",
+ "generatedAt": "2026-11-15T18:40:00+07:00",
  "ruenthaiSurvey": {
   "status": "partial",
   "source": "ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย (RuenThai Parking) → แท็บ RuenThai_Survey (คอลัมน์ Timestamp)",
@@ -75,7 +75,7 @@
  },
  "incidentsDaily": {
   "source": "ฐานข้อมูลงานจราจร → รายงานเหตุการณ์ (วันที่เกิดเหตุ, ประเภทเหตุการณ์, จำนวนคนเจ็บ/ป่วย)",
-  "checkedAt": "2026-11-15 18:15",
+  "checkedAt": "2026-11-15 18:36",
   "lastEntry": "2026-11-13",
   "lastRecordedAt": "2026-11-13 14:26",
   "complete": true,
@@ -367,7 +367,7 @@
  },
  "lostfoundDaily": {
   "source": "Sheet LF_New ของระบบ Lost & Found (Timestamp, ประเภท)",
-  "checkedAt": "2026-11-15 18:17",
+  "checkedAt": "2026-11-15 18:36",
   "lastEntry": "2026-11-14",
   "lastRecordedAt": "2026-11-14 20:34",
   "complete": true,

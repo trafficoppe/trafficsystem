@@ -12,6 +12,8 @@
 
 ## วิธีเปิดดู
 
+- **แนะนำ (เห็นแผนที่จริงและรายการจาก Sheet):** เปิดผ่าน local HTTP — Windows ดับเบิลคลิก `START_PREVIEW_WINDOWS.bat` → เบราว์เซอร์เปิด `http://localhost:8765/dist/preview.html` · macOS/Linux หรือเครื่องที่มี Python: `python3 tools/serve_preview.py` → `http://127.0.0.1:8765/dist/preview.html` (ฟังเฉพาะเครื่องนั้น ไม่ใช่การ Deploy)
+
 - เปิดไฟล์ `dist/preview.html` ได้เลย (ไฟล์เดียว ฝัง CSS/JS/สถิติรวมไว้แล้ว) — ต้องต่ออินเทอร์เน็ตเฉพาะเพื่อโหลดฟอนต์และตรามหาวิทยาลัย
 - หรือเปิด `index.html` ผ่านเว็บเซิร์ฟเวอร์ (เช่น `python3 -m http.server`) — เปิดจาก `file://` ตรง ๆ ไม่ได้เพราะต้องอ่าน `data/*.json`
 - เปลี่ยนหน้าด้วย `#hash` (ปุ่มย้อนกลับของเบราว์เซอร์ใช้ได้ ส่งลิงก์ตรงหน้าได้) เช่น `#dashboard`, `#report-guard`, `#roster`, `#guard-central`, `#settings`
@@ -58,7 +60,9 @@
 | `data/systems.json` ← `tools/build_systems.py` | บัญชีระบบ 24 รายการ — ลิงก์ทุกรายการตรวจเปิดได้แล้ว |
 | `data/stats.json` | **ไม่เปลี่ยนในรอบ 3** |
 | `docs/PREVIEW_V3.md` | บันทึกการออกแบบ เมนู ตารางเวร AI และข้อเสนอการเผยแพร่ |
-| `proposals/ai-stats-worker.js`, `proposals/roster-api-worker.js` | โค้ดตัวอย่าง Backend (ยังไม่ได้ Deploy ไม่ถูกเรียกจากหน้ารวม) |
+| `server/`, `apps-script/HubData.gs` | บริการข้อมูลภายในที่ตรวจตัวตนจริง (ข้อมูลบุคลากร/ภาพ/วิทยุ, บันทึกแบบฟอร์ม, ผู้ช่วย AI, รายชื่อเวร) — ยังไม่ได้ Deploy · ดู `server/README.md` |
+| `tools/serve_preview.py`, `START_PREVIEW_WINDOWS.bat`, `tools/windows/start_preview.ps1` | เปิด Preview ผ่าน local HTTP |
+| `docs/ส่งมอบรอบ7.md` | สถานะล่าสุด ตารางทุกหน้า ผลทดสอบ และสิ่งที่ต้องทำต่อ |
 | `tests/roster.test.js` | ตรวจกติกาตารางเวรเทียบกับค่าจากไฟล์ Excel |
 | `dist/preview.html` ← `tools/build_preview.py` | ไฟล์ Preview เปิดได้ไฟล์เดียว |
 

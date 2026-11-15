@@ -21,7 +21,7 @@ function gvTable(gid) {
   const S = v => ({ v }), N = v => ({ v, f: String(v) }), rows = [];
   if (gid === '147145093') { [['รถจักรยานยนต์', 6], ['รถจักรยานไฟฟ้า', 5], ['รถกอล์ฟ', 3]].forEach(([t, n]) => { for (let i = 1; i <= n; i++) { const id = rows.length + 1; rows.push([N(id), S(t), S('รุ่นสมมติ ' + id + ' (MOCK)'), S('แดง'), S('MOCK-' + id), S('ครุภัณฑ์-' + id), S(id === 2 ? '' : id === 3 ? 'https://drive.google.com/file/d/' + DID(999) + '/view' : 'https://github.com/user-attachments/assets/mock-' + id), null, null, N(2568), S('บริษัทสมมติ')]); } }); return { n: 11, rows }; }
   if (gid === '25594122') { FIRE_KINDS.forEach(([k, n]) => { for (let i = 1; i <= n; i++) { const id = rows.length + 1; rows.push([N(id), S('อุปกรณ์ดับเพลิง'), S(k), S('10 ปอนด์'), S('อาคารสมมติ ' + id + ' (MOCK)'), N(i), S('FE-' + id), k === 'หัวรับน้ำดับเพลิง' ? null : S('https://drive.google.com/file/d/' + DID(id) + '/view?usp=drivesdk'), null, null, null, N(2567), S('บริษัทสมมติ')]); } }); return { n: 13, rows }; }
-  if (gid === '591543024') { for (let i = 1; i <= 49; i++) rows.push([N(i), S('ลานจอดสมมติ ' + i + ' (MOCK)'), N(10 * i), S('https://drive.google.com/open?id=' + DID(100 + i)), null, null, null]); return { n: 7, rows }; }
+  if (gid === '591543024') { for (let i = 1; i <= 49; i++) rows.push([N(i), S('ลานจอดสมมติ ' + i + ' (MOCK)'), N(10 * i), null, null, null, null]); return { n: 7, rows }; }   // ต้นทางจริง: คอลัมน์รูปของลานจอดว่างทั้งหมด (ตรวจ 15 พ.ย.)
   if (gid === '1541578119') { for (let i = 1; i <= 7; i++) rows.push([S('แบบฟอร์มสมมติ ' + i + ' (MOCK)'), S(i < 3 ? 'https://docs.google.com/forms/d/e/MOCK' + i + '/viewform' : 'https://trafficoppe.github.io/mock' + i + '/')]); return { n: 2, rows }; }
   if (gid === '267450301') { for (let i = 1; i <= 118; i++) { const fire = i <= 78, bad = !fire && i % 5 === 0; rows.push([{ v: 'Date(2026,' + (2 + i % 4) + ',' + (1 + i % 27) + ',21,4,0)', f: 'x' }, S(fire ? 'อุปกรณ์ดับเพลิง' : i % 2 ? 'รถจักรยานยนต์' : 'รถกอล์ฟ'), S(fire ? 'ถังดับเพลิงชนิดCo2' : 'รุ่นสมมติ 1 (MOCK)'), S('แดง'), S(fire ? '1' : 'MOCK-1'), S(fire ? 'FE-21' : 'ครุภัณฑ์-1')].concat(Array.from({ length: 9 }, () => S('ปกติ')), [S(''), S(bad ? 'ไม่สามารถใช้งานได้ (ต้องส่งซ่อม/แก้ไข)' : 'สามารถใช้งานได้')])); } return { n: 17, rows }; }
   if (gid === '680269898') { rows.push([S('1'), S('FE-21'), { v: 'Date(2026,4,2)', f: 'x' }, N(2.5), N(10), S('CO2'), S('บริษัทสมมติ'), S('')]); return { n: 8, rows }; }
@@ -45,7 +45,7 @@ async function newPage(browser, o) {
     if (now) { const real = Date.now.bind(Date), off = now - real(); Date.now = () => real() + off; }
     if (incomplete) Object.defineProperty(window, '__HUB_DATA__', { configurable: true, get() { return undefined; }, set(v) { ['incidentsDaily', 'lostfoundDaily'].forEach(k => { if (v.extra && v.extra[k]) v.extra[k].complete = false; }); Object.defineProperty(window, '__HUB_DATA__', { value: v, writable: true, configurable: true }); } });
     Object.defineProperty(window, 'HUB_CONFIG', { configurable: true, get() { return undefined; }, set(v) { Object.assign(v, cfg || {}); Object.defineProperty(window, 'HUB_CONFIG', { value: v, writable: true, configurable: true }); } });
-  }, [o.now || BKK('2026-11-15', '18:40'), o.cfg || null, !!o.incomplete]);
+  }, [o.now || BKK('2026-11-15', '18:50'), o.cfg || null, !!o.incomplete]);
   await page.route('**/*', route => {
     const req = route.request(), u = req.url();
     if (u.startsWith(BASE) && !u.includes('/mock-api/')) return route.continue();
@@ -83,7 +83,7 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   ok('KPI ต่อการ์ดไม่เกิน 1 ค่าหลัก + 4 ค่ารอง', await page.$$eval('.now', n => n.every(x => x.querySelectorAll('.now-main b, .now-na').length === 1 && x.querySelectorAll('.now-subs div').length <= 4)));
   ok('ข้อความบนหน้าแรกสั้นลง (รุ่น 6 วัดได้ 8,662 ตัวอักษร 7 ตาราง — ต้องน้อยกว่าครึ่ง)', (await T(page, '#view').innerText()).length < 4300, (await T(page, '#view').innerText()).length + ' ตัวอักษร');
   let c = await nowCard(page, 'เหตุการณ์และอุบัติเหตุ');
-  ok('วันนี้ไม่มีเหตุ + แหล่งครอบคลุมถึงวันนี้ → แสดง 0 พร้อมเวลาตรวจ', /วันนี้ ณ 18:15 น\. 0 เหตุการณ์/.test(c) && /ณ เวลาตรวจ/.test(c) && /ล่าสุด 13 พ\.ย\./.test(c), c);
+  ok('วันนี้ไม่มีเหตุ + แหล่งครอบคลุมถึงวันนี้ → แสดง 0 พร้อมเวลาตรวจ', /วันนี้ ณ 18:36 น\. 0 เหตุการณ์/.test(c) && /ณ เวลาตรวจ/.test(c) && /ล่าสุด 13 พ\.ย\./.test(c), c);
   c = await nowCard(page, 'รถเข้าและหมวกนิรภัย');
   ok('ต้นทางยังมาไม่ถึงวันนี้ → “ยังไม่มีข้อมูลวันนี้” + วันล่าสุด (ไม่แสดง 0)', /ล่าสุด 10 พ\.ย\./.test(c) && /ยังไม่มีข้อมูลวันนี้/.test(c) && /รถเข้า 20,008 คัน/.test(c) && !/ 0 คัน/.test(c), c);
   c = await nowCard(page, 'รถรางบริการพิเศษ');
@@ -100,7 +100,7 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   await page.click('.seg.period button:text-is("เดือนนี้")'); await page.waitForTimeout(350);
   c = await nowCard(page, 'เหตุการณ์และอุบัติเหตุ');
   ok('เดือนนี้: เหตุการณ์ 13 · ผู้บาดเจ็บ/ป่วย 9 (นับจากข้อมูลรายวัน)', /13 เหตุการณ์/.test(c) && /ยานพาหนะ 4/.test(c) && /ผู้บาดเจ็บ\/ป่วย 9 คน/.test(c), c);
-  c = await nowCard(page, 'Lost & Found'); ok('เดือนนี้: แจ้งหาย 27 · เก็บได้ 6 · สถานะรับคืนแล้ว 7 (ไม่บวกแบบรับคืน) — ค่าคาดหวังนับจากแท็บ LF_New โดยตรงเมื่อ 15 พ.ย. 18:17 น. (รายการที่ 27 บันทึก 14 พ.ย. 20:34 น.)', /27 แจ้งของหาย/.test(c) && /เก็บของได้ 6/.test(c) && /สถานะรับคืนแล้ว 7/.test(c), c);
+  c = await nowCard(page, 'Lost & Found'); ok('เดือนนี้: แจ้งหาย 27 · เก็บได้ 6 · สถานะรับคืนแล้ว 7 (ไม่บวกแบบรับคืน) — ค่าคาดหวังนับจากแท็บ LF_New โดยตรงเมื่อ 15 พ.ย. 18:36 น. (รายการที่ 27 บันทึก 14 พ.ย. 20:34 น.)', /27 แจ้งของหาย/.test(c) && /เก็บของได้ 6/.test(c) && /สถานะรับคืนแล้ว 7/.test(c), c);
   c = await nowCard(page, 'รถเข้าและหมวกนิรภัย'); ok('เดือนนี้: รถเข้า ' + (GNOV.cars + GNOV.motorcycles).toLocaleString('en-US') + ' คัน จาก ' + GNOV.days + ' วันที่มีข้อมูล (เรียกว่า “คันเข้า”)', c.includes((GNOV.cars + GNOV.motorcycles).toLocaleString('en-US') + ' คันเข้า') && c.includes(GNOV.days + ' วัน') && !/เข้าออก/.test(c), c);
   await page.click('.seg.period button:text-is("ปีนี้")'); await page.waitForTimeout(350);
   c = await nowCard(page, 'เหตุการณ์และอุบัติเหตุ'); ok('ปีนี้: เหตุการณ์ 68 · ผู้บาดเจ็บ/ป่วย 39', /68 เหตุการณ์/.test(c) && /39 คน/.test(c), c);
@@ -135,7 +135,7 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   await ctx.close();
   // เส้นแบ่งวันตามเวลาไทย (เบราว์เซอร์ทดสอบตั้งเขตเวลา America/New_York): 23:59 ยังเป็น 15 พ.ย. · 00:01 เป็น 16 พ.ย. ซึ่งเลยวันที่อ่านต้นทาง
   ({ ctx, page, log } = await newPage(browser, { now: BKK('2026-11-15', '23:59') })); await page.goto(URL0); await page.waitForSelector('.now');
-  c = await nowCard(page, 'เหตุการณ์และอุบัติเหตุ'); ok('23:59 น. เวลาไทย: ยังเป็นวันนี้ 15 พ.ย. — 0 พร้อมเวลาที่อ่านต้นทาง (ไม่ใช่เวลาเปิดหน้า)', /วันนี้ 15 พ\.ย\. 2569/.test(await text(page, '.dash-meta')) && /วันนี้ ณ 18:15 น\. 0 เหตุการณ์/.test(c), c);
+  c = await nowCard(page, 'เหตุการณ์และอุบัติเหตุ'); ok('23:59 น. เวลาไทย: ยังเป็นวันนี้ 15 พ.ย. — 0 พร้อมเวลาที่อ่านต้นทาง (ไม่ใช่เวลาเปิดหน้า)', /วันนี้ 15 พ\.ย\. 2569/.test(await text(page, '.dash-meta')) && /วันนี้ ณ 18:36 น\. 0 เหตุการณ์/.test(c), c);
   await ctx.close();
   ({ ctx, page, log } = await newPage(browser, { now: BKK('2026-11-16', '00:01') })); await page.goto(URL0); await page.waitForSelector('.now');
   c = await nowCard(page, 'เหตุการณ์และอุบัติเหตุ'); const cLF = await nowCard(page, 'Lost & Found');
@@ -206,6 +206,7 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   await page.screenshot({ path: OUT + '/06_fire_equipment_detail_MOCKDATA.png' }); await page.keyboard.press('Escape');
   await page.click('.lu-bar .chip:has-text("ทั้งหมด")'); await page.screenshot({ path: OUT + '/07_fire_equipment_MOCKDATA.png', fullPage: true });
   tx = await open(page, 'parking'); await page.waitForSelector('.it'); ok('[MOCK gviz] ลานจอดรายลาน: 49 ลาน ความจุรวม 12,250 · แบ่งหน้า 24', /49/.test(await text(page, '.dv .kpis')) && /12,250/.test(await text(page, '.dv .kpis')) && await T(page, '.it').count() === 24 && /หน้า 1 \/ 3/.test(await text(page, '.lu-pager')));
+  ok('ลานจอด: ต้นทางไม่มีรูป → ไม่แสดงกรอบรูปเปล่า และบอกว่าต้นทางยังไม่มีภาพ/พิกัด', await T(page, '.dv .it .it-pic').count() === 0 && /ต้นทางยังไม่มีภาพและพิกัดของลานจอด/.test(await text(page, '.dv')));
   await page.click('.lu-pager button:has-text("ถัดไป")'); await page.waitForTimeout(250); ok('แบ่งหน้าทำงาน', /หน้า 2 \/ 3/.test(await text(page, '.lu-pager')));
   await page.screenshot({ path: OUT + '/08_parking_lots_MOCKDATA.png', fullPage: true });
   tx = await open(page, 'forms'); await page.waitForSelector('.list.forms li'); ok('[MOCK gviz] แบบฟอร์ม: 7 รายการจากต้นทาง + 4 แบบฟอร์มที่กรอกในระบบนี้', await T(page, '.dv .list.forms li').count() === 7 && await T(page, '.list.forms a[href^="#form"]').count() === 4);

@@ -52,7 +52,7 @@
     { group: 'g-vehicle', label: 'ยานพาหนะและลานจอดรถ', icon: 'car', children: [
       { id: 'vehicle-fleet', label: 'ยานพาหนะทั้งหมด' }, { id: 'parking', label: 'ข้อมูลการจอดรถ' }, { id: 'vehicle', label: 'ระบบลงทะเบียนยานพาหนะ' }, { id: 'tram', label: 'รถรางและจักรยาน Anywheel' }] },
     { group: 'g-traffic', label: 'การจัดการจราจรและแจ้งเหตุ', icon: 'alert', children: [
-      { id: 'traffic', label: 'ระบบรายงานเหตุการณ์' }, { id: 'accident-map', label: 'แผนที่จุดเกิดอุบัติเหตุ' }, { id: 'gate', label: 'รายงานจำนวนรถเข้าออกและผู้ไม่สวมหมวกนิรภัย' },
+      { id: 'traffic', label: 'ระบบรายงานเหตุการณ์' }, { id: 'accident-map', label: 'แผนที่จุดเกิดอุบัติเหตุ' }, { id: 'gate', label: 'รายงานจำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัย' },
       { id: 'event-incident', label: 'เหตุการณ์กิจกรรมพิเศษ' }, { id: 'helmet-quiz', label: 'แบบทดสอบรณรงค์สวมหมวกนิรภัย' }] },
     { id: 'cctv', label: 'กล้องวงจรปิด (CCTV)', icon: 'camera' },
     { group: 'g-grad', label: 'พิธีพระราชทานปริญญาบัตร', icon: 'cap', children: [{ id: 'graduation', label: 'ปีการศึกษา 2568 (ล่าสุด)' }, { id: 'grad-guard', label: 'รายงาน รปภ. งานปริญญา (GPS)' }] },
@@ -570,7 +570,7 @@
     if (gate) {
       var gm2 = gate.monthly.filter(function (r) { return inRange(r.month); }), cars = sm(gate.monthly, function (r) { return r.cars; }), mo = sm(gate.monthly, function (r) { return r.motorcycles; }), nh = sm(gate.monthly, function (r) { return r.noHelmet; }), days = sm(gate.monthly, function (r) { return r.days; });
       ov.push(days ? { to: 'gate', icon: 'car', l: 'รถเข้ามหาวิทยาลัย', v: num(cars + mo), u: 'คัน', s: 'ไม่สวมหมวก ' + num(nh) + ' ราย · ' + days + ' วันที่มีข้อมูล', color: C.c3 } : { to: 'gate', icon: 'car', l: 'รถเข้ามหาวิทยาลัย', na: 'ไม่มีข้อมูลในช่วงที่เลือก', color: C.c3 });
-      add('gate', 'รถเข้า / หมวกนิรภัย', repSec('gate', 'helmet', 'รายงานจำนวนรถเข้าออกและผู้ไม่สวมหมวกนิรภัย', { more: 'gate', note: rt + ' · อัปเดต ' + dLabel(gate.updated), tag: 'มีเฉพาะจำนวนรถเข้า — ยังไม่มีข้อมูลรถออก', color: C.c3 }, [
+      add('gate', 'รถเข้า / หมวกนิรภัย', repSec('gate', 'helmet', 'รายงานจำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัย', { more: 'gate', note: rt + ' · อัปเดต ' + dLabel(gate.updated), tag: 'มีเฉพาะจำนวนรถเข้า — ยังไม่มีข้อมูลรถออก', color: C.c3 }, [
         tiles(days ? [{ l: 'รถยนต์เข้า', v: num(cars), u: 'คัน', color: C.c3 }, { l: 'รถจักรยานยนต์เข้า', v: num(mo), u: 'คัน', color: C.c1 }, { l: 'ผู้ไม่สวมหมวกนิรภัย', v: num(nh), u: 'ราย', s: 'ควรตรวจการกรอกบางวัน', color: C.c2 },
           { l: 'วันที่มีข้อมูล', v: num(days), u: 'วัน', s: 'ผลรวมประตู 1, 3, 4, 5, 6', color: C.c5 }, { l: 'รถออก', na: 'ยังไม่มีข้อมูลยืนยัน' }] : [{ l: 'รถเข้ามหาวิทยาลัย', na: 'ไม่มีข้อมูลในช่วงที่เลือก' }]),
         figure('ตารางรายเดือน', 'หน่วย: คัน (รถเข้า) · ราย (ผู้ไม่สวมหมวก)', rtable(['เดือน', 'วันที่มีข้อมูล', 'รถยนต์เข้า', 'รถจักรยานยนต์เข้า', 'รวมรถเข้า', 'ผู้ไม่สวมหมวก'],
@@ -838,7 +838,7 @@
   };
   PAGES.gate = function (v) {
     var gate = mod('gate');
-    v.appendChild(pageHead('รายงานจำนวนรถเข้าออกและผู้ไม่สวมหมวกนิรภัย', 'ต้นทางมีเฉพาะจำนวนรถเข้า (เจ้าหน้าที่นับที่ประตู 1, 3, 4, 5, 6 รายวัน) — ยังไม่มีข้อมูลจำนวนรถออก', rangeCtrl()));
+    v.appendChild(pageHead('รายงานจำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัย', 'ต้นทางมีเฉพาะจำนวนรถเข้า (เจ้าหน้าที่นับที่ประตู 1, 3, 4, 5, 6 รายวัน) — ยังไม่มีข้อมูลจำนวนรถออก', rangeCtrl()));
     if (gate) {
       var cars = sumMonthly(gate.monthly, function (r) { return r.cars; }), mo = sumMonthly(gate.monthly, function (r) { return r.motorcycles; }), nh = sumMonthly(gate.monthly, function (r) { return r.noHelmet; }), days = sumMonthly(gate.monthly, function (r) { return r.days; });
       v.appendChild(kpiGrid(days ? [
@@ -1490,7 +1490,7 @@
       'รถเข้า: ต้นทาง (แท็บ จำนวนรถเข้า+หมวกนิรภัย) มีเฉพาะจำนวนรถเข้า 5 ประตู ไม่มีจำนวนรถออก',
       'แผนที่: ใช้ไทล์มาตรฐานของ OpenStreetMap (แหล่งเดียวกับระบบเดิม) ซึ่งกำหนดให้คำขอมี Referer ของเว็บไซต์ — เปิดผ่าน http/https จึงเห็นแผนที่ถนนและอาคาร · เปิดไฟล์จากเครื่อง (file://) เบราว์เซอร์ไม่ส่ง Referer จึงไม่เรียกไทล์และแสดงแผนผังตามพิกัดแทน',
       'Lost & Found: รายการและรูปดึงสดจาก API สาธารณะของระบบ Lost & Found (getPublicData — ไม่มีชื่อ/เบอร์โทรผู้แจ้ง) เฉพาะเมื่อ config.js ตั้ง internalMode: true · ค่าใน Repository คือ false',
-      'รถเข้าออก: ผู้ไม่สวมหมวกบางวันมากกว่าจำนวนรถจักรยานยนต์ที่นับได้ (อัตรารวมสูงผิดสังเกต) ควรตรวจการกรอกที่ต้นทาง',
+      'รถเข้า: ผู้ไม่สวมหมวกบางวันมากกว่าจำนวนรถจักรยานยนต์ที่นับได้ (อัตรารวมสูงผิดสังเกต) ควรตรวจการกรอกที่ต้นทาง',
       'เหตุการณ์: ต้นทางไม่มีคอลัมน์ผู้เสียชีวิต และคอลัมน์สาเหตุเป็นข้อความอิสระ จึงไม่แสดงจำนวนผู้เสียชีวิตและสัดส่วนสาเหตุ',
       'ผู้ช่วย AI: ยังเชื่อมต่อไม่ได้ เพราะ Endpoint เดิมไม่มีการยืนยันตัวตนและตอบจากข้อมูลรายแถว',
       'Anywheel: ต้นทางมีข้อมูลถึง 30 มิ.ย. 2569 · เวลาการใช้งานเว้นว่าง มี.ค.–พ.ค. 2569'])])]));
@@ -1789,7 +1789,7 @@
   }
   function itemCard(o) {
     return el('article', { class: 'card it', tabindex: '0', role: 'button', 'aria-label': o.title + ' — ดูรายละเอียด', onclick: o.open, onkeydown: function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); o.open(); } } },
-      [pic(o.img, o.title), el('div', { class: 'it-b' }, [o.tag ? el('span', { class: 'tag', text: o.tag }) : null, el('h4', { text: o.title }), o.sub ? el('p', { text: o.sub }) : null, o.meta ? el('p', { class: 'src', text: o.meta }) : null])]);
+      [o.noPic ? null : pic(o.img, o.title), el('div', { class: 'it-b' }, [o.tag ? el('span', { class: 'tag', text: o.tag }) : null, el('h4', { text: o.title }), o.sub ? el('p', { text: o.sub }) : null, o.meta ? el('p', { class: 'src', text: o.meta }) : null])]);
   }
   function liveNote(d, key) { return el('p', { class: 'src', text: 'อ่านจากแท็บ “' + DS[key].tab + '” เมื่อ ' + pad2(d.at.getHours()) + ':' + pad2(d.at.getMinutes()) + ' น. (เวลาเครื่อง)' }); }
   function normKey(s) { return String(s == null ? '' : s).replace(/\s+/g, '').toLowerCase(); }
@@ -1818,12 +1818,12 @@
   function lotsSection() {
     return section('ลานจอดรถรายลาน', {}, [dataView('parkingLots', function (rows, d) {
       rows = rows.filter(function (r) { return r.name; });
-      var cap = rows.reduce(function (a, r) { return a + (+r.capacity || 0); }, 0);
+      var cap = rows.reduce(function (a, r) { return a + (+r.capacity || 0); }, 0), anyImg = rows.some(function (r) { return imgsOf(r).length; });   /* ต้นทางมีคอลัมน์รูป 4 ช่องแต่ยังว่างทั้งหมด (ตรวจ 15 พ.ย.) — ถ้าไม่มีรูปเลยไม่แสดงกรอบรูปเปล่า */
       return el('div', {}, [kpiGrid([{ icon: 'map', label: 'ลานจอดรถ', value: num(rows.length), unit: 'ลาน', color: C.c3 }, { icon: 'car', label: 'ความจุรวมตามทะเบียน', value: num(cap), unit: 'คัน', color: C.c1 }]),
         el('div', { style: 'margin-top:14px' }, [listUI({ rows: rows, unit: 'ลาน', placeholder: 'ค้นหาชื่อลานจอดรถ…', text: function (r) { return r.name; },
-          render: function (page) { return el('div', { class: 'it-grid' }, page.map(function (r) { return itemCard({ img: imgsOf(r)[0], title: r.name, sub: 'จอดได้ ' + (r.capacity === '' ? '–' : num(+r.capacity)) + ' คัน', meta: 'ลำดับที่ ' + r.no,
+          render: function (page) { return el('div', { class: 'it-grid' }, page.map(function (r) { return itemCard({ img: imgsOf(r)[0], noPic: !anyImg, title: r.name, sub: 'จอดได้ ' + (r.capacity === '' ? '–' : num(+r.capacity)) + ' คัน', meta: 'ลำดับที่ ' + r.no,
             open: function () { detailDlg(r.name, [['ลำดับที่', r.no], ['จำนวนที่จอดได้', r.capacity === '' ? '' : num(+r.capacity) + ' คัน']], imgsOf(r),
-              el('p', { class: 'dlg-more' }, [extBtn('ค้นหาตำแหน่งใน Google Maps', 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(r.name + ' มหาวิทยาลัยมหิดล ศาลายา'), true)])); } }); })); } })]), liveNote(d, 'parkingLots')]);
+              el('p', { class: 'dlg-more' }, [extBtn('ค้นหาตำแหน่งใน Google Maps', 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(r.name + ' มหาวิทยาลัยมหิดล ศาลายา'), true)])); } }); })); } })]), anyImg ? null : el('p', { class: 'src', text: 'ต้นทางยังไม่มีภาพและพิกัดของลานจอด — ตำแหน่งเปิดค้นด้วยชื่อใน Google Maps จากหน้ารายละเอียด' }), liveNote(d, 'parkingLots')]);
     })]);
   }
 

@@ -171,13 +171,13 @@ for bt in _st["byType"]:
 _agg = {}
 for d, t, i in inc_rows:
     a = _agg.setdefault((d, t), [0, 0]); a[0] += 1; a[1] += i
-incidents_daily = dict(source="ฐานข้อมูลงานจราจร → รายงานเหตุการณ์ (วันที่เกิดเหตุ, ประเภทเหตุการณ์, จำนวนคนเจ็บ/ป่วย)", checkedAt="2026-11-15 18:15", lastEntry="2026-11-13", lastRecordedAt="2026-11-13 14:26",
+incidents_daily = dict(source="ฐานข้อมูลงานจราจร → รายงานเหตุการณ์ (วันที่เกิดเหตุ, ประเภทเหตุการณ์, จำนวนคนเจ็บ/ป่วย)", checkedAt="2026-11-15 18:36", lastEntry="2026-11-13", lastRecordedAt="2026-11-13 14:26",
   complete=True, coverage="อ่านครบทั้งแท็บ (68 แถว) ผ่าน Connector แบบอ่านอย่างเดียว — เวลาใน checkedAt คือเวลาที่อ่านต้นทางสำเร็จ ไม่ใช่เวลา build หรือเวลาเปิดหน้า", rows=[dict(date=d, type=t, count=c, injured=i) for (d, t), (c, i) in sorted(_agg.items())])
 # Lost & Found รายวัน: Sheet LF_New (แหล่งที่หน้ารายงานประจำเดือนของระบบเดิมใช้) — สรุปฝั่ง Google (group by วันที่, ประเภท) ไม่ได้อ่านรายแถว · ตรวจ 17:22 น.
 LFD = {"2026-11-01": (2, 0, 0), "2026-11-02": (2, 0, 0), "2026-11-03": (5, 0, 0), "2026-11-04": (2, 1, 1), "2026-11-05": (2, 0, 0), "2026-11-10": (2, 1, 0),
        "2026-11-11": (4, 3, 1), "2026-11-12": (3, 0, 0), "2026-11-13": (3, 1, 3), "2026-11-14": (2, 0, 0)}     # (สิ่งของสูญหาย, พบสิ่งของ, แบบรับของคืน)
 assert sum(sum(v) for v in LFD.values()) == 38
-lostfound_daily = dict(source="Sheet LF_New ของระบบ Lost & Found (Timestamp, ประเภท)", checkedAt="2026-11-15 18:17", lastEntry="2026-11-14", lastRecordedAt="2026-11-14 20:34", complete=True,
+lostfound_daily = dict(source="Sheet LF_New ของระบบ Lost & Found (Timestamp, ประเภท)", checkedAt="2026-11-15 18:36", lastEntry="2026-11-14", lastRecordedAt="2026-11-14 20:34", complete=True,
   coverage="อ่านครบทั้งแท็บ LF_New เฉพาะคอลัมน์ Timestamp/RefCode/ประเภท ผ่าน Connector แบบอ่านอย่างเดียว แล้วนับรายวันของ พ.ย. ซ้ำอีกครั้ง (38 รายการ ตรงกับรอบก่อน)", **{"from": "2026-11-01"},
   rows=[dict(date=d, lost=v[0], found=v[1], returnForms=v[2]) for d, v in sorted(LFD.items())])
 # ทะเบียนที่อ่านสดจาก Sheet “ข้อมูลงานจราจรออนไลน์” (ช่องทางเดียวกับระบบเดิม) — เก็บเฉพาะจำนวนรวมที่ตรวจ ณ 17:15 น. ไว้เทียบ ไม่เก็บรายรายการ
@@ -185,6 +185,6 @@ ops_check = dict(source="Sheet “ข้อมูลงานจราจรอ�
   fireEquipment=dict(total=50, byGroup={"ถังดับเพลิง": 34, "สายฉีด": 6, "หัวฉีด": 4, "ปั๊มน้ำ": 0, "ตู้เก็บอุปกรณ์": 1, "หัวรับน้ำ": 1, "ชุด PPE": 4}, aed=0),
   vehicles=dict(total=14, byType={"รถจักรยานยนต์": 6, "รถจักรยานไฟฟ้า": 5, "รถกอล์ฟ": 3}), parkingLots=49, forms=7,
   areaPhotos={"ตรวจพื้นที่": 2740, "ช่วยเหลือ": 381, "การจราจร": 110}, staff=24, inspections=118)
-out = dict(schema=2, generatedAt="2026-11-15T18:20:00+07:00", ruenthaiSurvey=ruenthai, incidentsDaily=incidents_daily, lostfoundDaily=lostfound_daily, opsCheck=ops_check, guardManpower=guard, roster=roster, tram=tram, anywheel=anywheel, lostfoundStatus=lfs, eventIncidents=event, gradGuardGps=gps, pending=pending)
+out = dict(schema=2, generatedAt="2026-11-15T18:40:00+07:00", ruenthaiSurvey=ruenthai, incidentsDaily=incidents_daily, lostfoundDaily=lostfound_daily, opsCheck=ops_check, guardManpower=guard, roster=roster, tram=tram, anywheel=anywheel, lostfoundStatus=lfs, eventIncidents=event, gradGuardGps=gps, pending=pending)
 (root / "data/extra.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
 print("data/extra.json ok | guards day/night:", guard["totals"], "| posts:", [(a["id"], a["dayPosts"], a["nightPosts"]) for a in areas])
