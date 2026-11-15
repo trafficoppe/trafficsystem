@@ -150,6 +150,41 @@ ruenthai = dict(status="partial", source="ฐานข้อมูลแบบ�
   notes=["ยังไม่ได้แยกตามกลุ่มผู้ใช้ (Group_Type) จำนวนรถ (Car_Count) หรือสถานะ LPR — ต้องนับจากคอลัมน์ D, M, Z ซึ่งรอบนี้ยังไม่ได้อ่าน",
          "ไม่นำชื่อ เบอร์โทร อีเมล หรือทะเบียนรถมาเก็บในไฟล์ของหน้ารวม"])
 pending = dict()
-out = dict(schema=2, generatedAt="2026-11-15T11:50:00+07:00", ruenthaiSurvey=ruenthai, guardManpower=guard, roster=roster, tram=tram, anywheel=anywheel, lostfoundStatus=lfs, eventIncidents=event, gradGuardGps=gps, pending=pending)
+# ---------- รอบ 7 (15 พ.ย. 2569 17:20–17:25 น.): ข้อมูลรายวันสำหรับ “วันนี้ / เดือนนี้” ----------
+# เหตุการณ์รายแถว: แท็บ รายงานเหตุการณ์ คอลัมน์ วันที่เกิดเหตุ (I), ประเภทเหตุการณ์ (O), จำนวนคนเจ็บ/ป่วย (W) — อ่านผ่าน Connector แบบอ่านอย่างเดียว
+#   เก็บเฉพาะ วันที่|รหัสประเภท|จำนวนคนเจ็บป่วย (ไม่มีชื่อ สถานที่ หรือรายละเอียด) · ตรวจ 17:20 น. แถวสุดท้ายยังเป็นแถว 69 (13 พ.ย.)
+INC_T = dict(V="อุบัติเหตุจากยานพาหนะ", G="อุบัติเหตุทั่วไป", P="รับส่งผู้ป่วย", W="บังคับล้อ", S="ลักทรัพย์", F="ปรับ รปภ.", O="อื่นๆ")
+INC = """09-05 P1|09-05 G1|09-05 P1|09-05 G1|09-05 P1|09-05 P1|09-05 P1|09-05 P2|09-05 P1|09-06 P1|09-06 G1|09-06 P1|09-06 P1|09-06 P1|09-06 P1|09-06 G1|09-11 G1|09-17 P1|
+08-03 V0|08-17 V1|08-20 V0|08-25 V0|08-25 V0|08-18 V0|08-18 V1|08-25 V0|09-02 V1|09-06 V1|09-09 V0|09-10 V0|09-18 V0|09-22 V2|09-23 P1|10-03 G1|10-11 F0|10-11 G1|10-12 W0|
+10-20 V0|10-21 V0|10-14 V0|10-18 V1|10-21 W0|10-21 W0|10-21 W0|10-22 W0|10-22 W0|10-22 W0|10-22 G0|07-01 G0|10-25 S0|10-27 V0|10-28 V0|10-28 G1|10-30 V0|10-30 O0|
+11-02 V0|11-03 V0|11-04 P1|11-04 P1|11-05 P1|11-05 V1|11-05 P1|11-09 W0|11-10 W0|11-10 P1|11-10 V1|11-11 G1|11-13 G1""".replace("\n", "").split("|")
+inc_rows = [("2026-" + x[:5], INC_T[x[6]], int(x[7:])) for x in INC]
+assert len(inc_rows) == 68 and sum(r[2] for r in inc_rows) == 39
+_st = json.loads((root / "data/stats.json").read_text(encoding="utf-8"))["modules"]["incidents"]
+for mrow in _st["monthly"]:                                   # ต้องตรงกับสถิติรายเดือนเดิมทุกเดือนทุกประเภท
+    got = {}
+    for d, t, _ in inc_rows:
+        if d[:7] == mrow["month"]: got[t] = got.get(t, 0) + 1
+    assert got == mrow["byType"], (mrow["month"], got, mrow["byType"])
+for bt in _st["byType"]:
+    if "injuredOrIll" in bt: assert sum(r[2] for r in inc_rows if r[1] == bt["type"]) == bt["injuredOrIll"], bt
+_agg = {}
+for d, t, i in inc_rows:
+    a = _agg.setdefault((d, t), [0, 0]); a[0] += 1; a[1] += i
+incidents_daily = dict(source="ฐานข้อมูลงานจราจร → รายงานเหตุการณ์ (วันที่เกิดเหตุ, ประเภทเหตุการณ์, จำนวนคนเจ็บ/ป่วย)", checkedAt="2026-11-15 18:15", lastEntry="2026-11-13", lastRecordedAt="2026-11-13 14:26",
+  complete=True, coverage="อ่านครบทั้งแท็บ (68 แถว) ผ่าน Connector แบบอ่านอย่างเดียว — เวลาใน checkedAt คือเวลาที่อ่านต้นทางสำเร็จ ไม่ใช่เวลา build หรือเวลาเปิดหน้า", rows=[dict(date=d, type=t, count=c, injured=i) for (d, t), (c, i) in sorted(_agg.items())])
+# Lost & Found รายวัน: Sheet LF_New (แหล่งที่หน้ารายงานประจำเดือนของระบบเดิมใช้) — สรุปฝั่ง Google (group by วันที่, ประเภท) ไม่ได้อ่านรายแถว · ตรวจ 17:22 น.
+LFD = {"2026-11-01": (2, 0, 0), "2026-11-02": (2, 0, 0), "2026-11-03": (5, 0, 0), "2026-11-04": (2, 1, 1), "2026-11-05": (2, 0, 0), "2026-11-10": (2, 1, 0),
+       "2026-11-11": (4, 3, 1), "2026-11-12": (3, 0, 0), "2026-11-13": (3, 1, 3), "2026-11-14": (2, 0, 0)}     # (สิ่งของสูญหาย, พบสิ่งของ, แบบรับของคืน)
+assert sum(sum(v) for v in LFD.values()) == 38
+lostfound_daily = dict(source="Sheet LF_New ของระบบ Lost & Found (Timestamp, ประเภท)", checkedAt="2026-11-15 18:17", lastEntry="2026-11-14", lastRecordedAt="2026-11-14 20:34", complete=True,
+  coverage="อ่านครบทั้งแท็บ LF_New เฉพาะคอลัมน์ Timestamp/RefCode/ประเภท ผ่าน Connector แบบอ่านอย่างเดียว แล้วนับรายวันของ พ.ย. ซ้ำอีกครั้ง (38 รายการ ตรงกับรอบก่อน)", **{"from": "2026-11-01"},
+  rows=[dict(date=d, lost=v[0], found=v[1], returnForms=v[2]) for d, v in sorted(LFD.items())])
+# ทะเบียนที่อ่านสดจาก Sheet “ข้อมูลงานจราจรออนไลน์” (ช่องทางเดียวกับระบบเดิม) — เก็บเฉพาะจำนวนรวมที่ตรวจ ณ 17:15 น. ไว้เทียบ ไม่เก็บรายรายการ
+ops_check = dict(source="Sheet “ข้อมูลงานจราจรออนไลน์”", checkedAt="2026-11-15 17:15",
+  fireEquipment=dict(total=50, byGroup={"ถังดับเพลิง": 34, "สายฉีด": 6, "หัวฉีด": 4, "ปั๊มน้ำ": 0, "ตู้เก็บอุปกรณ์": 1, "หัวรับน้ำ": 1, "ชุด PPE": 4}, aed=0),
+  vehicles=dict(total=14, byType={"รถจักรยานยนต์": 6, "รถจักรยานไฟฟ้า": 5, "รถกอล์ฟ": 3}), parkingLots=49, forms=7,
+  areaPhotos={"ตรวจพื้นที่": 2740, "ช่วยเหลือ": 381, "การจราจร": 110}, staff=24, inspections=118)
+out = dict(schema=2, generatedAt="2026-11-15T18:20:00+07:00", ruenthaiSurvey=ruenthai, incidentsDaily=incidents_daily, lostfoundDaily=lostfound_daily, opsCheck=ops_check, guardManpower=guard, roster=roster, tram=tram, anywheel=anywheel, lostfoundStatus=lfs, eventIncidents=event, gradGuardGps=gps, pending=pending)
 (root / "data/extra.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
 print("data/extra.json ok | guards day/night:", guard["totals"], "| posts:", [(a["id"], a["dayPosts"], a["nightPosts"]) for a in areas])

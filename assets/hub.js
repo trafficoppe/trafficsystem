@@ -60,7 +60,7 @@
       { id: 'guard-scan', label: 'การสแกนจุดและรายงานปฏิบัติงาน' }]) },
     { id: 'borrow', label: 'ยืม-คืนอุปกรณ์และรถกอล์ฟ', icon: 'box' },
     { id: 'lostfound', label: 'แจ้งของหาย / เก็บของได้', icon: 'search' },
-    { group: 'g-safety', label: 'อุปกรณ์ความปลอดภัยและเหตุฉุกเฉิน', icon: 'heart', children: [{ id: 'safety', label: 'อุปกรณ์ดับเพลิงและการตรวจถัง' }, { id: 'aed', label: 'เครื่อง AED' }] },
+    { group: 'g-safety', label: 'อุปกรณ์ความปลอดภัยและเหตุฉุกเฉิน', icon: 'heart', children: [{ id: 'safety', label: 'อุปกรณ์ดับเพลิง' }, { id: 'aed', label: 'เครื่อง AED' }] },
     { group: 'g-forms', label: 'แบบฟอร์มต่างๆ', icon: 'form', children: [{ id: 'forms', label: 'แบบฟอร์มทั่วไป' }, { id: 'forms-radio', label: 'บันทึกศูนย์วิทยุสื่อสาร' }] },
     { group: 'g-reports', label: 'รายงานและสถิติ', icon: 'chart', children: [
       { id: 'report-daily', label: 'รายงานประจำวัน' }, { id: 'report-radio', label: 'รายงานวิทยุสื่อสาร' }, { id: 'report-monthly', label: 'รายงานประจำเดือน' },
@@ -228,11 +228,13 @@
   /* ---------- router ---------- */
   var PAGES = {};
   /* ลิงก์ตรงถึงหมวดในหน้า: #dashboard/lostfound = หน้า dashboard เลื่อนไปที่หมวด lostfound */
-  function hashParts() { var h = ''; try { h = decodeURIComponent((location.hash || '').replace('#', '')); } catch (e) { h = ''; } var i = h.indexOf('/'); return i < 0 ? [h, ''] : [h.slice(0, i), h.slice(i + 1)]; }
+  function hashParts() { var h = (location.hash || '').replace('#', ''), q = h.indexOf('?'); if (q >= 0) h = h.slice(0, q); try { h = decodeURIComponent(h); } catch (e) { h = ''; } var i = h.indexOf('/'); return i < 0 ? [h, ''] : [h.slice(0, i), h.slice(i + 1)]; }
   function currentPage() { var h = hashParts()[0]; h = ALIAS[h] || h; return PAGES[h] ? h : 'dashboard'; }
   function go(page) { if (currentPage() === page) route(true); else location.hash = '#' + page; }
   function route(first) {
     var page = currentPage(), grp = PAGE_GROUP[page];
+    state.rerender = state.curPage === page; state.curPage = page;
+    if (MONTHS.length && page !== 'dashboard' && page !== 'report-monthly') scopeRange('all', { from: MONTHS[0], to: MONTHS[MONTHS.length - 1] });
     if (!first || !Object.keys(openGroups).length) openGroups = {};     // เปลี่ยนหน้า = เปิดเฉพาะหมวดของหน้าปัจจุบัน (เมนูไม่ยาวเกิน)
     if (grp) openGroups[grp.group] = true;
     buildNav(); markActive(); tipHide();
@@ -499,7 +501,7 @@
    * หน้า “รายงานประจำเดือน” (#report-monthly) ใช้รายงานชุดเดียวกัน เพิ่มปุ่มเลือกเดือน
    * ==================================================================== */
   function latestMonthOf(list) { return list && list.length ? list[list.length - 1] : null; }
-  function pickMonth(page) { return function (i, c) { if (c.month) { state.from = c.month; state.to = c.month; } go(page); }; }
+  function pickMonth(page) { return function (i, c) { if (c.month) { (state.scopes || (state.scopes = {}))[page === 'report-monthly' ? 'report' : 'all'] = { from: c.month, to: c.month }; } go(page); }; }
   function mCols(rows) { return rows.map(function (r) { return { label: mLabel(r.month), full: mFull(r.month), month: r.month }; }); }
   function tiles(list) {
     return el('div', { class: 'tiles' }, list.filter(Boolean).map(function (t) {
@@ -538,7 +540,7 @@
       ov.push({ to: 'incidents', icon: 'alert', l: 'เหตุการณ์และอุบัติเหตุ', v: num(itot), u: 'เหตุการณ์', s: 'ยานพาหนะ ' + num(tsum[V] || 0) + ' · ทั่วไป ' + num(tsum[G] || 0) + ' · รับส่งผู้ป่วย ' + num(tsum[P] || 0), color: C.c1 });
       add('incidents', 'เหตุการณ์และอุบัติเหตุ', repSec('incidents', 'alert', 'รายงานเหตุการณ์และอุบัติเหตุ', { more: 'traffic', note: rt + ' · อัปเดต ' + dLabel(inc.updated), color: C.c1 }, [
         tiles([{ l: 'เหตุการณ์ทั้งหมด', v: num(itot), u: 'เหตุการณ์', color: C.c1 }, { l: V, v: num(tsum[V] || 0), u: 'เหตุ', color: C.c3 }, { l: G, v: num(tsum[G] || 0), u: 'เหตุ', color: C.c2 }, { l: P, v: num(tsum[P] || 0), u: 'ครั้ง', color: C.c4 },
-          { l: 'ผู้บาดเจ็บ/ผู้ป่วย', v: num(inc.injuredTotal), u: 'คน', s: 'ทั้งช่วงข้อมูล ' + dLabel(inc.range.from).replace(/ \d{4}$/, '') + ' – ' + dLabel(inc.range.to), color: C.fine },
+          { l: 'ผู้บาดเจ็บ/ผู้ป่วย', v: num(incSum(incRows(function (r) { return inRange(r.date.slice(0, 7)); })).inj), u: 'คน', s: rt, color: C.fine },
           { l: 'ผู้เสียชีวิต', na: 'ไม่มีข้อมูลยืนยัน', s: 'ต้นทางไม่มีช่องบันทึกผู้เสียชีวิต' }]),
         el('div', { class: 'grid2' }, [
           figure('ประเภทเหตุการณ์', 'หน่วย: เหตุการณ์ · ' + rt, rtable(['ประเภทเหตุการณ์', 'จำนวนครั้ง'], order.map(function (k2) { return [k2, num(tsum[k2])]; }), { num: [1], foot: ['รวม', num(itot)] })),
@@ -556,8 +558,8 @@
       lm.forEach(function (r) { var x = st[r.month]; if (x) { ret += x.returned; pend += pendOf(x); } });
       ov.push({ to: 'lostfound', icon: 'search', l: 'Lost & Found', v: num(lall), u: 'รายการ', s: 'แจ้งหาย ' + num(lsum('สิ่งของสูญหาย')) + ' · เก็บได้ ' + num(lsum('พบสิ่งของ')) + (lfs ? ' · รับคืนแล้ว ' + num(ret) : ''), color: C.c4 });
       add('lostfound', 'Lost & Found', repSec('lostfound', 'search', 'Lost & Found — แจ้งของหาย / เก็บของได้', { more: 'lostfound', note: rt + ' · อัปเดต ' + dLabel(lf.updated), color: C.c4 }, [
-        tiles([{ l: 'รายการทั้งหมด', v: num(lall), u: 'รายการ', color: C.c4 }, { l: 'แจ้งของหาย', v: num(lsum('สิ่งของสูญหาย')), u: 'รายการ', color: C.fine }, { l: 'เก็บของได้', v: num(lsum('พบสิ่งของ')), u: 'รายการ', color: C.c2 },
-          lfs ? { l: 'รับของคืนแล้ว', v: num(ret), u: 'รายการ', color: C.c1 } : { l: 'รับของคืนแล้ว', na: 'ไม่มีข้อมูลยืนยัน' }, lfs ? { l: 'ยังดำเนินการอยู่', v: num(pend), u: 'รายการ', s: 'ยังไม่พบ / รอเจ้าของมารับ / รอดำเนินการ', color: C.c5 } : null]),
+        tiles([{ l: 'แจ้งของหาย', v: num(lsum('สิ่งของสูญหาย')), u: 'รายการ', color: C.fine }, { l: 'เก็บของได้', v: num(lsum('พบสิ่งของ')), u: 'รายการ', color: C.c2 }, { l: 'แบบฟอร์มรับของคืน', v: num(lsum('รับของคืน')), u: 'ฉบับ', s: 'จำนวนแบบฟอร์ม ไม่ใช่สถานะ', color: C.c4 },
+          lfs ? { l: 'สถานะ “รับของคืนแล้ว”', v: num(ret), u: 'รายการ', s: 'นับจากสถานะของทุกรายการ', color: C.c1 } : { l: 'สถานะ “รับของคืนแล้ว”', na: 'ไม่มีข้อมูลยืนยัน' }, lfs ? { l: 'ยังดำเนินการอยู่', v: num(pend), u: 'รายการ', s: 'ยังไม่พบ / รอเจ้าของมารับ / รอดำเนินการ', color: C.c5 } : null]),
         figure('ตารางรายเดือน', 'หน่วย: รายการ' + (lfs ? ' · สถานะตรวจ ' + dLabel(lfs.checkedAt) : ''), rtable(['เดือน', 'แจ้งของหาย', 'เก็บของได้', 'แบบรับของคืน', 'ไม่ระบุประเภท', 'รวม', 'รับคืนแล้ว', 'ยังดำเนินการ'],
           lm.map(function (r) { var x = st[r.month]; return [mFull(r.month), num(ty(r, 'สิ่งของสูญหาย')), num(ty(r, 'พบสิ่งของ')), num(ty(r, 'รับของคืน')), num(ty(r, '(ไม่ระบุประเภท)')), num(sumObj(r.byType)), x ? num(x.returned) : '–', x ? num(pendOf(x)) : '–']; }),
           { num: [1, 2, 3, 4, 5, 6, 7], foot: ['รวม', num(lsum('สิ่งของสูญหาย')), num(lsum('พบสิ่งของ')), num(lsum('รับของคืน')), num(lsum('(ไม่ระบุประเภท)')), num(lall), lfs ? num(ret) : '–', lfs ? num(pend) : '–'] })),
@@ -648,18 +650,13 @@
         sat ? figure('ความพึงพอใจ รปภ.เอกชน รายเดือน', 'คะแนนเฉลี่ยรวม (1–5) · สองแบบประเมินแสดงแยกกัน', el('div', { class: 'mini-pair' }, ['central', 'unit'].map(function (src) {
           return el('div', {}, [el('h4', { text: sat[src].name }), satScoreChart(src, function (i, c) { state.satSrc = src; state.satMonth = c.month; go('report-guard'); }, null, 200)]); }))) : null])); }
 
-    /* ส่วนบน: ตัวเลขภาพรวม + ทางลัดไปแต่ละหมวด */
-    v.appendChild(el('div', { class: 'ovs', role: 'list', 'aria-label': 'ตัวเลขภาพรวม' }, ov.map(function (o) {
-      return el('button', { type: 'button', class: 'card ov', role: 'listitem', style: '--accent:' + o.color, 'aria-label': o.l + ' — ไปยังรายงานหมวดนี้', onclick: function () { jumpTo(o.to); } }, [el('span', { class: 'ov-l' }, [ic(o.icon, 17), o.l]),
-        o.na ? el('b', { class: 'ov-na', text: o.na }) : el('b', {}, [o.v, el('small', { text: ' ' + o.u })]), o.s ? el('span', { class: 'ov-s', text: o.s }) : null]); })));
+    /* ทางลัดไปแต่ละหมวด */
     v.appendChild(el('nav', { class: 'jump', 'aria-label': 'ทางลัดไปยังหมวดรายงาน' }, [el('span', { class: 'jump-l', text: 'ไปที่หมวด' })].concat(secs.map(function (x) {
       return el('a', { href: '#' + currentPage() + '/' + x[0], text: x[1], onclick: function (e) { e.preventDefault(); jumpTo(x[0]); } }); }))));
     v.appendChild(hold);
     v.appendChild(el('p', { class: 'rep-foot' }, ['แหล่งข้อมูล นิยาม และสถานะการเชื่อมต่อของแต่ละชุดข้อมูลอยู่ที่ ', el('a', { href: '#admin-info', text: 'ข้อมูลระบบเพิ่มเติม' }), ' · ',
       el('a', { href: '#systems', text: 'สถานะระบบทั้งหมด' }), ' · ', el('button', { type: 'button', class: 'linkish', text: 'กลับขึ้นด้านบน ↑', onclick: function () { window.scrollTo(0, 0); } })]));
   }
-  PAGES.dashboard = function (v) { renderReport(v, false); };
-  PAGES['report-monthly'] = function (v) { renderReport(v, true); };
   function incidentChart(onPick) {
     var inc = mod('incidents'), rows = inc.monthly.filter(function (r) { return inRange(r.month); });
     var other = function (r) { return sumObj(r.byType) - (r.byType[V] || 0) - (r.byType[G] || 0) - (r.byType[P] || 0); };
@@ -948,22 +945,22 @@
   };
   PAGES.safety = function (v) {
     var f = mod('fire');
-    v.appendChild(pageHead('อุปกรณ์ดับเพลิงและการตรวจถัง', 'ทะเบียนและผลตรวจถังดับเพลิง และแผนที่เครื่อง AED'));
+    v.appendChild(pageHead('อุปกรณ์ดับเพลิง', 'ทะเบียนอุปกรณ์ดับเพลิงรายชิ้น 7 ประเภท พร้อมภาพ ประวัติการตรวจสภาพ และการเติมสาร'));
+    v.appendChild(fireEquipSection());
     if (f) {
+      v.appendChild(el('div', { class: 'sec' }, [el('div', { class: 'sec-h' }, [el('h2', { text: 'ระบบตรวจถังดับเพลิง — สถิติรวม' }), el('span', { class: 'note', text: 'อัปเดต ' + dLabel(f.updated) })])]));
       v.appendChild(kpiGrid([
         { icon: 'heart', label: 'ถังดับเพลิงในทะเบียน', value: num(f.extinguishers), unit: 'ถัง', updated: f.updated, color: C.c2 },
         { icon: 'shield', label: 'ถังที่ตรวจแล้ว', value: num(f.extinguishersInspected), unit: 'ถัง', sub: 'จาก ' + f.extinguishers + ' ถัง', color: C.c3 },
         { icon: 'file', label: 'การตรวจทั้งหมด', value: num(f.inspections), unit: 'ครั้ง', sub: 'ปกติ ' + f.inspectionResult['ปกติ'] + ' · ชำรุด ' + f.inspectionResult['ชำรุด'], color: C.c1 },
-        { icon: 'map', label: 'เครื่อง AED', na: 'ไม่มีข้อมูลยืนยัน (ดูแผนที่ต้นทาง)', color: C.c5 }]));
+]));
       var g = el('div', { class: 'grid2' });
       g.appendChild(figure('ถังดับเพลิงแยกชนิด', 'ที่มา: ข้อมูลถังดับเพลิง', hbars(Object.keys(f.byType).map(function (t) { return { label: t.replace(/ \(.*\)/, ''), value: f.byType[t], color: C.c2 }; }), 20, { labelW: 150, ticks: [0, 5, 10, 15, 20] })));
       g.appendChild(figure('ถังดับเพลิงแยกหน่วยงาน', 'ที่มา: ข้อมูลถังดับเพลิง', hbars(Object.keys(f.byUnit).map(function (t) { return { label: t, value: f.byUnit[t], color: C.c1 }; }), 35, { labelW: 190, ticks: [0, 10, 20, 30] })));
       v.appendChild(el('div', { class: 'sec' }, [g]));
       v.appendChild(section('นิยาม', {}, [infoBox('ถังดับเพลิง', f)]));
     }
-    v.appendChild(section('ประเภทอุปกรณ์ดับเพลิงในระบบเดิม', { note: 'ถังดับเพลิง · สายฉีด · หัวฉีด · ปั๊มน้ำ · ตู้เก็บอุปกรณ์ · หัวรับน้ำ · ชุด PPE' }, [entryCard({ what: 'ดูทะเบียนและผลตรวจอุปกรณ์ดับเพลิงทั้ง 7 ประเภท รายชิ้น พร้อมภาพและประวัติการเติมสาร', source: OLD_SHEET + ' แท็บ ตรวจสภาพ / ประวัติการเติมสารถังดับเพลิง',
-      why: 'ตัวเลขที่ตรวจยืนยันแล้วในหน้านี้มาจากระบบตรวจถังดับเพลิงรุ่นใหม่ (เฉพาะถังดับเพลิง) อุปกรณ์ประเภทอื่นยังไม่ได้ตรวจนับจากต้นทาง', menu: 'อุปกรณ์ดับเพลิง › (เลือกประเภท)' })]));
-    v.appendChild(systemsSection(['fire', 'aed-map']));
+    v.appendChild(systemsSection(['fire']));
   };
   PAGES.reports = function (v) {
     v.appendChild(pageHead('ระบบสร้างเอกสาร PDF', 'เครื่องมือสร้างเอกสารรายงานและ Dashboard เดิม (เปิดในระบบต้นทาง)'));
@@ -1166,30 +1163,21 @@
     var rows = [['สถานะ', el('span', { class: 'pill s-blocked', text: 'ยังไม่ได้ย้ายมาแสดงในระบบใหม่' })], ['เนื้อหาของหน้านี้', o.what], ['แหล่งข้อมูล', o.source],
       ['สิ่งที่ยังขาด', o.need || o.why], ['ตำแหน่งในระบบเดิม', o.menu]].filter(function (r) { return r[1]; });
     var dl = el('dl'); rows.forEach(function (r) { dl.appendChild(el('dt', { text: r[0] })); dl.appendChild(el('dd', {}, [r[1]])); });
-    return el('div', { class: 'card entry' }, [el('h3', { text: o.cardTitle || 'หน้านี้ยังใช้งานในระบบใหม่ไม่ได้' }), dl,
+    return el('div', { class: 'card entry stub' }, [el('h3', { text: o.cardTitle || 'หน้านี้ยังใช้งานในระบบใหม่ไม่ได้' }), dl,
       el('div', { class: 'btns' }, [oldUrl() ? extBtn('เปิดหน้านี้ในระบบเดิม (ทางเลือกชั่วคราว)', oldUrl(), true) : el('span', { class: 'kpi-na', text: 'ไม่มีลิงก์ที่ยืนยันได้' })])]);
   }
   var PII = 'ข้อมูลเป็นรายบุคคล (ชื่อ ตำแหน่ง เบอร์ติดต่อ รูปถ่าย) — ต้องมีระบบยืนยันตัวตนของเว็บไซต์ใหม่ และ API อ่านอย่างเดียวที่ตรวจสิทธิ์ผู้เรียก ก่อนจึงจะแสดงได้',
       NOSTAT = 'เป็นบันทึกและภาพถ่ายรายครั้ง — ต้องมีระบบยืนยันตัวตนของเว็บไซต์ใหม่ และ API อ่านอย่างเดียวของแท็บนี้ (ระบบเดิมอ่านผ่าน Apps Script ที่ใช้รหัสพนักงาน)';
   var OLD_SHEET = 'Sheet “ข้อมูลงานจราจรออนไลน์”';
   var ENTRY = {
-    'staff': { title: 'บุคลากร/พนักงาน — บุคลากรทั้งหมด', desc: 'ทำเนียบบุคลากรงานจราจรและความปลอดภัย', what: 'ดูรายชื่อ ตำแหน่ง และช่องทางติดต่อของบุคลากรทุกหน่วย', source: OLD_SHEET + ' แท็บ พนักงานจราจร (ผ่าน Apps Script ของระบบเดิม)', why: PII, menu: 'บุคลากร/พนักงาน › บุคลากรทั้งหมด' },
-    'staff-strategy': { title: 'บุคลากร/พนักงาน — หน่วยยุทธศาสตร์ฯ', desc: 'ทำเนียบบุคลากร กรองเฉพาะหน่วยยุทธศาสตร์ฯ', what: 'ดูรายชื่อและช่องทางติดต่อของบุคลากรหน่วยยุทธศาสตร์ฯ', source: OLD_SHEET + ' แท็บ พนักงานจราจร (ผ่าน Apps Script ของระบบเดิม)', why: PII, menu: 'บุคลากร/พนักงาน › หน่วยยุทธศาสตร์ฯ' },
-    'staff-ops': { title: 'บุคลากร/พนักงาน — หน่วยปฏิบัติการฯ', desc: 'ทำเนียบบุคลากร กรองเฉพาะหน่วยปฏิบัติการฯ', what: 'ดูรายชื่อและช่องทางติดต่อของบุคลากรหน่วยปฏิบัติการฯ', source: OLD_SHEET + ' แท็บ พนักงานจราจร (ผ่าน Apps Script ของระบบเดิม)', why: PII, menu: 'บุคลากร/พนักงาน › หน่วยปฏิบัติการฯ' },
-    'area-inspect': { title: 'การดูแลพื้นที่ส่วนกลาง — ตรวจพื้นที่', desc: 'บันทึกและภาพการตรวจพื้นที่ส่วนกลาง', what: 'ดูภาพและบันทึกการตรวจพื้นที่ส่วนกลางรายครั้ง', source: OLD_SHEET + ' แท็บ ภาพการตรวจพื้นที่', why: NOSTAT, menu: 'การดูแลพื้นที่ส่วนกลาง › ตรวจพื้นที่' },
-    'area-assist': { title: 'การดูแลพื้นที่ส่วนกลาง — ให้ความช่วยเหลือ', desc: 'บันทึกการให้ความช่วยเหลือผู้ใช้พื้นที่', what: 'ดูภาพและบันทึกการให้ความช่วยเหลือรายครั้ง', source: OLD_SHEET + ' แท็บ ภาพการตรวจพื้นที่', why: NOSTAT, menu: 'การดูแลพื้นที่ส่วนกลาง › ให้ความช่วยเหลือ', related: ['incident-report'], relatedTitle: 'สถิติการรับส่งผู้ป่วยและเหตุการณ์อยู่ในระบบรายงานเหตุการณ์' },
-    'area-traffic': { title: 'การดูแลพื้นที่ส่วนกลาง — งานจราจร', desc: 'บันทึกการปฏิบัติงานด้านจราจรในพื้นที่ส่วนกลาง', what: 'ดูภาพและบันทึกงานจราจรรายครั้ง', source: 'Apps Script ของระบบเดิม (ข้อมูลภาพการปฏิบัติงาน)', why: NOSTAT, menu: 'การดูแลพื้นที่ส่วนกลาง › งานจราจร', related: ['gate-tracker', 'incident-report'], relatedTitle: 'ระบบจราจรที่มีสถิติในหน้ารวม' },
-    'vehicle-fleet': { title: 'ยานพาหนะทั้งหมด', desc: 'ทะเบียนยานพาหนะของงานจราจรและการตรวจสภาพ', what: 'ดูรายการยานพาหนะของงาน ผลตรวจสภาพ และบันทึกการทำความสะอาด', source: OLD_SHEET + ' แท็บ ตรวจสภาพ / Vehicle_List (ผ่าน Apps Script ของระบบเดิม)', why: 'รายการมีทะเบียนรถและภาพถ่าย — ต้องมีระบบยืนยันตัวตนของเว็บไซต์ใหม่ และ API อ่านอย่างเดียวของแท็บ ยานพาหนะงานจราจร / ตรวจยานพาหนะ · ยังไม่ได้นับจำนวนรวมจากต้นทาง', menu: 'ยานพาหนะทั้งหมด' },
-    'forms-radio': { title: 'แบบฟอร์มบันทึกศูนย์วิทยุสื่อสาร', desc: 'แบบบันทึกการปฏิบัติงานของศูนย์วิทยุสื่อสาร', what: 'บันทึกเหตุการณ์และการรับ–ส่งข่าวของศูนย์วิทยุรายผลัด', source: OLD_SHEET + ' แท็บ บันทึกรายงานวิทยุสื่อสาร (เขียนผ่าน Apps Script ของระบบเดิม)', why: 'เป็นแบบฟอร์มที่เขียนข้อมูลจริง — ต้องตรวจ API เขียนข้อมูลและสิทธิ์ของระบบเดิมก่อนออกแบบตัวเชื่อม รอบนี้ไม่ได้ส่งข้อมูลทดสอบเข้าระบบจริง', menu: 'แบบฟอร์มต่างๆ › บันทึกศูนย์วิทยุสื่อสาร' },
-    'report-daily': { title: 'รายงานประจำวัน', desc: 'สรุปเหตุการณ์และการปฏิบัติงานประจำวัน', what: 'เปิดดู/พิมพ์รายงานประจำวันของงานจราจรและความปลอดภัย', source: 'หลาย Sheet ของระบบเดิม (รายงานเหตุการณ์ ของหาย จำนวนรถ ฯลฯ)', why: 'รายงานมีรายละเอียดรายเหตุการณ์และชื่อผู้ปฏิบัติงาน — ต้องมีระบบยืนยันตัวตนของเว็บไซต์ใหม่ และ API อ่านอย่างเดียวที่ตรวจสิทธิ์ผู้เรียก · สถิติรวมรายเดือนดูได้ที่หน้า Dashboard', menu: 'รายงานและสถิติ › รายงานประจำวัน', related: ['pdf-daily'], relatedTitle: 'ระบบสร้างเอกสารที่เกี่ยวข้อง' },
-    'report-radio': { title: 'รายงานวิทยุสื่อสาร', desc: 'รายงานจากบันทึกของศูนย์วิทยุสื่อสาร', what: 'เปิดดู/พิมพ์รายงานการปฏิบัติงานศูนย์วิทยุสื่อสาร', source: OLD_SHEET + ' แท็บ บันทึกรายงานวิทยุสื่อสาร และ พนักงานจราจร', why: 'รายงานมีชื่อผู้ปฏิบัติงานและรายละเอียดรายครั้ง — ต้องมีระบบยืนยันตัวตนของเว็บไซต์ใหม่ และ API อ่านอย่างเดียวที่ตรวจสิทธิ์ผู้เรียก', menu: 'รายงานและสถิติ › รายงานวิทยุสื่อสาร' }
   };
   Object.keys(ENTRY).forEach(function (id) {
     PAGES[id] = function (v) { var o = ENTRY[id]; v.appendChild(pageHead(o.title, o.desc)); v.appendChild(el('div', { class: 'sec' }, [entryCard(o)])); if (o.related) v.appendChild(systemsSection(o.related, o.relatedTitle)); };
   });
   PAGES.parking = function (v) {
     var rts = extra('ruenthaiSurvey'), gr = mod('graduationParking');
-    v.appendChild(pageHead('ข้อมูลการจอดรถ', 'แบบสำรวจลานจอดรถเรือนไทย และลานจอดช่วงพิธีพระราชทานปริญญาบัตร'));
+    v.appendChild(pageHead('ข้อมูลการจอดรถ', 'ลานจอดรถรายลาน แบบสำรวจลานจอดรถเรือนไทย และลานจอดช่วงพิธีพระราชทานปริญญาบัตร'));
+    v.appendChild(lotsSection());
     if (rts) { var peak = rts.daily.slice().sort(function (a, b) { return b.count - a.count; })[0];
       v.appendChild(section('แบบสำรวจลานจอดรถเรือนไทย', { note: dLabel(rts.from).replace(/ \d{4}$/, '') + ' – ' + dLabel(rts.updated) }, [kpiGrid([
         { icon: 'file', label: 'แบบสำรวจที่ส่งแล้ว', value: num(rts.total), unit: 'ชุด', updated: rts.updated, color: C.c4 },
@@ -1200,32 +1188,18 @@
           [{ name: 'แบบสำรวจที่ส่ง', color: C.c4, values: rts.daily.map(function (d) { return d.count; }) }], { unit: 'ชุด', int: true, h: 250, aria: 'แบบสำรวจลานจอดรถเรือนไทยรายวัน' }))])])); }
     if (gr) v.appendChild(section('ลานจอดงานพิธีพระราชทานปริญญาบัตร ปีการศึกษา 2568', { more: 'graduation' }, [kpiGrid(gr.days.map(function (d, i) {
       return { icon: 'cap', label: 'รถในลานจอด ' + dLabel(d.date), value: num(d.latestCount), unit: 'คัน', sub: d.occupancyPercent + '% ของความจุ ' + num(d.capacity) + ' คัน (' + d.lots + ' ลาน)', color: [C.c1, C.c3, C.c4][i] }; }))]));
-    v.appendChild(section('ข้อมูลลานจอดรถรายลาน', {}, [entryCard({ what: 'ตำแหน่ง ภาพ และรายละเอียดของลานจอดรถแต่ละลานภายในมหาวิทยาลัย', source: OLD_SHEET + ' แท็บ ลานจอดรถ',
-      need: 'ยังไม่ได้ตรวจโครงสร้างแท็บนี้และยังไม่มี API อ่านอย่างเดียวสำหรับระบบใหม่', menu: 'การจัดการจราจร › ข้อมูลลานจอดรถ' })]));
     v.appendChild(systemsSection(['ruenthai', 'grad-parking'], 'ระบบต้นทาง'));
   };
   function simpleSys(id, title, desc, ids, secTitle) { PAGES[id] = function (v) { v.appendChild(pageHead(title, desc)); v.appendChild(systemsSection(ids, secTitle)); }; }
   simpleSys('event-incident', 'ระบบเหตุการณ์กิจกรรมพิเศษ', 'แบบฟอร์มและแดชบอร์ดรายงานเหตุการณ์ช่วงกิจกรรมพิเศษ — ยังไม่มีสถิติที่ยืนยันแหล่งข้อมูลได้ จึงแสดงเป็นลิงก์', ['event-incident'], 'ระบบต้นทาง');
   simpleSys('helmet-quiz', 'แบบทดสอบโครงการรณรงค์สวมหมวกนิรภัย', 'สื่อและแบบทดสอบความรู้ — ลิงก์ตรวจแล้วเปิดได้ · ยังไม่มีสถิติผลทดสอบที่ยืนยันแหล่งข้อมูลได้', ['helmet-quiz', 'gate-tracker'], 'ระบบต้นทาง');
   simpleSys('aed', 'เครื่อง AED', 'แผนที่ตำแหน่งและความพร้อมใช้งานเครื่อง AED ในวิทยาเขตศาลายา (Google My Maps) — ไม่มีข้อมูลจำนวนเครื่องในรูปแบบที่ระบบอ่านยืนยันได้ จึงแสดงเป็นลิงก์', ['aed-map'], 'ระบบต้นทาง');
-  PAGES['inspection-history'] = function (v) {
-    var fire = mod('fire');
-    v.appendChild(pageHead('ประวัติการตรวจสภาพ', 'ประวัติการตรวจสภาพอุปกรณ์และยานพาหนะ สำหรับค้นและพิมพ์รายงาน'));
-    if (fire) v.appendChild(section('สรุปการตรวจถังดับเพลิง (ระบบตรวจถังรุ่นใหม่)', { more: 'safety' }, [kpiGrid([
-      { icon: 'heart', label: 'ถังดับเพลิงในทะเบียน', value: num(fire.extinguishers), unit: 'ถัง', updated: fire.updated, color: C.c2 },
-      { icon: 'check', label: 'ถังที่ตรวจแล้ว', value: num(fire.extinguishersInspected), unit: 'ถัง', sub: 'จากบันทึกการตรวจ ' + num(fire.inspections) + ' ครั้ง', color: C.c1 },
-      { icon: 'alert', label: 'ผลตรวจชำรุด', value: num(fire.inspectionResult['ชำรุด']), unit: 'ครั้ง', sub: 'ปกติ ' + num(fire.inspectionResult['ปกติ']) + ' ครั้ง', color: C.fine }])]));
-    v.appendChild(el('div', { class: 'sec' }, [entryCard({ what: 'ค้นประวัติการตรวจสภาพอุปกรณ์ดับเพลิง การเติมสาร และยานพาหนะ แล้วพิมพ์รายงาน', source: OLD_SHEET + ' แท็บ ตรวจสภาพ / อุปกรณ์ดับเพลิง / ประวัติการเติมสารถังดับเพลิง',
-      why: 'ประวัติรายรายการมีชื่อผู้ตรวจและลายมือชื่อ จึงเปิดในระบบต้นทาง', menu: 'ประวัติการตรวจสภาพ' })]));
-    v.appendChild(systemsSection(['fire']));
-  };
   PAGES.forms = function (v) {
-    v.appendChild(pageHead('แบบฟอร์มทั่วไป', 'รวมแบบฟอร์มที่ใช้งานอยู่ — เปิดกรอกในระบบต้นทางเท่านั้น หน้ารวมนี้ไม่ส่งข้อมูลแทนผู้ใช้'));
+    v.appendChild(pageHead('แบบฟอร์มทั่วไป', 'แบบฟอร์มที่ใช้งานอยู่ของงานจราจรและความปลอดภัย')); v.appendChild(formsSection());
     var ids = ['incident-report', 'gate-tracker', 'event-incident', 'cctv', 'borrow', 'lostfound', 'guard-scan', 'guard-shift', 'guard-feedback-central', 'guard-feedback-unit', 'veh-staff', 'ruenthai', 'grad-parking', 'fire', 'helmet-quiz'];
     v.appendChild(section('แบบฟอร์มของระบบที่สำรวจแล้ว', { note: 'ลิงก์ตามบัญชีระบบ · ตรวจล่าสุด 14 พ.ย. 2569' }, [el('ul', { class: 'list' }, ids.map(function (id) { return SYS[id]; }).filter(function (s) { return s && s.links.length; }).map(function (s) {
       return el('li', {}, [el('div', {}, [el('b', { text: s.name }), el('span', { text: s.desc })]), extBtn(s.links[0].label, s.links[0].url, true)]); }))]));
-    v.appendChild(section('แบบฟอร์มในระบบเดิม', {}, [entryCard({ what: 'แบบฟอร์มทั่วไปของงาน (เช่น แบบบันทึกการทำความสะอาดยานพาหนะ การเติมสารถังดับเพลิง การจัดการขยะ) และรายการแบบฟอร์มดาวน์โหลด',
-      source: OLD_SHEET + ' แท็บ แบบฟอร์ม (เขียนผ่าน Apps Script ของระบบเดิม)', why: 'เป็นแบบฟอร์มที่เขียนข้อมูลจริง — ต้องตรวจ API เขียนข้อมูลและสิทธิ์ของระบบเดิมก่อนออกแบบตัวเชื่อม รอบนี้ไม่ได้ส่งข้อมูลทดสอบเข้าระบบจริง', menu: 'แบบฟอร์มต่างๆ › แบบฟอร์มทั่วไป' })]));
+    v.appendChild(localFormsSection());
   };
 
   /* ---------- ตารางเวร (คำนวณจากกติกาในไฟล์ Excel — ไม่มีรายชื่อใน Repository) ---------- */
@@ -1341,7 +1315,7 @@
   function aiStatusCard() {
     var on = !!CFG.aiApiUrl;
     return el('div', { class: 'card set' }, [el('div', {}, [el('h3', {}, ['สถานะ: ', el('span', { class: 'pill ' + (on ? 's-warn' : 's-off'), text: on ? 'ตั้งค่า Backend แล้ว (ยังไม่ได้ทดสอบ)' : 'ยังเชื่อมต่อผู้ช่วย AI ไม่ได้' })]),
-      el('p', { text: 'หน้ารวมนี้ยังไม่ส่งคำถามไปยังบริการ AI ใด ๆ — ผู้ช่วย AI ของระบบเดิมยังใช้งานได้ที่ Dashboard งานจราจรและความปลอดภัย (AI)' })]),
+      el('p', { text: on ? 'ปุ่มผู้ช่วย AI มุมล่างขวาจะส่งคำถามและช่วงเวลาที่กำลังดูไปยังบริการที่ตั้งค่าไว้' : 'ปุ่มผู้ช่วย AI มุมล่างขวาเปิดได้ แต่ยังไม่ส่งคำถามไปยังบริการใด ๆ จนกว่าจะตั้งค่าบริการที่ตรวจตัวตน (โค้ดอยู่ที่ server/functions/api/chat.js — ยังไม่ได้ Deploy)' })]),
       el('div', { class: 'btns', style: 'margin:0' }, [SYS['dashboard-ai'] ? extBtn('เปิด Dashboard AI เดิม', SYS['dashboard-ai'].links[0].url) : null, el('a', { class: 'btn sec', href: '#ai', text: 'รายละเอียด' })])]);
   }
   PAGES.ai = function (v) {
@@ -1524,6 +1498,579 @@
   PAGE_TITLE['admin-info'] = 'ข้อมูลระบบเพิ่มเติม';
 
   /* ---------- เริ่มทำงาน ---------- */
+
+  /* ======================================================================
+   * รอบ 7 — หน้าแรกแบบ “วันนี้ก่อน แนวโน้มอยู่ด้านล่าง”
+   * A ส่วนต้น: วันที่ (เวลาไทย ณ ตอนเปิด) + ตัวเลือก วันนี้ / เดือนนี้ / ปีนี้ / กำหนดช่วง
+   * B ข้อมูลตามช่วงที่เลือก: หนึ่งการ์ดต่อหนึ่งเรื่อง (ตัวเลขหลัก + 2–3 ค่า + กราฟจิ๋ว) — ไม่มีข้อมูลของวันนั้น = บอกว่าไม่มี ไม่แสดงเป็น 0
+   * C แนวโน้มรายเดือน: หนึ่งกราฟต่อหนึ่งเรื่อง ไม่ขึ้นกับตัวเลือก “วันนี้” — คลิกกราฟ/หัวการ์ดเพื่อเปิดหน้ารายละเอียด
+   * ตาราง รายการ และคำอธิบายแหล่งข้อมูลอยู่ในหน้ารายละเอียด / รายงานประจำเดือน / ข้อมูลระบบเพิ่มเติม
+   * ==================================================================== */
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function todayStr() { var n = bkkNow(); return n.y + '-' + pad2(n.m) + '-' + pad2(n.d); }
+  function dShort(s) { return (+s.slice(8, 10)) + ' ' + TH_M[+s.slice(5, 7) - 1]; }
+  function addDays(s, n) { var d = new Date(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) + n * 86400000); return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate()); }
+  /* แต่ละหน้าจำช่วงเดือนของตัวเอง: หน้าแรก (ปีนี้) / รายงานประจำเดือน (เดือนเดียว) / หน้าอื่น (ทั้งหมด) */
+  function scopeRange(key, def) {
+    var s = state.scopes || (state.scopes = {});
+    if (state.rerender && state.scopeKey === key) s[key] = { from: state.from, to: state.to };
+    else { if (!s[key]) s[key] = def; state.from = s[key].from; state.to = s[key].to; }
+    state.scopeKey = key;
+  }
+  function yearRange() { var y = todayStr().slice(0, 4), ms = MONTHS.filter(function (m) { return m.slice(0, 4) === y; }); return ms.length ? { from: ms[0], to: ms[ms.length - 1] } : { from: MONTHS[0], to: MONTHS[MONTHS.length - 1] }; }
+  function periodOf() {
+    var t = todayStr(), cm = t.slice(0, 7), k = state.period || 'today';
+    if (k === 'today') return { kind: k, day: t, cm: cm, label: 'วันนี้ ' + dLabel(t) };
+    if (k === 'month') return { kind: k, months: [cm], cm: cm, label: 'เดือนนี้ ' + mFull(cm) };
+    if (k === 'year') return { kind: k, months: MONTHS.filter(function (m) { return m.slice(0, 4) === t.slice(0, 4); }), cm: cm, label: 'ปีนี้ พ.ศ. ' + (+t.slice(0, 4) + 543) };
+    return { kind: 'custom', months: MONTHS.filter(inRange), cm: cm, label: rangeText() };
+  }
+  function spark(vals, color, aria) {
+    var mx = Math.max.apply(null, vals.concat([1])), n = vals.length, w = 6, g = 2, H = 30, s = svg('svg', { viewBox: '0 0 ' + (n * (w + g)) + ' ' + H, class: 'spark', role: 'img', 'aria-label': aria, preserveAspectRatio: 'none' });
+    vals.forEach(function (x, i) { var h = x == null ? 0 : Math.max(x > 0 ? 2 : 0.8, x / mx * (H - 2)); s.appendChild(svg('rect', { x: i * (w + g), y: H - h, width: w, height: h, rx: 1, fill: x == null ? 'var(--line)' : color, opacity: i === n - 1 ? 1 : 0.55 })); });
+    return s;
+  }
+  function nowCard(o) {
+    var kids = [el('div', { class: 'now-h' }, [el('span', { class: 'now-ico' }, [ic(o.icon, 18)]), el('h3', { text: o.title }), o.badge ? el('span', { class: 'now-badge' + (o.stale ? ' stale' : ''), text: o.badge }) : null])];
+    if (o.mainNa) kids.push(el('div', { class: 'now-na', text: o.mainNa }));
+    else kids.push(el('div', { class: 'now-main' }, [el('b', { text: o.main.v }), el('small', { text: o.main.u })]));
+    if (o.subs && o.subs.length) kids.push(el('dl', { class: 'now-subs' }, o.subs.filter(Boolean).reduce(function (a, s) { a.push(el('div', {}, [el('dt', { text: s.l }), el('dd', { text: s.v })])); return a; }, [])));
+    if (o.spark) kids.push(el('div', { class: 'now-spark' }, [spark(o.spark.vals, o.color, o.spark.aria), el('span', { text: o.spark.cap })]));
+    if (o.note) kids.push(el('p', { class: 'now-note', text: o.note }));
+    return el('a', { class: 'card now', href: '#' + o.page, style: '--accent:' + o.color, 'aria-label': o.title + ' — เปิดรายละเอียด' }, kids);
+  }
+  /* ---- ตัวคำนวณของแต่ละเรื่อง: คืนค่าตามช่วงที่เลือก พร้อมป้ายเมื่อเป็นข้อมูลล่าสุดแทนช่วงที่ขอ ---- */
+  function incRows(test) { var d = extra('incidentsDaily'); return d ? d.rows.filter(test) : []; }
+  function incSum(rows) { var o = { n: 0, inj: 0, v: 0, g: 0, p: 0 }; rows.forEach(function (r) { o.n += r.count; o.inj += r.injured; if (r.type === V) o.v += r.count; else if (r.type === G) o.g += r.count; else if (r.type === P) o.p += r.count; }); return o; }
+  function daySeries(endDay, n, f) { var out = []; for (var i = n - 1; i >= 0; i--) out.push(f(addDays(endDay, -i))); return out; }
+  /* ความครอบคลุมของชุดข้อมูลรายวัน: แสดง 0 ของ “วันนี้” ได้เฉพาะเมื่อ complete === true (อ่านต้นทางครบทั้งแท็บสำเร็จ) และวันที่ที่อ่าน (checkedAt) คือวันนี้
+   * วันที่เปิดหน้า/วันที่ build ไม่ใช่หลักฐาน — ถ้าอ่านไม่ครบหรือไม่มี checkedAt ถือว่ายืนยันไม่ได้ และไม่เติมศูนย์หลังรายการล่าสุด */
+  function coverOf(d) { var c = String((d && d.checkedAt) || ''); return { ok: !!d && d.complete === true && c.length >= 16, day: c.slice(0, 10), time: c.slice(11, 16) }; }
+  function nowIncidents(Q) {
+    var d = extra('incidentsDaily'), base = { icon: 'alert', title: 'เหตุการณ์และอุบัติเหตุ', color: C.c1, page: 'traffic' };
+    if (!d) return null;
+    var cv = coverOf(d), cover = cv.ok ? cv.day : d.lastEntry, end = Q.day && Q.day <= cover ? Q.day : cover, s;
+    base.spark = { vals: daySeries(end, 14, function (x) { return incSum(incRows(function (r) { return r.date === x; })).n; }), aria: 'เหตุการณ์ 14 วันล่าสุด', cap: '14 วันถึง ' + dShort(end) };
+    if (Q.kind === 'today') {
+      if (!cv.ok || Q.day > cv.day) { s = incSum(incRows(function (r) { return r.date === d.lastEntry; }));
+        base.mainNa = cv.ok ? 'ยังไม่มีข้อมูลวันนี้' : 'ยังยืนยันข้อมูลวันนี้ไม่ได้'; base.badge = 'ล่าสุด ' + dShort(d.lastEntry); base.stale = true; base.subs = [{ l: 'เหตุการณ์', v: num(s.n) }, { l: 'ผู้บาดเจ็บ/ป่วย', v: num(s.inj) + ' คน' }]; base.note = cv.ok ? 'ตรวจข้อมูลล่าสุด ' + dLabel(d.checkedAt) : 'อ่านต้นทางไม่ครบ'; return base; }
+      s = incSum(incRows(function (r) { return r.date === Q.day; })); base.badge = Q.day === cv.day ? 'วันนี้ ณ ' + cv.time + ' น.' : 'วันนี้'; base.note = 'รายการที่บันทึกแล้ว ณ เวลาตรวจ · ล่าสุด ' + dShort(d.lastEntry);
+    } else { s = incSum(incRows(function (r) { return Q.months.indexOf(r.date.slice(0, 7)) >= 0; })); base.badge = Q.label; if (Q.months.indexOf(Q.cm) >= 0) base.note = 'ข้อมูลถึง ' + dLabel(cv.ok ? d.checkedAt : d.lastEntry); }
+    base.main = { v: num(s.n), u: 'เหตุการณ์' };
+    base.subs = [{ l: 'ยานพาหนะ', v: num(s.v) }, { l: 'ทั่วไป', v: num(s.g) }, { l: 'รับส่งผู้ป่วย', v: num(s.p) }, { l: 'ผู้บาดเจ็บ/ป่วย', v: num(s.inj) + ' คน' }];
+    return base;
+  }
+  function nowLostFound(Q) {
+    var d = extra('lostfoundDaily'), lf = mod('lostfound'), lfs = extra('lostfoundStatus'), base = { icon: 'search', title: 'Lost & Found', color: C.c4, page: 'lostfound' };
+    if (!lf) return null;
+    if (d) { var cv = coverOf(d), cover = cv.ok ? cv.day : d.lastEntry, end = Q.day && Q.day <= cover ? Q.day : cover, by = {}; d.rows.forEach(function (r) { by[r.date] = r; });
+      base.spark = { vals: daySeries(end, 14, function (x) { return x < d.from ? null : by[x] ? by[x].lost + by[x].found : 0; }), aria: 'แจ้งหายและเก็บได้ 14 วันล่าสุด', cap: '14 วันถึง ' + dShort(end) };
+      if (Q.kind === 'today') {
+        if (!cv.ok || Q.day > cv.day || Q.day < d.from) { var l = by[d.lastEntry] || { lost: 0, found: 0 }; base.mainNa = !cv.ok ? 'ยังยืนยันข้อมูลวันนี้ไม่ได้' : Q.day < d.from ? 'ข้อมูลรายวันยังไม่รองรับ' : 'ยังไม่มีข้อมูลวันนี้'; base.badge = 'ล่าสุด ' + dShort(d.lastEntry); base.stale = true;
+          base.subs = [{ l: 'แจ้งหาย', v: num(l.lost) }, { l: 'เก็บได้', v: num(l.found) }]; base.note = cv.ok ? 'ตรวจข้อมูลล่าสุด ' + dLabel(d.checkedAt) : 'อ่านต้นทางไม่ครบ'; return base; }
+        var t = by[Q.day] || { lost: 0, found: 0, returnForms: 0 }; base.badge = Q.day === cv.day ? 'วันนี้ ณ ' + cv.time + ' น.' : 'วันนี้'; base.main = { v: num(t.lost), u: 'แจ้งของหาย' };
+        base.subs = [{ l: 'เก็บของได้', v: num(t.found) }, { l: 'แบบรับของคืน', v: num(t.returnForms) }]; base.note = 'รายการที่บันทึกแล้ว ณ เวลาตรวจ · ล่าสุด ' + dShort(d.lastEntry); return base; } }
+    else if (Q.kind === 'today') { base.mainNa = 'ข้อมูลรายวันยังไม่รองรับ'; return base; }
+    var rows = lf.monthly.filter(function (r) { return Q.months.indexOf(r.month) >= 0; }), st = (lfs ? lfs.monthly : []).filter(function (r) { return Q.months.indexOf(r.month) >= 0; });
+    var sum = function (k) { return rows.reduce(function (a, r) { return a + (r.byType[k] || 0); }, 0); };
+    base.badge = Q.label; base.main = { v: num(sum('สิ่งของสูญหาย')), u: 'แจ้งของหาย' };
+    base.subs = [{ l: 'เก็บของได้', v: num(sum('พบสิ่งของ')) }, lfs ? { l: 'สถานะรับคืนแล้ว', v: num(st.reduce(function (a, r) { return a + r.returned; }, 0)) } : null];
+    if (!rows.length) { base.mainNa = 'ยังไม่มีข้อมูลของช่วงนี้'; base.subs = []; }
+    return base;
+  }
+  function nowGate(Q) {
+    var g = mod('gate'), base = { icon: 'helmet', title: 'รถเข้าและหมวกนิรภัย', color: C.c3, page: 'gate' };
+    if (!g) return null;
+    var days = g.daily, last = days[days.length - 1], by = {}; days.forEach(function (r) { by[r.date] = r; });
+    var end = Q.day && by[Q.day] ? Q.day : last.date;
+    base.spark = { vals: daySeries(end, 14, function (x) { return by[x] ? by[x].cars + by[x].motorcycles : null; }), aria: 'รถเข้า 14 วันล่าสุด', cap: '14 วันถึง ' + dShort(end) + ' · เฉพาะรถเข้า' };
+    var fill = function (r, n) { base.main = { v: num(r.cars + r.motorcycles), u: 'คันเข้า' }; base.subs = [{ l: 'รถยนต์', v: num(r.cars) }, { l: 'จักรยานยนต์', v: num(r.motorcycles) }, { l: 'ไม่สวมหมวก', v: num(r.noHelmet) + ' ราย' }]; if (n) base.subs.push({ l: 'วันที่มีข้อมูล', v: n + ' วัน' }); };
+    if (Q.kind === 'today') {
+      if (by[Q.day]) { fill(by[Q.day]); base.badge = 'วันนี้'; return base; }
+      base.mainNa = 'ยังไม่มีข้อมูลวันนี้'; base.badge = 'ล่าสุด ' + dShort(last.date); base.stale = true;
+      base.subs = [{ l: 'รถเข้า', v: num(last.cars + last.motorcycles) + ' คัน' }, { l: 'ไม่สวมหมวก', v: num(last.noHelmet) + ' ราย' }]; return base; }
+    var rows = g.monthly.filter(function (r) { return Q.months.indexOf(r.month) >= 0; });
+    if (!rows.length) { base.mainNa = 'ยังไม่มีข้อมูลของช่วงนี้'; base.badge = 'ล่าสุด ' + dShort(last.date); base.stale = true; return base; }
+    fill({ cars: rows.reduce(function (a, r) { return a + r.cars; }, 0), motorcycles: rows.reduce(function (a, r) { return a + r.motorcycles; }, 0), noHelmet: rows.reduce(function (a, r) { return a + r.noHelmet; }, 0) }, rows.reduce(function (a, r) { return a + r.days; }, 0));
+    base.badge = Q.label; if (Q.months.indexOf(last.date.slice(0, 7)) >= 0) base.note = 'ข้อมูลถึง ' + dLabel(last.date);
+    return base;
+  }
+  /* แหล่งที่ snapshot เก็บเป็นรายเดือน: “วันนี้” แสดงค่าของเดือน (ระบุชื่อเดือน) และบอกว่ารายวันยังไม่รองรับ — ไม่หารเฉลี่ยเป็นรายวัน */
+  function nowMonthly(Q, base, rows, fill, lastTxt) {
+    if (!rows.length) return null;
+    var last = rows[rows.length - 1], pick;
+    if (Q.kind === 'today' || Q.kind === 'month') {
+      pick = rows.filter(function (r) { return r.month === Q.cm; })[0];
+      if (pick) { fill([pick]); base.badge = mLabel(Q.cm) + (Q.kind === 'today' ? ' (ทั้งเดือน)' : ''); if (Q.kind === 'today') base.note = 'ข้อมูลรายวันยังไม่รองรับ — แสดงยอดสะสมของเดือนนี้'; }
+      else { fill([last]); base.badge = 'ล่าสุด ' + mLabel(last.month); base.stale = true; base.note = (Q.kind === 'today' ? 'ยังไม่มีข้อมูลวันนี้' : 'ยังไม่มีข้อมูลเดือนนี้') + (lastTxt ? ' · ' + lastTxt : ''); }
+      return base;
+    }
+    pick = rows.filter(function (r) { return Q.months.indexOf(r.month) >= 0; });
+    if (!pick.length) { base.mainNa = 'ยังไม่มีข้อมูลของช่วงนี้'; base.badge = 'ล่าสุด ' + mLabel(last.month); base.stale = true; return base; }
+    fill(pick); base.badge = Q.label; if (pick[pick.length - 1].month < Q.months[Q.months.length - 1] && lastTxt) base.note = lastTxt;
+    return base;
+  }
+  function sumK(rows, k) { return rows.reduce(function (a, r) { return a + (r[k] || 0); }, 0); }
+  function nowAnywheel(Q) { var aw = extra('anywheel'); if (!aw) return null; var base = { icon: 'pin', title: 'จักรยาน Anywheel', color: C.c1, page: 'tram' };
+    base.spark = { vals: aw.monthly.map(function (r) { return r.trips; }), aria: 'การใช้ Anywheel รายเดือน', cap: mLabel(aw.monthly[0].month) + ' – ' + mLabel(aw.monthly[aw.monthly.length - 1].month) };
+    return nowMonthly(Q, base, aw.monthly, function (rows) { base.main = { v: num(sumK(rows, 'trips')), u: 'ครั้ง' }; base.subs = [{ l: 'ระยะทาง', v: num(sumK(rows, 'km')) + ' กม.' }, { l: 'เฉลี่ย/วัน', v: num(Math.round(sumK(rows, 'trips') / sumK(rows, 'days'))) + ' ครั้ง' }]; }, 'ต้นทางมีข้อมูลถึง ' + dLabel(aw.updated)); }
+  function nowTram(Q) { var t = extra('tram'); if (!t) return null; var base = { icon: 'car', title: 'รถรางบริการพิเศษ', color: C.c2, page: 'tram' }, ms = t.monthly.slice(-8);
+    base.spark = { vals: ms.map(function (r) { return r.rounds; }), aria: 'จำนวนรอบรถรางรายเดือน', cap: 'รอบ · ' + mLabel(ms[0].month) + ' – ' + mLabel(ms[ms.length - 1].month) };
+    return nowMonthly(Q, base, t.monthly, function (rows) { base.main = { v: num(sumK(rows, 'jobs')), u: 'งาน' }; base.subs = [{ l: 'รอบ', v: num(sumK(rows, 'rounds')) }, { l: 'ระยะทาง', v: num(sumK(rows, 'km')) + ' กม.' }]; }, 'ต้นทางมีข้อมูลถึง ' + dLabel(t.updated)); }
+  function nowCctv(Q) { var c = mod('cctv'); if (!c) return null; var base = { icon: 'camera', title: 'คำขอดูกล้อง CCTV', color: C.c2, page: 'cctv' };
+    base.spark = { vals: c.monthly.map(function (r) { return r.count; }), aria: 'คำขอ CCTV รายเดือน', cap: mLabel(c.monthly[0].month) + ' – ' + mLabel(c.monthly[c.monthly.length - 1].month) };
+    return nowMonthly(Q, base, c.monthly, function (rows) { base.main = { v: num(sumK(rows, 'count')), u: 'คำขอ' }; base.subs = [{ l: 'ปิดเคสสะสม', v: num(c.byStatus['ปิดเคส']) + ' / ' + num(c.total) }]; }, 'อัปเดต ' + dLabel(c.updated)); }
+  function nowAssets() { var vr = mod('vehicleRegistration'), oc = extra('opsCheck'); if (!vr) return null;
+    var tot = Object.keys(vr.rows).reduce(function (a, k2) { return a + (vr.rows[k2] || 0); }, 0);
+    return { icon: 'car', title: 'ลานจอดและยานพาหนะ', color: C.c5, page: 'parking', badge: 'ทะเบียน ณ ' + dShort(vr.updated), main: { v: num(tot), u: 'รายการลงทะเบียน' },
+      subs: [{ l: 'บุคลากร', v: num((vr.rows['บุคลากร – รถยนต์'] || 0) + (vr.rows['บุคลากร – รถจักรยานยนต์'] || 0)) }, { l: 'นักศึกษา', v: num(vr.rows['นักศึกษา – รถยนต์']) }, oc ? { l: 'ลานจอดรถ', v: num(oc.parkingLots) + ' ลาน' } : null, oc ? { l: 'รถของงาน', v: num(oc.vehicles.total) + ' คัน' } : null] }; }
+  function nowGuard(Q) { var sat = mod('guardSatisfaction'), fines = mod('guardFines'), oc = extra('opsCheck'); if (!sat) return null;
+    var rows = sat.central.monthly, pick = rows.filter(function (r) { return r.month === Q.cm; })[0] || rows[rows.length - 1], u = sat.unit.monthly, lu = u[u.length - 1];
+    var base = { icon: 'shield', title: 'รปภ. และความปลอดภัย', color: C.fine, page: 'report-guard', badge: 'ประเมินเดือน ' + mLabel(pick.month), stale: pick.month !== Q.cm, main: { v: pick.overall.toFixed(2), u: '/ 5 พึงพอใจ รปภ.ส่วนกลาง' },
+      subs: [{ l: 'ส่วนงาน', v: lu.overall.toFixed(2) + ' / 5' }, { l: 'ผู้ตอบ', v: num(pick.responses) }] };
+    if (fines && Q.months) base.subs.push({ l: 'ค่าปรับ รปภ.', v: num(fines.monthly.filter(function (r) { return Q.months.indexOf(r.month) >= 0; }).reduce(function (a, r) { return a + r.cases; }, 0)) + ' กรณี' });
+    if (oc) base.subs.push({ l: 'อุปกรณ์ดับเพลิง', v: num(oc.fireEquipment.total) + ' ชิ้น' });
+    return base; }
+  function trendCard(o) {
+    return el('article', { class: 'card trend', style: '--accent:' + o.color }, [el('div', { class: 'trend-h' }, [el('h3', { text: o.title }), el('span', { class: 'note', text: o.unit }), el('a', { class: 'more', href: '#' + o.page, 'aria-label': 'ดูรายละเอียด ' + o.title, text: 'รายละเอียด →' })]),
+      o.kpis && o.kpis.length ? el('div', { class: 'trend-k' }, o.kpis.filter(Boolean).map(function (k2) { return el('span', {}, [el('b', { text: k2.v }), ' ' + k2.l]); })) : null, o.chart]);
+  }
+  PAGES.dashboard = function (v) {
+    scopeRange('dash', yearRange());
+    if (!state.period) state.period = 'today';
+    if (state.period !== 'custom') { var yr = yearRange(); state.from = yr.from; state.to = yr.to; }
+    var Q = periodOf(), t = todayStr(), gen = (DATA.extra || {}).generatedAt || DATA.stats.generatedAt || '';
+    var seg = el('div', { class: 'seg period', role: 'group', 'aria-label': 'ช่วงข้อมูลของส่วนบน' }, [['today', 'วันนี้'], ['month', 'เดือนนี้'], ['year', 'ปีนี้'], ['custom', 'กำหนดช่วง']].map(function (x) {
+      return el('button', { type: 'button', 'aria-pressed': String(state.period === x[0]), text: x[1], onclick: function () { state.period = x[0]; route(true); } }); }));
+    v.appendChild(el('div', { class: 'dash-head' }, [el('div', {}, [el('h1', { text: 'ภาพรวมงานจราจรและความปลอดภัย' }),
+      el('div', { class: 'dash-meta' }, [el('span', { class: 'upd' }, [ic('calendar'), 'วันนี้ ' + dLabel(t)]), el('span', { text: 'ตรวจข้อมูลล่าสุด ' + stampTxt(gen) })])]), el('div', { class: 'dash-ctl' }, [seg, state.period === 'custom' ? rangeCtrl() : null])]));
+    var cards = [nowIncidents(Q), nowLostFound(Q), nowGate(Q), nowAnywheel(Q), nowTram(Q), nowCctv(Q), nowAssets(Q), nowGuard(Q)].filter(Boolean);
+    v.appendChild(el('section', { class: 'sec', 'aria-label': 'ข้อมูล' + Q.label }, [el('div', { class: 'sec-h' }, [el('h2', { text: Q.kind === 'today' ? 'ข้อมูลวันนี้' : 'ข้อมูล' + Q.label }), el('span', { class: 'note', text: Q.kind === 'today' ? dLabel(t) + ' · เรื่องที่ยังไม่มีข้อมูลวันนี้จะแสดงข้อมูลล่าสุดพร้อมป้ายวันที่' : '' })]), el('div', { class: 'nows' }, cards.map(nowCard))]));
+    /* แนวโน้มรายเดือน — ใช้ช่วงของปีนี้ (หรือช่วงที่กำหนดเอง) ไม่ขึ้นกับปุ่ม “วันนี้/เดือนนี้” */
+    var rt = rangeText(), inc = mod('incidents'), lf = mod('lostfound'), gate = mod('gate'), cctv = mod('cctv'), sat = mod('guardSatisfaction'), vr = mod('vehicleRegistration'), aw = extra('anywheel'), tram = extra('tram'), am = mod('accidentMap'), tc = [];
+    var inR = function (r) { return inRange(r.month); };
+    if (inc) { var is = incSum(incRows(function (r) { return inRange(r.date.slice(0, 7)); }));
+      tc.push(trendCard({ title: 'เหตุการณ์และอุบัติเหตุ', unit: 'เหตุการณ์/เดือน', page: 'traffic', color: C.c1, kpis: [{ v: num(is.n), l: 'เหตุการณ์' }, { v: num(is.v + is.g), l: 'อุบัติเหตุ' }, { v: num(is.inj), l: 'ผู้บาดเจ็บ/ป่วย' }], chart: incidentChart(pickMonth('traffic')) })); }
+    if (am) tc.push(el('article', { class: 'card trend', style: '--accent:' + C.c3 }, [el('div', { class: 'trend-h' }, [el('h3', { text: 'จุดเกิดอุบัติเหตุ' }), el('span', { class: 'note', text: num(mapPoints().length) + ' จุด' }), el('a', { class: 'more', href: '#accident-map', 'aria-label': 'เปิดแผนที่เต็ม', text: 'แผนที่เต็ม →' })]), dashMap()]));
+    if (lf) { var lr = lf.monthly.filter(inR), ls = function (k2) { return lr.reduce(function (a, r) { return a + (r.byType[k2] || 0); }, 0); };
+      tc.push(trendCard({ title: 'Lost & Found', unit: 'รายการ/เดือน', page: 'lostfound', color: C.c4, kpis: [{ v: num(ls('สิ่งของสูญหาย')), l: 'แจ้งหาย' }, { v: num(ls('พบสิ่งของ')), l: 'เก็บได้' }], chart: lfChart(pickMonth('lostfound')) })); }
+    if (gate) { var gr2 = gate.monthly.filter(inR);
+      tc.push(trendCard({ title: 'รถเข้ามหาวิทยาลัย', unit: 'คัน/เดือน · เฉพาะรถเข้า', page: 'gate', color: C.c3, kpis: [{ v: num(sumK(gr2, 'cars')), l: 'รถยนต์' }, { v: num(sumK(gr2, 'motorcycles')), l: 'จักรยานยนต์' }, { v: num(sumK(gr2, 'noHelmet')), l: 'ไม่สวมหมวก (ราย)' }], chart: gateMonthChart(pickMonth('gate')) })); }
+    if (aw) { var ar = aw.monthly.filter(inR);
+      tc.push(trendCard({ title: 'จักรยาน Anywheel', unit: 'ครั้ง/เดือน', page: 'tram', color: C.c1, kpis: [{ v: num(sumK(ar, 'trips')), l: 'ครั้ง' }, { v: num(sumK(ar, 'km')), l: 'กม.' }], chart: bars(mCols(ar), [{ name: 'จำนวนครั้งการใช้งาน', color: C.c1, values: ar.map(function (r) { return r.trips; }) }], { unit: 'ครั้ง', int: true, h: 210, aria: 'การใช้ Anywheel รายเดือน', onPick: function () { go('tram'); } }) })); }
+    if (tram) { var tr = tramRows();
+      tc.push(trendCard({ title: 'รถรางบริการพิเศษ', unit: 'รอบ/เดือน', page: 'tram', color: C.c2, kpis: [{ v: num(sumK(tr, 'jobs')), l: 'งาน' }, { v: num(sumK(tr, 'rounds')), l: 'รอบ' }, { v: num(sumK(tr, 'km')), l: 'กม.' }], chart: bars(mCols(tr), [{ name: 'จำนวนรอบ', color: C.c2, values: tr.map(function (r) { return r.rounds; }) }], { unit: 'รอบ', int: true, h: 210, aria: 'จำนวนรอบรถรางรายเดือน', onPick: function () { go('tram'); } }) })); }
+    if (cctv) tc.push(trendCard({ title: 'คำขอดูกล้อง CCTV', unit: 'คำขอ/เดือน', page: 'cctv', color: C.c2, kpis: [{ v: num(sumMonthly(cctv.monthly, function (r) { return r.count; })), l: 'คำขอ' }], chart: cctvMonthChart(pickMonth('cctv')) }));
+    if (vr) { var names = Object.keys(vr.rows), mx = Math.max.apply(null, names.map(function (n) { return vr.rows[n] || 0; }));
+      tc.push(trendCard({ title: 'ยานพาหนะที่ลงทะเบียน', unit: 'รายการ · ณ ' + dShort(vr.updated), page: 'vehicle', color: C.c5, chart: hbars(names.map(function (n) { return { label: n, value: vr.rows[n], color: C.c5 }; }), mx, { unit: 'รายการ', series: 'ลงทะเบียน', labelW: 170, nullText: 'ยังเชื่อมต่อไม่ได้', aria: 'ยานพาหนะที่ลงทะเบียน' }) })); }
+    if (sat) tc.push(trendCard({ title: 'ความพึงพอใจ รปภ.ส่วนกลาง', unit: 'คะแนน 1–5/เดือน', page: 'report-guard', color: C.fine, chart: satScoreChart('central', function (i, c) { state.satSrc = 'central'; state.satMonth = c.month; go('report-guard'); }, null, 210) }));
+    v.appendChild(el('section', { class: 'sec', 'aria-label': 'แนวโน้มรายเดือน' }, [el('div', { class: 'sec-h' }, [el('h2', { text: 'แนวโน้มรายเดือน' }), el('span', { class: 'note', text: rt + ' · คลิกแท่งเพื่อดูรายละเอียด' }),
+      el('a', { class: 'more', href: '#report-monthly', text: 'รายงานประจำเดือน →' })]), el('div', { class: 'trends' }, tc)]));
+  };
+  PAGES['report-monthly'] = function (v) { var cm = todayStr().slice(0, 7), d = MONTHS.indexOf(cm) >= 0 ? cm : MONTHS[MONTHS.length - 1]; scopeRange('report', { from: d, to: d }); renderReport(v, true); };
+
+  /* ======================================================================
+   * รอบ 7 — ตัวอ่านข้อมูลรายรายการ และหน้าที่ย้ายมาจากระบบเดิม
+   * ช่องทางอ่าน 2 แบบ (กำหนดราย dataset ที่ config.js → dataAccess):
+   *   'legacy' = Sheet “ข้อมูลงานจราจรออนไลน์” ผ่านคำสั่งสรุปของ Google (gviz, JSONP) — ช่องทางเดียวกับหน้าเดิมบน main
+   *              เลือกเฉพาะคอลัมน์ที่ไม่ใช่ข้อมูลรายบุคคล (ไม่ดึงคอลัมน์ ผู้ดูแล / ผู้ตรวจ / ชื่อไฟล์)
+   *   'api'    = บริการข้อมูลภายในที่ตรวจตัวตนฝั่งบริการ (config.js → dataApiUrl; โค้ดอยู่ที่ server/ และ apps-script/HubData.gs — ยังไม่ได้ Deploy)
+   *              ใช้กับข้อมูลรายบุคคล/ภาพภายใน: บุคลากร ภาพตรวจพื้นที่ บันทึกวิทยุ — ไม่มีการอ่านข้อมูลกลุ่มนี้จากช่องทางสาธารณะ
+   * ไม่มีรายการ รูป หรือรหัสไฟล์ใดเก็บใน Repository — ทุกอย่างอ่านตอนเปิดหน้า
+   * ==================================================================== */
+  var OPS_SHEET = '1lYRhXtLgec6ISM6Ugt-YKLrh47NRt7ihcVLcD8mI_Yg';
+  var DS = {
+    parkingLots: { mode: 'legacy', tab: 'ลานจอดรถ', gid: 591543024, q: 'select A,B,D,E,F,G,H', keys: ['no', 'name', 'capacity', 'img1', 'img2', 'img3', 'img4'] },
+    vehicles: { mode: 'legacy', tab: 'Vehicle_List', gid: 147145093, q: 'select A,B,C,D,E,F,G,H,I,J,K', keys: ['id', 'type', 'model', 'color', 'plate', 'assetNo', 'img1', 'img2', 'img3', 'year', 'vendor'] },
+    fire: { mode: 'legacy', tab: 'อุปกรณ์ดับเพลิง', gid: 25594122, q: 'select A,B,C,D,E,F,G,H,I,J,K,L,M', keys: ['id', 'cat', 'kind', 'size', 'place', 'no', 'assetNo', 'img1', 'img2', 'img3', 'img4', 'year', 'vendor'] },
+    forms: { mode: 'legacy', tab: 'แบบฟอร์ม', gid: 1541578119, q: 'select A,B', keys: ['name', 'url'] },
+    inspections: { mode: 'legacy', tab: 'ตรวจสภาพ', gid: 267450301, q: 'select A,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R', keys: ['at', 'type', 'model', 'color', 'plate', 'assetNo', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'remark', 'status'] },
+    refills: { mode: 'legacy', tab: 'ประวัติการเติมสารถังดับเพลิง', gid: 680269898, q: 'select C,D,E,F,G,H,I,K', keys: ['plate', 'assetNo', 'date', 'before', 'after', 'agent', 'vendor', 'remark'] },
+    staff: { mode: 'api', tab: 'พนักงานจราจร' }, areaPhotos: { mode: 'api', tab: 'ภาพการตรวจพื้นที่' }, radio: { mode: 'api', tab: 'บันทึกรายงานวิทยุสื่อสาร' }
+  };
+  var HCFG = window.HUB_CONFIG || {}, dsCache = {}, gvSeq = 0;
+  function gvCell(c) {
+    if (!c || c.v == null) return '';
+    var m = typeof c.v === 'string' && /^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+))?/.exec(c.v);
+    if (m) return m[1] + '-' + pad2(+m[2] + 1) + '-' + pad2(+m[3]) + (m[4] != null ? ' ' + pad2(+m[4]) + ':' + pad2(+m[5]) : '');
+    return typeof c.v === 'string' ? c.v.trim() : c.v;
+  }
+  function gvRows(table, keys) { return ((table || {}).rows || []).map(function (r) { var o = {}; keys.forEach(function (k, i) { o[k] = gvCell((r.c || [])[i]); }); return o; }); }
+  function gviz(ds) {
+    return new Promise(function (res, rej) {
+      var cb = '__hubgv' + (++gvSeq), s = document.createElement('script'), done = false;
+      var fin = function (err, val) { if (done) return; done = true; clearTimeout(tm); try { delete window[cb]; } catch (e) { window[cb] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); if (err) rej(err); else res(val); };
+      var tm = setTimeout(function () { fin({ code: 'timeout' }); }, 20000);
+      window[cb] = function (r) { if (!r || r.status === 'error' || !r.table) return fin({ code: 'source' }); if ((r.table.cols || []).length !== ds.keys.length) return fin({ code: 'schema' }); fin(null, gvRows(r.table, ds.keys)); };
+      s.onerror = function () { fin({ code: 'network' }); };
+      s.src = (HCFG.opsSheetBase || 'https://docs.google.com/spreadsheets/d/' + OPS_SHEET) + '/gviz/tq?gid=' + ds.gid + '&headers=1&tq=' + encodeURIComponent(ds.q) + '&tqx=' + encodeURIComponent('out:json;responseHandler:' + cb);
+      document.head.appendChild(s);
+    });
+  }
+  function apiGet(key) {
+    var base = HCFG.dataApiUrl;
+    if (!base) return Promise.reject({ code: 'noapi' });
+    return fetch(base + (base.indexOf('?') < 0 ? '?' : '&') + 'dataset=' + encodeURIComponent(key), { credentials: 'include', headers: { Accept: 'application/json' } }).then(function (r) {
+      if (r.status === 401 || r.status === 403) throw { code: 'auth', status: r.status };
+      if (!r.ok) throw { code: 'http', status: r.status };
+      return r.json().catch(function () { throw { code: 'schema' }; });
+    }, function () { throw { code: 'network' }; }).then(function (j) { if (!j || j.ok !== true || !Array.isArray(j.rows)) throw { code: 'schema' }; return j.rows; });
+  }
+  function dsMode(key) { return (HCFG.dataAccess || {})[key] || DS[key].mode; }
+  function loadDS(key, force) {
+    if (force) delete dsCache[key];
+    if (!dsCache[key]) { var m = dsMode(key); dsCache[key] = (m === 'off' ? Promise.reject({ code: 'off' }) : m === 'api' ? apiGet(key) : gviz(DS[key])).then(function (rows) { return { rows: rows, at: new Date() }; }); dsCache[key].catch(function () { delete dsCache[key]; }); }
+    return dsCache[key];
+  }
+  var DS_ERR = {
+    noapi: ['ต้องเข้าสู่ระบบภายในก่อนจึงจะแสดงข้อมูลส่วนนี้', 'ข้อมูลส่วนนี้เป็นข้อมูลรายบุคคลหรือภาพภายใน หน้านี้อ่านผ่านบริการข้อมูลที่ตรวจตัวตนเท่านั้น และบริการนั้นยังไม่ได้ตั้งค่าสำหรับเว็บไซต์นี้'],
+    auth: ['บัญชีนี้ยังไม่ได้เข้าสู่ระบบ หรือไม่มีสิทธิ์ดูข้อมูลส่วนนี้', 'บริการข้อมูลปฏิเสธคำขอ — เข้าสู่ระบบด้วยบัญชีที่ได้รับอนุญาตแล้วลองใหม่'],
+    network: ['เชื่อมต่อแหล่งข้อมูลไม่ได้', 'ตรวจการเชื่อมต่ออินเทอร์เน็ตหรือระบบกรองเครือข่าย แล้วลองใหม่'],
+    timeout: ['แหล่งข้อมูลไม่ตอบกลับภายในเวลา', 'อาจเกิดจากเครือข่ายช้า หรือแหล่งข้อมูลต้นทางถูกจำกัดสิทธิ์การอ่าน'],
+    source: ['แหล่งข้อมูลต้นทางแจ้งข้อผิดพลาด', 'แท็บหรือคำสั่งอ่านข้อมูลไม่ตรงกับต้นทางในขณะนี้'],
+    schema: ['โครงสร้างข้อมูลที่ได้รับไม่ตรงกับที่หน้านี้รองรับ', 'จำนวนคอลัมน์หรือรูปแบบคำตอบเปลี่ยนไปจากที่ตรวจไว้ — แจ้งผู้ดูแลระบบ'],
+    http: ['บริการข้อมูลตอบกลับผิดพลาด', 'ลองใหม่อีกครั้ง ถ้ายังไม่ได้ให้แจ้งผู้ดูแลระบบ'], off: ['ผู้ดูแลปิดการแสดงข้อมูลส่วนนี้ไว้', '']
+  };
+  /* dataView: แสดง กำลังโหลด → เนื้อหา / ข้อความผิดพลาดตามสาเหตุ + ปุ่มลองใหม่ */
+  function dataView(key, render) {
+    var host = el('div', { class: 'dv', 'data-ds': key });
+    var run = function (force) {
+      host.textContent = ''; host.appendChild(el('div', { class: 'empty', role: 'status', text: 'กำลังโหลดข้อมูล…' }));
+      loadDS(key, force).then(function (d) { host.textContent = ''; try { host.appendChild(render(d.rows, d)); } catch (e) { host.appendChild(el('div', { class: 'card box dv-err', role: 'alert' }, [el('strong', { text: 'แสดงข้อมูลไม่สำเร็จ' }), el('p', { class: 'src', text: String(e && e.message || e) })])); } },
+        function (e) { var c = (e && e.code) || 'network', t = DS_ERR[c] || DS_ERR.network; host.textContent = '';
+          host.appendChild(el('div', { class: 'card box dv-err dv-' + c, role: 'alert' }, [el('strong', { text: t[0] }), t[1] ? el('p', { text: t[1] }) : null,
+            el('p', { class: 'src', text: 'แหล่งข้อมูล: แท็บ “' + DS[key].tab + '” · ช่องทาง: ' + (dsMode(key) === 'api' ? 'บริการข้อมูลภายใน' : 'Sheet ต้นทาง') + ' · รหัสสาเหตุ: ' + c + (e && e.status ? ' ' + e.status : '') }),
+            c === 'noapi' || c === 'off' ? el('a', { class: 'btn sec', href: '#admin-info', text: 'สิ่งที่ผู้ดูแลต้องตั้งค่า' }) : el('button', { type: 'button', class: 'btn sec', text: 'ลองใหม่', onclick: function () { run(true); } })])); });
+    };
+    run(false); return host;
+  }
+  function driveId(u) { var s = String(u || ''), m = /(?:\/d\/|[?&]id=)([-\w]{20,})/.exec(s); return m ? m[1] : /^[-\w]{25,}$/.test(s) ? s : ''; }
+  function imgSrc(u, sz) { var id = driveId(u); if (id) return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=' + (sz || 'w400'); return /^https:\/\//.test(String(u || '')) ? String(u) : ''; }
+  function imgsOf(r) { return ['img1', 'img2', 'img3', 'img4', 'photo', 'url'].map(function (k) { return r[k]; }).filter(function (u) { return imgSrc(u); }); }
+  function pic(u, alt, cls) {
+    var src = imgSrc(u, 'w400');
+    if (!src) return el('div', { class: (cls || 'it-pic') + ' noimg', text: 'ไม่มีภาพ' });
+    var b = el('button', { type: 'button', class: cls || 'it-pic', 'aria-label': 'ขยายภาพ: ' + alt, onclick: function (e) { e.stopPropagation(); lightbox(imgSrc(u, 'w1600'), alt); } });
+    var im = el('img', { alt: alt, loading: 'lazy', referrerpolicy: 'no-referrer' });
+    im.onerror = function () { b.textContent = 'โหลดภาพไม่ได้'; b.classList.add('noimg'); b.disabled = true; };
+    im.src = src; b.appendChild(im); return b;
+  }
+  function detailDlg(title, fields, images, more) {
+    var last = document.activeElement, close = function () { ov.remove(); document.removeEventListener('keydown', onKey); if (last && last.focus) last.focus(); }, onKey = function (e) { if (e.key === 'Escape' && !document.querySelector('.lightbox')) close(); };
+    var dl = el('dl', { class: 'dlg-dl' }); fields.filter(function (f) { return f[1] !== '' && f[1] != null; }).forEach(function (f) { dl.appendChild(el('dt', { text: f[0] })); dl.appendChild(el('dd', { text: String(f[1]) })); });
+    var btn = el('button', { type: 'button', class: 'btn sec', text: 'ปิด', onclick: close });
+    var ov = el('div', { class: 'dlg-ov', role: 'dialog', 'aria-modal': 'true', 'aria-label': title, onclick: function (e) { if (e.target === ov) close(); } }, [el('div', { class: 'dlg' }, [el('div', { class: 'dlg-h' }, [el('h3', { text: title }), btn]),
+      images && images.length ? el('div', { class: 'dlg-imgs' }, images.map(function (u, i) { return pic(u, title + ' ภาพที่ ' + (i + 1), 'dlg-pic'); })) : el('p', { class: 'src', text: 'ไม่มีภาพประกอบ' }), dl, more || null])]);
+    document.body.appendChild(ov); document.addEventListener('keydown', onKey); btn.focus();
+  }
+  /* listUI: ค้นหา + ตัวกรอง + แบ่งหน้า ใช้ร่วมทุกหน้ารายการ */
+  function listUI(o) {
+    var st = { q: '', f: o.filters && o.filters.length ? o.filters[0].id : null, page: 0 }, per = o.per || 24;
+    var bar = el('div', { class: 'lu-bar' }), body = el('div'), wrap = el('div', { class: 'lu' }, [bar, body]);
+    var inp = el('input', { type: 'search', placeholder: o.placeholder || 'ค้นหา…', 'aria-label': o.placeholder || 'ค้นหา' }); var tmr = null;
+    inp.oninput = function () { clearTimeout(tmr); tmr = setTimeout(function () { st.q = inp.value.trim().toLowerCase(); st.page = 0; draw(); }, 200); };
+    function chips() { return el('div', { class: 'chips', role: 'group', 'aria-label': 'ตัวกรอง' }, o.filters.map(function (f) {
+      return el('button', { type: 'button', class: 'chip', 'aria-pressed': String(st.f === f.id), text: f.label + ' ' + num(o.rows.filter(f.test).length), onclick: function () { st.f = f.id; st.page = 0; draw(); } }); })); }
+    function draw() {
+      var f = (o.filters || []).filter(function (x) { return x.id === st.f; })[0];
+      var rows = o.rows.filter(function (r) { return (!f || f.test(r)) && (!st.q || o.text(r).toLowerCase().indexOf(st.q) >= 0); }), pages = Math.max(1, Math.ceil(rows.length / per));
+      if (st.page >= pages) st.page = pages - 1;
+      bar.textContent = ''; if (o.filters && o.filters.length) bar.appendChild(chips()); bar.appendChild(inp);
+      body.textContent = '';
+      body.appendChild(el('p', { class: 'lu-count', role: 'status', text: num(rows.length) + ' ' + (o.unit || 'รายการ') + (rows.length !== o.rows.length ? ' (จากทั้งหมด ' + num(o.rows.length) + ')' : '') }));
+      if (!rows.length) { body.appendChild(el('div', { class: 'empty', text: f && f.emptyText && !st.q ? f.emptyText : 'ไม่พบรายการที่ตรงกับเงื่อนไข' })); return; }
+      body.appendChild(o.render(rows.slice(st.page * per, st.page * per + per)));
+      if (pages > 1) body.appendChild(el('div', { class: 'lu-pager' }, [el('button', { type: 'button', class: 'btn-ghost', text: '‹ ก่อนหน้า', disabled: st.page === 0 ? '' : null, onclick: function () { st.page--; draw(); wrap.scrollIntoView(); } }),
+        el('span', { text: 'หน้า ' + (st.page + 1) + ' / ' + pages }), el('button', { type: 'button', class: 'btn-ghost', text: 'ถัดไป ›', disabled: st.page >= pages - 1 ? '' : null, onclick: function () { st.page++; draw(); wrap.scrollIntoView(); } })]));
+    }
+    draw(); return wrap;
+  }
+  function itemCard(o) {
+    return el('article', { class: 'card it', tabindex: '0', role: 'button', 'aria-label': o.title + ' — ดูรายละเอียด', onclick: o.open, onkeydown: function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); o.open(); } } },
+      [pic(o.img, o.title), el('div', { class: 'it-b' }, [o.tag ? el('span', { class: 'tag', text: o.tag }) : null, el('h4', { text: o.title }), o.sub ? el('p', { text: o.sub }) : null, o.meta ? el('p', { class: 'src', text: o.meta }) : null])]);
+  }
+  function liveNote(d, key) { return el('p', { class: 'src', text: 'อ่านจากแท็บ “' + DS[key].tab + '” เมื่อ ' + pad2(d.at.getHours()) + ':' + pad2(d.at.getMinutes()) + ' น. (เวลาเครื่อง)' }); }
+  function normKey(s) { return String(s == null ? '' : s).replace(/\s+/g, '').toLowerCase(); }
+  function histTable(rows) {
+    return table(['วันเวลา', 'สรุปสถานะ', 'หมายเหตุ'], rows.slice().sort(function (a, b) { return a.at < b.at ? 1 : -1; }).slice(0, 12).map(function (r) { return [dLabel(String(r.at)), r.status || '–', r.remark || '–']; }), {});
+  }
+  function historyBlock(match) {
+    return el('div', { class: 'dlg-more' }, [el('h4', { text: 'ประวัติการตรวจสภาพ' }), dataView('inspections', function (rows) { var hit = rows.filter(match); return hit.length ? el('div', {}, [el('p', { class: 'src', text: num(hit.length) + ' ครั้ง · แสดง 12 ครั้งล่าสุด' }), histTable(hit)]) : el('p', { class: 'src', text: 'ยังไม่มีประวัติการตรวจในต้นทาง' }); })]);
+  }
+
+  /* ---------- ยานพาหนะทั้งหมด ---------- */
+  PAGES['vehicle-fleet'] = function (v) {
+    v.appendChild(pageHead('ยานพาหนะทั้งหมด', 'ทะเบียนยานพาหนะของงานจราจรและความปลอดภัย พร้อมภาพและประวัติการตรวจสภาพ'));
+    v.appendChild(el('div', { class: 'sec' }, [dataView('vehicles', function (rows, d) {
+      var types = {}; rows.forEach(function (r) { types[r.type] = 1; });
+      return el('div', {}, [listUI({ rows: rows, unit: 'คัน', placeholder: 'ค้นหารุ่น ทะเบียน สี…', text: function (r) { return [r.type, r.model, r.plate, r.color, r.assetNo].join(' '); },
+        filters: [{ id: 'all', label: 'ทั้งหมด', test: function () { return true; } }].concat(Object.keys(types).sort().map(function (t) { return { id: t, label: t, test: function (r) { return r.type === t; } }; })),
+        render: function (page) { return el('div', { class: 'it-grid' }, page.map(function (r) { return itemCard({ img: imgsOf(r)[0], tag: r.type, title: r.model || '–', sub: 'ทะเบียน ' + (r.plate || '–') + (r.color ? ' · สี' + r.color : ''), meta: r.year ? 'ปีที่ซื้อ ' + r.year : '',
+          open: function () { detailDlg((r.model || r.type) + ' · ' + (r.plate || ''), [['ประเภท', r.type], ['ยี่ห้อ/รุ่น', r.model], ['สี', r.color], ['ทะเบียน', r.plate], ['หมายเลขครุภัณฑ์', r.assetNo], ['ปีที่ซื้อ', r.year], ['บริษัทที่ซื้อ', r.vendor]], imgsOf(r),
+            el('div', {}, [el('p', { class: 'dlg-more' }, [formLink('form-clean', { model: r.model, plate: r.plate, equip: r.assetNo }, 'บันทึกการทำความสะอาดคันนี้')]), historyBlock(function (h) { return h.type !== 'อุปกรณ์ดับเพลิง' && normKey(h.plate) === normKey(r.plate); })])); } }); })); } }), liveNote(d, 'vehicles')]);
+    })]));
+  };
+  PAGE_TITLE['vehicle-fleet'] = 'ยานพาหนะทั้งหมด';
+
+  /* ---------- ลานจอดรถรายลาน (ส่วนหนึ่งของหน้า ข้อมูลการจอดรถ) ---------- */
+  function lotsSection() {
+    return section('ลานจอดรถรายลาน', {}, [dataView('parkingLots', function (rows, d) {
+      rows = rows.filter(function (r) { return r.name; });
+      var cap = rows.reduce(function (a, r) { return a + (+r.capacity || 0); }, 0);
+      return el('div', {}, [kpiGrid([{ icon: 'map', label: 'ลานจอดรถ', value: num(rows.length), unit: 'ลาน', color: C.c3 }, { icon: 'car', label: 'ความจุรวมตามทะเบียน', value: num(cap), unit: 'คัน', color: C.c1 }]),
+        el('div', { style: 'margin-top:14px' }, [listUI({ rows: rows, unit: 'ลาน', placeholder: 'ค้นหาชื่อลานจอดรถ…', text: function (r) { return r.name; },
+          render: function (page) { return el('div', { class: 'it-grid' }, page.map(function (r) { return itemCard({ img: imgsOf(r)[0], title: r.name, sub: 'จอดได้ ' + (r.capacity === '' ? '–' : num(+r.capacity)) + ' คัน', meta: 'ลำดับที่ ' + r.no,
+            open: function () { detailDlg(r.name, [['ลำดับที่', r.no], ['จำนวนที่จอดได้', r.capacity === '' ? '' : num(+r.capacity) + ' คัน']], imgsOf(r),
+              el('p', { class: 'dlg-more' }, [extBtn('ค้นหาตำแหน่งใน Google Maps', 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(r.name + ' มหาวิทยาลัยมหิดล ศาลายา'), true)])); } }); })); } })]), liveNote(d, 'parkingLots')]);
+    })]);
+  }
+
+  /* ---------- อุปกรณ์ดับเพลิง 7 ประเภท (AED อยู่หน้าของตัวเอง) ---------- */
+  var FIRE_GROUPS = ['ถังดับเพลิง', 'สายฉีด', 'หัวฉีด', 'ปั๊มน้ำ', 'ตู้เก็บอุปกรณ์', 'หัวรับน้ำ', 'ชุด PPE'];
+  function fireGroup(kind) {
+    var k = String(kind || '').toLowerCase();
+    if (/aed|เครื่องกระตุก/.test(k)) return 'AED';
+    if (/หัวฉีด/.test(k)) return 'หัวฉีด'; if (/หัวรับ/.test(k)) return 'หัวรับน้ำ'; if (/สาย/.test(k)) return 'สายฉีด'; if (/ปั๊ม|ปั้ม|pump/.test(k)) return 'ปั๊มน้ำ';
+    if (/ตู้/.test(k)) return 'ตู้เก็บอุปกรณ์'; if (/ppe|ชุด/.test(k)) return 'ชุด PPE'; if (/ถัง/.test(k)) return 'ถังดับเพลิง';
+    return 'อื่น ๆ';
+  }
+  function fireEquipSection() {
+    return section('อุปกรณ์ดับเพลิงรายชิ้น', {}, [dataView('fire', function (all, d) {
+      all.forEach(function (r) { r.group = fireGroup(r.kind); });
+      var rows = all.filter(function (r) { return r.group !== 'AED'; }), aed = all.length - rows.length, other = rows.filter(function (r) { return r.group === 'อื่น ๆ'; }).length;
+      var groups = FIRE_GROUPS.concat(other ? ['อื่น ๆ'] : []);
+      return el('div', {}, [listUI({ rows: rows, unit: 'ชิ้น', placeholder: 'ค้นหาชนิด สถานที่ เลขที่…', text: function (r) { return [r.kind, r.size, r.place, r.no, r.assetNo].join(' '); },
+        filters: [{ id: 'all', label: 'ทั้งหมด', test: function () { return true; } }].concat(groups.map(function (g) { return { id: g, label: g, test: function (r) { return r.group === g; }, emptyText: 'ทะเบียนต้นทางยังไม่มีรายการประเภท “' + g + '”' }; })),
+        render: function (page) { return el('div', { class: 'it-grid' }, page.map(function (r) { return itemCard({ img: imgsOf(r)[0], tag: r.group, title: r.kind || '–', sub: (r.place || 'ไม่ระบุสถานที่') + (r.no !== '' ? ' · เลขที่ ' + r.no : ''), meta: [r.size, r.year ? 'ปี ' + r.year : ''].filter(Boolean).join(' · '),
+          open: function () { detailDlg(r.kind + (r.no !== '' ? ' · เลขที่ ' + r.no : ''), [['ประเภท', r.group], ['ชนิด', r.kind], ['ขนาด', r.size], ['สถานที่ติดตั้ง', r.place], ['เลขที่', r.no], ['หมายเลขครุภัณฑ์', r.assetNo], ['ปีที่ซื้อ', r.year], ['บริษัทที่ซื้อ', r.vendor]], imgsOf(r),
+            el('div', {}, [historyBlock(function (h) { return h.type === 'อุปกรณ์ดับเพลิง' && (r.assetNo !== '' && normKey(h.assetNo) === normKey(r.assetNo) || normKey(h.model) === normKey(r.kind) && normKey(h.plate) === normKey(r.no)); }),
+              r.group === 'ถังดับเพลิง' ? el('div', { class: 'dlg-more' }, [el('h4', { text: 'ประวัติการเติมสาร' }), el('p', {}, [formLink('form-refill', { detail: r.kind, plate: r.no, equip: r.assetNo }, 'บันทึกการเติมสารถังนี้')]), dataView('refills', function (rf) { var hit = rf.filter(function (x) { return r.assetNo !== '' && normKey(x.assetNo) === normKey(r.assetNo) || normKey(x.plate) === normKey(r.no) && r.no !== ''; });
+                return hit.length ? table(['วันที่เติม', 'สารเคมี', 'น้ำหนักก่อน/หลัง', 'บริษัท'], hit.map(function (x) { return [x.date ? dLabel(String(x.date)) : '–', x.agent || '–', (x.before || '–') + ' / ' + (x.after || '–'), x.vendor || '–']; }), {}) : el('p', { class: 'src', text: 'ยังไม่มีประวัติการเติมสารในต้นทาง' }); })]) : null])); } }); })); } }),
+        aed ? el('p', { class: 'src' }, ['ไม่รวมเครื่อง AED ' + num(aed) + ' รายการ — ดูที่หน้า ', el('a', { href: '#aed', text: 'เครื่อง AED' })]) : null, liveNote(d, 'fire')]);
+    })]);
+  }
+
+  /* ---------- แบบฟอร์ม ---------- */
+  var LOCAL_FORMS = [
+    ['แบบฟอร์มตรวจสภาพยานพาหนะ / อุปกรณ์ดับเพลิง', 'form.html', 'เลือกรายการจากหน้า ยานพาหนะ หรือ อุปกรณ์ดับเพลิง ในระบบเดิมเพื่อเติมข้อมูลอัตโนมัติ'],
+    ['แบบบันทึกการทำความสะอาดยานพาหนะ', 'page_clean_vehicle_form.html', ''], ['แบบบันทึกการเติมสารถังดับเพลิง', 'page_refill_form.html', ''], ['แบบบันทึกการจัดการขยะ', 'page_waste_form.html', '']];
+  function formKind(u) { return /docs\.google\.com\/forms/.test(u) ? 'Google Forms' : /github\.io/.test(u) ? 'ระบบที่พัฒนาเอง' : 'ลิงก์ภายนอก'; }
+  function formsSection() {
+    return section('แบบฟอร์มที่ใช้งาน', {}, [dataView('forms', function (rows, d) {
+      rows = rows.filter(function (r) { return r.name && /^https:\/\//.test(r.url); });
+      return el('div', {}, [listUI({ rows: rows, unit: 'แบบฟอร์ม', placeholder: 'ค้นหาชื่อแบบฟอร์ม…', text: function (r) { return r.name; }, per: 30,
+        render: function (page) { return el('ul', { class: 'list forms' }, page.map(function (r) { return el('li', {}, [el('div', {}, [el('b', { text: r.name }), el('span', { text: formKind(r.url) + ' · เปิดในแท็บใหม่ (ฟอร์มต้นทางไม่อนุญาตให้ฝังหรือจำเป็นต้องเข้าสู่ระบบของต้นทาง)' })]), extBtn('เปิดแบบฟอร์ม', r.url, true)]); })); } }), liveNote(d, 'forms')]);
+    })]);
+  }
+
+  /* ---------- ประวัติการตรวจสภาพ ---------- */
+  var CHECK_LABELS = ['1. ลมยาง', '2. สภาพเนื้อยาง/ดอกยาง', '3. กะทะล้อ/น็อตล้อ', '4. ระบบเบรก', '5. ช่วงล่าง/โช้คอัพ', '6. ระบบไฟฟ้า/แตร', '7. แบตเตอรี่/ของเหลว', '8. ระบบขับเคลื่อน', '9. สภาพตัวถัง'];
+  PAGES['inspection-history'] = function (v) {
+    v.appendChild(pageHead('ประวัติการตรวจสภาพ', 'ผลตรวจสภาพยานพาหนะและอุปกรณ์ดับเพลิงรายครั้ง'));
+    v.appendChild(el('div', { class: 'sec' }, [dataView('inspections', function (rows, d) {
+      rows = rows.filter(function (r) { return r.at; }).sort(function (a, b) { return a.at < b.at ? 1 : -1; });
+      var ok = function (r) { return /^สามารถ/.test(r.status); }, types = {}; rows.forEach(function (r) { types[r.type] = 1; });
+      return el('div', {}, [kpiGrid([{ icon: 'file', label: 'การตรวจทั้งหมด', value: num(rows.length), unit: 'ครั้ง', sub: rows.length ? 'ล่าสุด ' + dLabel(String(rows[0].at)) : '', color: C.c3 },
+        { icon: 'check', label: 'สามารถใช้งานได้', value: num(rows.filter(ok).length), unit: 'ครั้ง', color: C.c1 }, { icon: 'alert', label: 'ต้องส่งซ่อม/แก้ไข', value: num(rows.length - rows.filter(ok).length), unit: 'ครั้ง', color: C.fine }]),
+        el('div', { style: 'margin-top:14px' }, [listUI({ rows: rows, unit: 'ครั้ง', per: 20, placeholder: 'ค้นหารุ่น ทะเบียน เลขครุภัณฑ์…', text: function (r) { return [r.type, r.model, r.plate, r.assetNo, r.status].join(' '); },
+          filters: [{ id: 'all', label: 'ทั้งหมด', test: function () { return true; } }, { id: 'bad', label: 'ต้องส่งซ่อม', test: function (r) { return !ok(r); } }].concat(Object.keys(types).sort().map(function (t) { return { id: t, label: t, test: function (r) { return r.type === t; } }; })),
+          render: function (page) { var tb = table(['วันเวลา', 'ประเภท', 'ยี่ห้อ/รุ่น', 'ทะเบียน/เลขที่', 'สรุปสถานะ'], page.map(function (r) { return [dLabel(String(r.at)), r.type, r.model || '–', r.plate || '–', r.status || '–']; }), {});
+            Array.prototype.forEach.call(tb.querySelectorAll('tbody tr'), function (tr, i) { var r = page[i]; tr.tabIndex = 0; tr.classList.add('rowlink'); tr.setAttribute('aria-label', 'ดูผลตรวจ ' + (r.model || '') + ' ' + dLabel(String(r.at)));
+              var open = function () { detailDlg((r.model || r.type) + ' · ' + dLabel(String(r.at)), [['ประเภท', r.type], ['ยี่ห้อ/รุ่น', r.model], ['สี/สถานที่', r.color], ['ทะเบียน/เลขที่', r.plate], ['หมายเลขครุภัณฑ์', r.assetNo]].concat(CHECK_LABELS.map(function (l, j) { return [l, r['c' + (j + 1)]]; })).concat([['หมายเหตุเพิ่มเติม', r.remark], ['สรุปสถานะการใช้งาน', r.status]]), []); };
+              tr.onclick = open; tr.onkeydown = function (e) { if (e.key === 'Enter') open(); }; });
+            return tb; } })]), liveNote(d, 'inspections')]);
+    })]));
+  };
+
+  /* ---------- ข้อมูลภายใน (ผ่านบริการข้อมูลที่ตรวจตัวตนเท่านั้น) ---------- */
+  function staffPage(unitKey, title) {
+    return function (v) {
+      v.appendChild(pageHead(title, 'ทำเนียบบุคลากรงานจราจรและความปลอดภัย'));
+      v.appendChild(el('div', { class: 'sec' }, [dataView('staff', function (rows) {
+        rows = rows.filter(function (r) { return r.name && (!unitKey || String(r.unit || '').indexOf(unitKey) >= 0); });
+        var units = {}; rows.forEach(function (r) { if (r.unit) units[r.unit] = 1; });
+        return listUI({ rows: rows, unit: 'คน', placeholder: 'ค้นหาชื่อ ตำแหน่ง…', text: function (r) { return [r.name, r.position, r.unit].join(' '); },
+          filters: unitKey ? null : [{ id: 'all', label: 'ทั้งหมด', test: function () { return true; } }].concat(Object.keys(units).sort().map(function (u) { return { id: u, label: u.replace(/^หน่วย/, ''), test: function (r) { return r.unit === u; } }; })),
+          render: function (page) { return el('div', { class: 'it-grid people' }, page.map(function (r) { return itemCard({ img: r.photo, tag: r.isHead ? 'หัวหน้าหน่วย' : '', title: r.name, sub: r.position || '', meta: [r.unit, r.phone ? 'โทร ' + r.phone : ''].filter(Boolean).join(' · '),
+            open: function () { detailDlg(r.name, [['ตำแหน่ง', r.position], ['หน่วย', r.unit], ['เบอร์โทร', r.phone]], imgSrc(r.photo) ? [r.photo] : []); } }); })); } });
+      })]));
+    };
+  }
+  PAGES.staff = staffPage('', 'บุคลากรทั้งหมด'); PAGES['staff-strategy'] = staffPage('ยุทธศาสตร์', 'หน่วยยุทธศาสตร์และพัฒนาระบบความปลอดภัย'); PAGES['staff-ops'] = staffPage('ปฏิบัติการ', 'หน่วยปฏิบัติการจราจรและรักษาความปลอดภัย');
+  function areaPage(cat, title, desc) {
+    return function (v) {
+      v.appendChild(pageHead(title, desc));
+      v.appendChild(el('div', { class: 'sec' }, [dataView('areaPhotos', function (rows) {
+        rows = rows.filter(function (r) { return r.category === cat && imgSrc(r.url); }).sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+        var months = {}; rows.forEach(function (r) { months[String(r.date).slice(0, 7)] = 1; });
+        return listUI({ rows: rows, unit: 'ภาพ', per: 30, placeholder: 'ค้นหาวันที่ (ปปปป-ดด-วว)…', text: function (r) { return String(r.date); },
+          filters: [{ id: 'all', label: 'ทั้งหมด', test: function () { return true; } }].concat(Object.keys(months).sort().reverse().slice(0, 6).map(function (m) { return { id: m, label: mLabel(m), test: function (r) { return String(r.date).slice(0, 7) === m; } }; })),
+          render: function (page) { return el('div', { class: 'it-grid photos' }, page.map(function (r) { return el('figure', { class: 'card ph-tile' }, [pic(r.url, title + ' ' + dLabel(String(r.date))), el('figcaption', { text: dLabel(String(r.date)) })]); })); } });
+      })]));
+    };
+  }
+  PAGES['area-inspect'] = areaPage('ตรวจพื้นที่', 'ตรวจพื้นที่', 'ภาพการตรวจพื้นที่ส่วนกลาง เรียงจากล่าสุด');
+  PAGES['area-assist'] = areaPage('ช่วยเหลือ', 'ให้ความช่วยเหลือ', 'ภาพการให้ความช่วยเหลือผู้ใช้พื้นที่ เรียงจากล่าสุด');
+  PAGES['area-traffic'] = areaPage('การจราจร', 'งานจราจร', 'ภาพการปฏิบัติงานด้านจราจร เรียงจากล่าสุด');
+  PAGES['report-radio'] = function (v) {
+    v.appendChild(pageHead('รายงานวิทยุสื่อสาร', 'บันทึกของศูนย์วิทยุสื่อสาร เรียงจากล่าสุด'));
+    v.appendChild(el('div', { class: 'sec' }, [dataView('radio', function (rows) {
+      rows = rows.slice().sort(function (a, b) { return a.at < b.at ? 1 : -1; }); var types = {}; rows.forEach(function (r) { if (r.type) types[r.type] = 1; });
+      return listUI({ rows: rows, unit: 'รายการ', per: 20, placeholder: 'ค้นหาสถานที่ ประเภท รายละเอียด…', text: function (r) { return [r.type, r.place, r.detail, r.unit, r.status].join(' '); },
+        filters: [{ id: 'all', label: 'ทั้งหมด', test: function () { return true; } }].concat(Object.keys(types).sort().slice(0, 8).map(function (t) { return { id: t, label: t, test: function (r) { return r.type === t; } }; })),
+        render: function (page) { var tb = table(['วันเวลา', 'ประเภทเหตุการณ์', 'สถานที่', 'สถานะ'], page.map(function (r) { return [dLabel(String(r.at)), r.type || '–', r.place || '–', r.status || '–']; }), {});
+          Array.prototype.forEach.call(tb.querySelectorAll('tbody tr'), function (tr, i) { var r = page[i]; tr.tabIndex = 0; tr.classList.add('rowlink');
+            var open = function () { detailDlg((r.type || 'บันทึกวิทยุ') + ' · ' + dLabel(String(r.at)), [['หน่วยงานที่แจ้ง', r.unit], ['ผู้แจ้ง', r.reporter], ['เจ้าหน้าที่ศูนย์วิทยุ', r.operator], ['สถานที่เกิดเหตุ', r.place], ['รายละเอียด', r.detail], ['การดำเนินการของศูนย์', r.action], ['สถานะ', r.status]], []); };
+            tr.onclick = open; tr.onkeydown = function (e) { if (e.key === 'Enter') open(); }; });
+          return tb; } });
+    })]));
+  };
+  ['staff', 'staff-strategy', 'staff-ops', 'area-inspect', 'area-assist', 'area-traffic', 'report-radio'].forEach(function (id) { PAGE_TITLE[id] = PAGE_TITLE[id] || id; });
+
+  /* ---------- รายงานประจำวัน: สถิติรวมของวันที่เลือก (จากข้อมูลรายวันที่ตรวจแล้ว) ---------- */
+  PAGES['report-daily'] = function (v) {
+    var inc = extra('incidentsDaily'), lfd = extra('lostfoundDaily'), gate = mod('gate'), t = todayStr();
+    var icv = coverOf(inc), cover = inc ? (icv.ok ? icv.day : inc.lastEntry) : t, day = state.repDay && state.repDay <= cover ? state.repDay : (t <= cover ? t : cover);
+    var inp = el('input', { type: 'date', value: day, max: cover, 'aria-label': 'เลือกวันที่' }); inp.onchange = function () { if (inp.value) { state.repDay = inp.value; route(true); } };
+    v.appendChild(pageHead('รายงานประจำวัน', 'สรุปตัวเลขของวันที่เลือก · ข้อมูลตรวจถึง ' + dLabel(inc && icv.ok ? inc.checkedAt : cover), el('div', { class: 'ctrls' }, [ic('calendar'), el('label', { text: 'วันที่' }), inp,
+      el('button', { type: 'button', class: 'btn-ghost', text: 'ก่อนหน้า', onclick: function () { state.repDay = addDays(day, -1); route(true); } }), el('button', { type: 'button', class: 'btn-ghost', text: 'ถัดไป', disabled: day >= cover ? '' : null, onclick: function () { state.repDay = addDays(day, 1); route(true); } })])));
+    var s = incSum(incRows(function (r) { return r.date === day; })), g = gate ? gate.daily.filter(function (r) { return r.date === day; })[0] : null, l = lfd ? lfd.rows.filter(function (r) { return r.date === day; })[0] : null;
+    v.appendChild(section('เหตุการณ์และอุบัติเหตุ — ' + dLabel(day), { more: 'traffic' }, [kpiGrid([{ icon: 'alert', label: 'เหตุการณ์ทั้งหมด', value: num(s.n), unit: 'เหตุการณ์', color: C.c1 }, { icon: 'car', label: 'อุบัติเหตุจากยานพาหนะ', value: num(s.v), unit: 'เหตุ', color: C.c3 },
+      { icon: 'alert', label: 'อุบัติเหตุทั่วไป', value: num(s.g), unit: 'เหตุ', color: C.c2 }, { icon: 'heart', label: 'รับส่งผู้ป่วย', value: num(s.p), unit: 'ครั้ง', color: C.c4 }, { icon: 'users', label: 'ผู้บาดเจ็บ/ผู้ป่วย', value: num(s.inj), unit: 'คน', color: C.fine }])]));
+    v.appendChild(section('รถเข้าและหมวกนิรภัย', { more: 'gate' }, [kpiGrid(g ? [{ icon: 'car', label: 'รถยนต์เข้า', value: num(g.cars), unit: 'คัน', color: C.c3 }, { icon: 'car', label: 'รถจักรยานยนต์เข้า', value: num(g.motorcycles), unit: 'คัน', color: C.c1 }, { icon: 'helmet', label: 'ผู้ไม่สวมหมวกนิรภัย', value: num(g.noHelmet), unit: 'ราย', color: C.c2 }]
+      : [{ icon: 'car', label: 'รถเข้ามหาวิทยาลัย', na: 'ไม่มีข้อมูลของวันนี้', sub: gate ? 'ต้นทางมีข้อมูลถึง ' + dLabel(gate.daily[gate.daily.length - 1].date) : '', color: C.c5 }])]));
+    v.appendChild(section('Lost & Found', { more: 'lostfound' }, [kpiGrid(lfd && day >= lfd.from && day <= (coverOf(lfd).ok ? coverOf(lfd).day : lfd.lastEntry) ? [{ icon: 'search', label: 'แจ้งของหาย', value: num(l ? l.lost : 0), unit: 'รายการ', color: C.c4 }, { icon: 'box', label: 'เก็บของได้', value: num(l ? l.found : 0), unit: 'รายการ', color: C.c1 }, { icon: 'file', label: 'แบบฟอร์มรับของคืน', value: num(l ? l.returnForms : 0), unit: 'ฉบับ', color: C.c3 }]
+      : [{ icon: 'search', label: 'Lost & Found', na: 'ข้อมูลรายวันยังไม่รองรับช่วงนี้', sub: lfd ? 'มีข้อมูลรายวันตั้งแต่ ' + dLabel(lfd.from) : '', color: C.c5 }])]));
+    v.appendChild(section('บันทึกศูนย์วิทยุสื่อสารของวันนี้', { more: 'report-radio' }, [dataView('radio', function (rows) { var hit = rows.filter(function (r) { return String(r.at).slice(0, 10) === day; });
+      return hit.length ? table(['เวลา', 'ประเภทเหตุการณ์', 'สถานที่', 'สถานะ'], hit.map(function (r) { return [String(r.at).slice(11, 16), r.type || '–', r.place || '–', r.status || '–']; }), {}) : el('div', { class: 'empty', text: 'ไม่มีบันทึกของวันที่เลือก' }); })]));
+  };
+
+  /* ---------- แบบฟอร์มที่พัฒนาเอง (ย้าย UI / การตรวจข้อมูล / การเติมค่าอัตโนมัติ มาจากระบบเดิม) ----------
+   * การบันทึกจริงต้องผ่านบริการที่ตรวจตัวตน (config.js → formApiUrl) — ถ้ายังไม่ได้ตั้งค่า แบบฟอร์มจะตรวจข้อมูลให้แต่ไม่ส่ง และไม่แสดงว่าบันทึกสำเร็จ
+   * เปิดพร้อมค่าเริ่มต้นได้ เช่น #form-clean?model=…&plate=…&equip=… (ลิงก์จากหน้ารายละเอียดยานพาหนะ/อุปกรณ์) */
+  function hashQuery() { var h = location.hash || '', i = h.indexOf('?'), o = {}; if (i < 0) return o; h.slice(i + 1).split('&').forEach(function (p) { var kv = p.split('='); try { o[decodeURIComponent(kv[0])] = decodeURIComponent((kv[1] || '').replace(/\+/g, ' ')); } catch (e) {} }); return o; }
+  var WASTE = [['wasteGeneral', 'ขยะทั่วไป'], ['wasteRecycle', 'ขยะรีไซเคิล'], ['wasteOrphan', 'ขยะกำพร้า'], ['wasteFuel', 'ขยะทำเชื้อเพลิง'], ['wasteOrganic', 'ขยะอินทรีย์/ขยะเปียก'], ['wasteHazard', 'ขยะอันตราย'], ['wasteInfect', 'ขยะติดเชื้อ (ถ้ามี)']];
+  var FORM_DEFS = {
+    'form-clean': { title: 'แบบบันทึกการทำความสะอาดยานพาหนะ', sheet: 'การทำความสะอาดยานพาหนะ', back: 'vehicle-fleet', images: 5, fields: [
+      { k: 'รุ่นรถ', l: 'ยี่ห้อ/รุ่น', pre: 'model' }, { k: 'ทะเบียน', l: 'ทะเบียน', pre: 'plate', req: true }, { k: 'หมายเลขครุภัณฑ์', l: 'หมายเลขครุภัณฑ์', pre: 'equip' },
+      { k: 'วันที่', l: 'วันที่ทำความสะอาด', type: 'date', req: true, today: true }, { k: 'ผู้ดำเนินการ', l: 'ผู้ดำเนินการ', req: true, ph: 'ระบุชื่อผู้รับผิดชอบ' }, { k: 'หมายเหตุ', l: 'หมายเหตุ', type: 'textarea', ph: 'ระบุรายละเอียดเพิ่มเติม…' }] },
+    'form-refill': { title: 'แบบบันทึกการเติมสารถังดับเพลิง', sheet: 'ประวัติการเติมสารถังดับเพลิง', back: 'safety', images: 1, fields: [
+      { k: 'ชนิดถัง', l: 'ชนิดถัง', pre: 'detail' }, { k: 'ทะเบียน', l: 'เลขที่ถัง', pre: 'plate', req: true }, { k: 'หมายเลขครุภัณฑ์', l: 'หมายเลขครุภัณฑ์', pre: 'equip' },
+      { k: 'วันที่เติม', l: 'วันที่เติม', type: 'date', req: true, today: true }, { k: 'สารเคมีที่เติม', l: 'สารเคมีที่เติม', req: true, ph: 'เช่น ผงเคมีแห้ง (Dry Chemical)' },
+      { k: 'น้ำหนักก่อนเติม', l: 'น้ำหนักก่อนเติม (กก.)', type: 'number', ph: 'เช่น 2.5' }, { k: 'น้ำหนักหลังเติม', l: 'น้ำหนักหลังเติม (กก.)', type: 'number', req: true, ph: 'เช่น 10.0' },
+      { k: 'บริษัทที่เติม', l: 'บริษัทที่เติม', req: true, ph: 'ระบุชื่อบริษัท/ร้านที่รับเติมสาร' }, { k: 'หมายเหตุ', l: 'หมายเหตุ', type: 'textarea' }],
+      check: function (val) { var b = val['น้ำหนักก่อนเติม'], a = val['น้ำหนักหลังเติม']; return b !== '' && a !== '' && +a < +b ? { 'น้ำหนักหลังเติม': 'น้ำหนักหลังเติมต้องไม่น้อยกว่าน้ำหนักก่อนเติม' } : {}; } },
+    'form-waste': { title: 'แบบบันทึกการจัดการขยะ', sheet: 'การจัดการขยะ', back: 'forms', images: 5, fields: [{ k: 'reporterName', l: 'ชื่อ-สกุล ผู้รายงาน', req: true }, { k: 'position', l: 'ตำแหน่ง', req: true }]
+      .concat(WASTE.map(function (w) { return { k: w[0], l: w[1] + ' (กก.)', type: 'number', ph: '0' }; })),
+      check: function (val) { return WASTE.some(function (w) { return +val[w[0]] > 0; }) ? {} : { wasteGeneral: 'กรอกน้ำหนักขยะอย่างน้อย 1 ประเภท' }; } },
+    'forms-radio': { title: 'แบบบันทึกศูนย์วิทยุสื่อสาร', sheet: 'บันทึกรายงานวิทยุสื่อสาร', back: 'report-radio', images: 0, fields: [
+      { k: 'วันเวลาที่บันทึก', l: 'วันเวลาที่บันทึก', type: 'datetime-local', req: true, now: true }, { k: 'เจ้าหน้าที่ศูนย์วิทยุ', l: 'เจ้าหน้าที่ศูนย์วิทยุ' }, { k: 'หน่วยงานที่แจ้ง', l: 'หน่วยงานที่แจ้ง' }, { k: 'ชื่อ รปภ./ผู้แจ้ง', l: 'ชื่อ รปภ./ผู้แจ้ง' },
+      { k: 'ประเภทเหตุการณ์', l: 'ประเภทเหตุการณ์', req: true }, { k: 'สถานที่เกิดเหตุ', l: 'สถานที่เกิดเหตุ' }, { k: 'รายละเอียด/ข้อความ', l: 'รายละเอียด/ข้อความ', type: 'textarea' },
+      { k: 'การดำเนินการของศูนย์', l: 'การดำเนินการของศูนย์', type: 'checks', opts: ['ประสานสายตรวจ', 'ประสานกู้ชีพ/พยาบาล', 'แจ้งสถานีตำรวจ', 'รายงานผู้บังคับบัญชา', 'เรียกรถ taxi'] },
+      { k: 'สถานะ', l: 'สถานะ', type: 'select', req: true, opts: ['รับแจ้ง', 'กำลังดำเนินการตรวจสอบ', 'ระงับเหตุเรียบร้อย (ปิดงาน)'] }] }
+  };
+  function formPage(id) {
+    return function (v) {
+      var def = FORM_DEFS[id], q = hashQuery(), t = todayStr(), n = bkkNow(), inputs = {}, errs = {}, files = [];
+      v.appendChild(pageHead(def.title, 'บันทึกลงแท็บ “' + def.sheet + '” ของระบบเดิม'));
+      var form = el('form', { class: 'card hform', novalidate: '', 'aria-label': def.title }), msg = el('div', { class: 'hform-msg', role: 'status', 'aria-live': 'polite' });
+      def.fields.forEach(function (f) {
+        var pre = f.pre && q[f.pre] != null && q[f.pre] !== '' ? q[f.pre] : '', idn = 'f_' + id + '_' + f.k.replace(/[^\w]/g, ''), box, inp;
+        if (f.type === 'checks') { inp = el('div', { class: 'hform-checks', role: 'group', 'aria-label': f.l }, f.opts.map(function (o) { return el('label', {}, [el('input', { type: 'checkbox', value: o }), ' ' + o]); })); }
+        else if (f.type === 'select') { inp = el('select', { id: idn }, [el('option', { value: '', text: '— เลือก —' })].concat(f.opts.map(function (o) { return el('option', { value: o, text: o }); }))); }
+        else if (f.type === 'textarea') inp = el('textarea', { id: idn, rows: '3', placeholder: f.ph || null });
+        else inp = el('input', { id: idn, type: f.type || 'text', placeholder: f.ph || null, step: f.type === 'number' ? 'any' : null, min: f.type === 'number' ? '0' : null, max: f.type === 'date' ? t : null, inputmode: f.type === 'number' ? 'decimal' : null });
+        if (pre) { inp.value = pre; inp.readOnly = true; inp.classList.add('ro'); }
+        else if (f.today) inp.value = t; else if (f.now) inp.value = t + 'T' + pad2(n.h) + ':' + pad2(new Date(Date.now() + 7 * 3600000).getUTCMinutes());
+        var er = el('span', { class: 'hform-err', id: idn + '_e' }); errs[f.k] = er; inputs[f.k] = inp; if (f.type !== 'checks') inp.setAttribute('aria-describedby', idn + '_e');
+        box = el('div', { class: 'hform-f' + (f.type === 'textarea' || f.type === 'checks' ? ' wide' : '') }, [el('label', { for: f.type === 'checks' ? null : idn }, [f.l, f.req ? el('b', { class: 'req', 'aria-label': 'จำเป็น', text: ' *' }) : null]), inp, er]);
+        form.appendChild(box);
+      });
+      if (def.images) { var fi = el('input', { type: 'file', accept: 'image/*', multiple: def.images > 1 ? '' : null, id: 'f_' + id + '_img' }), fe = el('span', { class: 'hform-err' });
+        fi.onchange = function () { files = Array.prototype.slice.call(fi.files || []); fe.textContent = files.length > def.images ? 'แนบได้ไม่เกิน ' + def.images + ' ภาพ' : files.some(function (x) { return x.size > 8 * 1048576; }) ? 'แต่ละภาพต้องไม่เกิน 8 MB' : ''; };
+        errs.__img = fe; form.appendChild(el('div', { class: 'hform-f wide' }, [el('label', { for: fi.id, text: 'ภาพประกอบ (ไม่เกิน ' + def.images + ' ภาพ)' }), fi, fe])); }
+      function values() { var o = {}; def.fields.forEach(function (f) { o[f.k] = f.type === 'checks' ? Array.prototype.filter.call(inputs[f.k].querySelectorAll('input'), function (c) { return c.checked; }).map(function (c) { return c.value; }).join(', ') : String(inputs[f.k].value || '').trim(); }); return o; }
+      function validate() {
+        var val = values(), bad = {};
+        def.fields.forEach(function (f) { var x = val[f.k]; if (f.req && x === '') bad[f.k] = 'จำเป็นต้องกรอก'; else if (f.type === 'number' && x !== '' && !(+x >= 0)) bad[f.k] = 'ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป'; else if (f.type === 'date' && x > t) bad[f.k] = 'วันที่ต้องไม่เกินวันนี้'; });
+        var extraBad = def.check ? def.check(val) : {}; Object.keys(extraBad).forEach(function (k) { if (!bad[k]) bad[k] = extraBad[k]; });
+        if (errs.__img && errs.__img.textContent) bad.__img = errs.__img.textContent;
+        def.fields.forEach(function (f) { errs[f.k].textContent = bad[f.k] || ''; if (f.type !== 'checks') inputs[f.k].setAttribute('aria-invalid', bad[f.k] ? 'true' : 'false'); });
+        return { ok: !Object.keys(bad).length, val: val, first: Object.keys(bad)[0] };
+      }
+      var btn = el('button', { type: 'submit', class: 'btn', text: HCFG.formApiUrl ? 'บันทึก' : 'ตรวจข้อมูล' });
+      form.appendChild(el('div', { class: 'hform-f wide hform-act' }, [btn, el('a', { class: 'btn sec', href: '#' + def.back, text: 'ยกเลิก' }), msg]));
+      form.onsubmit = function (e) {
+        e.preventDefault(); msg.className = 'hform-msg'; msg.textContent = '';
+        var r = validate();
+        if (!r.ok) { msg.classList.add('bad'); msg.textContent = 'ยังบันทึกไม่ได้ — แก้ไขช่องที่มีข้อความสีแดง'; if (inputs[r.first] && inputs[r.first].focus) inputs[r.first].focus(); return; }
+        if (!HCFG.formApiUrl) { msg.classList.add('warn'); msg.textContent = 'ข้อมูลครบถ้วน แต่ยังไม่ได้บันทึก: เว็บไซต์นี้ยังไม่ได้เชื่อมบริการบันทึกข้อมูล — ข้อมูลที่กรอกไม่ได้ถูกส่งไปที่ใด'; return; }
+        var fd = new FormData(); fd.append('form', id); fd.append('sheet_name', def.sheet); Object.keys(r.val).forEach(function (k) { fd.append(k, r.val[k]); }); files.forEach(function (x, i) { fd.append('img' + (i + 1), x); });
+        btn.disabled = true; msg.textContent = 'กำลังบันทึก…';
+        fetch(HCFG.formApiUrl, { method: 'POST', body: fd, credentials: 'include' }).then(function (res) { return res.json().then(function (j) { return { s: res.status, j: j }; }, function () { return { s: res.status, j: null }; }); })
+          .then(function (x) { btn.disabled = false;
+            if (x.s === 401 || x.s === 403) { msg.classList.add('bad'); msg.textContent = 'ยังไม่ได้บันทึก — บัญชีนี้ยังไม่ได้เข้าสู่ระบบหรือไม่มีสิทธิ์บันทึก'; }
+            else if (x.s >= 200 && x.s < 300 && x.j && x.j.ok === true) { msg.classList.add('ok'); msg.textContent = 'บันทึกแล้ว' + (x.j.ref ? ' · เลขอ้างอิง ' + x.j.ref : ''); form.reset(); }
+            else { msg.classList.add('bad'); msg.textContent = 'ยังไม่ได้บันทึก — บริการตอบกลับผิดพลาด (HTTP ' + x.s + ') ลองใหม่อีกครั้ง'; } },
+          function () { btn.disabled = false; msg.classList.add('bad'); msg.textContent = 'ยังไม่ได้บันทึก — เชื่อมต่อบริการบันทึกข้อมูลไม่ได้ ข้อมูลที่กรอกยังอยู่ในหน้านี้'; });
+      };
+      v.appendChild(el('div', { class: 'sec' }, [form]));
+    };
+  }
+  Object.keys(FORM_DEFS).forEach(function (id) { PAGES[id] = formPage(id); PAGE_TITLE[id] = FORM_DEFS[id].title; if (id !== 'forms-radio') PAGE_GROUP[id] = PAGE_GROUP.forms; });
+  function localFormsSection() {
+    return section('แบบฟอร์มที่กรอกในระบบนี้', {}, [el('ul', { class: 'list forms' }, [['form-clean', 'เลือกยานพาหนะจากหน้า “ยานพาหนะทั้งหมด” เพื่อเติมรุ่นและทะเบียนให้อัตโนมัติ'], ['form-refill', 'เลือกถังจากหน้า “อุปกรณ์ดับเพลิง” เพื่อเติมชนิดและเลขที่ถังให้อัตโนมัติ'], ['form-waste', ''], ['forms-radio', '']].map(function (x) {
+      return el('li', {}, [el('div', {}, [el('b', { text: FORM_DEFS[x[0]].title }), el('span', { text: x[1] || 'บันทึกลงแท็บ “' + FORM_DEFS[x[0]].sheet + '”' })]), el('a', { class: 'btn sec', href: '#' + x[0], text: 'เปิดแบบฟอร์ม' })]); }))]);
+  }
+  function formLink(id, params, label) { return el('a', { class: 'btn sec', href: '#' + id + '?' + Object.keys(params).filter(function (k) { return params[k] !== '' && params[k] != null; }).map(function (k) { return k + '=' + encodeURIComponent(params[k]); }).join('&'), text: label, onclick: function () { var d = document.querySelector('.dlg-ov'); if (d) d.remove(); } }); }
+
+  /* ---------- ผู้ช่วย AI (ปุ่มมุมล่างขวา) ----------
+   * ส่งคำถาม + ช่วงเวลาที่กำลังดู ไปยังบริการ (config.js → aiApiUrl) ที่ตรวจตัวตน จำกัดจำนวนคำถาม และคำนวณตัวเลขจากไฟล์สถิติรวมฝั่งบริการ
+   * หน้าเว็บไม่มี key/token และไม่ส่งรายชื่อ รูป หรือรายละเอียดรายบุคคล · ยังไม่ได้ตั้งค่า = แจ้งว่ายังเชื่อมต่อไม่ได้ (ไม่มีคำตอบจำลอง) */
+  var chat = { hist: [], busy: false, last: '' };
+  function setupChat() {
+    var log = el('div', { class: 'chat-log', role: 'log', 'aria-live': 'polite', 'aria-label': 'ข้อความสนทนา' }), inp = el('textarea', { rows: '1', placeholder: 'พิมพ์คำถามเกี่ยวกับสถิติ…', 'aria-label': 'คำถาม', maxlength: '500' });
+    var send = el('button', { type: 'submit', class: 'btn', text: 'ส่ง' }), quick = el('div', { class: 'chat-quick' });
+    var bubble = svg('svg', { viewBox: '0 0 24 24', width: 26, height: 26, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' }, [svg('path', { d: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z' }), svg('path', { d: 'M9 11h.01M12 11h.01M15 11h.01' })]);
+    var fab = el('button', { type: 'button', id: 'chatFab', class: 'chat-fab', 'aria-label': 'เปิดผู้ช่วย AI ถามสถิติ', 'aria-expanded': 'false', 'aria-controls': 'chatPanel' }, [bubble]);
+    var closeB = el('button', { type: 'button', class: 'chat-x', 'aria-label': 'ปิดผู้ช่วย AI', text: '×' }), scope = el('span', { class: 'chat-scope' });
+    var form = el('form', { class: 'chat-form' }, [inp, send]);
+    var panel = el('section', { id: 'chatPanel', class: 'chat-panel', hidden: '', 'aria-label': 'ผู้ช่วย AI ถามสถิติ' }, [el('div', { class: 'chat-h' }, [el('div', {}, [el('strong', { text: 'ผู้ช่วยถามสถิติ' }), scope]), closeB]), log, quick, form]);
+    function add(role, text, extraNode) { var m = el('div', { class: 'chat-m ' + role }, [el('p', { text: text }), extraNode || null]); log.appendChild(m); log.scrollTop = log.scrollHeight; return m; }
+    function ctx() { var Q = periodOf(); return { today: todayStr(), page: currentPage(), period: Q.kind, from: state.from, to: state.to, dataAsOf: (DATA && ((DATA.extra || {}).generatedAt || DATA.stats.generatedAt)) || '' }; }
+    function ask(text) {
+      if (chat.busy || !text) return; chat.busy = true; chat.last = text; send.disabled = true; quick.textContent = '';
+      add('user', text); var wait = add('ai wait', 'กำลังตอบ…'), ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(function () { if (ctl) ctl.abort(); }, 45000);
+      var fail = function (t) { wait.remove(); add('ai err', t, el('button', { type: 'button', class: 'btn-ghost', text: 'ลองใหม่', onclick: function (e) { e.target.closest('.chat-m').remove(); ask(chat.last); } })); };
+      fetch(HCFG.aiApiUrl, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, signal: ctl ? ctl.signal : undefined,
+        body: JSON.stringify({ action: 'chat', userMessage: text, chatHistory: chat.hist.slice(-8), context: ctx() }) })
+        .then(function (r) { return r.json().then(function (j) { return { s: r.status, j: j }; }, function () { return { s: r.status, j: null }; }); })
+        .then(function (x) {
+          if (x.s === 401 || x.s === 403) return fail('ยังไม่ได้เข้าสู่ระบบ หรือบัญชีนี้ไม่มีสิทธิ์ใช้ผู้ช่วย AI');
+          if (x.s === 429) return fail('ถามถี่เกินกำหนด — รอสักครู่แล้วลองใหม่');
+          if (!x.j || x.j.status !== 'success' || typeof x.j.reply !== 'string') return fail('ผู้ช่วย AI ตอบกลับผิดพลาด (HTTP ' + x.s + ')');
+          wait.remove(); chat.hist.push({ role: 'User', text: text }); chat.hist.push({ role: 'AI', text: x.j.reply });
+          add('ai', x.j.reply, x.j.sources && x.j.sources.length ? el('p', { class: 'chat-src', text: 'แหล่งข้อมูล: ' + x.j.sources.join(' · ') + (x.j.asOf ? ' · ข้อมูล ณ ' + x.j.asOf : '') }) : null);
+        }, function () { fail('เชื่อมต่อผู้ช่วย AI ไม่ได้ หรือใช้เวลานานเกินไป'); })
+        .then(function () { clearTimeout(tm); chat.busy = false; send.disabled = false; });
+    }
+    function open(on) {
+      panel.hidden = !on; fab.setAttribute('aria-expanded', String(on)); document.body.classList.toggle('chat-open', on);
+      if (!on) { fab.focus(); return; }
+      scope.textContent = 'ช่วงที่กำลังดู: ' + rangeText();
+      if (!log.childNodes.length) {
+        if (!HCFG.aiApiUrl) { add('ai note', 'ยังเชื่อมต่อผู้ช่วย AI ไม่ได้', el('p', { class: 'chat-src' }, ['เว็บไซต์นี้ยังไม่ได้ตั้งค่าบริการผู้ช่วย AI ที่ตรวจตัวตน จึงยังถามตอบไม่ได้ — ', el('a', { href: '#ai', text: 'ดูสิ่งที่ต้องตั้งค่า' })])); inp.disabled = true; send.disabled = true; }
+        else { add('ai', 'ถามสถิติรวมของงานจราจรและความปลอดภัยได้ เช่น จำนวนอุบัติเหตุ รถเข้า หรือของหาย ในช่วงที่กำลังดู'); ['อุบัติเหตุเดือนนี้มีกี่ครั้ง', 'สรุป Lost & Found ปีนี้', 'รถเข้ามหาวิทยาลัยล่าสุดวันไหน เท่าไร'].forEach(function (t) { quick.appendChild(el('button', { type: 'button', class: 'chip', text: t, onclick: function () { ask(t); } })); }); }
+      }
+      if (!inp.disabled) inp.focus(); else closeB.focus();
+    }
+    fab.onclick = function () { open(panel.hidden); }; closeB.onclick = function () { open(false); };
+    form.onsubmit = function (e) { e.preventDefault(); var t = inp.value.trim(); if (t) { inp.value = ''; ask(t); } };
+    inp.onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.dispatchEvent(new Event('submit', { cancelable: true })); } };
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.hidden && !document.querySelector('.dlg-ov, .lightbox')) open(false); });
+    document.body.appendChild(fab); document.body.appendChild(panel);
+  }
+
   function renderStamp() {
     var g = DATA.stats.generatedAt || '', s = $('stamp'); s.textContent = '';
     s.appendChild(el('b', { text: 'ข้อมูล ณ ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) })); s.appendChild(el('br'));
@@ -1536,7 +2083,7 @@
   setupShell();
   load().then(function (d) {
     DATA = d; DATA.systems.categories.forEach(function (c) { c.systems.forEach(function (s) { SYS[s.id] = s; }); });
-    collectMonths(); renderStamp(); route(true);
+    collectMonths(); renderStamp(); setupChat(); route(true);
     window.addEventListener('hashchange', function () { route(false); });
   }).catch(function (e) {
     $('stamp').textContent = 'โหลดข้อมูลไม่สำเร็จ';

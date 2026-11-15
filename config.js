@@ -15,6 +15,18 @@ window.HUB_CONFIG = {
   /* API สาธารณะของระบบ Lost & Found (ค่าเดียวกับ assets/lf-data.js ใน Repository trafficoppe/lostfound — ไม่ใช่ความลับ)
      หน้ารวมเรียกเฉพาะ GET ?action=getPublicData (อ่านอย่างเดียว ไม่มีชื่อ/เบอร์โทรผู้แจ้ง) และเรียกเฉพาะเมื่อ internalMode เป็น true */
   lostfoundApiUrl: "https://script.google.com/macros/s/AKfycbxrI-qgAvb0Zy-aKWDtTaHKM3etKDeedFVpOMoECxH3-x2uGCTQG_Fw70a1JR8F4BNM/exec",
+  /* ---- รอบ 7: ข้อมูลรายรายการ ----
+     dataAccess: ช่องทางอ่านของแต่ละชุดข้อมูล
+       "legacy" = อ่านจาก Sheet “ข้อมูลงานจราจรออนไลน์” ด้วยช่องทางเดียวกับหน้าเดิมบน main (ปัจจุบัน Sheet นี้เปิดให้อ่านได้โดยไม่ต้องเข้าสู่ระบบ)
+                  หน้ารวมเลือกเฉพาะคอลัมน์ที่ไม่ใช่ข้อมูลรายบุคคล
+       "api"    = อ่านผ่านบริการข้อมูลภายใน (dataApiUrl) ที่ตรวจตัวตนฝั่งบริการ — ใช้กับข้อมูลรายบุคคลและภาพภายใน
+       "off"    = ไม่แสดง
+     ถ้าผู้ดูแลจำกัดสิทธิ์ Sheet ต้นทางในภายหลัง ให้เปลี่ยนชุดข้อมูลที่เป็น "legacy" เป็น "api" */
+  dataAccess: { parkingLots: "legacy", vehicles: "legacy", fire: "legacy", forms: "legacy", inspections: "legacy", refills: "legacy", staff: "api", areaPhotos: "api", radio: "api" },
+  /* บริการข้อมูลภายใน / บันทึกแบบฟอร์ม (เช่น "/api/data", "/api/form" เมื่อเว็บไซต์อยู่หลัง Cloudflare Access — โค้ดอยู่ที่ server/ ยังไม่ได้ Deploy)
+     เว้นว่าง = หน้าข้อมูลภายในจะแจ้งว่าต้องเข้าสู่ระบบภายใน และแบบฟอร์มจะตรวจข้อมูลแต่ไม่ส่ง */
+  dataApiUrl: "",
+  formApiUrl: "",
   /* Google Maps JavaScript API key (ไม่บังคับ) — เว้นว่าง = ใช้แผนที่ OpenStreetMap (เมื่อเปิดผ่าน http/https) */
   googleMapsApiKey: "",
   allowMapEmbed: true
