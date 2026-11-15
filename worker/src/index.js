@@ -265,7 +265,7 @@ async function chat(request, env, deps, s) {
   const now = deps.now(), kM = 'chat:' + s.staff + ':' + Math.floor(now / 60000), kD = 'chatd:' + s.staff + ':' + Math.floor((now + BKK) / 864e5);
   if (await count(env, kM, deps) >= (+env.CHAT_RATE_PER_MIN || 6) || await count(env, kD, deps) >= (+env.CHAT_RATE_PER_DAY || 60)) throw new Err(429, 'rate-limited');
   await hit(env, kM, 60, deps); await hit(env, kD, 86400, deps);
-  const [stats, extra] = await Promise.all(['data/stats.json', 'data/extra.json'].map(async (p) => { const r = await asset(env, p, deps); if (!r.ok) throw new Err(503, 'stats-unavailable'); return r.json(); }));
+  const [stats, extra] = await Promise.all(['data/stats.json', 'data/extra.json'].map(async (p) => { const r = await asset(env, p, deps, new URL(request.url).origin); if (!r.ok) throw new Err(503, 'stats-unavailable'); return r.json(); }));
   let live = null; try { live = await liveStats(env, deps); } catch (e) { live = null; }               // ใช้ตัวเลขสดเมื่ออ่านต้นทางได้ ไม่งั้นใช้ไฟล์ล่าสุด
   if (live) { ['incidents', 'lostfound', 'gate'].forEach((k) => { if (live[k]) Object.assign(stats.modules[k], live[k]); }); ['incidentsDaily', 'lostfoundDaily'].forEach((k) => { if (live[k]) extra[k] = Object.assign(extra[k] || {}, live[k]); }); if (live.lostfoundStatus && extra.lostfoundStatus) Object.assign(extra.lostfoundStatus, live.lostfoundStatus); extra.generatedAt = new Date(now + BKK).toISOString().slice(0, 16); }
   const facts = buildFacts(stats, extra, b.context || {}, now);
@@ -298,13 +298,19 @@ async function img(request, env, deps) {
 
 // ---------- 8) ไฟล์หน้าเว็บ (สาธารณะ ไม่มีข้อมูลบุคคล) จาก Repository ที่ commit ที่กำหนด ----------
 const TYPES = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json; charset=utf-8', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', ico: 'image/x-icon', woff2: 'font/woff2' };
-async function asset(env, path, deps) {
-  if (!/^[0-9a-f]{7,40}$/.test(str(env.ASSET_REF)) || !/^(index\.html|config\.js|assets\/[\w.\-/]+|data\/[\w.\-]+\.json)$/.test(path) || path.includes('..')) return new Response('Not found', { status: 404, headers: SEC });
+async function asset(env, path, deps, origin) {
+  if (!/^(index\.html|config\.js|assets\/[\w.\-/]+|data\/[\w.\-]+\.json)$/.test(path) || path.includes('..')) return new Response('Not found', { status: 404, headers: SEC });
+  if (env.ASSETS) {                                // Cloudflare Pages: ไฟล์หน้าเว็บมาจากโครงการเดียวกัน (สร้างจาก branch ด้วย tools/build_site.sh)
+    const r = await env.ASSETS.fetch(new Request(origin + '/' + (path === 'index.html' ? '' : path))), h = new Headers(r.headers);
+    for (const k in SEC) h.set(k, SEC[k]); h.set('cache-control', /^(index\.html|config\.js|data\/)/.test(path) ? 'no-cache' : 'public, max-age=300');
+    return new Response(r.body, { status: r.status, headers: h });
+  }
+  if (!/^[0-9a-f]{7,40}$/.test(str(env.ASSET_REF))) return new Response('Not found', { status: 404, headers: SEC });
   const url = REPO + env.ASSET_REF + '/' + path, cache = deps.cache, hitC = cache && await cache.match(url); if (hitC) return hitC;
   let r; try { r = await deps.fetch(url); } catch (e) { return new Response('Upstream error', { status: 502, headers: SEC }); }
   if (!r.ok) return new Response('Not found', { status: r.status === 404 ? 404 : 502, headers: SEC });
   let body = await r.arrayBuffer();
-  if (path === 'config.js') body = new TextEncoder().encode(new TextDecoder().decode(body) + '\n;window.HUB_CONFIG=Object.assign(window.HUB_CONFIG||{},{auth:"session",apiBase:"/api",dataApiUrl:"/api/data",rosterApiUrl:"/api/roster",aiApiUrl:"/api/chat",statsApiUrl:"/api/stats",imgApiUrl:"/api/img",formApiUrl:""});\n');
+  if (path === 'config.js') body = new TextEncoder().encode(new TextDecoder().decode(body) + '\n;window.HUB_CONFIG=Object.assign(window.HUB_CONFIG||{},{auth:"session",apiBase:"/api",dataApiUrl:"/api/data",rosterApiUrl:"/api/roster",aiApiUrl:"/api/chat",liveStatsUrl:"/api/stats",imgApiUrl:"/api/img",formApiUrl:""});\n');
   const res = new Response(body, { status: 200, headers: { 'content-type': TYPES[path.split('.').pop()] || 'application/octet-stream', 'cache-control': 'public, max-age=300', ...SEC } });
   if (cache) await cache.put(url, res.clone()); return res;
 }
@@ -316,9 +322,9 @@ export async function handle(request, env, deps) {
   try {
     if (net.mode === 'badconfig') throw new Err(503, 'bad-network-config');
     if (net.mode === 'denied') return api ? json({ ok: false, code: 'network-denied' }, 403) : page('เข้าใช้งานไม่ได้จากเครือข่ายนี้', 'ระบบนี้เปิดให้ใช้เฉพาะเครือข่ายภายในที่กำหนด', net.ip);
-    if (!api) { if (request.method !== 'GET' && request.method !== 'HEAD') throw new Err(405, 'method'); return await asset(env, path === '/' ? 'index.html' : path.slice(1), deps); }
+    if (!api) { if (request.method !== 'GET' && request.method !== 'HEAD') throw new Err(405, 'method'); return await asset(env, path === '/' ? 'index.html' : path.slice(1), deps, url.origin); }
     if (path === '/api/health') {                 // สถานะบริการ (ไม่มีข้อมูล): ?probe=1 บอกเพียงว่าแต่ละแหล่งอ่านได้หรือไม่ เพื่อให้ผู้ดูแลแยกสาเหตุได้
-      const out = { ok: true, ref: str(env.ASSET_REF), network: net.mode, now: bkk(deps.now()), ai: env.LLM_API_URL ? 'external' : env.AI && env.AI_MODEL ? 'workers-ai' : 'none', admins: str(env.ADMIN_CODES) ? 'set' : 'unset' };
+      const out = { ok: true, ref: str(env.ASSET_REF) || (env.ASSETS ? 'pages' : ''), network: net.mode, now: bkk(deps.now()), ai: env.LLM_API_URL ? 'external' : env.AI && env.AI_MODEL ? 'workers-ai' : 'none', admins: str(env.ADMIN_CODES) ? 'set' : 'unset' };
       if (url.searchParams.get('probe') === '1') { out.sources = {}; for (const k of Object.keys(SOURCES(env))) { try { await table(env, k, deps); out.sources[k] = 'ok'; } catch (e) { out.sources[k] = e instanceof Err ? e.code : 'internal'; } } try { await env.DB.prepare('SELECT 1 AS x').first(); out.db = 'ok'; } catch (e) { out.db = 'error'; } }
       return json(out);
     }

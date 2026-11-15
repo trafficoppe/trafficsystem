@@ -598,7 +598,7 @@ async function chat(request, env, deps, s) {
   await hit(env, kM, 60, deps);
   await hit(env, kD, 86400, deps);
   const [stats, extra] = await Promise.all(["data/stats.json", "data/extra.json"].map(async (p) => {
-    const r = await asset(env, p, deps);
+    const r = await asset(env, p, deps, new URL(request.url).origin);
     if (!r.ok) throw new Err(503, "stats-unavailable");
     return r.json();
   }));
@@ -666,8 +666,15 @@ async function img(request, env, deps) {
   return new Response(r.body, { status: 200, headers: { "content-type": ct, "cache-control": "private, max-age=86400", ...SEC } });
 }
 var TYPES = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json; charset=utf-8", svg: "image/svg+xml", png: "image/png", jpg: "image/jpeg", webp: "image/webp", ico: "image/x-icon", woff2: "font/woff2" };
-async function asset(env, path, deps) {
-  if (!/^[0-9a-f]{7,40}$/.test(str(env.ASSET_REF)) || !/^(index\.html|config\.js|assets\/[\w.\-/]+|data\/[\w.\-]+\.json)$/.test(path) || path.includes("..")) return new Response("Not found", { status: 404, headers: SEC });
+async function asset(env, path, deps, origin) {
+  if (!/^(index\.html|config\.js|assets\/[\w.\-/]+|data\/[\w.\-]+\.json)$/.test(path) || path.includes("..")) return new Response("Not found", { status: 404, headers: SEC });
+  if (env.ASSETS) {
+    const r2 = await env.ASSETS.fetch(new Request(origin + "/" + (path === "index.html" ? "" : path))), h = new Headers(r2.headers);
+    for (const k in SEC) h.set(k, SEC[k]);
+    h.set("cache-control", /^(index\.html|config\.js|data\/)/.test(path) ? "no-cache" : "public, max-age=300");
+    return new Response(r2.body, { status: r2.status, headers: h });
+  }
+  if (!/^[0-9a-f]{7,40}$/.test(str(env.ASSET_REF))) return new Response("Not found", { status: 404, headers: SEC });
   const url = REPO + env.ASSET_REF + "/" + path, cache = deps.cache, hitC = cache && await cache.match(url);
   if (hitC) return hitC;
   let r;
@@ -678,7 +685,7 @@ async function asset(env, path, deps) {
   }
   if (!r.ok) return new Response("Not found", { status: r.status === 404 ? 404 : 502, headers: SEC });
   let body = await r.arrayBuffer();
-  if (path === "config.js") body = new TextEncoder().encode(new TextDecoder().decode(body) + '\n;window.HUB_CONFIG=Object.assign(window.HUB_CONFIG||{},{auth:"session",apiBase:"/api",dataApiUrl:"/api/data",rosterApiUrl:"/api/roster",aiApiUrl:"/api/chat",statsApiUrl:"/api/stats",imgApiUrl:"/api/img",formApiUrl:""});\n');
+  if (path === "config.js") body = new TextEncoder().encode(new TextDecoder().decode(body) + '\n;window.HUB_CONFIG=Object.assign(window.HUB_CONFIG||{},{auth:"session",apiBase:"/api",dataApiUrl:"/api/data",rosterApiUrl:"/api/roster",aiApiUrl:"/api/chat",liveStatsUrl:"/api/stats",imgApiUrl:"/api/img",formApiUrl:""});\n');
   const res = new Response(body, { status: 200, headers: { "content-type": TYPES[path.split(".").pop()] || "application/octet-stream", "cache-control": "public, max-age=300", ...SEC } });
   if (cache) await cache.put(url, res.clone());
   return res;
@@ -691,10 +698,10 @@ async function handle(request, env, deps) {
     if (net.mode === "denied") return api ? json({ ok: false, code: "network-denied" }, 403) : page("\u0E40\u0E02\u0E49\u0E32\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E08\u0E32\u0E01\u0E40\u0E04\u0E23\u0E37\u0E2D\u0E02\u0E48\u0E32\u0E22\u0E19\u0E35\u0E49", "\u0E23\u0E30\u0E1A\u0E1A\u0E19\u0E35\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E2B\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E40\u0E04\u0E23\u0E37\u0E2D\u0E02\u0E48\u0E32\u0E22\u0E20\u0E32\u0E22\u0E43\u0E19\u0E17\u0E35\u0E48\u0E01\u0E33\u0E2B\u0E19\u0E14", net.ip);
     if (!api) {
       if (request.method !== "GET" && request.method !== "HEAD") throw new Err(405, "method");
-      return await asset(env, path === "/" ? "index.html" : path.slice(1), deps);
+      return await asset(env, path === "/" ? "index.html" : path.slice(1), deps, url.origin);
     }
     if (path === "/api/health") {
-      const out = { ok: true, ref: str(env.ASSET_REF), network: net.mode, now: bkk(deps.now()), ai: env.LLM_API_URL ? "external" : env.AI && env.AI_MODEL ? "workers-ai" : "none", admins: str(env.ADMIN_CODES) ? "set" : "unset" };
+      const out = { ok: true, ref: str(env.ASSET_REF) || (env.ASSETS ? "pages" : ""), network: net.mode, now: bkk(deps.now()), ai: env.LLM_API_URL ? "external" : env.AI && env.AI_MODEL ? "workers-ai" : "none", admins: str(env.ADMIN_CODES) ? "set" : "unset" };
       if (url.searchParams.get("probe") === "1") {
         out.sources = {};
         for (const k of Object.keys(SOURCES(env))) {

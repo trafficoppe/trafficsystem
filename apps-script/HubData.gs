@@ -23,6 +23,7 @@ function doPost(e) {
   var P = PropertiesService.getScriptProperties(), secret = P.getProperty('HUB_SHARED_SECRET') || '';
   if (secret.length < 32 || !hubSafeEqual_(String(body.secret || ''), secret)) return hubOut_({ ok: false, code: 'forbidden' });
   try {
+    if (body.action === 'table') return hubOut_(hubTableRaw_(P, String(body.source || '')));   // ใช้โดย worker/src/index.js (รอบ 8)
     if (body.action === 'read') return hubOut_(hubRead_(P, String(body.dataset || '')));
     if (body.action === 'form') return hubOut_(hubForm_(P, body));
     return hubOut_({ ok: false, code: 'unknown-action' });
@@ -101,4 +102,18 @@ function hubForm_(P, body) {
     sh.appendRow(row);
     return { ok: true, ref: ref };
   } finally { lock.releaseLock(); }
+}
+
+/**
+ * รอบ 8 — ส่งทั้งแท็บเป็นตาราง (หัวคอลัมน์ + แถว ตามค่าที่แสดงในชีต) ให้บริการกลาง (worker/src/index.js) ซึ่งเป็นผู้เลือกคอลัมน์และตรวจสิทธิ์ผู้ใช้
+ * ใช้เมื่อ Sheet ต้นทางไม่ได้แชร์แบบผู้มีลิงก์ดูได้ · ต้องตั้ง Script Properties: SHEET_MAIN, SHEET_LF, SHEET_OPS, SHEET_EVENTS, SHEET_GPS (Spreadsheet ID)
+ * อ่านอย่างเดียว ไม่แก้ชีต · ยังไม่ได้ Deploy และยังไม่เคยรัน
+ */
+var HUB_SOURCES = { staff: ['SHEET_MAIN', 'รายชื่อเจ้าหน้าที่'], incidents: ['SHEET_MAIN', 'รายงานเหตุการณ์'], gate: ['SHEET_MAIN', 'จำนวนรถเข้า+หมวกนิรภัย'], lostfound: ['SHEET_LF', 'LF_New'], lfYear: ['SHEET_LF', 'รายการ พ.ศ. 2569 (ปัจจุบัน)'],
+  areaPhotos: ['SHEET_OPS', 'ภาพการตรวจพื้นที่'], radio: ['SHEET_OPS', 'บันทึกรายงานวิทยุสื่อสาร'], events: ['SHEET_EVENTS', 'Sheet1'], gps: ['SHEET_GPS', 'Reports'] };
+function hubTableRaw_(P, source) {
+  var s = HUB_SOURCES[source]; if (!s) return { ok: false, code: 'unknown-source' };
+  var id = P.getProperty(s[0]); if (!id) return { ok: false, code: 'not-configured' };
+  var sh = SpreadsheetApp.openById(id).getSheetByName(s[1]); if (!sh) return { ok: false, code: 'schema' };
+  return { ok: true, rows: sh.getDataRange().getDisplayValues() };
 }

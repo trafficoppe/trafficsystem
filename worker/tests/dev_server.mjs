@@ -1,0 +1,54 @@
+// worker/tests/dev_server.mjs — รันบริการกลางตัวจริง (worker/src/index.js) บนเครื่อง เพื่อทดสอบหน้าเว็บ + บริการร่วมกัน
+// ของจำลอง: D1 = SQLite ในหน่วยความจำ · Google Sheets/Drive = ชุดข้อมูลสมมติด้านล่าง · Workers AI = คำตอบตายตัว · IP ผู้เรียก = 10.20.0.5
+// ใช้: node worker/tests/dev_server.mjs [port]   (ต้องรัน sh tools/build_site.sh ก่อน)
+import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url'; import { DatabaseSync } from 'node:sqlite';
+import { handle, SCHEMA } from '../src/index.js';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..'), SITE = path.join(ROOT, 'site');
+const db = new DatabaseSync(':memory:'); SCHEMA.forEach((s) => db.exec(s));
+const st = (sql, a = []) => ({ bind: (...x) => st(sql, x), first: async () => db.prepare(sql).get(...a) || null, all: async () => ({ results: db.prepare(sql).all(...a) }), run: async () => { db.prepare(sql).run(...a); return {}; }, _x: () => (/^\s*select/i.test(sql) ? { results: db.prepare(sql).all(...a) } : (db.prepare(sql).run(...a), { results: [] })) });
+const DB = { prepare: (sql) => st(sql), batch: async (l) => { db.exec('BEGIN'); try { const r = l.map((s) => s._x()); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; } } };
+['1|ส.ต1|ชื่อสมมติ หนึ่ง (MOCK)', '1|วิทยุ|ชื่อสมมติ สอง (MOCK)', '2|ส.ต1|ชื่อสมมติ สาม (MOCK)', '3|ส.ต1|ชื่อสมมติ สี่ (MOCK)', '4|ส.ต1|ชื่อสมมติ ห้า (MOCK)'].forEach((x, i) => { const [t, r, n] = x.split('|'); db.prepare('INSERT INTO roster(id, team, role, name, active, ord, updated) VALUES(?, ?, ?, ?, 1, ?, 0)').run('r_seed' + i, t, r, n, i); });
+const ID = (n) => 'MOCKDRIVEFILEID' + String(n).padStart(16, '0'), D = (id) => 'https://drive.google.com/file/d/' + id + '/view';
+const IH = ['วันเวลาที่บันทึก', 'ช่องทางรับแจ้ง', 'ประเภทผู้แจ้ง', 'วันที่เกิดเหตุ', 'เวลาเกิดเหตุ', 'เวลาได้รับแจ้ง', 'เวลาเข้าถึงที่เกิดเหตุ', 'สถานที่เกิดเหตุ', 'พิกัด (Lat, Lng)', 'ประเภทเหตุการณ์', 'พาหนะคันที่ 1', 'ประเภทผู้ขับขี่คันที่ 1', 'คู่กรณี/พาหนะคันที่ 2', 'ประเภทผู้ขับขี่คันที่ 2', 'การเสียหายของทรัพย์สิน', 'รายละเอียดทรัพย์สินเสียหาย', 'การมีผู้บาดเจ็บ/ผู้ป่วย', 'จำนวนคนเจ็บ/ป่วย', 'รายละเอียดผู้บาดเจ็บ/ป่วยทั้งหมด', 'สาเหตุของเหตุการณ์', 'วิธีการเคลื่อนย้าย', 'ส่งต่อสถานพยาบาลปลายทาง', 'รายละเอียดเหตุการณ์เพิ่มเติม', 'ลิงก์รูปภาพเหตุการณ์', 'ข้อมูลสรุป KPI', 'รหัสเหตุการณ์'];
+const inc = (n, date, type, ll, inj, pd) => ['15/11/2026 9:0' + (n % 10) + ':00', 'วิทยุสื่อสาร', 'รปภ.', date, '9:00', '9:01', '9:04', 'จุดสมมติ ' + n, ll, type, '-', '-', '-', '-', '-', '-', inj === '-' ? '-' : +inj > 0 ? 'มี' : 'ไม่มี', inj, pd, '-', '-', '-', 'รายละเอียดสมมติ ' + n, D(ID(n)), '✅ เป็นไปตาม KPI | 3 นาที', 'INC-MOCK-' + n];
+const P1 = (t) => '[คนที่ 1] ประเภท: ' + t + ' | ชื่อ: ผู้บาดเจ็บสมมติ | โทร: 000 | อาการ: ถลอก';
+// 10 เหตุ: บนถนน 4 (เจ็บ 1+2+0+0) · ทั่วไป 2 (เจ็บ 1+1) · รับส่งผู้ป่วย 2 · บังคับล้อ 1 · ลักทรัพย์ 1 — ต.ค. 4 เหตุ / พ.ย. 6 เหตุ
+const INC = [IH, inc(1, '2026-10-05', 'อุบัติเหตุจากยานพาหนะ', '13.7950, 100.3220', '1', P1('นักศึกษา')), inc(2, '2026-10-12', 'อุบัติเหตุจากยานพาหนะ', '13.7960, 100.3230', '2', P1('บุคลากร') + ' ' + P1('บุคคลภายนอก').replace('คนที่ 1', 'คนที่ 2')), inc(3, '2026-10-20', 'อุบัติเหตุทั่วไป', '13.7940, 100.3210', '1', P1('Outsource')), inc(4, '2026-10-28', 'รับส่งผู้ป่วย', '-', '1', P1('นักศึกษา')),
+  inc(5, '2026-11-02', 'อุบัติเหตุจากยานพาหนะ', '13.7970, 100.3240', '0', '-'), inc(6, '2026-11-05', 'อุบัติเหตุจากยานพาหนะ', '-', '0', '-'), inc(7, '2026-11-09', 'อุบัติเหตุทั่วไป', '13.7930, 100.3200', '1', '-'), inc(8, '2026-11-10', 'รับส่งผู้ป่วย', '-', '1', P1('บุคลากร')), inc(9, '2026-11-11', 'บังคับล้อ', '13.79, 100.32', '-', '-'), inc(10, '2026-11-13', 'ลักทรัพย์', '-', '-', '-')];
+const LFH = ['Timestamp', 'RefCode', 'ประเภท', 'ชื่อ-นามสกุล', 'ประเภทบุคคล', 'คณะ/หน่วยงาน', 'เบอร์โทร', 'วันที่เกิดเหตุ', 'เวลา', 'รายละเอียด', 'สถานที่', 'URL รูปภาพ', 'สถานะ', 'การดำเนินการ', 'วันที่อัปเดต', 'อัปเดตโดย'];
+const LF = [LFH]; for (let i = 1; i <= 15; i++) { const ty = i % 3 === 0 ? 'พบสิ่งของ' : i % 5 === 0 ? 'รับของคืน' : 'สิ่งของสูญหาย', stt = i % 4 === 0 ? 'รับของคืนแล้ว' : i % 3 === 0 ? 'เจ้าของยังไม่มารับคืน' : 'รอดำเนินการ'; LF.push(['2026-11-' + String(i).padStart(2, '0') + ' 10:00:00', 'REF-MOCK-' + i, ty, 'ผู้แจ้งสมมติ ' + i, 'นักศึกษา', 'คณะสมมติ', '000-MOCK-' + i, '2026-11-' + String(i).padStart(2, '0'), '09:00', 'ของสมมติชิ้นที่ ' + i, i % 2 ? 'อาคารสมมติ A' : 'อาคารสมมติ B', i <= 3 ? D(ID(100 + i)) : '', stt, '', '', '']); }
+const SHEETS = {
+  '1850713009': [['ชื่อ-สกุล', 'ตำแหน่ง', 'รหัสพนักงาน', 'เบอร์โทร', 'URL_รูปภาพ_1', 'หน่วย', 'หัวหน้าหน่วย', 'ลายเซน'], ['ผู้ใช้สมมติ ก (MOCK)', 'พนักงานสมมติ', '0123', '000', '', 'หน่วยปฏิบัติการจราจรและรักษาความปลอดภัย', '', 'SIG'], ['ผู้ดูแลสมมติ ข (MOCK)', 'หัวหน้าสมมติ', '4567', '', '', 'หน่วยยุทธศาสตร์และพัฒนาระบบความปลอดภัย', 'หัวหน้าหน่วยยุทธศาสตร์', ''], ['ผู้ใช้สมมติ ค (MOCK)', 'พนักงานสมมติ', '8899', '', '', 'หน่วยปฏิบัติการจราจรและรักษาความปลอดภัย', '', '']],
+  '480256005': INC, '2074352966': LF,
+  '659712341': [['วันที่ของข้อมูล', 'เวลาที่บันทึกเข้าระบบ', 'รถยนต์ ประตู 1', 'มอไซค์ ประตู 1', 'ไม่สวมหมวก ประตู 1'], ['2026-11-14', '15/11/2026 8:00:00', '1,000', '300', '5'], ['2026-11-15', '15/11/2026 17:00:00', '900', '200', '4']],
+  '1811117659': [['วันที่บันทึก', 'ปี พ.ศ.', 'ประเภท', 'เลขอ้างอิง', 'สถานะ']].concat(LF.slice(1).map((r) => [r[0].slice(0, 10), 'พ.ศ. 2569', r[2], r[1], r[12]])),
+  '1509680619': [['วันที่/เวลา', 'ชื่อไฟล์', 'ลิงก์ภาพ', 'หมวดหมู่'], ['15/11/2026 7:00:00', 'a.jpg', D(ID(201)), 'ตรวจพื้นที่'], ['15/11/2026 8:00:00', 'b.jpg', D(ID(202)), 'ตรวจพื้นที่'], ['14/11/2026 7:00:00', 'c.jpg', D(ID(203)), 'ตรวจพื้นที่'], ['14/11/2026 9:00:00', 'd.jpg', D(ID(204)), 'ช่วยเหลือ']],
+  '1354124607': [['วันเวลาที่บันทึก', 'เจ้าหน้าที่ศูนย์วิทยุ', 'หน่วยงานที่แจ้ง', 'ชื่อ รปภ./ผู้แจ้ง', 'ประเภทเหตุการณ์', 'สถานที่เกิดเหตุ', 'รายละเอียด/ข้อความ', 'การดำเนินการของศูนย์', 'สถานะ'], ['15/11/2026 6:00:00', 'ศูนย์สมมติ', 'หน่วยสมมติ', 'ผู้แจ้งสมมติ', 'แจ้งเหตุทั่วไป', 'จุดสมมติ', 'ข้อความสมมติ', 'รับทราบ', 'รับแจ้ง']],
+  '0': [['ด', 'ชื่อ นามสกุล', 'ตำแหน่ง', 'หน่วยงาน', 'ประเภทเหตุการณ์', 'ระดับเหตุการณ์', 'สถานที่เกิดเหตุ', 'รายละเอียดเพิ่มเติม', 'รูปภาพ 1', 'รูปภาพ 2', 'รูปภาพ 3'], ['04/09/2026 10:00:00', 'ชื่อสมมติ', 'ตำแหน่งสมมติ', 'หน่วยสมมติ', 'เหตุสมมติ', 'ต่ำ', 'จุดสมมติ', 'รายละเอียด', '', '', '']],
+  '1074767452': [['Report_Type', 'Guard_Name', 'Guard_Company', 'Duty_Post', 'Duty', 'Event_Type', 'Report_Detail', 'Latitude', 'Longitude', 'GPS_Accuracy_M', 'Distance_From_Post_M', 'Geo_Status', 'Photo_File_ID', 'Record_Status', 'Report_Code', 'Report_Date', 'Report_Time', 'Guard_ID', 'Zone', 'Event_Severity', 'GPS_Status'], ['CHECKIN', 'รปภ.สมมติ', 'บริษัทสมมติ', 'จุด 1', 'เวรสมมติ', '', 'ปกติ', '13.79', '100.32', '12', '5', 'IN_RANGE', '', 'COMPLETE', 'R-1', '2026-10-05', '08:00', 'G-1', 'A', '', 'OK'], ['CHECKIN', 'รปภ.สมมติ', 'บริษัทสมมติ', 'จุด 2', 'เวรสมมติ', '', 'ปกติ', '13.79', '100.32', '30', '90', 'OUT_OF_RANGE', '', 'COMPLETE', 'R-2', '2026-10-05', '09:00', 'G-1', 'B', '', 'OK']]
+};
+const csv = (rows) => rows.map((r) => r.map((c) => (/[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c)).join(',')).join('\n');
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFklEQVR4XmOsmNbOgA0wYRVlYKCLBADuLwGhta8zygAAAABJRU5ErkJggg==', 'base64');
+export const control = { sourceDown: false };
+const fetchMock = async (u) => { u = String(u); let m = /export\?format=csv&gid=(\d+)/.exec(u);
+  if (m) return control.sourceDown ? new Response('<html>', { headers: { 'content-type': 'text/html' } }) : SHEETS[m[1]] ? new Response(csv(SHEETS[m[1]]), { headers: { 'content-type': 'text/csv' } }) : new Response('', { status: 404 });
+  if (/drive\.google\.com\/thumbnail/.test(u)) return new Response(PNG, { headers: { 'content-type': 'image/png' } });
+  return new Response('', { status: 404 }); };
+const TYPES = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json; charset=utf-8', png: 'image/png', svg: 'image/svg+xml' };
+const env = { DB, ALLOWED_CIDRS: '10.20.0.0/16', ADMIN_CODES: '4567', SHEET_MAIN: 'M', SHEET_LF: 'L', SHEET_OPS: 'O', SHEET_EVENTS: 'E', SHEET_GPS: 'G', AI_MODEL: '@cf/mock/model',
+  AI: { run: async () => ({ response: '[คำตอบจากบริการ AI จำลอง] เดือน พ.ย. 2569 มีเหตุการณ์รวม 6 เหตุการณ์ (ข้อมูลตามช่วงที่ระบุ)' }) },
+  ASSETS: { fetch: async (req) => { let p = new URL(req.url).pathname; if (p === '/') p = '/index.html'; const f = path.join(SITE, p); return f.startsWith(SITE) && fs.existsSync(f) && fs.statSync(f).isFile() ? new Response(fs.readFileSync(f), { headers: { 'content-type': TYPES[p.split('.').pop()] || 'application/octet-stream' } }) : new Response('Not found', { status: 404 }); } } };
+export function start(port, opt = {}) {
+  const srv = http.createServer(async (rq, rs) => {
+    const chunks = []; for await (const c of rq) chunks.push(c);
+    if (rq.url === '/__test/expire') { db.exec('DELETE FROM sessions'); rs.end('ok'); return; }
+    if (rq.url.startsWith('/__test/source/')) { control.sourceDown = rq.url.endsWith('down'); rs.end('ok'); return; }
+    const headers = new Headers(); for (const [k, v] of Object.entries(rq.headers)) if (typeof v === 'string') headers.set(k, v);
+    headers.set('CF-Connecting-IP', opt.ip || '10.20.0.5');
+    const req = new Request('http://localhost:' + port + rq.url, { method: rq.method, headers, body: ['GET', 'HEAD'].includes(rq.method) ? undefined : Buffer.concat(chunks) });
+    const res = await handle(req, Object.assign({}, env, opt.env || {}), { fetch: fetchMock, now: () => Date.now() });
+    const h = {}; res.headers.forEach((v, k) => { h[k] = v; }); rs.writeHead(res.status, h); rs.end(Buffer.from(await res.arrayBuffer()));
+  });
+  return new Promise((ok) => srv.listen(port, '127.0.0.1', () => ok(srv)));
+}
+if (process.argv[1] && process.argv[1].endsWith('dev_server.mjs')) { const port = +process.argv[2] || 8770; await start(port); console.log('บริการกลาง (ของจำลอง) ที่ http://localhost:' + port + '/'); }

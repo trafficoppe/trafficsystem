@@ -1,0 +1,138 @@
+/* tests/session.browser.test.js — ทดสอบหน้าเว็บ + บริการกลางตัวจริงร่วมกันบนเครื่อง (Chrome headless)
+ * ใช้: sh tools/build_site.sh && node worker/tests/dev_server.mjs 8770 &  แล้ว  SHOTS=<โฟลเดอร์> node tests/session.browser.test.js http://localhost:8770
+ * ของจริง: โค้ดหน้าเว็บ, โค้ดบริการ (Login/session/สิทธิ์/รายชื่อเวรใน SQLite) · ของจำลอง [MOCK]: Google Sheets, Drive, Workers AI, ไทล์แผนที่ (ถูกบล็อก), รหัสพนักงานและชื่อทั้งหมด */
+let pw; try { pw = require('playwright'); } catch (e) { pw = require('/opt/npm-tools/node_modules/playwright'); }
+const BASE = process.argv[2] || 'http://localhost:8770', SHOTS = process.env.SHOTS || '', fs = require('fs');
+let n = 0, fails = 0; const ok = (name, cond, info) => { n++; if (!cond) fails++; console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond || info === undefined ? '' : ' — ' + String(info).slice(0, 300))); };
+const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: SHOTS + '/' + name + '.png', fullPage: !!full }); } };
+(async () => {
+  const browser = await pw.chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+  const mk = async (vp) => { const ctx = await browser.newContext({ viewport: vp || { width: 1440, height: 900 }, deviceScaleFactor: vp ? 2 : 1, isMobile: !!vp, hasTouch: !!vp }); const page = await ctx.newPage(); const log = { err: [], api: [] };
+    page.on('pageerror', (e) => log.err.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) log.err.push(m.text()); });
+    await page.route('**/*', (r) => { const u = r.request().url(); if (u.startsWith(BASE)) { if (u.includes('/api/')) log.api.push(r.request().method() + ' ' + u.slice(BASE.length)); return r.continue(); } return r.abort(); });
+    return { ctx, page, log }; };
+  const T = (p, s) => p.locator(s), txt = async (p, s) => (await p.locator(s).first().innerText()).replace(/\s+/g, ' ').trim();
+  const login = async (p, code) => { await p.fill('#loginCode', code); await p.press('#loginCode', 'Enter'); };
+  const go = async (p, h) => { await p.evaluate((x) => { location.hash = x; }, h); await p.waitForTimeout(500); };
+  let { ctx, page, log } = await mk();
+
+  // ---------- 1) ก่อน Login ----------
+  await page.goto(BASE + '/#staff'); await page.waitForSelector('#loginView');
+  ok('ยังไม่ Login: เห็นเฉพาะหน้าเข้าสู่ระบบ ตัวระบบถูกซ่อน และไม่มีการเรียกข้อมูลภายใน', await T(page, '#app').isHidden() && !log.api.some((a) => /data|stats|roster|img|chat/.test(a)), log.api.join());
+  ok('หน้า Login: ข้อความ 3 บรรทัดตามลำดับ + ตรา + ช่องรหัสพนักงาน + ปุ่ม', (await page.locator('.lg-title > span').allInnerTexts()).map((s) => s.replace(/\s+/g, ' ')).join('|') === 'ระบบฐานข้อมูล|งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม|มหาวิทยาลัยมหิดล' && await T(page, '.lg-logo').count() === 1 && (await txt(page, '.lg-form label')) === 'รหัสพนักงาน' && (await txt(page, '.lg-btn')) === 'เข้าสู่ระบบ');
+  ok('ช่องรหัส: type=text + inputmode=numeric (ไม่ใช่ type=number)', await page.getAttribute('#loginCode', 'type') === 'text' && await page.getAttribute('#loginCode', 'inputmode') === 'numeric');
+  await page.fill('#loginCode', ''); await page.type('#loginCode', '01a2-3'); ok('พิมพ์ตัวอักษรปน → เหลือเฉพาะตัวเลข และเลขศูนย์นำหน้ายังอยู่', await page.inputValue('#loginCode') === '0123');
+  await shot(page, '01_login_desktop');
+  await login(page, '9999'); await page.waitForFunction(() => /ไม่ถูกต้อง/.test(document.getElementById('loginMsg').textContent));
+  ok('รหัสผิด → ข้อความทั่วไป ไม่บอกว่ามีใครในระบบ และยังไม่เข้า', (await txt(page, '#loginMsg')) === 'รหัสพนักงานไม่ถูกต้องหรือไม่มีสิทธิ์เข้าใช้งาน' && await T(page, '#app').isHidden());
+  await login(page, '123'); await page.waitForTimeout(400); ok('รหัสที่ตัดเลขศูนย์นำหน้า (123) → ไม่ผ่าน', await T(page, '#loginView').count() === 1);
+  await page.request.get(BASE + '/__test/source/down'); await page.waitForTimeout(100);
+  // (แหล่งตรวจรหัสถูกแคช 5 นาทีในบริการ — กรณีอ่านไม่ได้ทดสอบที่ worker/tests/worker.test.mjs) 
+  await page.request.get(BASE + '/__test/source/up');
+
+  // ---------- 2) Login ครั้งเดียว ----------
+  await login(page, '0123'); await page.waitForSelector('#userBox'); await page.waitForSelector('.it, .dv-err');
+  ok('รหัสถูก + กด Enter → เข้าได้ทันที และกลับมาหน้าที่เปิดค้างไว้ (#staff) พร้อมรายชื่อจากบริการ', /#staff/.test(page.url()) && await T(page, '.it').count() === 3 && await T(page, '#loginView').count() === 0, page.url());
+  ok('cookie เป็น HttpOnly (JavaScript ในหน้าอ่านไม่ได้) และไม่มีการเก็บสถานะ Login ใน storage', await page.evaluate(() => !/hub_s/.test(document.cookie) && !Object.keys(localStorage).concat(Object.keys(sessionStorage)).some((k) => /auth|login|session|code/i.test(k))));
+  ok('แถบบนแสดงชื่อผู้ใช้ + ปุ่มออกจากระบบ', /ผู้ใช้สมมติ ก/.test(await txt(page, '#userBox')) && /ออกจากระบบ/.test(await txt(page, '#userBox')));
+  ok('ไม่มีข้อความ “ต้องเข้าสู่ระบบภายในก่อน” ค้างในหน้าบุคลากร', !/ต้องเข้าสู่ระบบภายในก่อน/.test(await txt(page, '#view')));
+
+  // ---------- 3) รายงานเหตุการณ์ ----------
+  await go(page, 'traffic'); await page.waitForSelector('.kstrip');
+  const order = await page.evaluate(() => [...document.querySelectorAll('#view > *')].map((e) => e.getAttribute('aria-label') || e.className));
+  ok('ตำแหน่งบล็อก: หลังสรุปสถิติเดิม ก่อน “ระบบและแบบฟอร์มที่เกี่ยวข้อง”', order.indexOf('รายละเอียดรายงานเหตุการณ์') > 0 && order.indexOf('รายละเอียดรายงานเหตุการณ์') === order.length - 2 && /ระบบ/.test(order[order.length - 1]), order.join(' > '));
+  const inner = await page.evaluate(() => [...document.querySelector('.incb').children].map((e) => e.className.split(' ')[0]));
+  ok('ลำดับในบล็อก: ช่วงวันที่ → KPI → กราฟรายปี → รายละเอียด → แผนที่', inner.join() === 'incb-ctl,kstrips,,incb-h,incb-list,', inner.join());
+  const ks = async () => (await page.locator('.kstrip').allInnerTexts()).map((s) => s.replace(/\s+/g, ' '));
+  let k = await ks();
+  ok('[MOCK ข้อมูล] KPI 5 กลุ่ม ทั้งช่วง: อุบัติเหตุ 6 (ถนน 4 ทั่วไป 2 ทำงาน 0) · บาดเจ็บ 5 (3/2/0) · ประเภท นศ.1 บุคลากร 1 ภายนอก 1 Outsource 1 ไม่ระบุ 1 · รับส่ง 2 ครั้ง · เสียชีวิต “ไม่พบในบันทึก”', k.length === 5 && /อุบัติเหตุทั้งหมด 6 ครั้ง บนถนน 4 ทั่วไป 2 ทำงาน 0/.test(k[0]) && /ผู้ได้รับบาดเจ็บทั้งหมด 5 คน บนถนน 3 ทั่วไป 2 ทำงาน 0/.test(k[1]) && /5 คน นักศึกษา 1 บุคลากร 1 ภายนอก 1 Outsource 1 ไม่ระบุ 1/.test(k[2]) && /รับส่งผู้ป่วย 2 ครั้ง นักศึกษา 1 บุคลากร 1 ภายนอก 0 Outsource 0/.test(k[3]) && /ผู้เสียชีวิต ไม่พบในบันทึก/.test(k[4]) && !/ผู้เสียชีวิต 0/.test(k[4]), k.join(' || '));
+  ok('รายการ 10 เหตุการณ์ (หน้าละ 6) + แผนที่ 5 จุด + บอกเหตุที่ไม่มีพิกัด', /10 เหตุการณ์/.test(await txt(page, '.incb-list .lu-count')) && await T(page, '.incb-list .it').count() === 6 && /5 จุด[^·]*· อีก 1 เหตุไม่มีพิกัด/.test(await txt(page, '.incb figure:has(.incb-map) figcaption')), await txt(page, '.incb figure:has(.incb-map) figcaption'));
+  ok('กราฟรายปี: เริ่มที่ พ.ศ. 2569 มีตัวเลือกปี แยกจากช่วงวันที่', /พ\.ศ\. 2569/.test(await txt(page, '.incb figure.chart figcaption')) && await T(page, '.incb-yr select option').count() >= 1);
+  await shot(page, '02_incident_block', true);
+  await page.fill('.incb-ctl input[aria-label="ตั้งแต่วันที่"]', '2026-11-01'); await page.dispatchEvent('.incb-ctl input[aria-label="ตั้งแต่วันที่"]', 'change'); await page.waitForTimeout(300); k = await ks();
+  ok('เปลี่ยนช่วงวันที่ (พ.ย.) → KPI รายการ และแผนที่เปลี่ยนตามชุดเดียวกัน: อุบัติเหตุ 3 · บาดเจ็บ 1 · รับส่ง 1 · รายการ 6 · แผนที่ 2 จุด', /อุบัติเหตุทั้งหมด 3 ครั้ง บนถนน 2 ทั่วไป 1/.test(k[0]) && /ทั้งหมด 1 คน/.test(k[1]) && /รับส่งผู้ป่วย 1 ครั้ง/.test(k[3]) && /^6 เหตุการณ์/.test(await txt(page, '.incb-list .lu-count')) && /^2 จุด/.test((await txt(page, '.incb figure:has(.incb-map) figcaption')).replace(/^แผนที่จุดเกิดอุบัติเหตุ\s*/, '')), k[0] + ' | ' + await txt(page, '.incb figure:has(.incb-map) figcaption'));
+  await page.click('.incb-ctl button:has-text("ทั้งช่วงข้อมูล")'); await page.waitForSelector('.kstrip');
+  await page.selectOption('.incb-list select', 'อุบัติเหตุทั่วไป'); await page.waitForTimeout(300); k = await ks();
+  ok('กรองประเภท “อุบัติเหตุทั่วไป” → รายการ 2 · แผนที่ 2 จุด · KPI ยังเป็นของช่วงวันที่', /^2 เหตุการณ์/.test(await txt(page, '.incb-list .lu-count')) && /แผนที่จุดเกิดอุบัติเหตุ 2 จุด/.test(await txt(page, '.incb figure:has(.incb-map) figcaption')) && /ทั้งหมด 6 ครั้ง/.test(k[0]));
+  await page.click('.incb-list .it .it-b'); await page.waitForSelector('.dlg');
+  ok('เปิดรายละเอียด: บุคคล (ไม่มีเบอร์โทร) + ภาพผ่านบริการภาพของระบบ', /รายละเอียดบุคคล|ผู้บาดเจ็บ\/ผู้ป่วย/.test(await txt(page, '.dlg')) && !/โทร|000/.test(await txt(page, '.dlg')) && /\/api\/img\?id=MOCKDRIVEFILEID/.test(await page.getAttribute('.dlg img', 'src')) && await page.evaluate(() => { const i = document.querySelector('.dlg img'); return i.complete && i.naturalWidth > 0; }));
+  await page.click('.dlg .btn.sec');
+  ok('สถิติสดจากบริการ: ยอดเหตุการณ์ของหน้าเปลี่ยนเป็นชุดที่อ่านสด (10 เหตุ) และมีเวลาอ่านล่าสุด', /เหตุการณ์ทั้งหมด\s*10/.test(await txt(page, '.kpis')) && /ตรวจข้อมูลล่าสุด/.test(await txt(page, '#stamp')), await txt(page, '.kpis'));
+  await go(page, 'guard-central'); await page.waitForSelector('details.fold');
+  const dt = await page.locator('details.fold').first();
+  ok('“นิยามและที่มา” (หมวดควบคุมงาน รปภ.) เป็นแถบพับ ปิดเป็นค่าเริ่มต้น กดแล้วเปิด ใช้คีย์บอร์ดได้', await dt.getAttribute('open') === null && await (async () => { await dt.locator('summary').focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(150); return (await dt.getAttribute('open')) !== null; })());
+
+  // ---------- 4) Lost & Found ----------
+  await go(page, 'lostfound'); await page.waitForSelector('.dv[data-ds="lostfound"] .it');
+  const lfc = async () => txt(page, '.dv[data-ds="lostfound"] .lu-count');
+  ok('[MOCK ข้อมูล] Lost & Found: โหลดรายการทันทีหลัง Login (15 รายการ หน้าละ 12 เรียงล่าสุดก่อน)', /^15 รายการ/.test(await lfc()) && await T(page, '.dv[data-ds="lostfound"] .it').count() === 12 && /ชิ้นที่ 15/.test(await txt(page, '.dv[data-ds="lostfound"] .it')) && !/แสดงเมื่อเปิดผ่านระบบภายใน/.test(await txt(page, '#view')));
+  await page.selectOption('select[aria-label="กรองตามประเภท"]', 'พบสิ่งของ'); await page.waitForTimeout(200); const c1 = await lfc();
+  await page.selectOption('select[aria-label="กรองตามสถานะ"]', 'รับของคืนแล้ว'); await page.waitForTimeout(200); const c2 = await lfc();
+  ok('ตัวกรองประเภทกับสถานะแยกกัน: พบสิ่งของ 5 → + สถานะรับของคืนแล้ว 1', /^5 รายการ/.test(c1) && /^1 รายการ/.test(c2), c1 + ' | ' + c2);
+  await page.click('.dv[data-ds="lostfound"] .it .it-b'); await page.waitForSelector('.dlg');
+  ok('รายละเอียด: ชื่อผู้แจ้ง/เบอร์โทรตามต้นทาง (เฉพาะหลัง Login)', /ผู้แจ้งสมมติ 12/.test(await txt(page, '.dlg')) && /000-MOCK-12/.test(await txt(page, '.dlg'))); await page.click('.dlg .btn.sec');
+  await page.selectOption('select[aria-label="กรองตามประเภท"]', 'all'); await page.selectOption('select[aria-label="กรองตามสถานะ"]', 'all'); await page.fill('.dv[data-ds="lostfound"] input[type=search]', 'อาคารสมมติ B'); await page.waitForTimeout(500);
+  ok('ค้นหา + แบ่งหน้า', /^7 รายการ/.test(await lfc()));
+  await page.fill('.dv[data-ds="lostfound"] input[type=search]', ''); await page.waitForTimeout(500); await page.click('.dv[data-ds="lostfound"] .lu-pager button:has-text("ถัดไป")'); await page.waitForTimeout(200);
+  ok('หน้า 2 มี 3 รายการ และรูปของรายการที่มีภาพโหลดผ่านบริการภาพ', await T(page, '.dv[data-ds="lostfound"] .it').count() === 3 && await page.evaluate(() => [...document.querySelectorAll('.dv[data-ds="lostfound"] .it img')].every((i) => /\/api\/img\?id=/.test(i.src) && i.complete && i.naturalWidth > 0)));
+  await shot(page, '03_lostfound_list', true);
+
+  // ---------- 5) ตรวจพื้นที่ / กิจกรรมพิเศษ / GPS / วิทยุ ----------
+  await go(page, 'area-inspect'); await page.waitForSelector('.ph-tile');
+  ok('[MOCK ข้อมูล] ตรวจพื้นที่: สถิติจำนวนบันทึก (3 ภาพ 2 วัน) + ภาพ · ไม่เรียกว่าอัตราทำงานครบ', /ภาพบันทึกทั้งหมด\s*3/.test(await txt(page, '.kpis')) && /วันที่มีบันทึก\s*2/.test(await txt(page, '.kpis')) && await T(page, '.ph-tile').count() === 3 && /ไม่ใช่อัตราการทำงานครบ/.test(await txt(page, '#view')));
+  await shot(page, '04_area_inspect', true);
+  await go(page, 'event-incident'); await page.waitForSelector('.dv[data-ds="events"] .it'); const evOk = await T(page, '.dv[data-ds="events"] .it').count() === 1;
+  await go(page, 'grad-guard'); await page.waitForSelector('.dv[data-ds="gps"] .it');
+  ok('กิจกรรมพิเศษและ GPS (แท็บ Reports): session เดียวกันเปิดได้ · GPS แสดง Record_Status / Geo_Status และไม่มีชื่อ รปภ.', evOk && /COMPLETE 2/.test(await txt(page, '.dv[data-ds="gps"]')) && /IN_RANGE 1/.test(await txt(page, '.dv[data-ds="gps"]')) && !/รปภ\.สมมติ/.test(await txt(page, '.dv[data-ds="gps"]')));
+  await go(page, 'report-radio'); await page.waitForSelector('.dv[data-ds="radio"]'); await page.waitForTimeout(400); ok('รายงานวิทยุ: เปิดได้โดยไม่ถาม Login ซ้ำ', !/ต้องเข้าสู่ระบบ|ยังไม่ได้เข้าสู่ระบบ/.test(await txt(page, '#view')) && await T(page, '#loginView').count() === 0);
+
+  // ---------- 6) ตารางเวร / ตั้งค่า (ผู้ใช้ทั่วไป) ----------
+  await go(page, 'roster'); await page.waitForFunction(() => /ชื่อสมมติ หนึ่ง/.test(document.getElementById('view').textContent));
+  ok('ตารางเวร: รายชื่อประจำผลัดจากฐานข้อมูลของระบบ (ตามบทบาทที่บันทึก)', /ส\.ต1\s*ชื่อสมมติ หนึ่ง \(MOCK\)/.test(await txt(page, '#view')) && /วิทยุ\s*ชื่อสมมติ สอง/.test(await txt(page, '#view')));
+  await go(page, 'settings'); await page.waitForSelector('.ros-grid');
+  ok('ตั้งค่า (ผู้ใช้ทั่วไป): เห็นรายชื่อแบบอ่านอย่างเดียว ไม่มีปุ่มแก้ไข/เพิ่ม', /อ่านอย่างเดียว/.test(await txt(page, '.dv:has(.ros-grid)')) && await T(page, '.ros-act, .ros-add').count() === 0);
+  const forged = await page.evaluate(async () => { const r = await fetch('/api/roster', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: 0, op: 'add', team: '1', role: 'x', name: 'x' }) }); return r.status; });
+  ok('ผู้ใช้ทั่วไปยิงคำสั่งแก้รายชื่อโดยตรง → บริการปฏิเสธ (403)', forged === 403);
+
+  // ---------- 7) ผู้ช่วย AI ----------
+  await go(page, 'dashboard'); await page.waitForSelector('.now');
+  ok('ปุ่มผู้ช่วย: รูปหุ่นยนต์ + ชื่อสั้น “ถาม AI” + Tooltip “ถาม AI เรื่องสถิติ”', (await txt(page, '#chatFab')) === 'ถาม AI' && await page.getAttribute('#chatFab', 'title') === 'ถาม AI เรื่องสถิติ' && await T(page, '#chatFab svg rect').count() === 1);
+  await page.click('#chatFab'); await page.fill('#chatPanel textarea, #chatPanel input[type=text]', 'เดือนนี้มีเหตุการณ์กี่ครั้ง'); await page.keyboard.press('Enter'); await page.waitForFunction(() => /คำตอบจากบริการ AI จำลอง/.test(document.getElementById('chatPanel').textContent), null, { timeout: 8000 }).catch(() => {});
+  ok('[MOCK AI] ถามผ่าน /api/chat ด้วย session เดียวกัน → ได้คำตอบพร้อมแหล่งข้อมูล', /คำตอบจากบริการ AI จำลอง/.test(await txt(page, '#chatPanel')) && log.api.some((a) => a === 'POST /api/chat'), (await txt(page, '#chatPanel')).slice(-200));
+  await shot(page, '05_chat_MOCK_AI'); await page.keyboard.press('Escape');
+
+  // ---------- 8) Logout / หมดอายุ ----------
+  await page.click('#userBox .ub-out'); await page.waitForSelector('#loginView');
+  const afterOut = await page.evaluate(async () => [(await fetch('/api/data?dataset=staff', { credentials: 'include' })).status, (await fetch('/api/img?id=MOCKDRIVEFILEID0000000000000001', { credentials: 'include' })).status, (await fetch('/api/roster', { credentials: 'include' })).status]);
+  ok('ออกจากระบบ → กลับหน้า Login · ข้อมูล/ภาพ/รายชื่อเวรเข้าไม่ได้ (401) · เนื้อหาเดิมถูกล้าง', afterOut.join() === '401,401,401' && await T(page, '#app').isHidden() && (await page.evaluate(() => document.getElementById('view').textContent)) === '');
+  await login(page, '4567'); await page.waitForSelector('#userBox'); await go(page, 'lostfound'); await page.waitForSelector('.dv[data-ds="lostfound"] .it');
+  await page.request.get(BASE + '/__test/expire'); await page.click('.dv[data-ds="lostfound"] .it .it-b').catch(() => {}); await page.keyboard.press('Escape'); await go(page, 'staff'); await page.waitForSelector('#loginView');
+  ok('session หมดอายุระหว่างใช้งาน → กลับหน้า Login พร้อมข้อความ', /หมดเวลาการใช้งาน/.test(await txt(page, '#loginMsg')));
+  await login(page, '4567'); await page.waitForSelector('.it'); ok('เข้าใหม่ → กลับมาหน้าที่เปิดไว้ (#staff) ทันที', /#staff/.test(page.url()) && await T(page, '.it').count() === 3);
+
+  // ---------- 9) ผู้ดูแลแก้รายชื่อเวร ----------
+  ok('ผู้ดูแล: แถบบนระบุ “ผู้ดูแล”', /ผู้ดูแล$/.test((await txt(page, '#userBox .ub-name'))));
+  await go(page, 'settings'); await page.waitForSelector('.ros-add');
+  await page.fill('.ros-add input[aria-label="ชื่อ–สกุล"]', 'ชื่อทดสอบ เพิ่มใหม่ (MOCK)'); await page.fill('.ros-add input[aria-label="บทบาท"]', 'ส.ต2'); await page.selectOption('.ros-add select', '2'); await page.click('.ros-add button[type=submit]'); await page.waitForFunction(() => /เพิ่มรายชื่อแล้ว/.test(document.getElementById('view').textContent));
+  await page.reload(); await page.waitForSelector('.ros-grid');
+  ok('ผู้ดูแลเพิ่มรายชื่อ → เปิดหน้าใหม่แล้วยังอยู่ (บันทึกฝั่งบริการ) + มีประวัติ', /ชื่อทดสอบ เพิ่มใหม่ \(MOCK\)/.test(await txt(page, '.ros-grid')) && await (async () => { await page.click('details.fold summary:has-text("ประวัติการแก้ไข")'); await page.waitForTimeout(300); return /add/.test(await txt(page, '.dv:has(.ros-grid) details.fold')); })());
+  const c2x = await mk(); await c2x.page.goto(BASE + '/#settings'); await c2x.page.waitForSelector('#loginView'); await login(c2x.page, '4567'); await c2x.page.waitForSelector('.ros-add');   // ผู้ดูแลคนที่สอง (อีกเครื่อง) ถือรุ่นเดิม
+  await page.click('.ros-list li:has-text("ชื่อทดสอบ เพิ่มใหม่") button:has-text("ปิดใช้งาน")'); await page.waitForFunction(() => /ปิดใช้งานแล้ว/.test(document.getElementById('view').textContent));
+  await c2x.page.click('.ros-list li:has-text("ชื่อสมมติ หนึ่ง") button:has-text("ปิดใช้งาน")'); await c2x.page.waitForFunction(() => /มีผู้ดูแลอีกคนแก้ไขไปก่อน/.test(document.getElementById('view').textContent));
+  ok('ผู้ดูแลสองคนแก้พร้อมกัน → คนที่ถือรุ่นเก่าถูกปฏิเสธและได้รายชื่อล่าสุด (ไม่เขียนทับ)', /ชื่อทดสอบ เพิ่มใหม่ \(MOCK\) \(ปิดใช้งาน\)/.test(await txt(c2x.page, '.ros-grid')) && !/ชื่อสมมติ หนึ่ง \(MOCK\) \(ปิดใช้งาน\)/.test(await txt(c2x.page, '.ros-grid')));
+  await shot(page, '06_settings_roster_admin_MOCK', true); await c2x.ctx.close();
+  ok('ไม่มี Console error จากโค้ดของระบบ (เดสก์ท็อป)', log.err.length === 0, log.err.join(' | '));
+  await ctx.close();
+
+  // ---------- 10) มือถือ ----------
+  ({ ctx, page, log } = await mk({ width: 390, height: 844 }));
+  await page.goto(BASE + '/'); await page.waitForSelector('#loginView');
+  ok('มือถือ: หน้า Login ไม่ล้นจอ ปุ่มสูงพอแตะ', await page.evaluate(() => document.documentElement.scrollWidth <= 390 && document.querySelector('.lg-btn').getBoundingClientRect().height >= 44 && document.querySelector('.lg-card').getBoundingClientRect().width <= 390));
+  await shot(page, '07_login_mobile');
+  await login(page, '0123'); await page.waitForSelector('.now'); await go(page, 'traffic'); await page.waitForSelector('.kstrip');
+  ok('มือถือ: บล็อกเหตุการณ์ไม่ล้นจอ · ปุ่มผู้ช่วยเป็นไอคอน (ไม่มีข้อความทับเนื้อหา) และหลบเมื่อเลื่อนลง', await page.evaluate(async () => { const w = (ms) => new Promise((r) => setTimeout(r, ms)), f = document.getElementById('chatFab'); const fit = document.documentElement.scrollWidth <= 390 && f.getBoundingClientRect().width <= 50 && getComputedStyle(f.querySelector('.fab-t')).display === 'none'; window.scrollTo(0, 400); await w(120); window.scrollTo(0, 900); await w(350); return fit && f.classList.contains('fab-away'); }));
+  await shot(page, '08_incident_block_mobile');
+  ok('ไม่มี Console error จากโค้ดของระบบ (มือถือ)', log.err.length === 0, log.err.join(' | '));
+  await browser.close();
+  console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (หน้าเว็บ + บริการตัวจริงบนเครื่อง · แหล่งข้อมูล/AI/รหัสพนักงานเป็นของจำลอง)'); process.exit(fails ? 1 : 0);
+})().catch((e) => { console.error('CRASH', e); process.exit(2); });
