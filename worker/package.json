@@ -1,0 +1,1 @@
+{ "name": "mu-traffic-hub-worker", "private": true, "type": "module", "scripts": { "test": "node tests/worker.test.mjs", "build": "esbuild src/index.js --bundle --format=esm --target=es2022 --outfile=dist/worker.js" } }
