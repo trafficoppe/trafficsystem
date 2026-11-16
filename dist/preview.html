@@ -4054,7 +4054,7 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
       var kp = el('div'), bar = el('div', { class: 'lu-bar' }), body = el('div');
       function open(r) {
         var dl = el('dl', { class: 'dlg-dl' });
-        [['รหัสรายงาน', r.id], ['วันที่ เวลา', fdate(r.date) + (r.time ? ' เวลา ' + r.time.slice(0, 5) + ' น.' : '')], ['ชนิดรายงาน', r.kind], ['จุดปฏิบัติงาน', r.post], ['โซน / หน้าที่', [r.zone, r.duty].filter(Boolean).join(' / ')], ['บริษัท', r.company],
+        [['รหัสรายงาน', r.id], ['วันที่ เวลา', fdate(r.date) + (r.time ? ' เวลา ' + String(r.time).replace(/^(\d{1,2}[:.]\d{2}).*$/, '$1') + ' น.' : '')], ['ชนิดรายงาน', r.kind], ['จุดปฏิบัติงาน', r.post], ['โซน / หน้าที่', [r.zone, r.duty].filter(Boolean).join(' / ')], ['บริษัท', r.company],
           ['เหตุการณ์', [r.eventType, r.severity].filter(Boolean).join(' · ')], ['รายละเอียด', r.detail], ['สถานะบันทึก', r.record], ['สถานะพิกัด', [geoTh(r.geo), r.gpsStatus].filter(Boolean).join(' · ')],
           ['ความแม่นยำ GPS', r.accuracy ? num(+r.accuracy) + ' เมตร' : ''], ['ระยะจากจุดประจำ', r.distance ? num(+r.distance) + ' เมตร' : ''], ['พิกัดของรายงาน (ณ เวลาที่ส่ง)', r.lat != null && r.lng != null ? r.lat + ', ' + r.lng : '']].forEach(function (f) { if (f[1]) { dl.appendChild(el('dt', { text: f[0] })); dl.appendChild(el('dd', { text: f[1] })); } });
         panelDlg((r.post || 'รายงาน') + ' — ' + fdate(r.date), el('div', {}, [gallery(r.images, 'ภาพประกอบรายงาน ' + (r.post || '')), dl]));
@@ -4085,7 +4085,7 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
         body.appendChild(el('p', { class: 'lu-count', role: 'status', text: num(f.length) + ' รายงาน · เรียงจากล่าสุด' }));
         if (!f.length) { body.appendChild(el('div', { class: 'empty', text: 'ไม่พบรายงานที่ตรงกับเงื่อนไข' })); return; }
         body.appendChild(el('div', { class: 'it-grid' }, f.slice(st.page * per, st.page * per + per).map(function (r) {
-          return itemCard({ img: (r.images || [])[0], tag: geoTh(r.geo), title: r.post || 'ไม่ระบุจุด', sub: fdate(r.date) + (r.time ? ' ' + r.time.slice(0, 5) + ' น.' : '') + (r.zone ? ' · โซน ' + r.zone : ''), meta: [r.kind, r.eventType, r.record].filter(Boolean).join(' · '), open: function () { open(r); } }); })));
+          return itemCard({ img: (r.images || [])[0], tag: geoTh(r.geo), title: r.post || 'ไม่ระบุจุด', sub: fdate(r.date) + (r.time ? ' ' + String(r.time).replace(/^(\d{1,2}[:.]\d{2}).*$/, '$1') + ' น.' : '') + (r.zone ? ' · โซน ' + r.zone : ''), meta: [r.kind, r.eventType, r.record].filter(Boolean).join(' · '), open: function () { open(r); } }); })));
         var pg = pager(st, pages, draw, host); if (pg) body.appendChild(pg);
       }
       host.appendChild(kp); host.appendChild(bar); host.appendChild(body); host.appendChild(readNote(d, 'แท็บ Reports (ระบบรายงาน รปภ. งานปริญญา)')); draw(); return host;
