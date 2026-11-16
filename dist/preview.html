@@ -4154,7 +4154,7 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
     'source-schema': 'หัวคอลัมน์ต้นทางเปลี่ยน', 'relay-timeout': 'ตัวกลางตอบช้าเกินไป', 'relay-unreachable': 'ติดต่อตัวกลางไม่ได้ชั่วคราว', 'source-unreachable': 'ติดต่อต้นทางไม่ได้ชั่วคราว', 'source-error': 'ต้นทางตอบผิดรูปแบบ',
     'relay-internal': 'ตัวกลางทำงานผิดพลาด', 'relay-error': 'ตัวกลางตอบผิดรูปแบบ', 'source-not-configured': 'ยังไม่ได้ตั้ง ID ของแหล่งข้อมูล',
     'relay-not-deployed': 'ไม่พบ Web app ของตัวกลาง (ถูกลบหรือ URL ผิด)', 'outdated': 'ตัวกลาง Deploy เป็นโค้ดรุ่นเก่า — ต้อง Deploy เป็น New version', 'relay-not-allowed': 'ตัวกลางไม่อนุญาตไฟล์นี้ (อยู่นอกโฟลเดอร์ที่กำหนด)',
-    'relay-unknown-source': 'ตัวกลางรุ่นนี้ไม่รู้จักตารางนี้', 'relay-not-found': 'ตัวกลางไม่พบไฟล์/แท็บ', 'skipped': 'ไม่มีภาพตัวอย่างให้ตรวจ' };
+    'relay-unknown-source': 'ตัวกลางรุ่นนี้ไม่รู้จักตารางนี้', 'relay-source-forbidden': 'บัญชีที่ติดตั้งตัวกลางเปิด Sheet นี้ไม่ได้', 'relay-source-error': 'ตัวกลางอ่าน Sheet ไม่สำเร็จ', 'relay-not-found': 'ตัวกลางไม่พบไฟล์/แท็บ', 'skipped': 'ไม่มีภาพตัวอย่างให้ตรวจ' };
   function srcWhy(code) { return SRC_WHY[code] || ('อ่านไม่สำเร็จ (' + code + ')'); }
   function liveSourcesSection() {
     var host = el('div', {}, [el('p', { class: 'src', text: 'กำลังตรวจการอ่านแต่ละแหล่ง…' })]);

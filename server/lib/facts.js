@@ -54,7 +54,7 @@ export function applyLive(stats, extra, live) {
   else if (e.ruenthai && X.ruenthaiSurvey) X.ruenthaiSurvey.liveErr = e.ruenthai;
   return L;
 }
-const WHY = { 'relay-not-configured': 'ยังไม่ได้ติดตั้งตัวกลางอ่านไฟล์ของเจ้าของ', 'relay-login-required': 'ตัวกลางยังไม่ได้ Deploy แบบเปิดให้บริการเรียกได้', 'relay-forbidden': 'ค่าลับของตัวกลางไม่ตรง', 'relay-timeout': 'ตัวกลางตอบช้าเกินกำหนด',
+const WHY = { 'relay-not-configured': 'ยังไม่ได้ติดตั้งตัวกลางอ่านไฟล์ของเจ้าของ', 'relay-login-required': 'ตัวกลางยังไม่ได้ Deploy แบบเปิดให้บริการเรียกได้', 'relay-forbidden': 'ค่าลับของตัวกลางไม่ตรง', 'relay-timeout': 'ตัวกลางตอบช้าเกินกำหนด', 'relay-source-forbidden': 'บัญชีที่ติดตั้งตัวกลางเปิด Sheet นี้ไม่ได้',
   'source-unreachable': 'ติดต่อแหล่งข้อมูลไม่ได้', 'source-error': 'แหล่งข้อมูลตอบผิดรูปแบบ', 'source-schema': 'หัวคอลัมน์ต้นทางเปลี่ยน', 'source-not-configured': 'ยังไม่ได้ตั้งค่าแหล่งข้อมูล' };
 const why = (c) => WHY[c] || ('อ่านไม่สำเร็จ (' + c + ')');
 const topObj = (o, k) => Object.keys(o || {}).sort((a, b) => o[b] - o[a]).slice(0, k || 8).map((x) => x + ' ' + n(o[x])).join(', ');

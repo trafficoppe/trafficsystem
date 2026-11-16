@@ -8,7 +8,7 @@
  *   - ตารางอ่านได้เฉพาะ Spreadsheet/แท็บ/คอลัมน์ในรายการ RELAY_TABLES · คอลัมน์ข้อมูลส่วนบุคคล (ทะเบียนรถ) ส่งเฉพาะ “มี/ไม่มีค่า”
  *   - ภาพอ่านได้เฉพาะไฟล์ภาพที่อยู่ใต้โฟลเดอร์ใน RELAY_IMAGE_ROOTS เท่านั้น
  *   - ทุกคำขอต้องมีค่าลับร่วม (เก็บใน Script Properties → RELAY_SECRET) — ค่าลับได้มาจากการลงทะเบียนครั้งเดียวด้วย setup()
- *   - ไม่ส่ง OAuth token ออกไปที่ใด · ใช้สิทธิ์แบบอ่านอย่างเดียว (ดู HubRelay.appsscript.json)
+ *   - ไม่ส่ง OAuth token ออกไปที่ใด · ใช้สิทธิ์แบบอ่านอย่างเดียว (ดู HubRelay.appsscript.json) · อ่านแท็บเป็น CSV ด้วยสิทธิ์ drive.readonly (SpreadsheetApp ต้องใช้สิทธิ์แก้ไข จึงไม่ใช้)
  * setup() กดซ้ำได้: ถ้ามีค่าลับแล้วจะตรวจการทำงานอย่างเดียว (ไม่ใช้ token ซ้ำ) · checkInstall() ตรวจอย่างเดียว
  * วิธีติดตั้ง: ดู docs/ส่งมอบรอบ10.md หัวข้อ “เปิดตัวกลางอ่านข้อมูลส่วนตัว”
  */
@@ -16,9 +16,9 @@ var RELAY_HUB = 'https://mu-traffic-hub.pages.dev';
 var RELAY_VERSION = 'r11';                            // ต้องตรงกับ RELAY_VERSION ใน worker/src/index.js
 var RELAY_ENROLL_TOKEN = '__ENROLL_TOKEN__';          // token ใช้ครั้งเดียว (หมดอายุภายใน 7 วัน) · กู้คืน: ผู้ดูแลออก token ใหม่ แล้วใส่ใน Script Properties → ENROLL_TOKEN (ไม่ต้องแก้โค้ด)
 var RELAY_TABLES = {
-  studentMoto: { id: '1v0LYqEkWIb3MaNKqp1T50tBlDmYn7UP8xl36cPlpllQ', tab: 'Registrations_Motorcycle',
+  studentMoto: { id: '1v0LYqEkWIb3MaNKqp1T50tBlDmYn7UP8xl36cPlpllQ', tab: 'Registrations_Motorcycle', gid: '1304328494',
     cols: ['Timestamp', 'RefCode', 'วิทยาเขต', 'คณะ/สถาบัน/ส่วนงาน', 'ประเภทนักศึกษา', 'ระดับการศึกษา', 'ประเภทเครื่องยนต์', 'จำนวนรถ'], present: ['รถ1_ทะเบียน', 'รถ2_ทะเบียน', 'รถ3_ทะเบียน'] },
-  ruenthai: { id: '1CcOw6B9ajfga0TptvO15XnwIfC9IrW1Oh2kR1doAHZA', tab: 'RuenThai_Survey',
+  ruenthai: { id: '1CcOw6B9ajfga0TptvO15XnwIfC9IrW1Oh2kR1doAHZA', tab: 'RuenThai_Survey', gid: '873571277',
     cols: ['Timestamp', 'Ref_Code', 'Group_Type', 'Group_Label', 'User_SubType', 'Faculty_Dept', 'Sub_Unit_Project', 'Car_Count', 'Car1_Type', 'Car2_Type', 'LPR_Status'], present: ['Car1_Plate', 'Car2_Plate'] }
 };
 var RELAY_IMAGE_ROOTS = ['1zLhp_JAQRLyL5hCtZHaxZu-24djV4PeH'];   // โฟลเดอร์ SecurityGuardReports (ภาพประกอบรายงาน รปภ. GPS งานปริญญา)
@@ -46,8 +46,9 @@ function relayTable_(source, cols, present) {
   var T = RELAY_TABLES[source]; if (!T) return { ok: false, code: 'unknown-source' };
   var want = (Array.isArray(cols) ? cols : T.cols).filter(function (c) { return T.cols.indexOf(c) >= 0; });
   var pres = (Array.isArray(present) ? present : T.present).filter(function (c) { return T.present.indexOf(c) >= 0; });
-  var sh = SpreadsheetApp.openById(T.id).getSheetByName(T.tab); if (!sh) return { ok: false, code: 'schema' };
-  var v = sh.getDataRange().getDisplayValues(), head = v[0].map(function (h) { return String(h).trim(); });
+  var x = relayCsv_(T); if (!x.v) return { ok: false, code: x.code };
+  var v = x.v; if (!v.length) return { ok: false, code: 'schema' };
+  var head = v[0].map(function (h) { return String(h).trim(); });
   var ix = want.concat(pres).map(function (c) { return head.indexOf(c); });
   if (ix.some(function (i) { return i < 0; })) return { ok: false, code: 'schema' };
   var rows = [want.concat(pres)];
@@ -56,6 +57,15 @@ function relayTable_(source, cols, present) {
     rows.push(ix.map(function (i, k) { var x = String(row[i]).trim(); return k < want.length ? x : (x ? '1' : ''); }));
   }
   return { ok: true, rows: rows, at: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') };
+}
+// อ่านแท็บเป็น CSV (ค่าที่แสดงผล) ผ่านสิทธิ์ drive.readonly ของบัญชีนี้ — ไม่ใช้ SpreadsheetApp เพราะต้องขอสิทธิ์ “แก้ไขสเปรดชีต” ทั้งหมด
+function relayCsv_(T) {
+  var r = UrlFetchApp.fetch('https://docs.google.com/spreadsheets/d/' + T.id + '/export?format=csv&gid=' + T.gid,
+    { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true, followRedirects: true });
+  var c = r.getResponseCode(), h = r.getHeaders() || {}, ct = String(h['Content-Type'] || h['content-type'] || '');
+  if (c === 404) return { code: 'not-found' };
+  if (c !== 200 || /html/i.test(ct)) return { code: c === 401 || c === 403 || /html/i.test(ct) ? 'source-forbidden' : 'source-error' };
+  return { v: Utilities.parseCsv(r.getContentText('UTF-8')) };
 }
 function relayAllowed_(file) {
   var queue = [], it = file.getParents(), depth = 0;
@@ -91,7 +101,7 @@ function relayImg_(id, w) {
 function setup() {
   var url = relayUrl_(), P = PropertiesService.getScriptProperties();
   // ทดสอบสิทธิ์อ่านของบัญชีนี้ก่อน (หน้าขออนุญาตของ Google จะขึ้นตอนนี้ครั้งเดียว)
-  Object.keys(RELAY_TABLES).forEach(function (k) { var sh = SpreadsheetApp.openById(RELAY_TABLES[k].id).getSheetByName(RELAY_TABLES[k].tab); if (!sh) throw new Error('บัญชีนี้เปิดแท็บ ' + RELAY_TABLES[k].tab + ' ไม่ได้'); Logger.log('อ่านได้: ' + RELAY_TABLES[k].tab + ' (' + (sh.getLastRow() - 1) + ' แถว)'); });
+  Object.keys(RELAY_TABLES).forEach(function (k) { var t = relayTable_(k); if (!t.ok) throw new Error('บัญชีนี้อ่านแท็บ ' + RELAY_TABLES[k].tab + ' ไม่ได้ (' + t.code + ') — ติดตั้งด้วยบัญชีที่เปิดไฟล์นี้ได้'); Logger.log('อ่านได้: ' + RELAY_TABLES[k].tab + ' (' + (t.rows.length - 1) + ' แถวที่มีข้อมูล)'); });
   RELAY_IMAGE_ROOTS.forEach(function (id) { Logger.log('อ่านโฟลเดอร์ภาพได้: ' + DriveApp.getFolderById(id).getName()); });
   if (!P.getProperty('RELAY_SECRET')) {
     var tok = P.getProperty('ENROLL_TOKEN') || RELAY_ENROLL_TOKEN;

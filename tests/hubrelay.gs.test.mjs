@@ -19,11 +19,14 @@ function load(over = {}) {
   const ctx = {
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = v; }, deleteProperty: (k) => { delete props[k]; } }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (t) => ({ setMimeType: () => ({ text: t }) }) },
-    Utilities: { DigestAlgorithm: { SHA_256: 1 }, computeDigest: (a, s) => Array.from(Buffer.from(require_crypto().createHash('sha256').update(s).digest())).map((b) => (b > 127 ? b - 256 : b)), base64Encode: (b) => Buffer.from(b).toString('base64'), formatDate: () => '2026-11-16 22:00' },
-    SpreadsheetApp: { openById: (id) => ({ getSheetByName: (tab) => (SHEET[tab] ? { getDataRange: () => ({ getDisplayValues: () => SHEET[tab] }), getLastRow: () => SHEET[tab].length } : null) }) },
+    Utilities: { DigestAlgorithm: { SHA_256: 1 }, computeDigest: (a, s) => Array.from(Buffer.from(require_crypto().createHash('sha256').update(s).digest())).map((b) => (b > 127 ? b - 256 : b)), base64Encode: (b) => Buffer.from(b).toString('base64'), formatDate: () => '2026-11-16 22:00', parseCsv: (t) => t.split('\n').filter((l) => l.length).map((l) => l.split(',')) },
+    // ไม่มี SpreadsheetApp ในของจำลอง: ยืนยันว่าสคริปต์ไม่ใช้บริการที่ต้องขอสิทธิ์แก้ไขสเปรดชีต
     DriveApp: { getFileById: (id) => { const f = FILES[id]; if (!f) throw new Error('nf'); return { getMimeType: () => f.mime, getSize: () => f.size, getParents: () => iter([folder(f.parent)]), getBlob: () => blob(f.mime) }; }, getFolderById: (id) => ({ getName: () => 'SecurityGuardReports' }) },
     ScriptApp: { getOAuthToken: () => 'OAUTH-TOKEN-MOCK', getService: () => ({ getUrl: () => over.url === undefined ? 'https://script.google.com/a/macros/mahidol.ac.th/s/MOCKDEPLOYMENTID0000000001/exec' : over.url }) },
-    UrlFetchApp: { fetch: (u, o) => { calls.push(u); if (/googleapis\.com\/drive/.test(u)) { if (over.thumbFail) throw new Error('drive api down'); return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ thumbnailLink: 'https://lh3.googleusercontent.com/thumb=s220' }) }; }
+    UrlFetchApp: { fetch: (u, o) => { let m; calls.push(u); if (/googleapis\.com\/drive/.test(u)) { if (over.thumbFail) throw new Error('drive api down'); return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ thumbnailLink: 'https://lh3.googleusercontent.com/thumb=s220' }) }; }
+      m = /docs\.google\.com\/spreadsheets\/d\/([\w-]+)\/export\?format=csv&gid=(\d+)/.exec(u);
+      if (m) { const tab = { 1304328494: 'Registrations_Motorcycle', 873571277: 'RuenThai_Survey' }[m[2]]; calls.push('csv:' + m[2] + ':' + (o.headers && /^Bearer /.test(o.headers.Authorization))); if (over.csvDenied) return { getResponseCode: () => 200, getHeaders: () => ({ 'Content-Type': 'text/html' }), getContentText: () => '<html>' };
+        return SHEET[tab] ? { getResponseCode: () => 200, getHeaders: () => ({ 'Content-Type': 'text/csv' }), getContentText: () => SHEET[tab].map((r) => r.join(',')).join('\n') } : { getResponseCode: () => 404, getHeaders: () => ({}), getContentText: () => '' }; }
       if (/googleusercontent/.test(u)) return { getResponseCode: () => 200, getHeaders: () => ({ 'Content-Type': 'image/jpeg' }), getBlob: () => blob('image/jpeg') };
       const p = u.replace(/^https:\/\/mu-traffic-hub\.pages\.dev/, ''), body = JSON.parse(o.payload); const h = over.hub || {};
       const res = h[p] ? h[p](body) : { ok: false, code: 'not-found' }; return { getResponseCode: () => (res.ok ? 200 : 403), getContentText: () => JSON.stringify(res) }; } },
@@ -72,4 +75,8 @@ err = ''; try { G.ctx.checkInstall(); } catch (e) { err = e.message; } ok('Deplo
 G = load({ url: 'https://script.google.com/macros/s/X/dev' }); err = ''; try { G.ctx.setup(); } catch (e) { err = e.message; } ok('ยังไม่ได้ Deploy เป็น Web app → แจ้งให้ Deploy ก่อน', /Deploy/.test(err));
 G = load({ url: 'https://script.google.com/macros/s/X/dev', props: { RELAY_EXEC_URL: 'https://script.google.com/a/macros/mahidol.ac.th/s/MOCKDEPLOYMENTID0000000009/exec' }, hub: { '/api/relay/enroll': (b) => { G.enrolledUrl = b.url; return { ok: true, secret: SEC }; }, '/api/relay/confirm': () => okCheck } });
 ok('getUrl() เป็น /dev แต่ใส่ RELAY_EXEC_URL ไว้ → ใช้ URL /exec ที่ใส่', G.ctx.setup() === 'ok' && /0009\/exec$/.test(G.enrolledUrl));
+G = load({ props: { RELAY_SECRET: SEC } }); G.post({ action: 'table', source: 'ruenthai', secret: SEC });
+ok('อ่านตารางเป็น CSV ด้วย OAuth ของบัญชีเจ้าของ (Bearer ภายในสคริปต์ ไม่ส่งออก) ตาม gid ที่กำหนด', G.calls.includes('csv:873571277:true'));
+G = load({ props: { RELAY_SECRET: SEC }, csvDenied: true });
+ok('บัญชีนี้ไม่มีสิทธิ์อ่าน Sheet (ได้หน้า HTML) → source-forbidden ไม่ส่งข้อมูล', G.post({ action: 'table', source: 'studentMoto', secret: SEC }).code === 'source-forbidden');
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ตรรกะสคริปต์กับบริการ Google จำลอง)'); process.exit(fails ? 1 : 0);
