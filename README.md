@@ -63,7 +63,7 @@
 | `server/`, `apps-script/HubData.gs` | บริการข้อมูลภายในที่ตรวจตัวตนจริง (ข้อมูลบุคลากร/ภาพ/วิทยุ, บันทึกแบบฟอร์ม, ผู้ช่วย AI, รายชื่อเวร) — ยังไม่ได้ Deploy · ดู `server/README.md` |
 | `tools/serve_preview.py`, `START_PREVIEW_WINDOWS.bat`, `tools/windows/start_preview.ps1` | เปิด Preview ผ่าน local HTTP |
 | `docs/ส่งมอบรอบ8.md` | **สถานะล่าสุด (รอบ 8)**: ระบบภายในที่ Deploy บน Cloudflare Pages (`mu-traffic-hub`), Login กลาง, สิ่งที่ยังต้องตั้งค่า |
-| `worker/`, `wrangler.toml`, `tools/build_site.sh` | บริการกลางของระบบภายใน (ด่านเครือข่าย → session → ข้อมูล/ภาพ/รายชื่อเวร/AI) และค่าตั้งของ Cloudflare Pages — push branch นี้แล้ว Cloudflare Deploy เอง |
+| `worker/`, `wrangler.toml`, `tools/build_site.sh` | บริการกลางของระบบภายใน (ด่านเครือข่าย → session → ข้อมูล/ภาพ/รายชื่อเวร/AI) และค่าตั้งของ Cloudflare Pages — การ Deploy รุ่นใหม่ต้องสั่งเอง (ดู `docs/ส่งมอบรอบ8.md`) |
 | `docs/ส่งมอบรอบ7.md` | สถานะล่าสุด ตารางทุกหน้า ผลทดสอบ และสิ่งที่ต้องทำต่อ |
 | `tests/roster.test.js` | ตรวจกติกาตารางเวรเทียบกับค่าจากไฟล์ Excel |
 | `dist/preview.html` ← `tools/build_preview.py` | ไฟล์ Preview เปิดได้ไฟล์เดียว |
