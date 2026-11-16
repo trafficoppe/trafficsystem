@@ -3664,7 +3664,7 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
           if (code && CHAT_ERR[code]) return fail(CHAT_ERR[code]);
           if (!x.j || x.j.status !== 'success' || typeof x.j.reply !== 'string') return fail('ผู้ช่วย AI ตอบกลับผิดพลาด (HTTP ' + x.s + ')');
           wait.remove(); if (x.j.verified !== false) { chat.hist.push({ role: 'User', text: text }); chat.hist.push({ role: 'AI', text: x.j.reply }); }
-          add('ai', x.j.reply, x.j.sources && x.j.sources.length ? el('p', { class: 'chat-src', text: 'ที่มา: ' + x.j.sources.join(' · ') + (x.j.asOf ? ' · ข้อมูล ณ ' + x.j.asOf : '') }) : null);
+          add('ai', x.j.reply, x.j.sources && x.j.sources.length ? el('p', { class: 'chat-src', text: 'ที่มา: ' + x.j.sources.join(' · ') + (x.j.asOf ? ' · ข้อมูล ณ ' + x.j.asOf : '') + (x.j.snapshot && x.j.snapshot.length ? ' · จากไฟล์สรุป (ไม่ใช่ข้อมูลสด): ' + x.j.snapshot.join(', ') : '') }) : null);
         }, function () { fail('เชื่อมต่อผู้ช่วย AI ไม่ได้ หรือใช้เวลานานเกินไป'); })
         .then(function () { clearTimeout(tm); busy(false); });
     }
