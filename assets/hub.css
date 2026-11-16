@@ -724,3 +724,4 @@ body.tab-hidden .chat-fab .fab-bot,body.chat-open .chat-fab .fab-bot,body.tab-hi
 /* ปุ่ม ‹ › ของเหตุการณ์วันนี้อยู่ชิดซ้ายถัดจากตัวกรอง — ไม่ไปอยู่ใต้ปุ่มหุ่นยนต์มุมขวาล่าง */
 .tdi-bar{justify-content:flex-start}
 .chat-fab.mode-robot .fab-bot{width:66px;height:66px}
+.h-sub{font-size:15px;font-weight:700;margin:18px 0 6px}

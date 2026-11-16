@@ -25,9 +25,9 @@ var TOPICS = {
   anywheel: /anywheel|จักรยาน|ปั่น/i,
   tram: /รถราง|tram/i,
   guard: /รปภ|พึงพอใจ|ประเมิน|ความปลอดภัยเอกชน/i,
-  vehicle: /ทะเบียน|ลงทะเบียน|สติ๊กเกอร์|สติกเกอร์/i,
+  vehicle: /ทะเบียน|ลงทะเบียน|สติ๊กเกอร์|สติกเกอร์|นักศึกษา/i,
   ops: /ลานจอด|ดับเพลิง|ถังดับ|ยานพาหนะของงาน/i,
-  ruenthai: /เรือนไทย/i
+  ruenthai: /เรือนไทย|ruenthai/i
 };
 var CORE = ["incidents", "lostfound", "gate"];
 function topicsOf(text) {
@@ -50,16 +50,70 @@ var NAV_HINTS = [
   ["\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E14\u0E31\u0E1A\u0E40\u0E1E\u0E25\u0E34\u0E07", "safety"],
   ["\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14", "vehicle-fleet"]
 ];
-function buildFacts(stats, extra, ctx, nowMs, question) {
+function applyLive(stats, extra, live) {
+  const M = stats && stats.modules || {}, X = extra || {}, L = { topics: {}, errors: {} };
+  if (!live) return L;
+  const e = live.errors || {};
+  L.errors = Object.assign({}, e);
+  ["incidents", "lostfound", "gate"].forEach((k) => {
+    if (live[k] && M[k]) {
+      Object.assign(M[k], live[k]);
+      L.topics[k] = live.checkedAt;
+    }
+  });
+  ["incidentsDaily", "lostfoundDaily"].forEach((k) => {
+    if (live[k]) X[k] = Object.assign(X[k] || {}, live[k]);
+  });
+  if (live.lostfoundStatus && X.lostfoundStatus) Object.assign(X.lostfoundStatus, live.lostfoundStatus);
+  const vr = M.vehicleRegistration;
+  if (vr) {
+    if (live.studentMoto) {
+      vr.rows["\u0E19\u0E31\u0E01\u0E28\u0E36\u0E01\u0E29\u0E32 \u2013 \u0E23\u0E16\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19\u0E22\u0E19\u0E15\u0E4C"] = live.studentMoto.registrations;
+      vr.studentMoto = live.studentMoto;
+      L.topics.vehicle = live.studentMoto.checkedAt;
+    } else if (e.studentMoto) vr.studentMotoErr = e.studentMoto;
+  }
+  if (live.ruenthai) {
+    const r = live.ruenthai, rs = X.ruenthaiSurvey || (X.ruenthaiSurvey = {});
+    rs.total = r.surveys;
+    rs.daily = r.daily;
+    rs.from = r.range.from;
+    rs.to = r.range.to;
+    rs.updated = r.lastEntry;
+    rs.checkedAt = r.checkedAt;
+    rs.live = r;
+    L.topics.ruenthai = r.checkedAt;
+  } else if (e.ruenthai && X.ruenthaiSurvey) X.ruenthaiSurvey.liveErr = e.ruenthai;
+  return L;
+}
+var WHY = {
+  "relay-not-configured": "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E34\u0E14\u0E15\u0E31\u0E49\u0E07\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E02\u0E2D\u0E07\u0E40\u0E08\u0E49\u0E32\u0E02\u0E2D\u0E07",
+  "relay-login-required": "\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 Deploy \u0E41\u0E1A\u0E1A\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E40\u0E23\u0E35\u0E22\u0E01\u0E44\u0E14\u0E49",
+  "relay-forbidden": "\u0E04\u0E48\u0E32\u0E25\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07\u0E44\u0E21\u0E48\u0E15\u0E23\u0E07",
+  "relay-timeout": "\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07\u0E15\u0E2D\u0E1A\u0E0A\u0E49\u0E32\u0E40\u0E01\u0E34\u0E19\u0E01\u0E33\u0E2B\u0E19\u0E14",
+  "source-unreachable": "\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49",
+  "source-error": "\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E15\u0E2D\u0E1A\u0E1C\u0E34\u0E14\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A",
+  "source-schema": "\u0E2B\u0E31\u0E27\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19",
+  "source-not-configured": "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25"
+};
+var why = (c) => WHY[c] || "\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 (" + c + ")";
+var topObj = (o, k) => Object.keys(o || {}).sort((a, b) => o[b] - o[a]).slice(0, k || 8).map((x) => x + " " + n(o[x])).join(", ");
+function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
   const M = stats && stats.modules || {}, X = extra || {}, L = [], src = {};
   const today = new Date((nowMs || Date.now()) + 7 * 36e5).toISOString().slice(0, 10), curM = today.slice(0, 7);
   const from = ctx && isMonth(ctx.from) ? ctx.from : null, to = ctx && isMonth(ctx.to) ? ctx.to : null;
   const inR = (m) => from && to && m >= from && m <= to, rLabel = from && to ? from === to ? mTh(from) : mTh(from) + " \u2013 " + mTh(to) : "";
   const picked = question == null ? Object.keys(TOPICS) : topicsOf(question), use = new Set(picked.length ? picked : CORE);
-  const add = (topic, period, text, asOf) => L.push("[" + topic + " | " + period + (asOf ? " | \u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 \u0E13 " + asOf : "") + "] " + text);
+  const LI = liveInfo || { topics: {}, errors: {} }, asOfSeen = [];
+  const add = (topic, period, text, asOf) => {
+    if (asOf && asOfSeen.indexOf(asOf) < 0) asOfSeen.push(asOf);
+    L.push("[" + topic + " | " + period + (asOf ? " | \u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 \u0E13 " + asOf : "") + "] " + text);
+  };
   const part = (m) => m === curM ? " (\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E04\u0E23\u0E1A\u0E40\u0E14\u0E37\u0E2D\u0E19)" : "";
   L.push("\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49 (\u0E40\u0E27\u0E25\u0E32\u0E44\u0E17\u0E22) \u0E04\u0E37\u0E2D " + dTh(today) + " \xB7 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49 = " + THF[+curM.slice(5, 7) - 1] + " " + (+curM.slice(0, 4) + 543) + " \xB7 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E01\u0E48\u0E2D\u0E19 = " + mTh(prevMonth(curM)) + " \xB7 \u0E1B\u0E35\u0E19\u0E35\u0E49 = \u0E1B\u0E35\u0E1B\u0E0F\u0E34\u0E17\u0E34\u0E19 \u0E1E.\u0E28. " + (+today.slice(0, 4) + 543) + (ctx && ctx.period === "today" ? " \xB7 \u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E01\u0E33\u0E25\u0E31\u0E07\u0E14\u0E39 \u201C\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49\u201D \u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A (\u0E16\u0E49\u0E32\u0E04\u0E33\u0E16\u0E32\u0E21\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E48\u0E27\u0E07 \u0E43\u0E2B\u0E49\u0E15\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49 \u0E41\u0E25\u0E30\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49)" : rLabel ? " \xB7 \u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E01\u0E33\u0E25\u0E31\u0E07\u0E14\u0E39\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A: " + rLabel + " (\u0E16\u0E49\u0E32\u0E04\u0E33\u0E16\u0E32\u0E21\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E48\u0E27\u0E07 \u0E43\u0E2B\u0E49\u0E15\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E0A\u0E48\u0E27\u0E07\u0E19\u0E35\u0E49 \u0E41\u0E25\u0E30\u0E1A\u0E2D\u0E01\u0E0A\u0E48\u0E27\u0E07\u0E19\u0E35\u0E49\u0E43\u0E19\u0E04\u0E33\u0E15\u0E2D\u0E1A)" : ""));
   L.push("\u0E1B\u0E35\u0E01\u0E32\u0E23\u0E28\u0E36\u0E01\u0E29\u0E32\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1B\u0E35\u0E1B\u0E0F\u0E34\u0E17\u0E34\u0E19: \u0E23\u0E30\u0E1A\u0E1A\u0E21\u0E35\u0E1C\u0E25\u0E23\u0E27\u0E21\u0E23\u0E32\u0E22\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E41\u0E25\u0E30\u0E23\u0E32\u0E22\u0E1B\u0E35\u0E1B\u0E0F\u0E34\u0E17\u0E34\u0E19\u0E40\u0E17\u0E48\u0E32\u0E19\u0E31\u0E49\u0E19 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1C\u0E25\u0E23\u0E27\u0E21\u0E15\u0E32\u0E21\u0E1B\u0E35\u0E01\u0E32\u0E23\u0E28\u0E36\u0E01\u0E29\u0E32\u0E17\u0E35\u0E48\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27 (\u0E22\u0E01\u0E40\u0E27\u0E49\u0E19\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E27\u0E48\u0E32 \u201C\u0E1B\u0E35\u0E01\u0E32\u0E23\u0E28\u0E36\u0E01\u0E29\u0E32\u201D \u0E44\u0E27\u0E49\u0E0A\u0E31\u0E14\u0E40\u0E08\u0E19)");
+  const errK = Object.keys(LI.errors || {}).filter((k) => ({ incidents: 1, lostfound: 1, lostfoundYear: 1, gate: 1 })[k] && use.has(k === "lostfoundYear" ? "lostfound" : k));
+  if (errK.length) L.push("\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25: \u0E23\u0E2D\u0E1A\u0E19\u0E35\u0E49\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A " + errK.map((k) => ({ incidents: "\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C", lostfound: "Lost & Found \u0E23\u0E32\u0E22\u0E27\u0E31\u0E19", lostfoundYear: "Lost & Found \u0E23\u0E32\u0E22\u0E1B\u0E35", gate: "\u0E23\u0E16\u0E40\u0E02\u0E49\u0E32/\u0E2B\u0E21\u0E27\u0E01\u0E19\u0E34\u0E23\u0E20\u0E31\u0E22" })[k] + " (" + why(LI.errors[k]) + ")").join(", ") + " \u2014 \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E19\u0E31\u0E49\u0E19\u0E21\u0E32\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B\u0E15\u0E32\u0E21\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E17\u0E35\u0E48\u0E23\u0E30\u0E1A\u0E38 \u0E2B\u0E49\u0E32\u0E21\u0E40\u0E23\u0E35\u0E22\u0E01\u0E27\u0E48\u0E32\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2A\u0E14\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49");
   const inc = M.incidents, incD = X.incidentsDaily;
   if (inc && inc.monthly && use.has("incidents")) {
     const asOf = dTh(incD && incD.complete === true ? incD.checkedAt : inc.updated);
@@ -165,7 +219,15 @@ function buildFacts(stats, extra, ctx, nowMs, question) {
   const vr = M.vehicleRegistration;
   if (vr && vr.rows && use.has("vehicle")) {
     src.vehicle = "\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30";
-    add("\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30", "\u0E22\u0E2D\u0E14\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14", Object.keys(vr.rows).map((k) => k + " " + (vr.rows[k] == null ? "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19" : n(vr.rows[k]) + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23")).join(", "), dTh(vr.updated));
+    const SM = "\u0E19\u0E31\u0E01\u0E28\u0E36\u0E01\u0E29\u0E32 \u2013 \u0E23\u0E16\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19\u0E22\u0E19\u0E15\u0E4C", sm = vr.studentMoto, ks = Object.keys(vr.rows), have = ks.filter((k) => vr.rows[k] != null);
+    const snapKs = ks.filter((k) => k !== SM || !sm);
+    add("\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30 (\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2A\u0E14)", "\u0E22\u0E2D\u0E14\u0E08\u0E32\u0E01\u0E41\u0E16\u0E27\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22\u0E02\u0E2D\u0E07 Sheet (1 \u0E41\u0E16\u0E27 = 1 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E15\u0E31\u0E14\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E0B\u0E49\u0E33/\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01)", snapKs.map((k) => k + " " + (vr.rows[k] == null ? "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19" + (k === SM && vr.studentMotoErr ? " \u2014 \u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + why(vr.studentMotoErr) : "") : n(vr.rows[k]) + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23")).join(", "), dTh(vr.updated));
+    if (sm) {
+      add("\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30 " + SM + " (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14)", dTh(sm.range.from) + " \u2013 " + dTh(sm.range.to), "\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 " + n(sm.registrations) + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 (1 RefCode = 1 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \xB7 RefCode \u0E0B\u0E49\u0E33 " + n(sm.duplicateRefs) + " \u0E41\u0E16\u0E27\u0E19\u0E31\u0E1A\u0E04\u0E23\u0E31\u0E49\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 \xB7 \u0E41\u0E16\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35 RefCode " + n(sm.rowsWithoutRef) + " \u0E41\u0E16\u0E27\u0E44\u0E21\u0E48\u0E19\u0E31\u0E1A) \xB7 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E23\u0E16\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01 " + n(sm.vehiclesDeclared) + " \u0E04\u0E31\u0E19 (\u0E44\u0E21\u0E48\u0E01\u0E23\u0E2D\u0E01 " + n(sm.rowsNoCount) + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23) \xB7 \u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E23\u0E16\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01 " + n(sm.platesFilled) + " \u0E0A\u0E48\u0E2D\u0E07 (\u0E08\u0E33\u0E19\u0E27\u0E19\u0E23\u0E16\u0E44\u0E21\u0E48\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 " + n(sm.rowsCountMismatch) + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23)", dTh(sm.checkedAt));
+      add("\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30 " + SM + " (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14)", "\u0E41\u0E22\u0E01\u0E15\u0E32\u0E21\u0E2B\u0E21\u0E27\u0E14 (\u0E2B\u0E19\u0E48\u0E27\u0E22: \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19)", "\u0E27\u0E34\u0E17\u0E22\u0E32\u0E40\u0E02\u0E15: " + topObj(sm.byCampus) + " \xB7 \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E19\u0E15\u0E4C: " + topObj(sm.byEngine) + " \xB7 \u0E04\u0E13\u0E30/\u0E2A\u0E48\u0E27\u0E19\u0E07\u0E32\u0E19 (\u0E2D\u0E31\u0E19\u0E14\u0E31\u0E1A\u0E41\u0E23\u0E01): " + topObj(sm.byFaculty, 6), dTh(sm.checkedAt));
+    }
+    const tot = have.reduce((a, k) => a + vr.rows[k], 0);
+    add("\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30", "\u0E22\u0E2D\u0E14\u0E23\u0E27\u0E21 (\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A)", "\u0E23\u0E27\u0E21 " + n(tot) + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u0E08\u0E32\u0E01 " + have.length + " \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E17\u0E35\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 (" + have.join(", ") + ")" + (have.length < ks.length ? " \u2014 \u0E44\u0E21\u0E48\u0E23\u0E27\u0E21 " + ks.filter((k) => vr.rows[k] == null).join(", ") + " \u0E40\u0E1E\u0E23\u0E32\u0E30\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19" : "") + (sm ? " \xB7 \u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38: " + SM + " \u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E41\u0E25\u0E30\u0E19\u0E31\u0E1A\u0E15\u0E32\u0E21 RefCode \u0E2A\u0E48\u0E27\u0E19\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E2D\u0E37\u0E48\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E22\u0E2D\u0E14\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B \u0E13 " + dTh(vr.updated) + " \u0E19\u0E31\u0E1A\u0E15\u0E32\u0E21\u0E41\u0E16\u0E27 \u0E08\u0E36\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E32\u0E23\u0E23\u0E27\u0E21\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E15\u0E48\u0E32\u0E07\u0E40\u0E27\u0E25\u0E32/\u0E15\u0E48\u0E32\u0E07\u0E19\u0E34\u0E22\u0E32\u0E21" : ""), sm ? dTh(sm.checkedAt) + " (\u0E2A\u0E14) / " + dTh(vr.updated) + " (\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B)" : dTh(vr.updated));
   }
   const oc = X.opsCheck;
   if (oc && use.has("ops")) {
@@ -175,12 +237,16 @@ function buildFacts(stats, extra, ctx, nowMs, question) {
   const rt = X.ruenthaiSurvey;
   if (rt && rt.total != null && use.has("ruenthai")) {
     src.ruenthai = "\u0E41\u0E1A\u0E1A\u0E2A\u0E33\u0E23\u0E27\u0E08\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14\u0E23\u0E16\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E44\u0E17\u0E22";
-    add("\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14\u0E23\u0E16\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E44\u0E17\u0E22", dTh(rt.from) + " \u2013 " + dTh(rt.to), "\u0E41\u0E1A\u0E1A\u0E2A\u0E33\u0E23\u0E27\u0E08\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32 " + n(rt.total) + " \u0E09\u0E1A\u0E31\u0E1A \u2014 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E08\u0E33\u0E19\u0E27\u0E19\u0E23\u0E16\u0E44\u0E21\u0E48\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E2D\u0E14\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34", dTh(rt.checkedAt));
+    const R = rt.live;
+    if (R) {
+      add("\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14\u0E23\u0E16\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E44\u0E17\u0E22 (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14)", dTh(R.range.from) + " \u2013 " + dTh(R.range.to), "\u0E41\u0E1A\u0E1A\u0E2A\u0E33\u0E23\u0E27\u0E08\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07 " + n(R.surveys) + " \u0E09\u0E1A\u0E31\u0E1A (1 Ref_Code = 1 \u0E09\u0E1A\u0E31\u0E1A \xB7 Ref_Code \u0E0B\u0E49\u0E33 " + n(R.duplicateRefs) + " \u0E41\u0E16\u0E27\u0E19\u0E31\u0E1A\u0E04\u0E23\u0E31\u0E49\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27) \xB7 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E23\u0E16\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01 (Car_Count) \u0E23\u0E27\u0E21 " + n(R.carsDeclared) + " \u0E04\u0E31\u0E19 \u2014 \u0E40\u0E1B\u0E47\u0E19\u0E04\u0E19\u0E25\u0E30\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E01\u0E31\u0E1A\u0E08\u0E33\u0E19\u0E27\u0E19\u0E41\u0E1A\u0E1A\u0E2A\u0E33\u0E23\u0E27\u0E08 \xB7 \u0E0A\u0E48\u0E2D\u0E07\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E23\u0E16\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01 " + n(R.carTypesFilled) + " \u0E0A\u0E48\u0E2D\u0E07, \u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01 " + n(R.platesFilled) + " \u0E0A\u0E48\u0E2D\u0E07 (Car_Count \u0E44\u0E21\u0E48\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01 " + n(R.rowsCarMismatch) + " \u0E09\u0E1A\u0E31\u0E1A) \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E33\u0E19\u0E27\u0E19\u0E1C\u0E39\u0E49\u0E21\u0E35\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C\u0E15\u0E2D\u0E1A \u0E08\u0E36\u0E07\u0E04\u0E34\u0E14\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E2D\u0E14\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34", dTh(R.checkedAt));
+      add("\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14\u0E23\u0E16\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E44\u0E17\u0E22 (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14)", "\u0E41\u0E22\u0E01\u0E15\u0E32\u0E21\u0E2B\u0E21\u0E27\u0E14 (\u0E2B\u0E19\u0E48\u0E27\u0E22: \u0E41\u0E1A\u0E1A\u0E2A\u0E33\u0E23\u0E27\u0E08 \u0E22\u0E01\u0E40\u0E27\u0E49\u0E19\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E23\u0E16\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01)", "\u0E01\u0E25\u0E38\u0E48\u0E21: " + topObj(R.byGroup) + " \xB7 \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49: " + topObj(R.bySubType) + " \xB7 \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E23\u0E16: " + topObj(R.byCarType) + " \xB7 \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E01\u0E25\u0E49\u0E2D\u0E07 LPR: " + topObj(R.byLpr) + " \xB7 \u0E04\u0E13\u0E30/\u0E2A\u0E48\u0E27\u0E19\u0E07\u0E32\u0E19 (\u0E2D\u0E31\u0E19\u0E14\u0E31\u0E1A\u0E41\u0E23\u0E01): " + topObj(R.byFaculty, 6), dTh(R.checkedAt));
+    } else add("\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14\u0E23\u0E16\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E44\u0E17\u0E22 (\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2A\u0E14" + (rt.liveErr ? " \u2014 \u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + why(rt.liveErr) : "") + ")", dTh(rt.from) + " \u2013 " + dTh(rt.to), "\u0E41\u0E1A\u0E1A\u0E2A\u0E33\u0E23\u0E27\u0E08\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32 " + n(rt.total) + " \u0E09\u0E1A\u0E31\u0E1A \u2014 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E08\u0E33\u0E19\u0E27\u0E19\u0E23\u0E16\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E2D\u0E14\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34 \xB7 \u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B\u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E33\u0E19\u0E27\u0E19\u0E23\u0E16\u0E2B\u0E23\u0E37\u0E2D\u0E01\u0E32\u0E23\u0E41\u0E22\u0E01\u0E01\u0E25\u0E38\u0E48\u0E21", dTh(rt.checkedAt));
   }
   const others = Object.keys(TOPICS).filter((k) => !use.has(k));
   if (others.length) L.push("\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E2D\u0E37\u0E48\u0E19\u0E17\u0E35\u0E48\u0E23\u0E30\u0E1A\u0E1A\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 (\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E41\u0E19\u0E1A\u0E21\u0E32\u0E43\u0E19\u0E23\u0E2D\u0E1A\u0E19\u0E35\u0E49 \u2014 \u0E16\u0E49\u0E32\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E16\u0E32\u0E21\u0E16\u0E36\u0E07 \u0E43\u0E2B\u0E49\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E16\u0E32\u0E21\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E31\u0E49\u0E19\u0E42\u0E14\u0E22\u0E15\u0E23\u0E07\u0E44\u0E14\u0E49): " + others.map((k) => ({ incidents: "\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C/\u0E2D\u0E38\u0E1A\u0E31\u0E15\u0E34\u0E40\u0E2B\u0E15\u0E38", lostfound: "Lost & Found", gate: "\u0E23\u0E16\u0E40\u0E02\u0E49\u0E32\u0E41\u0E25\u0E30\u0E2B\u0E21\u0E27\u0E01\u0E19\u0E34\u0E23\u0E20\u0E31\u0E22", cctv: "\u0E04\u0E33\u0E02\u0E2D\u0E14\u0E39\u0E01\u0E25\u0E49\u0E2D\u0E07 CCTV", anywheel: "\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19 Anywheel", tram: "\u0E23\u0E16\u0E23\u0E32\u0E07", guard: "\u0E04\u0E27\u0E32\u0E21\u0E1E\u0E36\u0E07\u0E1E\u0E2D\u0E43\u0E08 \u0E23\u0E1B\u0E20.", vehicle: "\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30", ops: "\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14/\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30\u0E02\u0E2D\u0E07\u0E07\u0E32\u0E19/\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E14\u0E31\u0E1A\u0E40\u0E1E\u0E25\u0E34\u0E07", ruenthai: "\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E44\u0E17\u0E22" })[k]).join(", "));
   L.push("\u0E40\u0E21\u0E19\u0E39\u0E43\u0E19\u0E40\u0E27\u0E47\u0E1A\u0E19\u0E35\u0E49\u0E17\u0E35\u0E48\u0E41\u0E19\u0E30\u0E19\u0E33\u0E44\u0E14\u0E49 (\u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E1B\u0E47\u0E19 #\u0E23\u0E2B\u0E31\u0E2A \u0E40\u0E0A\u0E48\u0E19 #traffic \u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A\u0E08\u0E30\u0E17\u0E33\u0E40\u0E1B\u0E47\u0E19\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E43\u0E2B\u0E49): " + NAV_HINTS.map((h) => h[0] + " #" + h[1]).join(" \xB7 "));
-  return { text: L.join("\n"), sources: Object.keys(src).map((k) => src[k]), topics: Object.keys(src), asOf: dTh(String(X.generatedAt || stats && stats.generatedAt || "").slice(0, 16).replace("T", " ")) };
+  return { text: L.join("\n"), sources: Object.keys(src).map((k) => src[k]), topics: Object.keys(src), live: Object.keys(src).filter((k) => LI.topics && LI.topics[k]), asOf: asOfSeen.length ? asOfSeen.slice(0, 4).join(" \xB7 ") : dTh(String(X.generatedAt || stats && stats.generatedAt || "").slice(0, 16).replace("T", " ")) };
 }
 var MONTH_RX = "(?:" + TH.map((m) => m.replace(/\./g, "\\.")).join("|") + "|" + THF.join("|") + ")";
 function numbersOk(reply, factsText, question) {
@@ -272,45 +338,63 @@ var SOURCES = (env) => ({
   // ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย → RuenThai_Survey (ไม่อ่านแท็บ Tokens)
 });
 var PRIVATE_SRC = /* @__PURE__ */ new Set(["studentMoto", "ruenthai"]);
+var RELAY_VERSION = "r11";
 var RELAY_COLS = {
   studentMoto: { cols: ["Timestamp", "RefCode", "\u0E27\u0E34\u0E17\u0E22\u0E32\u0E40\u0E02\u0E15", "\u0E04\u0E13\u0E30/\u0E2A\u0E16\u0E32\u0E1A\u0E31\u0E19/\u0E2A\u0E48\u0E27\u0E19\u0E07\u0E32\u0E19", "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E19\u0E31\u0E01\u0E28\u0E36\u0E01\u0E29\u0E32", "\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E28\u0E36\u0E01\u0E29\u0E32", "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E19\u0E15\u0E4C", "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E23\u0E16"], present: ["\u0E23\u0E161_\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19", "\u0E23\u0E162_\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19", "\u0E23\u0E163_\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19"] },
   ruenthai: { cols: ["Timestamp", "Ref_Code", "Group_Type", "Group_Label", "User_SubType", "Faculty_Dept", "Sub_Unit_Project", "Car_Count", "Car1_Type", "Car2_Type", "LPR_Status"], present: ["Car1_Plate", "Car2_Plate"] }
 };
 var relayMemo = null;
-async function relayCfg(env) {
-  if (env.HUB_GS_URL && env.HUB_SHARED_SECRET) return { url: env.HUB_GS_URL, secret: env.HUB_SHARED_SECRET, via: "env" };
-  if (relayMemo && Date.now() - relayMemo.at < 6e4) return relayMemo.v;
-  let v = null;
+async function metaGet(env, keys) {
+  const o = {};
   try {
-    const o = {};
-    ((await env.DB.prepare("SELECT k, v FROM meta WHERE k IN ('relay_url', 'relay_secret')").all()).results || []).forEach((x) => {
+    ((await env.DB.prepare("SELECT k, v FROM meta WHERE k IN (" + keys.map(() => "?").join(",") + ")").bind(...keys).all()).results || []).forEach((x) => {
       o[x.k] = x.v;
     });
-    if (o.relay_url && o.relay_secret) v = { url: o.relay_url, secret: o.relay_secret, via: "enrolled" };
   } catch (e) {
   }
+  return o;
+}
+async function relayCfg(env) {
+  if (env.HUB_RELAY_URL && env.HUB_RELAY_SECRET) return { url: env.HUB_RELAY_URL, secret: env.HUB_RELAY_SECRET, via: "env", imgVer: "1" };
+  if (relayMemo && Date.now() - relayMemo.at < 6e4) return relayMemo.v;
+  const o = await metaGet(env, ["relay_url", "relay_secret", "img_cache_ver"]);
+  const v = o.relay_url && o.relay_secret ? { url: o.relay_url, secret: o.relay_secret, via: "enrolled", imgVer: o.img_cache_ver || "1" } : null;
   relayMemo = { at: Date.now(), v };
   return v;
 }
-async function relayCall(env, deps, body) {
-  const c = await relayCfg(env);
-  if (!c) throw new Err(503, "relay-not-configured");
+async function postJson(deps, url, body, ms) {
   let r, tm;
   const timeout = new Promise((_, rej) => {
-    tm = setTimeout(() => rej(new Error("timeout")), 25e3);
+    tm = setTimeout(() => rej(new Error("timeout")), ms || 25e3);
   });
   try {
-    r = await Promise.race([deps.fetch(c.url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...body, secret: c.secret }), redirect: "follow" }), timeout]);
+    r = await Promise.race([deps.fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), redirect: "follow" }), timeout]);
   } catch (e) {
     throw new Err(504, String(e && e.message) === "timeout" ? "relay-timeout" : "relay-unreachable");
   } finally {
     clearTimeout(tm);
   }
   const ct = r.headers.get("content-type") || "";
-  if (!/json/.test(ct)) throw new Err(502, /html/.test(ct) ? "relay-login-required" : "relay-error");
+  if (!/json/.test(ct)) throw new Err(502, /html/.test(ct) ? "relay-login-required" : r.status === 404 ? "relay-not-deployed" : "relay-error");
   const j = await r.json().catch(() => null);
   if (!j) throw new Err(502, "relay-error");
   if (j.ok !== true) throw new Err(502, "relay-" + str(j.code || "error").replace(/[^a-z-]/g, "").slice(0, 30));
+  return j;
+}
+async function relayCall(env, deps, body, cfg) {
+  const c = cfg || await relayCfg(env);
+  if (!c) throw new Err(503, "relay-not-configured");
+  return postJson(deps, c.url, { ...body, secret: c.secret });
+}
+async function hubDataCall(env, deps, key) {
+  let r;
+  try {
+    r = await deps.fetch(env.HUB_GS_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ secret: env.HUB_SHARED_SECRET, action: "table", source: key }) });
+  } catch (e) {
+    throw new Err(502, "source-unreachable");
+  }
+  const j = r.ok ? await r.json().catch(() => null) : null;
+  if (!j || j.ok !== true || !Array.isArray(j.rows)) throw new Err(502, "source-error");
   return j;
 }
 function parseCsv(text) {
@@ -349,10 +433,12 @@ async function table(env, key, deps, maxAge = 12e4) {
   const src = SOURCES(env)[key];
   if (!src || !src[0]) throw new Err(503, "source-not-configured");
   let rows;
-  if (PRIVATE_SRC.has(key) || env.HUB_GS_URL && env.HUB_SHARED_SECRET) {
-    const j = await relayCall(env, deps, { action: "table", source: key, ...RELAY_COLS[key] || {} });
+  if (PRIVATE_SRC.has(key)) {
+    const j = await relayCall(env, deps, { action: "table", source: key, ...RELAY_COLS[key] });
     if (!Array.isArray(j.rows)) throw new Err(502, "source-error");
     rows = j.rows.map((x) => x.map(str));
+  } else if (env.HUB_GS_URL && env.HUB_SHARED_SECRET) {
+    rows = (await hubDataCall(env, deps, key)).rows.map((x) => x.map(str));
   } else {
     let r;
     try {
@@ -910,21 +996,12 @@ async function chat(request, env, deps, s) {
   } catch (e) {
     live = null;
   }
-  if (live) {
-    ["incidents", "lostfound", "gate"].forEach((k) => {
-      if (live[k]) Object.assign(stats.modules[k], live[k]);
-    });
-    ["incidentsDaily", "lostfoundDaily"].forEach((k) => {
-      if (live[k]) extra[k] = Object.assign(extra[k] || {}, live[k]);
-    });
-    if (live.lostfoundStatus && extra.lostfoundStatus) Object.assign(extra.lostfoundStatus, live.lostfoundStatus);
-    extra.generatedAt = new Date(now + BKK).toISOString().slice(0, 16);
-  }
+  const liveInfo = applyLive(stats, extra, live);
   let hist = (Array.isArray(b.chatHistory) ? b.chatHistory : []).slice(-6).map((m) => ({ role: m && m.role === "AI" ? "assistant" : "user", content: str(m && m.text).slice(0, 600) })).filter((m) => m.content);
   while (hist.reduce((a, m) => a + m.content.length, 0) > 2400) hist.shift();
   while (hist.length && hist[0].role !== "user") hist.shift();
   const recentUser = hist.filter((m) => m.role === "user").slice(-2).map((m) => m.content).join(" ");
-  const facts = buildFacts(stats, extra, b.context || {}, now, q + " " + recentUser);
+  const facts = buildFacts(stats, extra, b.context || {}, now, q + " " + recentUser, liveInfo);
   const messages = hist.concat([{ role: "user", content: q }]).reduce((a, m) => {
     if (a.length && a[a.length - 1].role === m.role) a[a.length - 1].content += "\n" + m.content;
     else a.push({ ...m });
@@ -960,17 +1037,20 @@ async function chat(request, env, deps, s) {
   reply = reply.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
   const ok = numbersOk(reply, facts.text, q + " " + hist.map((m) => m.content).join(" "));
   const hasNum = /\d/.test(reply.replace(/#[a-z0-9-]+/g, ""));
-  return json({ status: "success", reply: ok ? reply.slice(0, 3e3) : UNVERIFIED, verified: ok, sources: ok && hasNum ? facts.sources : [], asOf: ok && hasNum ? facts.asOf : "", live: !!live });
+  return json({ status: "success", reply: ok ? reply.slice(0, 3e3) : UNVERIFIED, verified: ok, sources: ok && hasNum ? facts.sources : [], asOf: ok && hasNum ? facts.asOf : "", live: facts.live.length > 0, liveTopics: facts.live });
 }
 var IMG_W = [400, 800, 1600];
 async function img(request, env, deps) {
   const u = new URL(request.url), id = u.searchParams.get("id") || "", w = IMG_W.includes(+u.searchParams.get("w")) ? +u.searchParams.get("w") : 400;
   if (!/^[-\w]{20,60}$/.test(id)) throw new Err(400, "bad-id");
   if (!knownImg.has(id) && !await env.DB.prepare("SELECT 1 AS x FROM imgids WHERE id = ?").bind(id).first()) throw new Err(404, "unknown-image");
-  const ck = new Request("https://img-cache.mu-traffic-hub.internal/" + id + "/" + w), cache = deps.cache;
+  const rc = await relayCfg(env), ver = rc && rc.imgVer || (await metaGet(env, ["img_cache_ver"])).img_cache_ver || "1", etag = '"' + id + "-" + w + "-v" + ver + '"';
+  const H = (ct2, via2) => ({ "content-type": ct2, "cache-control": "private, no-cache", etag, "x-img-via": via2, ...SEC });
+  if (request.headers.get("If-None-Match") === etag) return new Response(null, { status: 304, headers: { "cache-control": "private, no-cache", etag, ...SEC } });
+  const ck = new Request("https://img-cache.mu-traffic-hub.internal/v" + ver + "/" + id + "/" + w), cache = deps.cache;
   if (cache) {
     const hitC = await cache.match(ck);
-    if (hitC) return new Response(hitC.body, { status: 200, headers: { "content-type": hitC.headers.get("content-type") || "image/jpeg", "cache-control": "private, max-age=86400", "x-img-via": "cache", ...SEC } });
+    if (hitC) return new Response(hitC.body, { status: 200, headers: H(hitC.headers.get("content-type") || "image/jpeg", "cache") });
   }
   let body = null, ct = "", via = "public", status = 0;
   try {
@@ -982,16 +1062,22 @@ async function img(request, env, deps) {
     status = -1;
   }
   if (!body) {
-    if (!await relayCfg(env)) throw new Err(status === 404 ? 404 : 502, status === 404 ? "image-not-found" : status === -1 ? "image-unreachable" : "image-private");
+    if (!rc) throw new Err(status === 404 ? 404 : 502, status === 404 ? "image-not-found" : status === -1 ? "image-unreachable" : "image-private");
     let j;
     try {
-      j = await relayCall(env, deps, { action: "img", id, w });
+      j = await relayCall(env, deps, { action: "img", id, w }, rc);
     } catch (e) {
       const c = e instanceof Err ? e.code : "relay-error";
       throw new Err(c === "relay-not-found" ? 404 : 502, c === "relay-not-found" ? "image-not-found" : c === "relay-not-allowed" ? "image-not-allowed" : c);
     }
-    if (!/^image\/(jpeg|png|webp|gif)$/.test(str(j.mime)) || !j.b64) throw new Err(502, "image-unavailable");
-    const bin = atob(j.b64), arr = new Uint8Array(bin.length);
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(str(j.mime)) || !j.b64 || j.b64.length > 6e6) throw new Err(502, "image-unavailable");
+    let bin;
+    try {
+      bin = atob(j.b64);
+    } catch (e) {
+      throw new Err(502, "image-unavailable");
+    }
+    const arr = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     body = arr.buffer;
     ct = j.mime;
@@ -1003,10 +1089,12 @@ async function img(request, env, deps) {
     } catch (e) {
     }
   }
-  return new Response(body, { status: 200, headers: { "content-type": ct, "cache-control": "private, max-age=86400", "x-img-via": via, ...SEC } });
+  return new Response(body, { status: 200, headers: H(ct, via) });
 }
+var RELAY_URL_RX = /^https:\/\/script\.google\.com\/(a\/macros\/[\w.-]+\/|macros\/)s\/[-\w]{20,120}\/exec$/;
 async function relayEnroll(request, env, deps) {
   const b = await request.json().catch(() => null), tok = str(b && b.token), url = str(b && b.url);
+  if (!RELAY_URL_RX.test(url)) throw new Err(400, "enroll-bad-url");
   const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'relay_enroll'").first();
   if (!row) throw new Err(403, "enroll-closed");
   let e;
@@ -1015,31 +1103,95 @@ async function relayEnroll(request, env, deps) {
   } catch (x) {
     throw new Err(403, "enroll-closed");
   }
-  if (!(e.exp > deps.now())) throw new Err(403, "enroll-expired");
   if (!/^[0-9a-f]{32,128}$/.test(tok) || await sha(tok) !== e.h) throw new Err(403, "enroll-bad-token");
-  if (!/^https:\/\/script\.google\.com\/(a\/macros\/[\w.-]+\/|macros\/)s\/[-\w]{20,120}\/exec$/.test(url)) throw new Err(400, "enroll-bad-url");
+  if (!(e.exp > deps.now())) throw new Err(403, "enroll-expired");
+  const claim = await env.DB.prepare("DELETE FROM meta WHERE k = 'relay_enroll' AND v = ? RETURNING k").bind(row.v).all();
+  if (!claim.results || claim.results.length !== 1) throw new Err(409, "enroll-used");
   const secret = hex(crypto.getRandomValues(new Uint8Array(32)));
   await env.DB.batch([
-    env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_url', ?)").bind(url),
-    env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_secret', ?)").bind(secret),
-    env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_enrolled_at', ?)").bind(bkk(deps.now())),
-    env.DB.prepare("DELETE FROM meta WHERE k = 'relay_enroll'")
+    env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_pending_url', ?)").bind(url),
+    env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_pending_secret', ?)").bind(secret),
+    env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_pending_at', ?)").bind(bkk(deps.now()))
   ]);
-  relayMemo = null;
-  return json({ ok: true, secret });
+  return json({ ok: true, secret, next: "confirm" });
+}
+async function relayCheck(env, deps, cfg) {
+  const out = { ping: "fail", version: "", tables: {}, image: "skipped" };
+  try {
+    const j = await relayCall(env, deps, { action: "ping" }, cfg);
+    out.version = str(j.v);
+    out.ping = out.version === RELAY_VERSION ? "ok" : "outdated";
+  } catch (e) {
+    out.ping = e instanceof Err ? e.code : "relay-error";
+    return out;
+  }
+  for (const k of PRIVATE_SRC) {
+    try {
+      const j = await relayCall(env, deps, { action: "table", source: k, ...RELAY_COLS[k] }, cfg);
+      out.tables[k] = Array.isArray(j.rows) ? "ok:" + Math.max(0, j.rows.length - 1) : "relay-error";
+    } catch (e) {
+      out.tables[k] = e instanceof Err ? e.code : "relay-error";
+    }
+  }
+  try {
+    const g = await table(env, "gps", deps), i = g.head.indexOf("Photo_File_ID"), id = i < 0 ? "" : g.rows.map((r) => driveId(r[i])).filter(Boolean)[0] || "";
+    if (id) {
+      const j = await relayCall(env, deps, { action: "img", id, w: 400 }, cfg);
+      out.image = /^image\//.test(str(j.mime)) && j.b64 ? "ok" : "relay-error";
+    }
+  } catch (e) {
+    out.image = e instanceof Err ? e.code : "relay-error";
+  }
+  out.ok = out.ping === "ok" && Object.values(out.tables).every((x) => /^ok:/.test(x)) && (out.image === "ok" || out.image === "skipped");
+  return out;
+}
+async function relayConfirm(request, env, deps) {
+  const b = await request.json().catch(() => null), url = str(b && b.url);
+  if (!RELAY_URL_RX.test(url)) throw new Err(400, "enroll-bad-url");
+  const ipKey = "relayconfirm:" + (await sha(clientIp(request))).slice(0, 24);
+  if (await count(env, ipKey, deps) >= 20) throw new Err(429, "rate-limited");
+  await hit(env, ipKey, 3600, deps);
+  const o = await metaGet(env, ["relay_url", "relay_secret", "relay_pending_url", "relay_pending_secret", "img_cache_ver"]);
+  if (o.relay_pending_url === url && o.relay_pending_secret) {
+    const chk = await relayCheck(env, deps, { url, secret: o.relay_pending_secret });
+    if (!chk.ok) return json({ ok: false, code: "check-failed", state: "pending", check: chk });
+    const ver = String((+o.img_cache_ver || 1) + (o.relay_url && o.relay_url !== url ? 1 : 0));
+    await env.DB.batch([
+      env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_url', ?)").bind(url),
+      env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_secret', ?)").bind(o.relay_pending_secret),
+      env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_enrolled_at', ?)").bind(bkk(deps.now())),
+      env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('img_cache_ver', ?)").bind(ver),
+      env.DB.prepare("DELETE FROM meta WHERE k IN ('relay_pending_url', 'relay_pending_secret', 'relay_pending_at')")
+    ]);
+    relayMemo = null;
+    return json({ ok: true, state: "active", promoted: true, check: chk });
+  }
+  if (o.relay_url === url && o.relay_secret) {
+    const chk = await relayCheck(env, deps, { url, secret: o.relay_secret });
+    return json({ ok: chk.ok, code: chk.ok ? void 0 : "check-failed", state: "active", check: chk });
+  }
+  throw new Err(404, "relay-unknown-url");
 }
 async function sourcesStatus(env, deps) {
-  const out = {}, rc = await relayCfg(env);
+  const out = {}, rc = await relayCfg(env), pend = await metaGet(env, ["relay_pending_url", "relay_enroll"]);
   for (const k of Object.keys(SOURCES(env))) {
     if (k === "staff") continue;
     try {
       const t = await table(env, k, deps);
-      out[k] = { state: t.rows.length ? "ok" : "empty", rows: t.rows.length, readAt: bkk(t.at), via: PRIVATE_SRC.has(k) || env.HUB_GS_URL && env.HUB_SHARED_SECRET ? "relay" : "csv" };
+      out[k] = { state: t.rows.length ? "ok" : "empty", rows: t.rows.length, readAt: bkk(t.at), via: PRIVATE_SRC.has(k) ? "relay" : env.HUB_GS_URL && env.HUB_SHARED_SECRET ? "hubdata" : "csv" };
     } catch (e) {
       out[k] = { state: "error", code: e instanceof Err ? e.code : "internal", via: PRIVATE_SRC.has(k) ? "relay" : "csv" };
     }
   }
-  return { ok: true, checkedAt: bkk(deps.now()), relay: rc ? { configured: true, via: rc.via } : { configured: false }, sources: out };
+  let check = null;
+  if (rc) {
+    try {
+      check = await relayCheck(env, deps, rc);
+    } catch (e) {
+      check = { ok: false };
+    }
+  }
+  return { ok: true, checkedAt: bkk(deps.now()), relay: rc ? { configured: true, via: rc.via, check } : { configured: false, pending: !!pend.relay_pending_url, enrollOpen: !!pend.relay_enroll }, sources: out };
 }
 var TYPES = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json; charset=utf-8", svg: "image/svg+xml", png: "image/png", jpg: "image/jpeg", webp: "image/webp", ico: "image/x-icon", woff2: "font/woff2" };
 async function asset(env, path, deps, origin) {
@@ -1097,6 +1249,7 @@ async function handle(request, env, deps) {
       return json(out);
     }
     if (path === "/api/relay/enroll" && request.method === "POST") return await relayEnroll(request, env, deps);
+    if (path === "/api/relay/confirm" && request.method === "POST") return await relayConfirm(request, env, deps);
     if (path === "/api/me") {
       const s = await session(request, env, deps);
       if (s) s.role = await roleOf(env, s.staff);
@@ -1155,16 +1308,18 @@ var SCHEMA = [
   "CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS imgids(id TEXT PRIMARY KEY, at INTEGER NOT NULL)"
 ];
-var index_default = { fetch: (request, env) => handle(request, env, { fetch: (u, o) => fetch(u, o), now: () => Date.now(), cache: caches.default }) };
+var src_default = { fetch: (request, env) => handle(request, env, { fetch: (u, o) => fetch(u, o), now: () => Date.now(), cache: caches.default }) };
 export {
   Err,
   IMG_W,
   PRIVATE_SRC,
   RELAY_COLS,
+  RELAY_VERSION,
   SCHEMA,
+  SOURCES,
   _reset,
   clientIp,
-  index_default as default,
+  src_default as default,
   handle,
   ipNum,
   network,

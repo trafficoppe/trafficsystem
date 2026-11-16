@@ -49,6 +49,7 @@ const relayOn = (on) => { db.exec("DELETE FROM meta WHERE k IN ('relay_url', 're
 relayOn(true);
 const fetchMock = async (u, o) => { u = String(u); let m = /export\?format=csv&gid=(\d+)/.exec(u);
   if (u === REL) { const b = JSON.parse(o.body); if (b.secret !== RSEC) return Response.json({ ok: false, code: 'forbidden' });
+    if (b.action === 'ping') return Response.json({ ok: true, v: 'r11' });
     if (b.action === 'table') { const T = RT[b.source], want = b.cols.concat(b.present), ix = want.map((c) => T[0].indexOf(c)); return Response.json({ ok: true, rows: [want].concat(T.slice(1).map((r) => ix.map((i, k) => (k < b.cols.length ? r[i] : (r[i] ? '1' : ''))))) }); }
     if (b.action === 'img') return PRIVATE_IMG.has(b.id) ? Response.json({ ok: true, mime: 'image/png', b64: PNG.toString('base64') }) : Response.json({ ok: false, code: 'not-allowed' });
     return Response.json({ ok: false, code: 'unknown-action' }); }

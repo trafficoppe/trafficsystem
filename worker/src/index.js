@@ -1,7 +1,7 @@
 // worker/src/index.js — บริการกลางของ “ระบบฐานข้อมูล งานจราจรและความปลอดภัย” (Cloudflare Worker โครงการใหม่ แยกจากเว็บไซต์เดิม)
 // ทุกคำขอผ่านลำดับเดียวกัน: (1) ตรวจเครือข่ายที่อนุญาต → (2) ตรวจ session → (3) ตรวจสิทธิ์ผู้ดูแลสำหรับการแก้ไข
 // ไม่มีรหัสพนักงาน รายชื่อ หรือค่าลับในไฟล์นี้ — รหัสตรวจกับแท็บ “รายชื่อเจ้าหน้าที่” ฝั่งบริการทุกครั้ง
-import { buildFacts, numbersOk } from '../../server/lib/facts.js';
+import { buildFacts, numbersOk, applyLive } from '../../server/lib/facts.js';
 
 const REPO = 'https://raw.githubusercontent.com/trafficoppe/trafficsystem/';
 const COOKIE = '__Host-hub_s';
@@ -48,7 +48,7 @@ export function network(request, env) {
 }
 
 // ---------- 2) แหล่งข้อมูล (อ่านอย่างเดียว) ----------
-const SOURCES = (env) => ({
+export const SOURCES = (env) => ({
   staff: [env.SHEET_MAIN, '1850713009'], incidents: [env.SHEET_MAIN, '480256005'], gate: [env.SHEET_MAIN, '659712341'],
   lostfound: [env.SHEET_LF, '2074352966'], lfYear: [env.SHEET_LF, '1811117659'],
   areaPhotos: [env.SHEET_OPS, '1509680619'], radio: [env.SHEET_OPS, '1354124607'], events: [env.SHEET_EVENTS, '0'], gps: [env.SHEET_GPS, '1074767452'],
@@ -56,33 +56,41 @@ const SOURCES = (env) => ({
   studentMoto: [env.SHEET_VEH_STUDENT, '1304328494'],   // MU ฐานข้อมูลลงทะเบียนยานพาหนะ นักศึกษา → Registrations_Motorcycle (gid 1053059692 = Registrations ไม่ใช่รถจักรยานยนต์)
   ruenthai: [env.SHEET_RUENTHAI, '873571277']            // ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย → RuenThai_Survey (ไม่อ่านแท็บ Tokens)
 });
-// ---------- 2.1) ตัวกลางอ่าน Sheet/ภาพส่วนตัว: Apps Script ที่เจ้าของไฟล์ Deploy เอง (Execute as me) · Worker ส่งค่าลับร่วมใน body ทุกครั้ง ----------
-// ค่าลับไม่อยู่ใน Repository/หน้าเว็บ: มาจาก env (HUB_GS_URL + HUB_SHARED_SECRET) หรือจากการลงทะเบียนครั้งเดียวผ่าน /api/relay/enroll (เก็บใน D1 meta)
+// ---------- 2.1) ตัวกลางอ่าน Sheet/ภาพส่วนตัว (HubRelay): Apps Script ที่บัญชีผู้มีสิทธิ์ Deploy เอง (Execute as me) ----------
+// แยกจากบริการเดิม HubData (env HUB_GS_URL + HUB_SHARED_SECRET) อย่างเด็ดขาด:
+//   - HubRelay ใช้เฉพาะ Sheet ส่วนตัวใน PRIVATE_SRC และภาพส่วนตัว · ค่าตั้งมาจาก D1 (ลงทะเบียนครั้งเดียว) หรือ env HUB_RELAY_URL + HUB_RELAY_SECRET
+//   - HubData (ถ้าผู้ดูแลตั้ง) ใช้เฉพาะแหล่งเดิมที่ไม่ใช่ PRIVATE_SRC — ตั้งค่าหนึ่งไม่ทำให้อีกบริการหรือ Login เปลี่ยนเส้นทาง
+// ค่าลับไม่อยู่ใน Repository/หน้าเว็บ/log
 export const PRIVATE_SRC = new Set(['studentMoto', 'ruenthai']);
+export const RELAY_VERSION = 'r11';                    // ต้องตรงกับ RELAY_VERSION ใน apps-script/HubRelay.gs (ตรวจว่า Deploy เป็นโค้ดรุ่นล่าสุด)
 // ขอเฉพาะคอลัมน์ที่ใช้ (สคริปต์ตรวจรายการอนุญาตซ้ำอีกชั้น) · present = ส่งแค่ “มี/ไม่มีค่า” ไม่ส่งเนื้อข้อมูล (เช่น ทะเบียนรถ)
 export const RELAY_COLS = {
   studentMoto: { cols: ['Timestamp', 'RefCode', 'วิทยาเขต', 'คณะ/สถาบัน/ส่วนงาน', 'ประเภทนักศึกษา', 'ระดับการศึกษา', 'ประเภทเครื่องยนต์', 'จำนวนรถ'], present: ['รถ1_ทะเบียน', 'รถ2_ทะเบียน', 'รถ3_ทะเบียน'] },
   ruenthai: { cols: ['Timestamp', 'Ref_Code', 'Group_Type', 'Group_Label', 'User_SubType', 'Faculty_Dept', 'Sub_Unit_Project', 'Car_Count', 'Car1_Type', 'Car2_Type', 'LPR_Status'], present: ['Car1_Plate', 'Car2_Plate'] }
 };
 let relayMemo = null;
+async function metaGet(env, keys) { const o = {}; try { ((await env.DB.prepare('SELECT k, v FROM meta WHERE k IN (' + keys.map(() => '?').join(',') + ')').bind(...keys).all()).results || []).forEach((x) => { o[x.k] = x.v; }); } catch (e) { /* ยังไม่มีค่า */ } return o; }
 async function relayCfg(env) {
-  if (env.HUB_GS_URL && env.HUB_SHARED_SECRET) return { url: env.HUB_GS_URL, secret: env.HUB_SHARED_SECRET, via: 'env' };
+  if (env.HUB_RELAY_URL && env.HUB_RELAY_SECRET) return { url: env.HUB_RELAY_URL, secret: env.HUB_RELAY_SECRET, via: 'env', imgVer: '1' };
   if (relayMemo && Date.now() - relayMemo.at < 60e3) return relayMemo.v;
-  let v = null;
-  try { const o = {}; ((await env.DB.prepare("SELECT k, v FROM meta WHERE k IN ('relay_url', 'relay_secret')").all()).results || []).forEach((x) => { o[x.k] = x.v; });
-    if (o.relay_url && o.relay_secret) v = { url: o.relay_url, secret: o.relay_secret, via: 'enrolled' }; } catch (e) { /* ยังไม่มีตาราง/ค่า */ }
+  const o = await metaGet(env, ['relay_url', 'relay_secret', 'img_cache_ver']);
+  const v = o.relay_url && o.relay_secret ? { url: o.relay_url, secret: o.relay_secret, via: 'enrolled', imgVer: o.img_cache_ver || '1' } : null;
   relayMemo = { at: Date.now(), v }; return v;
 }
-async function relayCall(env, deps, body) {
-  const c = await relayCfg(env); if (!c) throw new Err(503, 'relay-not-configured');
-  let r, tm; const timeout = new Promise((_, rej) => { tm = setTimeout(() => rej(new Error('timeout')), 25000); });
-  try { r = await Promise.race([deps.fetch(c.url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...body, secret: c.secret }), redirect: 'follow' }), timeout]); }
+async function postJson(deps, url, body, ms) {          // POST ไปยัง Apps Script (/exec ตอบ 302 → googleusercontent) จำกัดเวลา ไม่ลองซ้ำ
+  let r, tm; const timeout = new Promise((_, rej) => { tm = setTimeout(() => rej(new Error('timeout')), ms || 25000); });
+  try { r = await Promise.race([deps.fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), redirect: 'follow' }), timeout]); }
   catch (e) { throw new Err(504, String(e && e.message) === 'timeout' ? 'relay-timeout' : 'relay-unreachable'); } finally { clearTimeout(tm); }
   const ct = r.headers.get('content-type') || '';
-  if (!/json/.test(ct)) throw new Err(502, /html/.test(ct) ? 'relay-login-required' : 'relay-error');   // หน้า Login ของ Google = Deploy ไม่ได้เปิด “Anyone”
+  if (!/json/.test(ct)) throw new Err(502, /html/.test(ct) ? 'relay-login-required' : r.status === 404 ? 'relay-not-deployed' : 'relay-error');   // หน้า Login ของ Google = Deploy ไม่ได้เปิด “Anyone”/โดเมนจำกัด
   const j = await r.json().catch(() => null); if (!j) throw new Err(502, 'relay-error');
   if (j.ok !== true) throw new Err(502, 'relay-' + str(j.code || 'error').replace(/[^a-z-]/g, '').slice(0, 30));
   return j;
+}
+async function relayCall(env, deps, body, cfg) { const c = cfg || await relayCfg(env); if (!c) throw new Err(503, 'relay-not-configured'); return postJson(deps, c.url, { ...body, secret: c.secret }); }
+async function hubDataCall(env, deps, key) {           // บริการเดิม HubData (apps-script/HubData.gs) — เฉพาะแหล่งที่ไม่ใช่ PRIVATE_SRC
+  let r; try { r = await deps.fetch(env.HUB_GS_URL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ secret: env.HUB_SHARED_SECRET, action: 'table', source: key }) }); } catch (e) { throw new Err(502, 'source-unreachable'); }
+  const j = r.ok ? await r.json().catch(() => null) : null; if (!j || j.ok !== true || !Array.isArray(j.rows)) throw new Err(502, 'source-error'); return j;
 }
 export function parseCsv(text) {
   const rows = []; let row = [], cur = '', q = false;
@@ -98,9 +106,11 @@ async function table(env, key, deps, maxAge = 120e3) {
   const now = deps.now(), hit = memo.get(key); if (hit && now - hit.at < maxAge) return hit;
   const src = SOURCES(env)[key]; if (!src || !src[0]) throw new Err(503, 'source-not-configured');
   let rows;
-  if (PRIVATE_SRC.has(key) || (env.HUB_GS_URL && env.HUB_SHARED_SECRET)) {   // Sheet ส่วนตัว (หรือผู้ดูแลตั้งให้ทุกแหล่งผ่านตัวกลาง)
-    const j = await relayCall(env, deps, { action: 'table', source: key, ...(RELAY_COLS[key] || {}) });
+  if (PRIVATE_SRC.has(key)) {                              // Sheet ส่วนตัว → HubRelay เท่านั้น
+    const j = await relayCall(env, deps, { action: 'table', source: key, ...RELAY_COLS[key] });
     if (!Array.isArray(j.rows)) throw new Err(502, 'source-error'); rows = j.rows.map((x) => x.map(str));
+  } else if (env.HUB_GS_URL && env.HUB_SHARED_SECRET) {     // บริการเดิม HubData (ถ้าผู้ดูแลตั้งไว้) สำหรับแหล่งเดิมเท่านั้น
+    rows = (await hubDataCall(env, deps, key)).rows.map((x) => x.map(str));
   } else {
     let r; try { r = await deps.fetch('https://docs.google.com/spreadsheets/d/' + src[0] + '/export?format=csv&gid=' + src[1], { redirect: 'follow' }); } catch (e) { throw new Err(502, 'source-unreachable'); }
     if (!r.ok || !/text\/csv/.test(r.headers.get('content-type') || '')) throw new Err(502, r.status === 401 || r.status === 403 || r.ok ? 'source-private' : 'source-error');
@@ -362,13 +372,13 @@ async function chat(request, env, deps, s) {
   await hit(env, kM, 60, deps); await hit(env, kD, 86400, deps);
   const [stats, extra] = await Promise.all(['data/stats.json', 'data/extra.json'].map(async (p) => { const r = await asset(env, p, deps, new URL(request.url).origin); if (!r.ok) throw new Err(503, 'stats-unavailable'); return r.json(); }));
   let live = null; try { live = await liveStats(env, deps); } catch (e) { live = null; }               // ใช้ตัวเลขสดเมื่ออ่านต้นทางได้ ไม่งั้นใช้ไฟล์ล่าสุด
-  if (live) { ['incidents', 'lostfound', 'gate'].forEach((k) => { if (live[k]) Object.assign(stats.modules[k], live[k]); }); ['incidentsDaily', 'lostfoundDaily'].forEach((k) => { if (live[k]) extra[k] = Object.assign(extra[k] || {}, live[k]); }); if (live.lostfoundStatus && extra.lostfoundStatus) Object.assign(extra.lostfoundStatus, live.lostfoundStatus); extra.generatedAt = new Date(now + BKK).toISOString().slice(0, 16); }
+  const liveInfo = applyLive(stats, extra, live);      // ชุดเดียวกับหน้าเว็บ (รวม นักศึกษา–จยย. และเรือนไทย) · ไม่ตั้งเวลาอ่านเป็น “ตอนนี้” — ใช้ checkedAt ของแต่ละหัวข้อ
   // บทสนทนาก่อนหน้า: 6 ข้อความล่าสุด ไม่เกิน 600 ตัวอักษรต่อข้อความ และรวมไม่เกิน 2,400 ตัวอักษร (คุมค่าใช้จ่ายและความยาว)
   let hist = (Array.isArray(b.chatHistory) ? b.chatHistory : []).slice(-6).map((m) => ({ role: m && m.role === 'AI' ? 'assistant' : 'user', content: str(m && m.text).slice(0, 600) })).filter((m) => m.content);
   while (hist.reduce((a, m) => a + m.content.length, 0) > 2400) hist.shift();
   while (hist.length && hist[0].role !== 'user') hist.shift();
   const recentUser = hist.filter((m) => m.role === 'user').slice(-2).map((m) => m.content).join(' ');
-  const facts = buildFacts(stats, extra, b.context || {}, now, q + ' ' + recentUser);   // เลือกเฉพาะหัวข้อที่เกี่ยวกับคำถาม (รวมคำถามก่อนหน้าเพื่อรองรับคำถามต่อเนื่อง)
+  const facts = buildFacts(stats, extra, b.context || {}, now, q + ' ' + recentUser, liveInfo);   // เลือกเฉพาะหัวข้อที่เกี่ยวกับคำถาม (รวมคำถามก่อนหน้าเพื่อรองรับคำถามต่อเนื่อง)
   const messages = hist.concat([{ role: 'user', content: q }]).reduce((a, m) => { if (a.length && a[a.length - 1].role === m.role) a[a.length - 1].content += '\n' + m.content; else a.push({ ...m }); return a; }, []);
   const system = SYSTEM + '\n\nข้อเท็จจริง:\n' + facts.text; let reply = '';
   if (env.LLM_API_URL && env.LLM_API_KEY && env.LLM_MODEL) {            // ผู้ให้บริการภายนอกรูปแบบ Messages API (ถ้าผู้ดูแลตั้งค่าไว้)
@@ -385,55 +395,96 @@ async function chat(request, env, deps, s) {
   reply = reply.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
   const ok = numbersOk(reply, facts.text, q + ' ' + hist.map((m) => m.content).join(' '));       // ตัวเลขจากบทสนทนาก่อนหน้า (ที่ผ่านการตรวจแล้ว) ใช้ซ้ำได้
   const hasNum = /\d/.test(reply.replace(/#[a-z0-9-]+/g, ''));
-  return json({ status: 'success', reply: ok ? reply.slice(0, 3000) : UNVERIFIED, verified: ok, sources: ok && hasNum ? facts.sources : [], asOf: ok && hasNum ? facts.asOf : '', live: !!live });
+  return json({ status: 'success', reply: ok ? reply.slice(0, 3000) : UNVERIFIED, verified: ok, sources: ok && hasNum ? facts.sources : [], asOf: ok && hasNum ? facts.asOf : '', live: facts.live.length > 0, liveTopics: facts.live });
 }
 
 // ---------- 7) ภาพภายใน: รับเฉพาะรหัสไฟล์ที่ปรากฏในชุดข้อมูล ไม่รับ URL อิสระ ----------
 // ภาพ: 400 (รูปย่อ) / 800 / 1600 (ภาพหลัก/ภาพขยาย) · ลองทาง thumbnail สาธารณะก่อน (ไฟล์ที่แชร์ลิงก์) → ถ้าเป็นไฟล์ส่วนตัวและมีตัวกลาง ให้ตัวกลางของเจ้าของไฟล์อ่าน (ตรวจโฟลเดอร์ที่อนุญาตฝั่งสคริปต์)
 // แคชที่ Cloudflare ด้วยคีย์ภายใน (ไม่ใช่ URL สาธารณะ) · ทุกคำขอยังต้องผ่าน need() ก่อนถึงฟังก์ชันนี้
 export const IMG_W = [400, 800, 1600];
+// แคช: (1) Cloudflare เก็บภาพด้วยคีย์ภายในที่มีเลขรุ่นแคช (img_cache_ver ใน D1 — เพิ่มเลขเพื่อล้างภาพเก่าทั้งหมด และเพิ่มอัตโนมัติเมื่อเปลี่ยนตัวกลาง)
+//      (2) เบราว์เซอร์: private, no-cache + ETag → ทุกครั้งต้องถามบริการก่อน (ผ่าน need() ทุกครั้ง) ได้ 304 ถ้าภาพเดิม — หลัง Logout จึงเปิดภาพผ่านระบบไม่ได้
 async function img(request, env, deps) {
   const u = new URL(request.url), id = u.searchParams.get('id') || '', w = IMG_W.includes(+u.searchParams.get('w')) ? +u.searchParams.get('w') : 400;
   if (!/^[-\w]{20,60}$/.test(id)) throw new Err(400, 'bad-id');
   if (!knownImg.has(id) && !(await env.DB.prepare('SELECT 1 AS x FROM imgids WHERE id = ?').bind(id).first())) throw new Err(404, 'unknown-image');
-  const ck = new Request('https://img-cache.mu-traffic-hub.internal/' + id + '/' + w), cache = deps.cache;
-  if (cache) { const hitC = await cache.match(ck); if (hitC) return new Response(hitC.body, { status: 200, headers: { 'content-type': hitC.headers.get('content-type') || 'image/jpeg', 'cache-control': 'private, max-age=86400', 'x-img-via': 'cache', ...SEC } }); }
+  const rc = await relayCfg(env), ver = (rc && rc.imgVer) || (await metaGet(env, ['img_cache_ver'])).img_cache_ver || '1', etag = '"' + id + '-' + w + '-v' + ver + '"';
+  const H = (ct, via) => ({ 'content-type': ct, 'cache-control': 'private, no-cache', etag, 'x-img-via': via, ...SEC });
+  if (request.headers.get('If-None-Match') === etag) return new Response(null, { status: 304, headers: { 'cache-control': 'private, no-cache', etag, ...SEC } });
+  const ck = new Request('https://img-cache.mu-traffic-hub.internal/v' + ver + '/' + id + '/' + w), cache = deps.cache;
+  if (cache) { const hitC = await cache.match(ck); if (hitC) return new Response(hitC.body, { status: 200, headers: H(hitC.headers.get('content-type') || 'image/jpeg', 'cache') }); }
   let body = null, ct = '', via = 'public', status = 0;
   try { const r = await deps.fetch('https://drive.google.com/thumbnail?id=' + id + '&sz=w' + w, { redirect: 'follow' }); status = r.status; ct = r.headers.get('content-type') || ''; if (r.ok && /^image\//.test(ct)) body = await r.arrayBuffer(); }
   catch (e) { status = -1; }
   if (!body) {
-    if (!(await relayCfg(env))) throw new Err(status === 404 ? 404 : 502, status === 404 ? 'image-not-found' : status === -1 ? 'image-unreachable' : 'image-private');
-    let j; try { j = await relayCall(env, deps, { action: 'img', id, w }); }
+    if (!rc) throw new Err(status === 404 ? 404 : 502, status === 404 ? 'image-not-found' : status === -1 ? 'image-unreachable' : 'image-private');
+    let j; try { j = await relayCall(env, deps, { action: 'img', id, w }, rc); }
     catch (e) { const c = e instanceof Err ? e.code : 'relay-error'; throw new Err(c === 'relay-not-found' ? 404 : 502, c === 'relay-not-found' ? 'image-not-found' : c === 'relay-not-allowed' ? 'image-not-allowed' : c); }
-    if (!/^image\/(jpeg|png|webp|gif)$/.test(str(j.mime)) || !j.b64) throw new Err(502, 'image-unavailable');
-    const bin = atob(j.b64), arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(str(j.mime)) || !j.b64 || j.b64.length > 6e6) throw new Err(502, 'image-unavailable');
+    let bin; try { bin = atob(j.b64); } catch (e) { throw new Err(502, 'image-unavailable'); }
+    const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     body = arr.buffer; ct = j.mime; via = 'relay';
   }
   if (cache) { try { await cache.put(ck, new Response(body.slice(0), { headers: { 'content-type': ct, 'cache-control': 'public, max-age=604800' } })); } catch (e) { /* แคชเป็นส่วนเสริม */ } }
-  return new Response(body, { status: 200, headers: { 'content-type': ct, 'cache-control': 'private, max-age=86400', 'x-img-via': via, ...SEC } });
+  return new Response(body, { status: 200, headers: H(ct, via) });
 }
-// ลงทะเบียนตัวกลางครั้งเดียว: สคริปต์ของเจ้าของไฟล์ส่ง token ใช้ครั้งเดียว (ผู้ดูแลสร้าง hash ไว้ใน D1 พร้อมวันหมดอายุ) + URL /exec ของตัวเอง → ได้ค่าลับร่วมกลับไป
+// ลงทะเบียนตัวกลาง 2 ขั้น (ไม่แตะตัวกลางที่ทำงานอยู่จนกว่าตัวใหม่ผ่านการตรวจ):
+//   1) /api/relay/enroll {token, url}: ตรวจ token แล้ว “จอง” แบบ atomic (DELETE … RETURNING — คำขอพร้อมกันสำเร็จได้ครั้งเดียว) → เก็บเป็น relay_pending_* → ส่งค่าลับกลับให้สคริปต์เก็บ
+//   2) /api/relay/confirm {url}: บริการเรียก URL /exec จริงด้วยค่าลับฝั่งบริการ (ping รุ่นโค้ด + อ่าน 2 ตาราง + ภาพตัวอย่าง) → ผ่านครบจึงย้าย pending → ตัวกลางที่ใช้งาน
+//   ใช้ซ้ำได้: สคริปต์ที่มีค่าลับแล้วเรียก confirm อย่างเดียว (ตรวจซ้ำ/กู้คืน) ไม่ใช้ token เก่าซ้ำ · ผลตอบเป็นสถานะ/จำนวนเท่านั้น ไม่มีข้อมูลจากแหล่ง
+const RELAY_URL_RX = /^https:\/\/script\.google\.com\/(a\/macros\/[\w.-]+\/|macros\/)s\/[-\w]{20,120}\/exec$/;
 async function relayEnroll(request, env, deps) {
   const b = await request.json().catch(() => null), tok = str(b && b.token), url = str(b && b.url);
+  if (!RELAY_URL_RX.test(url)) throw new Err(400, 'enroll-bad-url');
   const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'relay_enroll'").first(); if (!row) throw new Err(403, 'enroll-closed');
   let e; try { e = JSON.parse(row.v); } catch (x) { throw new Err(403, 'enroll-closed'); }
-  if (!(e.exp > deps.now())) throw new Err(403, 'enroll-expired');
   if (!/^[0-9a-f]{32,128}$/.test(tok) || (await sha(tok)) !== e.h) throw new Err(403, 'enroll-bad-token');
-  if (!/^https:\/\/script\.google\.com\/(a\/macros\/[\w.-]+\/|macros\/)s\/[-\w]{20,120}\/exec$/.test(url)) throw new Err(400, 'enroll-bad-url');
+  if (!(e.exp > deps.now())) throw new Err(403, 'enroll-expired');
+  const claim = await env.DB.prepare("DELETE FROM meta WHERE k = 'relay_enroll' AND v = ? RETURNING k").bind(row.v).all();      // จองแบบ atomic
+  if (!claim.results || claim.results.length !== 1) throw new Err(409, 'enroll-used');
   const secret = hex(crypto.getRandomValues(new Uint8Array(32)));
-  await env.DB.batch([env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_url', ?)").bind(url), env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_secret', ?)").bind(secret),
-    env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_enrolled_at', ?)").bind(bkk(deps.now())), env.DB.prepare("DELETE FROM meta WHERE k = 'relay_enroll'")]);
-  relayMemo = null; return json({ ok: true, secret });
+  await env.DB.batch([env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_pending_url', ?)").bind(url), env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_pending_secret', ?)").bind(secret),
+    env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_pending_at', ?)").bind(bkk(deps.now()))]);
+  return json({ ok: true, secret, next: 'confirm' });
+}
+// ตรวจตัวกลางจริงจาก Cloudflare: แยกผลทีละขั้น (ตอบ/รุ่นโค้ด · ตารางแต่ละชุด · ภาพที่อนุญาต) — ไม่สรุปว่าใช้ได้เพียงเพราะมีค่าตั้ง
+async function relayCheck(env, deps, cfg) {
+  const out = { ping: 'fail', version: '', tables: {}, image: 'skipped' };
+  try { const j = await relayCall(env, deps, { action: 'ping' }, cfg); out.version = str(j.v); out.ping = out.version === RELAY_VERSION ? 'ok' : 'outdated'; }
+  catch (e) { out.ping = e instanceof Err ? e.code : 'relay-error'; return out; }
+  for (const k of PRIVATE_SRC) { try { const j = await relayCall(env, deps, { action: 'table', source: k, ...RELAY_COLS[k] }, cfg); out.tables[k] = Array.isArray(j.rows) ? 'ok:' + Math.max(0, j.rows.length - 1) : 'relay-error'; } catch (e) { out.tables[k] = e instanceof Err ? e.code : 'relay-error'; } }
+  try { const g = await table(env, 'gps', deps), i = g.head.indexOf('Photo_File_ID'), id = i < 0 ? '' : (g.rows.map((r) => driveId(r[i])).filter(Boolean)[0] || '');
+    if (id) { const j = await relayCall(env, deps, { action: 'img', id, w: 400 }, cfg); out.image = /^image\//.test(str(j.mime)) && j.b64 ? 'ok' : 'relay-error'; } }
+  catch (e) { out.image = e instanceof Err ? e.code : 'relay-error'; }
+  out.ok = out.ping === 'ok' && Object.values(out.tables).every((x) => /^ok:/.test(x)) && (out.image === 'ok' || out.image === 'skipped');
+  return out;
+}
+async function relayConfirm(request, env, deps) {
+  const b = await request.json().catch(() => null), url = str(b && b.url); if (!RELAY_URL_RX.test(url)) throw new Err(400, 'enroll-bad-url');
+  const ipKey = 'relayconfirm:' + (await sha(clientIp(request))).slice(0, 24); if (await count(env, ipKey, deps) >= 20) throw new Err(429, 'rate-limited'); await hit(env, ipKey, 3600, deps);
+  const o = await metaGet(env, ['relay_url', 'relay_secret', 'relay_pending_url', 'relay_pending_secret', 'img_cache_ver']);
+  if (o.relay_pending_url === url && o.relay_pending_secret) {
+    const chk = await relayCheck(env, deps, { url, secret: o.relay_pending_secret });
+    if (!chk.ok) return json({ ok: false, code: 'check-failed', state: 'pending', check: chk });
+    const ver = String((+o.img_cache_ver || 1) + (o.relay_url && o.relay_url !== url ? 1 : 0));
+    await env.DB.batch([env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_url', ?)").bind(url), env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_secret', ?)").bind(o.relay_pending_secret),
+      env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_enrolled_at', ?)").bind(bkk(deps.now())), env.DB.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('img_cache_ver', ?)").bind(ver),
+      env.DB.prepare("DELETE FROM meta WHERE k IN ('relay_pending_url', 'relay_pending_secret', 'relay_pending_at')")]);
+    relayMemo = null; return json({ ok: true, state: 'active', promoted: true, check: chk });
+  }
+  if (o.relay_url === url && o.relay_secret) { const chk = await relayCheck(env, deps, { url, secret: o.relay_secret }); return json({ ok: chk.ok, code: chk.ok ? undefined : 'check-failed', state: 'active', check: chk }); }
+  throw new Err(404, 'relay-unknown-url');          // URL นี้ไม่ได้ลงทะเบียน (หรือ token ถูกใช้ไปแล้วแต่สคริปต์ไม่ได้รับค่าลับ → ขอ token ใหม่)
 }
 // สถานะแหล่งข้อมูลทีละชุด (หลัง Login) — แยก อ่านสำเร็จ / อ่านสำเร็จแต่ไม่มีรายการ / อ่านไม่สำเร็จ พร้อมรหัสสาเหตุ และเวลาที่อ่านสำเร็จจริง
 async function sourcesStatus(env, deps) {
-  const out = {}, rc = await relayCfg(env);
+  const out = {}, rc = await relayCfg(env), pend = await metaGet(env, ['relay_pending_url', 'relay_enroll']);
   for (const k of Object.keys(SOURCES(env))) {
     if (k === 'staff') continue;
-    try { const t = await table(env, k, deps); out[k] = { state: t.rows.length ? 'ok' : 'empty', rows: t.rows.length, readAt: bkk(t.at), via: PRIVATE_SRC.has(k) || (env.HUB_GS_URL && env.HUB_SHARED_SECRET) ? 'relay' : 'csv' }; }
+    try { const t = await table(env, k, deps); out[k] = { state: t.rows.length ? 'ok' : 'empty', rows: t.rows.length, readAt: bkk(t.at), via: PRIVATE_SRC.has(k) ? 'relay' : env.HUB_GS_URL && env.HUB_SHARED_SECRET ? 'hubdata' : 'csv' }; }
     catch (e) { out[k] = { state: 'error', code: e instanceof Err ? e.code : 'internal', via: PRIVATE_SRC.has(k) ? 'relay' : 'csv' }; }
   }
-  return { ok: true, checkedAt: bkk(deps.now()), relay: rc ? { configured: true, via: rc.via } : { configured: false }, sources: out };
+  let check = null; if (rc) { try { check = await relayCheck(env, deps, rc); } catch (e) { check = { ok: false }; } }
+  return { ok: true, checkedAt: bkk(deps.now()), relay: rc ? { configured: true, via: rc.via, check } : { configured: false, pending: !!pend.relay_pending_url, enrollOpen: !!pend.relay_enroll }, sources: out };
 }
 
 // ---------- 8) ไฟล์หน้าเว็บ (สาธารณะ ไม่มีข้อมูลบุคคล) จาก Repository ที่ commit ที่กำหนด ----------
@@ -471,7 +522,8 @@ export async function handle(request, env, deps) {
       try { await env.DB.prepare('SELECT 1 AS x').first(); out.db = 'ok'; } catch (e) { out.db = 'error'; }
       return json(out);
     }
-    if (path === '/api/relay/enroll' && request.method === 'POST') return await relayEnroll(request, env, deps);   // เรียกโดยสคริปต์ของเจ้าของไฟล์ (ไม่มี session) — ป้องกันด้วย token ใช้ครั้งเดียว
+    if (path === '/api/relay/enroll' && request.method === 'POST') return await relayEnroll(request, env, deps);
+    if (path === '/api/relay/confirm' && request.method === 'POST') return await relayConfirm(request, env, deps);   // เรียกโดยสคริปต์ของเจ้าของไฟล์ (ไม่มี session) — ป้องกันด้วย token ใช้ครั้งเดียว
     if (path === '/api/me') { const s = await session(request, env, deps); if (s) s.role = await roleOf(env, s.staff); return s ? json({ ok: true, user: { name: s.name, unit: s.unit, role: s.role }, exp: s.exp }) : json({ ok: false, code: 'no-session' }, 401); }
     const m = request.method;
     if (path === '/api/login' && m === 'POST') return await login(request, env, deps, net);

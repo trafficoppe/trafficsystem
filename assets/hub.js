@@ -896,7 +896,7 @@
   PAGES.vehicle = function (v) {
     var vr = mod('vehicleRegistration'), rt = mod('ruenthai');
     v.appendChild(pageHead('ระบบลงทะเบียนยานพาหนะ', 'การลงทะเบียนยานพาหนะบุคลากร/นักศึกษา และแบบสำรวจลานจอดรถเรือนไทย'));
-    if (vr) v.appendChild(kpiGrid(Object.keys(vr.rows).map(function (n, i) { return vr.rows[n] == null ? { icon: 'car', label: n, na: /จักรยานยนต์/.test(n) && /นักศึกษา/.test(n) ? studentMotoNa() : 'ไม่มีข้อมูลยืนยัน', color: C.c5 } : { icon: 'car', label: n, value: num(vr.rows[n]), unit: 'รายการ', updated: vr.updated, color: [C.c1, C.c3, C.c4, C.c5][i] }; })));
+    if (vr) v.appendChild(kpiGrid(Object.keys(vr.rows).map(function (n, i) { return vr.rows[n] == null ? { icon: 'car', label: n, na: /จักรยานยนต์/.test(n) && /นักศึกษา/.test(n) ? studentMotoNa() : 'ไม่มีข้อมูลยืนยัน', color: C.c5 } : { icon: 'car', label: n, value: num(vr.rows[n]), unit: 'รายการ', updated: /จักรยานยนต์/.test(n) && /นักศึกษา/.test(n) && vr.studentMoto ? vr.studentMoto.checkedAt : vr.updated, sub: /จักรยานยนต์/.test(n) && /นักศึกษา/.test(n) && vr.studentMoto ? 'อ่านสด · 1 RefCode = 1 รายการ' : 'ไฟล์สรุป · นับตามแถว', color: [C.c1, C.c3, C.c4, C.c5][i] }; })));
     var rts = extra('ruenthaiSurvey'); if (rts) v.appendChild(section('แบบสำรวจลานจอดรถเรือนไทย', { more: 'parking' }, [kpiGrid([{ icon: 'file', label: 'แบบสำรวจที่ส่งแล้ว', value: num(rts.total), unit: 'ชุด', sub: dLabel(rts.from).replace(/ \d{4}$/, '') + ' – ' + dLabel(rts.updated), color: C.c4 }])]));
     v.appendChild(systemsSection(['veh-staff', 'veh-student', 'ruenthai']));
   };
@@ -1691,7 +1691,7 @@
   function nowAssets() { var vr = mod('vehicleRegistration'), oc = extra('opsCheck'); if (!vr) return null;
     var tot = Object.keys(vr.rows).reduce(function (a, k2) { return a + (vr.rows[k2] || 0); }, 0);
     return { icon: 'car', title: 'ลานจอดและยานพาหนะ', color: C.c5, page: 'parking', badge: 'ทะเบียน ณ ' + dShort(vr.updated), main: { v: num(tot), u: 'รายการลงทะเบียน' },
-      subs: [{ l: 'บุคลากร', v: num((vr.rows['บุคลากร – รถยนต์'] || 0) + (vr.rows['บุคลากร – รถจักรยานยนต์'] || 0)) }, { l: 'นักศึกษา', v: num(vr.rows['นักศึกษา – รถยนต์']) }, oc ? { l: 'ลานจอดรถ', v: num(oc.parkingLots) + ' ลาน' } : null, oc ? { l: 'รถของงาน', v: num(oc.vehicles.total) + ' คัน' } : null] }; }
+      subs: [{ l: 'บุคลากร', v: num((vr.rows['บุคลากร – รถยนต์'] || 0) + (vr.rows['บุคลากร – รถจักรยานยนต์'] || 0)) }, { l: 'นักศึกษา', v: num((vr.rows['นักศึกษา – รถยนต์'] || 0) + (vr.rows['นักศึกษา – รถจักรยานยนต์'] || 0)) + (vr.rows['นักศึกษา – รถจักรยานยนต์'] == null ? ' (ไม่รวม จยย.)' : '') }, oc ? { l: 'ลานจอดรถ', v: num(oc.parkingLots) + ' ลาน' } : null, oc ? { l: 'รถของงาน', v: num(oc.vehicles.total) + ' คัน' } : null] }; }
   function nowGuard(Q) { var sat = mod('guardSatisfaction'), fines = mod('guardFines'), oc = extra('opsCheck'); if (!sat) return null;
     var rows = sat.central.monthly, pick = rows.filter(function (r) { return r.month === Q.cm; })[0] || rows[rows.length - 1], u = sat.unit.monthly, lu = u[u.length - 1];
     var base = { icon: 'shield', title: 'รปภ. และความปลอดภัย', color: C.fine, page: 'report-guard', badge: 'ประเมินเดือน ' + mLabel(pick.month), stale: pick.month !== Q.cm, main: { v: pick.overall.toFixed(2), u: '/ 5 พึงพอใจ รปภ.ส่วนกลาง' },
@@ -2670,7 +2670,9 @@
   var SRC_WHY = { 'relay-not-configured': 'ไฟล์ต้นทางเป็นส่วนตัว — ยังไม่ได้เปิดตัวกลางอ่านข้อมูลของเจ้าของไฟล์ (Apps Script)', 'source-private': 'ไฟล์ต้นทางเป็นส่วนตัว (ไม่ได้แชร์ลิงก์)',
     'relay-login-required': 'ตัวกลางยังไม่ได้ Deploy ให้ “Anyone” เรียกได้', 'relay-forbidden': 'ค่าลับของตัวกลางไม่ตรง — ต้องลงทะเบียนตัวกลางใหม่', 'relay-schema': 'หัวคอลัมน์ต้นทางเปลี่ยน (ตัวกลางไม่พบคอลัมน์ที่ใช้)',
     'source-schema': 'หัวคอลัมน์ต้นทางเปลี่ยน', 'relay-timeout': 'ตัวกลางตอบช้าเกินไป', 'relay-unreachable': 'ติดต่อตัวกลางไม่ได้ชั่วคราว', 'source-unreachable': 'ติดต่อต้นทางไม่ได้ชั่วคราว', 'source-error': 'ต้นทางตอบผิดรูปแบบ',
-    'relay-internal': 'ตัวกลางทำงานผิดพลาด', 'relay-error': 'ตัวกลางตอบผิดรูปแบบ', 'source-not-configured': 'ยังไม่ได้ตั้ง ID ของแหล่งข้อมูล' };
+    'relay-internal': 'ตัวกลางทำงานผิดพลาด', 'relay-error': 'ตัวกลางตอบผิดรูปแบบ', 'source-not-configured': 'ยังไม่ได้ตั้ง ID ของแหล่งข้อมูล',
+    'relay-not-deployed': 'ไม่พบ Web app ของตัวกลาง (ถูกลบหรือ URL ผิด)', 'outdated': 'ตัวกลาง Deploy เป็นโค้ดรุ่นเก่า — ต้อง Deploy เป็น New version', 'relay-not-allowed': 'ตัวกลางไม่อนุญาตไฟล์นี้ (อยู่นอกโฟลเดอร์ที่กำหนด)',
+    'relay-unknown-source': 'ตัวกลางรุ่นนี้ไม่รู้จักตารางนี้', 'relay-not-found': 'ตัวกลางไม่พบไฟล์/แท็บ', 'skipped': 'ไม่มีภาพตัวอย่างให้ตรวจ' };
   function srcWhy(code) { return SRC_WHY[code] || ('อ่านไม่สำเร็จ (' + code + ')'); }
   function liveSourcesSection() {
     var host = el('div', {}, [el('p', { class: 'src', text: 'กำลังตรวจการอ่านแต่ละแหล่ง…' })]);
@@ -2682,7 +2684,14 @@
       host.appendChild(table(['ชุดข้อมูล', 'ผล', 'ช่องทาง', 'อ่านสำเร็จเมื่อ / สาเหตุ'], Object.keys(S).map(function (k) { var o = S[k], st = ST[o.state] || ['s-off', o.state];
         return [SRC_NAME[k] || k, el('span', { class: 'pill ' + st[0], text: st[1] + (o.rows != null && o.state === 'ok' ? ' · ' + num(o.rows) + ' แถว' : '') }), o.via === 'relay' ? 'ตัวกลางของเจ้าของไฟล์' : 'ลิงก์แชร์ของ Sheet',
           o.state === 'error' ? srcWhy(o.code) : fdate(o.readAt) + ' (เวลาไทย)']; }), {}));
-      host.appendChild(el('p', { class: 'src', text: 'ตรวจเมื่อ ' + fdate(x.j.checkedAt) + ' · ตัวกลางอ่านไฟล์ส่วนตัว: ' + (x.j.relay.configured ? 'เปิดแล้ว' : 'ยังไม่เปิด (ไฟล์ส่วนตัวจะอ่านไม่ได้จนกว่าเจ้าของไฟล์ติดตั้ง — ดูเอกสารส่งมอบรอบ 10)') + ' · ผลแคชไว้ไม่เกิน 2 นาที' }));
+      var R = x.j.relay || {}, ck = R.check || {}, okp = function (c) { return c === 'ok' || /^ok:/.test(String(c)); }, cell = function (c, okText) { return el('span', { class: 'pill ' + (okp(c) ? 's-connected' : c === 'skipped' ? 's-warn' : 's-off'), text: okp(c) ? okText : srcWhy(c) }); };
+      var rows = [['ตั้งค่าในระบบ', el('span', { class: 'pill ' + (R.configured ? 's-connected' : 's-off'), text: R.configured ? 'ตั้งค่าแล้ว' : R.pending ? 'ลงทะเบียนแล้ว รอตรวจ /exec ผ่าน' : R.enrollOpen ? 'ยังไม่ติดตั้ง (เปิดรับลงทะเบียน)' : 'ยังไม่ติดตั้ง' })]];
+      if (R.configured) { rows.push(['ตัวกลางตอบ (รุ่นโค้ด)', cell(ck.ping, 'ตอบได้ · รุ่น ' + (ck.version || '-'))]);
+        Object.keys(ck.tables || {}).forEach(function (k) { var t = ck.tables[k]; rows.push(['อ่านตาราง ' + (SRC_NAME[k] || k), cell(t, 'อ่านได้ · ' + num(+String(t).slice(3)) + ' แถว')]); });
+        rows.push(['อ่านภาพ GPS ที่อนุญาต (ตัวอย่าง 1 ภาพ)', cell(ck.image, 'อ่านได้')]); }
+      host.appendChild(el('h3', { class: 'h-sub', text: 'ตัวกลางอ่านไฟล์ส่วนตัว (HubRelay)' }));
+      host.appendChild(table(['ขั้นตรวจ', 'ผล'], rows, {}));
+      host.appendChild(el('p', { class: 'src', text: 'ตรวจเมื่อ ' + fdate(x.j.checkedAt) + ' (บริการเรียก /exec จริงด้วยค่าลับฝั่งบริการ ไม่ได้ดูเพียงว่ามีค่าตั้ง) · ผลอ่านตารางแคชไว้ไม่เกิน 2 นาที' }));
       host.appendChild(el('div', { class: 'btns' }, [el('button', { type: 'button', class: 'btn sec', text: 'ตรวจอีกครั้ง', onclick: function () { route(true); } })]));
     });
     return section('อ่านข้อมูลสดจากต้นทาง', { note: 'ผลจริงของบริการภายใน ณ เวลาที่เปิดหน้านี้ (แยกจากไฟล์สรุปด้านล่าง)' }, [host]);

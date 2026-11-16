@@ -25,9 +25,9 @@ const TOPICS = {
   anywheel: /anywheel|จักรยาน|ปั่น/i,
   tram: /รถราง|tram/i,
   guard: /รปภ|พึงพอใจ|ประเมิน|ความปลอดภัยเอกชน/i,
-  vehicle: /ทะเบียน|ลงทะเบียน|สติ๊กเกอร์|สติกเกอร์/i,
+  vehicle: /ทะเบียน|ลงทะเบียน|สติ๊กเกอร์|สติกเกอร์|นักศึกษา/i,
   ops: /ลานจอด|ดับเพลิง|ถังดับ|ยานพาหนะของงาน/i,
-  ruenthai: /เรือนไทย/i
+  ruenthai: /เรือนไทย|ruenthai/i
 };
 const CORE = ['incidents', 'lostfound', 'gate'];
 export function topicsOf(text) { const t = String(text || ''), out = Object.keys(TOPICS).filter((k) => TOPICS[k].test(t)); return out; }
@@ -40,19 +40,41 @@ export const NAV_HINTS = [
   ['รายงานประจำวัน', 'report-daily'], ['รายงานประจำเดือน', 'report-monthly'], ['อุปกรณ์ดับเพลิง', 'safety'], ['ยานพาหนะทั้งหมด', 'vehicle-fleet']
 ];
 
-export function buildFacts(stats, extra, ctx, nowMs, question) {
+// รวมตัวเลขสดจากบริการ (liveStats) เข้ากับไฟล์สรุป — ใช้ชุดเดียวกับหน้าเว็บ (assets/hub.js: liveRefresh + applyLive10) เพื่อให้ผู้ช่วยตอบตรงกับหน้าจอ
+// ไม่ตั้ง “เวลาอ่าน” เป็นเวลาปัจจุบัน: แต่ละหัวข้อเก็บเวลาที่อ่านสำเร็จจริง (checkedAt) ของตัวเอง · หัวข้อที่อ่านสดไม่สำเร็จคงค่าไฟล์สรุปพร้อมวันที่ของไฟล์ และบันทึกสาเหตุ
+export function applyLive(stats, extra, live) {
+  const M = (stats && stats.modules) || {}, X = extra || {}, L = { topics: {}, errors: {} };
+  if (!live) return L; const e = live.errors || {}; L.errors = Object.assign({}, e);
+  ['incidents', 'lostfound', 'gate'].forEach((k) => { if (live[k] && M[k]) { Object.assign(M[k], live[k]); L.topics[k] = live.checkedAt; } });
+  ['incidentsDaily', 'lostfoundDaily'].forEach((k) => { if (live[k]) X[k] = Object.assign(X[k] || {}, live[k]); });
+  if (live.lostfoundStatus && X.lostfoundStatus) Object.assign(X.lostfoundStatus, live.lostfoundStatus);
+  const vr = M.vehicleRegistration;
+  if (vr) { if (live.studentMoto) { vr.rows['นักศึกษา – รถจักรยานยนต์'] = live.studentMoto.registrations; vr.studentMoto = live.studentMoto; L.topics.vehicle = live.studentMoto.checkedAt; } else if (e.studentMoto) vr.studentMotoErr = e.studentMoto; }
+  if (live.ruenthai) { const r = live.ruenthai, rs = X.ruenthaiSurvey || (X.ruenthaiSurvey = {}); rs.total = r.surveys; rs.daily = r.daily; rs.from = r.range.from; rs.to = r.range.to; rs.updated = r.lastEntry; rs.checkedAt = r.checkedAt; rs.live = r; L.topics.ruenthai = r.checkedAt; }
+  else if (e.ruenthai && X.ruenthaiSurvey) X.ruenthaiSurvey.liveErr = e.ruenthai;
+  return L;
+}
+const WHY = { 'relay-not-configured': 'ยังไม่ได้ติดตั้งตัวกลางอ่านไฟล์ของเจ้าของ', 'relay-login-required': 'ตัวกลางยังไม่ได้ Deploy แบบเปิดให้บริการเรียกได้', 'relay-forbidden': 'ค่าลับของตัวกลางไม่ตรง', 'relay-timeout': 'ตัวกลางตอบช้าเกินกำหนด',
+  'source-unreachable': 'ติดต่อแหล่งข้อมูลไม่ได้', 'source-error': 'แหล่งข้อมูลตอบผิดรูปแบบ', 'source-schema': 'หัวคอลัมน์ต้นทางเปลี่ยน', 'source-not-configured': 'ยังไม่ได้ตั้งค่าแหล่งข้อมูล' };
+const why = (c) => WHY[c] || ('อ่านไม่สำเร็จ (' + c + ')');
+const topObj = (o, k) => Object.keys(o || {}).sort((a, b) => o[b] - o[a]).slice(0, k || 8).map((x) => x + ' ' + n(o[x])).join(', ');
+
+export function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
   const M = (stats && stats.modules) || {}, X = extra || {}, L = [], src = {};
   const today = new Date((nowMs || Date.now()) + 7 * 3600000).toISOString().slice(0, 10), curM = today.slice(0, 7);   // วันนี้ตามเวลาไทย คิดฝั่งบริการ ไม่เชื่อค่าที่หน้าเว็บส่งมา
   const from = ctx && isMonth(ctx.from) ? ctx.from : null, to = ctx && isMonth(ctx.to) ? ctx.to : null;
   const inR = (m) => from && to && m >= from && m <= to, rLabel = from && to ? (from === to ? mTh(from) : mTh(from) + ' – ' + mTh(to)) : '';
   // เลือกหัวข้อ: ไม่ส่ง question (การทดสอบ/เรียกแบบเดิม) = ทุกหัวข้อ · มีคำถามแต่ไม่พบหัวข้อ = หัวข้อหลัก 3 เรื่อง
   const picked = question == null ? Object.keys(TOPICS) : topicsOf(question), use = new Set(picked.length ? picked : CORE);
-  const add = (topic, period, text, asOf) => L.push('[' + topic + ' | ' + period + (asOf ? ' | ข้อมูล ณ ' + asOf : '') + '] ' + text);
+  const LI = liveInfo || { topics: {}, errors: {} }, asOfSeen = [];
+  const add = (topic, period, text, asOf) => { if (asOf && asOfSeen.indexOf(asOf) < 0) asOfSeen.push(asOf); L.push('[' + topic + ' | ' + period + (asOf ? ' | ข้อมูล ณ ' + asOf : '') + '] ' + text); };
   const part = (m) => m === curM ? ' (เดือนปัจจุบัน ยังไม่ครบเดือน)' : '';
   L.push('วันนี้ (เวลาไทย) คือ ' + dTh(today) + ' · เดือนนี้ = ' + THF[+curM.slice(5, 7) - 1] + ' ' + (+curM.slice(0, 4) + 543) + ' · เดือนก่อน = ' + mTh(prevMonth(curM)) + ' · ปีนี้ = ปีปฏิทิน พ.ศ. ' + (+today.slice(0, 4) + 543)
     + (ctx && ctx.period === 'today' ? ' · ผู้ใช้กำลังดู “ข้อมูลวันนี้” บนหน้าเว็บ (ถ้าคำถามไม่ระบุช่วง ให้ตอบของวันนี้ และบอกว่าเป็นของวันนี้)' : rLabel ? ' · ช่วงที่ผู้ใช้กำลังดูบนหน้าเว็บ: ' + rLabel + ' (ถ้าคำถามไม่ระบุช่วง ให้ตอบของช่วงนี้ และบอกช่วงนี้ในคำตอบ)' : ''));
   L.push('ปีการศึกษาไม่ใช่ปีปฏิทิน: ระบบมีผลรวมรายเดือนและรายปีปฏิทินเท่านั้น ไม่มีผลรวมตามปีการศึกษาที่ยืนยันแล้ว (ยกเว้นหัวข้อที่ระบุว่า “ปีการศึกษา” ไว้ชัดเจน)');
 
+  const errK = Object.keys(LI.errors || {}).filter((k) => ({ incidents: 1, lostfound: 1, lostfoundYear: 1, gate: 1 })[k] && use.has(k === 'lostfoundYear' ? 'lostfound' : k));
+  if (errK.length) L.push('หมายเหตุแหล่งข้อมูล: รอบนี้อ่านสดไม่สำเร็จสำหรับ ' + errK.map((k) => ({ incidents: 'เหตุการณ์', lostfound: 'Lost & Found รายวัน', lostfoundYear: 'Lost & Found รายปี', gate: 'รถเข้า/หมวกนิรภัย' })[k] + ' (' + why(LI.errors[k]) + ')').join(', ') + ' — ตัวเลขหัวข้อนั้นมาจากไฟล์สรุปตามวันที่ที่ระบุ ห้ามเรียกว่าข้อมูลสดของวันนี้');
   const inc = M.incidents, incD = X.incidentsDaily;
   if (inc && inc.monthly && use.has('incidents')) {
     const asOf = dTh(incD && incD.complete === true ? incD.checkedAt : inc.updated); src.incidents = 'รายงานเหตุการณ์ (ฐานข้อมูลงานจราจร)';
@@ -105,15 +127,24 @@ export function buildFacts(stats, extra, ctx, nowMs, question) {
   if (sat && sat.central && use.has('guard')) { src.guard = 'แบบประเมินความพึงพอใจ รปภ.'; sat.central.monthly.forEach((r) => add('ความพึงพอใจ รปภ.ส่วนกลาง', mTh(r.month), 'คะแนนรวม ' + n(r.overall) + ' จาก 5 · ผู้ตอบ ' + n(r.responses) + ' คน', dTh(sat.central.updated)));
     sat.unit.monthly.forEach((r) => add('ความพึงพอใจ รปภ.ส่วนงาน', mTh(r.month), 'คะแนนรวม ' + n(r.overall) + ' จาก 5 · ผู้ตอบ ' + n(r.respondents) + ' คน', dTh(sat.unit.updated))); }
   const vr = M.vehicleRegistration;
-  if (vr && vr.rows && use.has('vehicle')) { src.vehicle = 'ทะเบียนยานพาหนะ'; add('ทะเบียนยานพาหนะ', 'ยอดทะเบียนล่าสุด', Object.keys(vr.rows).map((k) => k + ' ' + (vr.rows[k] == null ? 'ไม่มีข้อมูลยืนยัน' : n(vr.rows[k]) + ' รายการ')).join(', '), dTh(vr.updated)); }
+  if (vr && vr.rows && use.has('vehicle')) { src.vehicle = 'ทะเบียนยานพาหนะ'; const SM = 'นักศึกษา – รถจักรยานยนต์', sm = vr.studentMoto, ks = Object.keys(vr.rows), have = ks.filter((k) => vr.rows[k] != null);
+    const snapKs = ks.filter((k) => k !== SM || !sm);
+    add('ทะเบียนยานพาหนะ (ไฟล์สรุป ไม่ใช่ข้อมูลสด)', 'ยอดจากแถวสุดท้ายของ Sheet (1 แถว = 1 รายการ ยังไม่ตัดรายการซ้ำ/ยกเลิก)', snapKs.map((k) => k + ' ' + (vr.rows[k] == null ? 'ไม่มีข้อมูลยืนยัน' + (k === SM && vr.studentMotoErr ? ' — อ่านสดไม่สำเร็จ: ' + why(vr.studentMotoErr) : '') : n(vr.rows[k]) + ' รายการ')).join(', '), dTh(vr.updated));
+    if (sm) { add('ทะเบียนยานพาหนะ ' + SM + ' (อ่านสด)', dTh(sm.range.from) + ' – ' + dTh(sm.range.to), 'รายการลงทะเบียน ' + n(sm.registrations) + ' รายการ (1 RefCode = 1 รายการ · RefCode ซ้ำ ' + n(sm.duplicateRefs) + ' แถวนับครั้งเดียว · แถวไม่มี RefCode ' + n(sm.rowsWithoutRef) + ' แถวไม่นับ) · จำนวนรถตามที่กรอก ' + n(sm.vehiclesDeclared) + ' คัน (ไม่กรอก ' + n(sm.rowsNoCount) + ' รายการ) · ช่องทะเบียนรถที่กรอก ' + n(sm.platesFilled) + ' ช่อง (จำนวนรถไม่ตรงกับช่องทะเบียน ' + n(sm.rowsCountMismatch) + ' รายการ)', dTh(sm.checkedAt));
+      add('ทะเบียนยานพาหนะ ' + SM + ' (อ่านสด)', 'แยกตามหมวด (หน่วย: รายการลงทะเบียน)', 'วิทยาเขต: ' + topObj(sm.byCampus) + ' · ประเภทเครื่องยนต์: ' + topObj(sm.byEngine) + ' · คณะ/ส่วนงาน (อันดับแรก): ' + topObj(sm.byFaculty, 6), dTh(sm.checkedAt)); }
+    const tot = have.reduce((a, k) => a + vr.rows[k], 0);
+    add('ทะเบียนยานพาหนะ', 'ยอดรวม (ตัวเลขเดียวกับหน้าเว็บ)', 'รวม ' + n(tot) + ' รายการ จาก ' + have.length + ' ประเภทที่มีข้อมูล (' + have.join(', ') + ')' + (have.length < ks.length ? ' — ไม่รวม ' + ks.filter((k) => vr.rows[k] == null).join(', ') + ' เพราะไม่มีข้อมูลยืนยัน' : '') + (sm ? ' · หมายเหตุ: ' + SM + ' อ่านสดและนับตาม RefCode ส่วนประเภทอื่นเป็นยอดจากไฟล์สรุป ณ ' + dTh(vr.updated) + ' นับตามแถว จึงเป็นการรวมตัวเลขต่างเวลา/ต่างนิยาม' : ''), sm ? dTh(sm.checkedAt) + ' (สด) / ' + dTh(vr.updated) + ' (ไฟล์สรุป)' : dTh(vr.updated)); }
   const oc = X.opsCheck;
   if (oc && use.has('ops')) { src.ops = 'ข้อมูลงานจราจรออนไลน์'; add('ทะเบียนของงานจราจร', 'ยอดล่าสุด', 'ลานจอดรถ ' + n(oc.parkingLots) + ' ลาน, ยานพาหนะของงาน ' + n(oc.vehicles.total) + ' คัน, อุปกรณ์ดับเพลิง ' + n(oc.fireEquipment.total) + ' ชิ้น (ไม่รวม AED)', dTh(oc.checkedAt)); }
   const rt = X.ruenthaiSurvey;
-  if (rt && rt.total != null && use.has('ruenthai')) { src.ruenthai = 'แบบสำรวจลานจอดรถเรือนไทย'; add('ลานจอดรถเรือนไทย', dTh(rt.from) + ' – ' + dTh(rt.to), 'แบบสำรวจที่ส่งเข้ามา ' + n(rt.total) + ' ฉบับ — ไม่ใช่จำนวนรถไม่ซ้ำและไม่ใช่ยอดอนุมัติ', dTh(rt.checkedAt)); }
+  if (rt && rt.total != null && use.has('ruenthai')) { src.ruenthai = 'แบบสำรวจลานจอดรถเรือนไทย'; const R = rt.live;
+    if (R) { add('ลานจอดรถเรือนไทย (อ่านสด)', dTh(R.range.from) + ' – ' + dTh(R.range.to), 'แบบสำรวจที่ส่ง ' + n(R.surveys) + ' ฉบับ (1 Ref_Code = 1 ฉบับ · Ref_Code ซ้ำ ' + n(R.duplicateRefs) + ' แถวนับครั้งเดียว) · จำนวนรถตามที่กรอก (Car_Count) รวม ' + n(R.carsDeclared) + ' คัน — เป็นคนละหน่วยกับจำนวนแบบสำรวจ · ช่องประเภทรถที่กรอก ' + n(R.carTypesFilled) + ' ช่อง, ช่องทะเบียนที่กรอก ' + n(R.platesFilled) + ' ช่อง (Car_Count ไม่ตรงกับช่องที่กรอก ' + n(R.rowsCarMismatch) + ' ฉบับ) · ไม่มีจำนวนผู้มีสิทธิ์ตอบ จึงคิดอัตราตอบกลับไม่ได้ และไม่ใช่ยอดอนุมัติ', dTh(R.checkedAt));
+      add('ลานจอดรถเรือนไทย (อ่านสด)', 'แยกตามหมวด (หน่วย: แบบสำรวจ ยกเว้นประเภทรถเป็นช่องที่กรอก)', 'กลุ่ม: ' + topObj(R.byGroup) + ' · ประเภทผู้ใช้: ' + topObj(R.bySubType) + ' · ประเภทรถ: ' + topObj(R.byCarType) + ' · สถานะกล้อง LPR: ' + topObj(R.byLpr) + ' · คณะ/ส่วนงาน (อันดับแรก): ' + topObj(R.byFaculty, 6), dTh(R.checkedAt)); }
+    else add('ลานจอดรถเรือนไทย (ไฟล์สรุป ไม่ใช่ข้อมูลสด' + (rt.liveErr ? ' — อ่านสดไม่สำเร็จ: ' + why(rt.liveErr) : '') + ')', dTh(rt.from) + ' – ' + dTh(rt.to), 'แบบสำรวจที่ส่งเข้ามา ' + n(rt.total) + ' ฉบับ — ไม่ใช่จำนวนรถและไม่ใช่ยอดอนุมัติ · ไฟล์สรุปไม่มีจำนวนรถหรือการแยกกลุ่ม', dTh(rt.checkedAt)); }
   const others = Object.keys(TOPICS).filter((k) => !use.has(k));
   if (others.length) L.push('หัวข้ออื่นที่ระบบมีข้อมูล (ไม่ได้แนบมาในรอบนี้ — ถ้าผู้ใช้ถามถึง ให้บอกว่าถามเรื่องนั้นโดยตรงได้): ' + others.map((k) => ({ incidents: 'เหตุการณ์/อุบัติเหตุ', lostfound: 'Lost & Found', gate: 'รถเข้าและหมวกนิรภัย', cctv: 'คำขอดูกล้อง CCTV', anywheel: 'จักรยาน Anywheel', tram: 'รถราง', guard: 'ความพึงพอใจ รปภ.', vehicle: 'ทะเบียนยานพาหนะ', ops: 'ลานจอด/ยานพาหนะของงาน/อุปกรณ์ดับเพลิง', ruenthai: 'ลานจอดเรือนไทย' })[k]).join(', '));
   L.push('เมนูในเว็บนี้ที่แนะนำได้ (เขียนเป็น #รหัส เช่น #traffic หน้าเว็บจะทำเป็นลิงก์ให้): ' + NAV_HINTS.map((h) => h[0] + ' #' + h[1]).join(' · '));
-  return { text: L.join('\n'), sources: Object.keys(src).map((k) => src[k]), topics: Object.keys(src), asOf: dTh(String((X.generatedAt || (stats && stats.generatedAt) || '')).slice(0, 16).replace('T', ' ')) };
+  return { text: L.join('\n'), sources: Object.keys(src).map((k) => src[k]), topics: Object.keys(src), live: Object.keys(src).filter((k) => LI.topics && LI.topics[k]), asOf: asOfSeen.length ? asOfSeen.slice(0, 4).join(' · ') : dTh(String((X.generatedAt || (stats && stats.generatedAt) || '')).slice(0, 16).replace('T', ' ')) };
 }
 
 // ตัวเลขในคำตอบต้องมาจากข้อเท็จจริง คำถาม/บทสนทนาก่อนหน้า หรือเป็นส่วนของวันที่/เวลา/ปี — นอกนั้นถือว่าโมเดลคิดเลขเอง/เดา แล้วไม่ส่งคำตอบนั้นออกไป

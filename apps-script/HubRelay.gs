@@ -1,5 +1,5 @@
 /**
- * HubRelay.gs — ตัวกลางอ่าน “Sheet ส่วนตัว” และ “ภาพส่วนตัว” ให้ระบบภายใน mu-traffic-hub (รอบ 10)
+ * HubRelay.gs — ตัวกลางอ่าน “Sheet ส่วนตัว” และ “ภาพส่วนตัว” ให้ระบบภายใน mu-traffic-hub (รอบ 11 · RELAY_VERSION r11)
  *
  * ทำไมต้องมี: Sheet ทะเบียนนักศึกษา–รถจักรยานยนต์, แบบสำรวจเรือนไทย และภาพประกอบรายงาน GPS งานปริญญา เป็นไฟล์ส่วนตัวของเจ้าของ
  *   บริการบน Cloudflare อ่านเองไม่ได้ (และห้ามเปลี่ยนการแชร์เป็นสาธารณะ) จึงให้สคริปต์นี้ซึ่งรันด้วยบัญชีเจ้าของไฟล์อ่านแทน
@@ -8,10 +8,13 @@
  *   - ตารางอ่านได้เฉพาะ Spreadsheet/แท็บ/คอลัมน์ในรายการ RELAY_TABLES · คอลัมน์ข้อมูลส่วนบุคคล (ทะเบียนรถ) ส่งเฉพาะ “มี/ไม่มีค่า”
  *   - ภาพอ่านได้เฉพาะไฟล์ภาพที่อยู่ใต้โฟลเดอร์ใน RELAY_IMAGE_ROOTS เท่านั้น
  *   - ทุกคำขอต้องมีค่าลับร่วม (เก็บใน Script Properties → RELAY_SECRET) — ค่าลับได้มาจากการลงทะเบียนครั้งเดียวด้วย setup()
+ *   - ไม่ส่ง OAuth token ออกไปที่ใด · ใช้สิทธิ์แบบอ่านอย่างเดียว (ดู HubRelay.appsscript.json)
+ * setup() กดซ้ำได้: ถ้ามีค่าลับแล้วจะตรวจการทำงานอย่างเดียว (ไม่ใช้ token ซ้ำ) · checkInstall() ตรวจอย่างเดียว
  * วิธีติดตั้ง: ดู docs/ส่งมอบรอบ10.md หัวข้อ “เปิดตัวกลางอ่านข้อมูลส่วนตัว”
  */
 var RELAY_HUB = 'https://mu-traffic-hub.pages.dev';
-var RELAY_ENROLL_TOKEN = '__ENROLL_TOKEN__';          // token ใช้ครั้งเดียว (หมดอายุภายใน 7 วัน) — หลัง setup() สำเร็จ ค่านี้ใช้ซ้ำไม่ได้แล้ว
+var RELAY_VERSION = 'r11';                            // ต้องตรงกับ RELAY_VERSION ใน worker/src/index.js
+var RELAY_ENROLL_TOKEN = '__ENROLL_TOKEN__';          // token ใช้ครั้งเดียว (หมดอายุภายใน 7 วัน) · กู้คืน: ผู้ดูแลออก token ใหม่ แล้วใส่ใน Script Properties → ENROLL_TOKEN (ไม่ต้องแก้โค้ด)
 var RELAY_TABLES = {
   studentMoto: { id: '1v0LYqEkWIb3MaNKqp1T50tBlDmYn7UP8xl36cPlpllQ', tab: 'Registrations_Motorcycle',
     cols: ['Timestamp', 'RefCode', 'วิทยาเขต', 'คณะ/สถาบัน/ส่วนงาน', 'ประเภทนักศึกษา', 'ระดับการศึกษา', 'ประเภทเครื่องยนต์', 'จำนวนรถ'], present: ['รถ1_ทะเบียน', 'รถ2_ทะเบียน', 'รถ3_ทะเบียน'] },
@@ -27,7 +30,7 @@ function doPost(e) {
   var secret = PropertiesService.getScriptProperties().getProperty('RELAY_SECRET') || '';
   if (secret.length < 32 || !relayEq_(String(body.secret || ''), secret)) return relayOut_({ ok: false, code: 'forbidden' });
   try {
-    if (body.action === 'ping') return relayOut_({ ok: true });
+    if (body.action === 'ping') return relayOut_({ ok: true, v: RELAY_VERSION });
     if (body.action === 'table') return relayOut_(relayTable_(String(body.source || ''), body.cols, body.present));
     if (body.action === 'img') return relayOut_(relayImg_(String(body.id || ''), Number(body.w) || 400));
     return relayOut_({ ok: false, code: 'unknown-action' });
@@ -64,31 +67,67 @@ function relayAllowed_(file) {
   }
   return false;
 }
+var RELAY_MIME = /^image\/(jpeg|png|webp|gif)$/, RELAY_MAX_BYTES = 4 * 1024 * 1024;
 function relayImg_(id, w) {
   if (!/^[-\w]{20,60}$/.test(id)) return { ok: false, code: 'bad-id' };
   if (RELAY_WIDTHS.indexOf(w) < 0) w = 400;
   var f; try { f = DriveApp.getFileById(id); } catch (e) { return { ok: false, code: 'not-found' }; }
-  if (!/^image\//.test(f.getMimeType()) || !relayAllowed_(f)) return { ok: false, code: 'not-allowed' };
-  var tok = ScriptApp.getOAuthToken(), meta = JSON.parse(UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + id + '?fields=thumbnailLink', { headers: { Authorization: 'Bearer ' + tok } }).getContentText());
+  if (!RELAY_MIME.test(f.getMimeType()) || !relayAllowed_(f)) return { ok: false, code: 'not-allowed' };
   var blob = null;
-  if (meta.thumbnailLink) {
-    var r = UrlFetchApp.fetch(String(meta.thumbnailLink).replace(/=s\d+$/, '') + '=s' + w, { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true });
-    if (r.getResponseCode() === 200 && /^image\//.test(r.getHeaders()['Content-Type'] || '')) blob = r.getBlob();
+  try {                                                  // ทางหลัก: รูปย่อตามความกว้างที่ขอ (Drive API ด้วยสิทธิ์ของสคริปต์นี้) — ล้มเหลวแล้วไปทางสำรอง ไม่ลองซ้ำ
+    var tok = ScriptApp.getOAuthToken(), m = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + id + '?fields=thumbnailLink', { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true });
+    var link = m.getResponseCode() === 200 ? JSON.parse(m.getContentText()).thumbnailLink : '';
+    if (link) { var r = UrlFetchApp.fetch(String(link).replace(/=s\d+$/, '') + '=s' + w, { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true });
+      if (r.getResponseCode() === 200 && RELAY_MIME.test(String(r.getHeaders()['Content-Type'] || '').split(';')[0])) blob = r.getBlob(); }
+  } catch (e) { blob = null; }
+  if (!blob) {                                            // ทางสำรอง: ไฟล์ต้นฉบับ (ชนิดภาพที่อนุญาต และไม่เกิน 4 MB)
+    if (f.getSize() > RELAY_MAX_BYTES) return { ok: false, code: 'too-large' };
+    blob = f.getBlob(); if (!RELAY_MIME.test(blob.getContentType())) return { ok: false, code: 'not-allowed' };
   }
-  if (!blob) { if (f.getSize() > 4 * 1024 * 1024) return { ok: false, code: 'too-large' }; blob = f.getBlob(); }      // ไม่มีรูปย่อ → ส่งไฟล์เดิม (จำกัดขนาด)
-  return { ok: true, mime: blob.getContentType(), b64: Utilities.base64Encode(blob.getBytes()) };
+  return { ok: true, mime: String(blob.getContentType()).split(';')[0], b64: Utilities.base64Encode(blob.getBytes()) };
 }
 
-/** รันครั้งเดียวหลัง Deploy เป็น Web App: ลงทะเบียน URL ของสคริปต์นี้กับระบบ แล้วเก็บค่าลับร่วมไว้ใน Script Properties */
+/** ติดตั้ง/ตรวจซ้ำ: กดได้หลายครั้ง — ครั้งแรกลงทะเบียนด้วย token แล้วให้ระบบเรียก URL /exec จริงเพื่อตรวจ · ครั้งต่อไปตรวจอย่างเดียว */
 function setup() {
+  var url = relayUrl_(), P = PropertiesService.getScriptProperties();
+  // ทดสอบสิทธิ์อ่านของบัญชีนี้ก่อน (หน้าขออนุญาตของ Google จะขึ้นตอนนี้ครั้งเดียว)
+  Object.keys(RELAY_TABLES).forEach(function (k) { var sh = SpreadsheetApp.openById(RELAY_TABLES[k].id).getSheetByName(RELAY_TABLES[k].tab); if (!sh) throw new Error('บัญชีนี้เปิดแท็บ ' + RELAY_TABLES[k].tab + ' ไม่ได้'); Logger.log('อ่านได้: ' + RELAY_TABLES[k].tab + ' (' + (sh.getLastRow() - 1) + ' แถว)'); });
+  RELAY_IMAGE_ROOTS.forEach(function (id) { Logger.log('อ่านโฟลเดอร์ภาพได้: ' + DriveApp.getFolderById(id).getName()); });
+  if (!P.getProperty('RELAY_SECRET')) {
+    var tok = P.getProperty('ENROLL_TOKEN') || RELAY_ENROLL_TOKEN;
+    var j = relayPost_('/api/relay/enroll', { token: tok, url: url });
+    if (!j.ok || !j.secret) throw new Error('ลงทะเบียนไม่สำเร็จ (' + j.code + ') — ' + relayHelp_(j.code));
+    P.setProperty('RELAY_SECRET', j.secret); P.deleteProperty('ENROLL_TOKEN');
+    Logger.log('ลงทะเบียนแล้ว กำลังให้ระบบตรวจการเชื่อมต่อ…');
+  } else Logger.log('มีค่าลับอยู่แล้ว — ตรวจการเชื่อมต่ออย่างเดียว (ไม่ใช้ token ซ้ำ)');
+  return checkInstall();
+}
+function checkInstall() {
+  var j = relayPost_('/api/relay/confirm', { url: relayUrl_() });
+  var c = j.check || {};
+  Logger.log('ระบบเรียกสคริปต์นี้: ' + (c.ping || j.code) + (c.version ? ' (รุ่น ' + c.version + ')' : ''));
+  Object.keys(c.tables || {}).forEach(function (k) { Logger.log('อ่านตาราง ' + k + ': ' + c.tables[k]); });
+  Logger.log('อ่านภาพตัวอย่าง: ' + (c.image || '-'));
+  if (!j.ok) throw new Error('ยังใช้งานไม่ได้ (' + (j.code || 'check-failed') + ') — ' + relayHelp_(c.ping && c.ping !== 'ok' ? c.ping : j.code));
+  Logger.log('ติดตั้งสำเร็จและผ่านการตรวจจากระบบแล้ว' + (j.promoted ? ' (เริ่มใช้งานตัวกลางนี้)' : ' (ใช้งานอยู่แล้ว)'));
+  return 'ok';
+}
+function relayUrl_() {
   var url = ScriptApp.getService().getUrl();
-  if (!url || !/\/exec$/.test(url)) throw new Error('ยังไม่ได้ Deploy เป็น Web App — กด Deploy > New deployment > Web app ก่อน แล้วรัน setup อีกครั้ง');
-  // ทดสอบสิทธิ์อ่านก่อน (ให้หน้าขออนุญาตของ Google ขึ้นครั้งเดียวตอนนี้)
-  Object.keys(RELAY_TABLES).forEach(function (k) { SpreadsheetApp.openById(RELAY_TABLES[k].id).getSheetByName(RELAY_TABLES[k].tab).getLastRow(); });
-  DriveApp.getFolderById(RELAY_IMAGE_ROOTS[0]).getName();
-  var r = UrlFetchApp.fetch(RELAY_HUB + '/api/relay/enroll', { method: 'post', contentType: 'application/json', payload: JSON.stringify({ token: RELAY_ENROLL_TOKEN, url: url }), muteHttpExceptions: true });
-  var j = {}; try { j = JSON.parse(r.getContentText()); } catch (e) {}
-  if (r.getResponseCode() !== 200 || !j.ok || !j.secret) throw new Error('ลงทะเบียนไม่สำเร็จ (' + (j.code || ('HTTP ' + r.getResponseCode())) + ') — แจ้งผู้ดูแลระบบเพื่อออก token ใหม่');
-  PropertiesService.getScriptProperties().setProperty('RELAY_SECRET', j.secret);
-  Logger.log('ลงทะเบียนสำเร็จ: ' + url);
+  if (!url || !/\/exec$/.test(url)) throw new Error('ยังไม่ได้ Deploy เป็น Web app — กด Deploy > New deployment > Web app ก่อน แล้วรัน setup อีกครั้ง');
+  return url;
+}
+function relayPost_(path, payload) {
+  var r = UrlFetchApp.fetch(RELAY_HUB + path, { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true });
+  var j = {}; try { j = JSON.parse(r.getContentText()); } catch (e) { j = { ok: false, code: 'HTTP ' + r.getResponseCode() }; }
+  if (r.getResponseCode() >= 400 && !j.code) j.code = 'HTTP ' + r.getResponseCode();
+  return j;
+}
+function relayHelp_(code) {
+  var H = { 'enroll-bad-token': 'token ไม่ถูกต้อง — ใช้ไฟล์ HubRelay_for_owner.gs ฉบับล่าสุด', 'enroll-expired': 'token หมดอายุ — ขอ token ใหม่จากผู้ดูแลระบบ แล้วใส่ใน Script Properties ชื่อ ENROLL_TOKEN',
+    'enroll-used': 'token ถูกใช้ไปแล้ว — ถ้าสคริปต์นี้ยังไม่มี RELAY_SECRET ให้ขอ token ใหม่ใส่ใน Script Properties ชื่อ ENROLL_TOKEN แล้วรัน setup อีกครั้ง', 'enroll-closed': 'ระบบยังไม่เปิดรับลงทะเบียน — ขอ token ใหม่จากผู้ดูแลระบบ',
+    'relay-login-required': 'ระบบเรียก URL นี้แล้วเจอหน้า Login — ตอน Deploy ต้องเลือก Who has access = Anyone (ถ้าไม่มีตัวเลือกนี้ แสดงว่าองค์กรจำกัดไว้)', 'relay-forbidden': 'ค่าลับไม่ตรงกับระบบ — ลบ RELAY_SECRET ใน Script Properties แล้วขอ token ใหม่',
+    'outdated': 'URL ที่ Deploy ยังเป็นโค้ดรุ่นเก่า — Deploy > Manage deployments > แก้ไข > Version: New version > Deploy', 'relay-unknown-url': 'URL นี้ยังไม่ได้ลงทะเบียน — ลบ RELAY_SECRET ใน Script Properties แล้วขอ token ใหม่',
+    'relay-timeout': 'สคริปต์ตอบช้า — ลองรัน checkInstall อีกครั้ง', 'relay-not-deployed': 'ไม่พบ Web app ที่ URL นี้ — ตรวจว่า Deploy แล้ว', 'check-failed': 'ดูรายละเอียดแต่ละรายการใน Execution log' };
+  return H[code] || 'ดูรายละเอียดใน Execution log';
 }
