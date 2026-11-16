@@ -18,11 +18,11 @@ function delta(cur, prev) {
   return (d > 0 ? "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E02\u0E36\u0E49\u0E19 " : "\u0E25\u0E14\u0E25\u0E07 ") + n(Math.abs(d)) + p;
 }
 var TOPICS = {
-  incidents: /อุบัติ|เหตุ|บาดเจ็บ|ผู้ป่วย|ป่วย|ชน|ล้ม|รถพยาบาล|ยานพาหนะ|incident|accident/i,
+  incidents: /อุบัติ|เหตุ|บาดเจ็บ|ผู้ป่วย|ป่วย|ชน|ล้ม|รถพยาบาล|incident|accident/i,
   lostfound: /ของหาย|หาย|เก็บได้|เก็บของ|รับคืน|คืนของ|lost|found|ของ/i,
   gate: /รถเข้า|ประตู|หมวก|นิรภัย|จักรยานยนต์|มอเตอร์ไซค์|รถยนต์|helmet|gate/i,
-  cctv: /กล้อง|cctv|วงจรปิด/i,
-  anywheel: /anywheel|จักรยาน|ปั่น/i,
+  cctv: /cctv|วงจรปิด|กล้องวงจร|ขอดู(?:ภาพ)?กล้อง|ภาพจากกล้อง/i,
+  anywheel: /anywheel|จักรยาน(?!ยนต์)|ปั่น/i,
   tram: /รถราง|tram/i,
   guard: /รปภ|พึงพอใจ|ประเมิน|ความปลอดภัยเอกชน/i,
   vehicle: /ทะเบียน|ลงทะเบียน|สติ๊กเกอร์|สติกเกอร์|นักศึกษา/i,
@@ -31,7 +31,11 @@ var TOPICS = {
 };
 var CORE = ["incidents", "lostfound", "gate"];
 function topicsOf(text) {
-  const t = String(text || ""), out = Object.keys(TOPICS).filter((k) => TOPICS[k].test(t));
+  const t = String(text || "");
+  let out = Object.keys(TOPICS).filter((k) => TOPICS[k].test(t));
+  if (out.includes("vehicle") && !/เข้า|ประตู|หมวก|นิรภัย/.test(t)) out = out.filter((k) => k !== "gate");
+  if (out.includes("ruenthai") && !/ดับเพลิง|ยานพาหนะของงาน|กี่ลาน|ลานจอดทั้งหมด/.test(t)) out = out.filter((k) => k !== "ops");
+  if (out.includes("ruenthai") && !/ลงทะเบียน|สติ๊กเกอร์|สติกเกอร์|นักศึกษา/.test(t)) out = out.filter((k) => k !== "vehicle");
   return out;
 }
 var NAV_HINTS = [
@@ -228,7 +232,7 @@ function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
       add("\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30 " + SM + " (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14)", "\u0E41\u0E22\u0E01\u0E15\u0E32\u0E21\u0E2B\u0E21\u0E27\u0E14 (\u0E2B\u0E19\u0E48\u0E27\u0E22: \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19)", "\u0E27\u0E34\u0E17\u0E22\u0E32\u0E40\u0E02\u0E15: " + topObj(sm.byCampus) + " \xB7 \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E19\u0E15\u0E4C: " + topObj(sm.byEngine) + " \xB7 \u0E04\u0E13\u0E30/\u0E2A\u0E48\u0E27\u0E19\u0E07\u0E32\u0E19 (\u0E2D\u0E31\u0E19\u0E14\u0E31\u0E1A\u0E41\u0E23\u0E01): " + topObj(sm.byFaculty, 6), dTh(sm.checkedAt));
     }
     const tot = have.reduce((a, k) => a + vr.rows[k], 0);
-    add("\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30", "\u0E22\u0E2D\u0E14\u0E23\u0E27\u0E21 (\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A)", "\u0E23\u0E27\u0E21 " + n(tot) + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u0E08\u0E32\u0E01 " + have.length + " \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E17\u0E35\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 (" + have.join(", ") + ")" + (have.length < ks.length ? " \u2014 \u0E44\u0E21\u0E48\u0E23\u0E27\u0E21 " + ks.filter((k) => vr.rows[k] == null).join(", ") + " \u0E40\u0E1E\u0E23\u0E32\u0E30\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19" : "") + (sm ? " \xB7 \u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38: " + SM + " \u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E41\u0E25\u0E30\u0E19\u0E31\u0E1A\u0E15\u0E32\u0E21 RefCode \u0E2A\u0E48\u0E27\u0E19\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E2D\u0E37\u0E48\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E22\u0E2D\u0E14\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B \u0E13 " + dTh(vr.updated) + " \u0E19\u0E31\u0E1A\u0E15\u0E32\u0E21\u0E41\u0E16\u0E27 \u0E08\u0E36\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E32\u0E23\u0E23\u0E27\u0E21\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E15\u0E48\u0E32\u0E07\u0E40\u0E27\u0E25\u0E32/\u0E15\u0E48\u0E32\u0E07\u0E19\u0E34\u0E22\u0E32\u0E21" : ""), sm ? dTh(sm.checkedAt) + " (\u0E2A\u0E14) / " + dTh(vr.updated) + " (\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B)" : dTh(vr.updated));
+    add("\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30", "\u0E22\u0E2D\u0E14\u0E23\u0E27\u0E21 (\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A)", "\u0E23\u0E27\u0E21 " + n(tot) + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u0E08\u0E32\u0E01 " + have.length + " \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E17\u0E35\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 (" + have.join(", ") + ")" + (have.length < ks.length ? " \u2014 \u0E44\u0E21\u0E48\u0E23\u0E27\u0E21 " + ks.filter((k) => vr.rows[k] == null).join(", ") + " \u0E40\u0E1E\u0E23\u0E32\u0E30\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19" : "") + (sm ? " \xB7 \u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38: \u0E22\u0E2D\u0E14\u0E23\u0E27\u0E21\u0E19\u0E35\u0E49\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2A\u0E14\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 \u2014 \u0E2A\u0E14\u0E40\u0E09\u0E1E\u0E32\u0E30 " + SM + " (\u0E19\u0E31\u0E1A\u0E15\u0E32\u0E21 RefCode) \u0E2A\u0E48\u0E27\u0E19\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E2D\u0E37\u0E48\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E22\u0E2D\u0E14\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B \u0E13 " + dTh(vr.updated) + " \u0E19\u0E31\u0E1A\u0E15\u0E32\u0E21\u0E41\u0E16\u0E27 \u0E08\u0E36\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E32\u0E23\u0E23\u0E27\u0E21\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E15\u0E48\u0E32\u0E07\u0E40\u0E27\u0E25\u0E32/\u0E15\u0E48\u0E32\u0E07\u0E19\u0E34\u0E22\u0E32\u0E21 \u0E2B\u0E49\u0E32\u0E21\u0E40\u0E23\u0E35\u0E22\u0E01\u0E22\u0E2D\u0E14\u0E23\u0E27\u0E21\u0E19\u0E35\u0E49\u0E27\u0E48\u0E32 \u201C\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2A\u0E14\u201D" : ""), sm ? dTh(sm.checkedAt) + " (\u0E2A\u0E14) / " + dTh(vr.updated) + " (\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B)" : dTh(vr.updated));
   }
   const oc = X.opsCheck;
   if (oc && use.has("ops")) {
@@ -247,7 +251,7 @@ function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
   const others = Object.keys(TOPICS).filter((k) => !use.has(k));
   if (others.length) L.push("\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E2D\u0E37\u0E48\u0E19\u0E17\u0E35\u0E48\u0E23\u0E30\u0E1A\u0E1A\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 (\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E41\u0E19\u0E1A\u0E21\u0E32\u0E43\u0E19\u0E23\u0E2D\u0E1A\u0E19\u0E35\u0E49 \u2014 \u0E16\u0E49\u0E32\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E16\u0E32\u0E21\u0E16\u0E36\u0E07 \u0E43\u0E2B\u0E49\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E16\u0E32\u0E21\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E31\u0E49\u0E19\u0E42\u0E14\u0E22\u0E15\u0E23\u0E07\u0E44\u0E14\u0E49): " + others.map((k) => ({ incidents: "\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C/\u0E2D\u0E38\u0E1A\u0E31\u0E15\u0E34\u0E40\u0E2B\u0E15\u0E38", lostfound: "Lost & Found", gate: "\u0E23\u0E16\u0E40\u0E02\u0E49\u0E32\u0E41\u0E25\u0E30\u0E2B\u0E21\u0E27\u0E01\u0E19\u0E34\u0E23\u0E20\u0E31\u0E22", cctv: "\u0E04\u0E33\u0E02\u0E2D\u0E14\u0E39\u0E01\u0E25\u0E49\u0E2D\u0E07 CCTV", anywheel: "\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19 Anywheel", tram: "\u0E23\u0E16\u0E23\u0E32\u0E07", guard: "\u0E04\u0E27\u0E32\u0E21\u0E1E\u0E36\u0E07\u0E1E\u0E2D\u0E43\u0E08 \u0E23\u0E1B\u0E20.", vehicle: "\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30", ops: "\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14/\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30\u0E02\u0E2D\u0E07\u0E07\u0E32\u0E19/\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E14\u0E31\u0E1A\u0E40\u0E1E\u0E25\u0E34\u0E07", ruenthai: "\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E44\u0E17\u0E22" })[k]).join(", "));
   L.push("\u0E40\u0E21\u0E19\u0E39\u0E43\u0E19\u0E40\u0E27\u0E47\u0E1A\u0E19\u0E35\u0E49\u0E17\u0E35\u0E48\u0E41\u0E19\u0E30\u0E19\u0E33\u0E44\u0E14\u0E49 (\u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E1B\u0E47\u0E19 #\u0E23\u0E2B\u0E31\u0E2A \u0E40\u0E0A\u0E48\u0E19 #traffic \u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A\u0E08\u0E30\u0E17\u0E33\u0E40\u0E1B\u0E47\u0E19\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E43\u0E2B\u0E49): " + NAV_HINTS.map((h) => h[0] + " #" + h[1]).join(" \xB7 "));
-  return { text: L.join("\n"), sources: Object.keys(src).map((k) => src[k]), topics: Object.keys(src), live: Object.keys(src).filter((k) => LI.topics && LI.topics[k]), snapshot: Object.keys(src).filter((k) => !(LI.topics && LI.topics[k])).map((k) => src[k]), asOf: asOfSeen.length ? asOfSeen.slice(0, 4).join(" \xB7 ") : dTh(String(X.generatedAt || stats && stats.generatedAt || "").slice(0, 16).replace("T", " ")) };
+  return { text: L.join("\n"), sources: Object.keys(src).map((k) => src[k]), topics: Object.keys(src), live: Object.keys(src).filter((k) => LI.topics && LI.topics[k]), snapshot: Object.keys(src).filter((k) => !(LI.topics && LI.topics[k])).map((k) => src[k]).concat(src.vehicle && LI.topics && LI.topics.vehicle ? ["\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30 (\u0E1A\u0E38\u0E04\u0E25\u0E32\u0E01\u0E23 \u0E41\u0E25\u0E30\u0E19\u0E31\u0E01\u0E28\u0E36\u0E01\u0E29\u0E32\u2013\u0E23\u0E16\u0E22\u0E19\u0E15\u0E4C)"] : []), asOf: asOfSeen.length ? asOfSeen.slice(0, 4).join(" \xB7 ") : dTh(String(X.generatedAt || stats && stats.generatedAt || "").slice(0, 16).replace("T", " ")) };
 }
 var MONTH_RX = "(?:" + TH.map((m) => m.replace(/\./g, "\\.")).join("|") + "|" + THF.join("|") + ")";
 function numbersOk(reply, factsText, question) {
@@ -1037,9 +1041,10 @@ async function chat(request, env, deps, s) {
   } else throw new Err(503, "llm-not-configured");
   if (!reply) throw new Err(502, "llm-schema");
   reply = reply.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+  const meta = topicsOf(q).length ? buildFacts(stats, extra, b.context || {}, now, q, liveInfo) : facts;
   const ok = numbersOk(reply, facts.text, q + " " + hist.map((m) => m.content).join(" "));
   const hasNum = /\d/.test(reply.replace(/#[a-z0-9-]+/g, ""));
-  return json({ status: "success", reply: ok ? reply.slice(0, 3e3) : UNVERIFIED, verified: ok, sources: ok && hasNum ? facts.sources : [], asOf: ok && hasNum ? facts.asOf : "", live: facts.live.length > 0, liveTopics: facts.live, snapshot: ok && hasNum ? facts.snapshot : [] });
+  return json({ status: "success", reply: ok ? reply.slice(0, 3e3) : UNVERIFIED, verified: ok, sources: ok && hasNum ? meta.sources : [], asOf: ok && hasNum ? meta.asOf : "", live: meta.live.length > 0, liveTopics: meta.live, snapshot: ok && hasNum ? meta.snapshot : [] });
 }
 var IMG_W = [400, 800, 1600];
 async function img(request, env, deps) {

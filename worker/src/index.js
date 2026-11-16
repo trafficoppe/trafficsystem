@@ -1,7 +1,7 @@
 // worker/src/index.js — บริการกลางของ “ระบบฐานข้อมูล งานจราจรและความปลอดภัย” (Cloudflare Worker โครงการใหม่ แยกจากเว็บไซต์เดิม)
 // ทุกคำขอผ่านลำดับเดียวกัน: (1) ตรวจเครือข่ายที่อนุญาต → (2) ตรวจ session → (3) ตรวจสิทธิ์ผู้ดูแลสำหรับการแก้ไข
 // ไม่มีรหัสพนักงาน รายชื่อ หรือค่าลับในไฟล์นี้ — รหัสตรวจกับแท็บ “รายชื่อเจ้าหน้าที่” ฝั่งบริการทุกครั้ง
-import { buildFacts, numbersOk, applyLive } from '../../server/lib/facts.js';
+import { buildFacts, numbersOk, applyLive, topicsOf } from '../../server/lib/facts.js';
 
 const REPO = 'https://raw.githubusercontent.com/trafficoppe/trafficsystem/';
 const COOKIE = '__Host-hub_s';
@@ -394,9 +394,11 @@ async function chat(request, env, deps, s) {
   } else throw new Err(503, 'llm-not-configured');
   if (!reply) throw new Err(502, 'llm-schema');
   reply = reply.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+  // ที่มา/วันที่ของข้อมูลที่แสดงใต้คำตอบ: ถ้าคำถามนี้ระบุหัวข้อเอง ใช้เฉพาะหัวข้อนั้น (ไม่สะสมหัวข้อจากคำถามก่อนหน้า)
+  const meta = topicsOf(q).length ? buildFacts(stats, extra, b.context || {}, now, q, liveInfo) : facts;
   const ok = numbersOk(reply, facts.text, q + ' ' + hist.map((m) => m.content).join(' '));       // ตัวเลขจากบทสนทนาก่อนหน้า (ที่ผ่านการตรวจแล้ว) ใช้ซ้ำได้
   const hasNum = /\d/.test(reply.replace(/#[a-z0-9-]+/g, ''));
-  return json({ status: 'success', reply: ok ? reply.slice(0, 3000) : UNVERIFIED, verified: ok, sources: ok && hasNum ? facts.sources : [], asOf: ok && hasNum ? facts.asOf : '', live: facts.live.length > 0, liveTopics: facts.live, snapshot: ok && hasNum ? facts.snapshot : [] });
+  return json({ status: 'success', reply: ok ? reply.slice(0, 3000) : UNVERIFIED, verified: ok, sources: ok && hasNum ? meta.sources : [], asOf: ok && hasNum ? meta.asOf : '', live: meta.live.length > 0, liveTopics: meta.live, snapshot: ok && hasNum ? meta.snapshot : [] });
 }
 
 // ---------- 7) ภาพภายใน: รับเฉพาะรหัสไฟล์ที่ปรากฏในชุดข้อมูล ไม่รับ URL อิสระ ----------

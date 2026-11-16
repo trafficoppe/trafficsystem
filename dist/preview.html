@@ -3172,7 +3172,7 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
     return nowMonthly(Q, base, c.monthly, function (rows) { base.main = { v: num(sumK(rows, 'count')), u: 'คำขอ' }; base.subs = [{ l: 'ปิดเคสสะสม', v: num(c.byStatus['ปิดเคส']) + ' / ' + num(c.total) }]; }, 'อัปเดต ' + dLabel(c.updated)); }
   function nowAssets() { var vr = mod('vehicleRegistration'), oc = extra('opsCheck'); if (!vr) return null;
     var tot = Object.keys(vr.rows).reduce(function (a, k2) { return a + (vr.rows[k2] || 0); }, 0);
-    return { icon: 'car', title: 'ลานจอดและยานพาหนะ', color: C.c5, page: 'parking', badge: 'ทะเบียน ณ ' + dShort(vr.updated), main: { v: num(tot), u: 'รายการลงทะเบียน' },
+    return { icon: 'car', title: 'ลานจอดและยานพาหนะ', color: C.c5, page: 'parking', badge: 'ทะเบียน ณ ' + dShort(vr.updated) + (vr.studentMoto ? ' · จยย.นศ. สด' : ''), main: { v: num(tot), u: 'รายการลงทะเบียน' },
       subs: [{ l: 'บุคลากร', v: num((vr.rows['บุคลากร – รถยนต์'] || 0) + (vr.rows['บุคลากร – รถจักรยานยนต์'] || 0)) }, { l: 'นักศึกษา', v: num((vr.rows['นักศึกษา – รถยนต์'] || 0) + (vr.rows['นักศึกษา – รถจักรยานยนต์'] || 0)) + (vr.rows['นักศึกษา – รถจักรยานยนต์'] == null ? ' (ไม่รวม จยย.)' : '') }, oc ? { l: 'ลานจอดรถ', v: num(oc.parkingLots) + ' ลาน' } : null, oc ? { l: 'รถของงาน', v: num(oc.vehicles.total) + ' คัน' } : null] }; }
   function nowGuard(Q) { var sat = mod('guardSatisfaction'), fines = mod('guardFines'), oc = extra('opsCheck'); if (!sat) return null;
     var rows = sat.central.monthly, pick = rows.filter(function (r) { return r.month === Q.cm; })[0] || rows[rows.length - 1], u = sat.unit.monthly, lu = u[u.length - 1];

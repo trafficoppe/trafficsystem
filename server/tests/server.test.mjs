@@ -11,7 +11,7 @@ import { handleData } from '../functions/api/data.js';
 import { handleForm, validateForm } from '../functions/api/form.js';
 import { handleChat } from '../functions/api/chat.js';
 import { handleRoster } from '../functions/api/roster.js';
-import { buildFacts, numbersOk } from '../lib/facts.js';
+import { buildFacts, numbersOk, topicsOf } from '../lib/facts.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const stats = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/stats.json'), 'utf8')), extra = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/extra.json'), 'utf8'));
@@ -134,5 +134,10 @@ _resetRate(); { const kv = new Map(), env = ENV({ RATE_KV: { get: async (k) => k
 { const files = ['lib/auth.js', 'lib/upstream.js', 'lib/ratelimit.js', 'lib/facts.js', 'functions/api/data.js', 'functions/api/form.js', 'functions/api/chat.js', 'functions/api/roster.js', '../apps-script/HubData.gs'].map((f) => fs.readFileSync(path.join(ROOT, 'server', f), 'utf8')).join('\n');
   ok('ซอร์สบริการไม่มีคีย์/URL ของ Apps Script จริง/รหัสพนักงาน', !/AKfyc[\w-]{20,}|AIza[\w-]{20,}|sk-[A-Za-z0-9]{20,}|1062|1lYRhXtLgec6/.test(files)); }
 
+{ const T = (q) => topicsOf(q).sort().join(',');
+  ok('หัวข้อ: “นักศึกษาลงทะเบียนรถจักรยานยนต์” → ทะเบียนเท่านั้น (ไม่ใช่รถเข้าประตู/Anywheel)', T('นักศึกษาลงทะเบียนรถจักรยานยนต์กี่รายการ') === 'vehicle', T('นักศึกษาลงทะเบียนรถจักรยานยนต์กี่รายการ'));
+  ok('หัวข้อ: “ยอดลงทะเบียนยานพาหนะรวม” → ทะเบียนเท่านั้น (ไม่ใช่เหตุการณ์)', T('ยอดลงทะเบียนยานพาหนะรวมทั้งหมดเท่าไร') === 'vehicle');
+  ok('หัวข้อ: “เรือนไทย … กล้อง LPR” → เรือนไทยเท่านั้น (ไม่ใช่ CCTV/ลานจอด)', T('รถเรือนไทยที่อัปเดตเข้ากล้อง LPR แล้วมีกี่คัน') === 'ruenthai', T('รถเรือนไทยที่อัปเดตเข้ากล้อง LPR แล้วมีกี่คัน'));
+  ok('หัวข้อ: รถจักรยานยนต์เข้าประตู ยังเป็นหัวข้อรถเข้า · ขอดูกล้อง ยังเป็น CCTV', T('รถจักรยานยนต์เข้าประตูวันนี้') === 'gate' && T('คำขอดูกล้องเดือนนี้') === 'cctv'); }
 console.log('รวม ' + count + ' ข้อ · ไม่ผ่าน ' + fails + ' (ทั้งหมดเป็นการทดสอบ local ด้วย MOCK)');
 process.exit(fails ? 1 : 0);

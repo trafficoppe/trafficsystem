@@ -18,11 +18,11 @@ export function delta(cur, prev) {
 }
 // หัวข้อ → คำที่บ่งบอกในคำถาม (ใช้เลือกส่งเฉพาะข้อมูลที่เกี่ยวข้อง และอ้างที่มาเฉพาะเรื่องนั้น)
 const TOPICS = {
-  incidents: /อุบัติ|เหตุ|บาดเจ็บ|ผู้ป่วย|ป่วย|ชน|ล้ม|รถพยาบาล|ยานพาหนะ|incident|accident/i,
+  incidents: /อุบัติ|เหตุ|บาดเจ็บ|ผู้ป่วย|ป่วย|ชน|ล้ม|รถพยาบาล|incident|accident/i,
   lostfound: /ของหาย|หาย|เก็บได้|เก็บของ|รับคืน|คืนของ|lost|found|ของ/i,
   gate: /รถเข้า|ประตู|หมวก|นิรภัย|จักรยานยนต์|มอเตอร์ไซค์|รถยนต์|helmet|gate/i,
-  cctv: /กล้อง|cctv|วงจรปิด/i,
-  anywheel: /anywheel|จักรยาน|ปั่น/i,
+  cctv: /cctv|วงจรปิด|กล้องวงจร|ขอดู(?:ภาพ)?กล้อง|ภาพจากกล้อง/i,
+  anywheel: /anywheel|จักรยาน(?!ยนต์)|ปั่น/i,
   tram: /รถราง|tram/i,
   guard: /รปภ|พึงพอใจ|ประเมิน|ความปลอดภัยเอกชน/i,
   vehicle: /ทะเบียน|ลงทะเบียน|สติ๊กเกอร์|สติกเกอร์|นักศึกษา/i,
@@ -30,7 +30,14 @@ const TOPICS = {
   ruenthai: /เรือนไทย|ruenthai/i
 };
 const CORE = ['incidents', 'lostfound', 'gate'];
-export function topicsOf(text) { const t = String(text || ''), out = Object.keys(TOPICS).filter((k) => TOPICS[k].test(t)); return out; }
+export function topicsOf(text) {
+  const t = String(text || ''); let out = Object.keys(TOPICS).filter((k) => TOPICS[k].test(t));
+  // คำถามเรื่องลงทะเบียนรถ ไม่ใช่เรื่องรถเข้าประตู · คำถามเรื่องลานเรือนไทย ไม่ใช่ทะเบียนลานจอด/อุปกรณ์ของงาน
+  if (out.includes('vehicle') && !/เข้า|ประตู|หมวก|นิรภัย/.test(t)) out = out.filter((k) => k !== 'gate');
+  if (out.includes('ruenthai') && !/ดับเพลิง|ยานพาหนะของงาน|กี่ลาน|ลานจอดทั้งหมด/.test(t)) out = out.filter((k) => k !== 'ops');
+  if (out.includes('ruenthai') && !/ลงทะเบียน|สติ๊กเกอร์|สติกเกอร์|นักศึกษา/.test(t)) out = out.filter((k) => k !== 'vehicle');
+  return out;
+}
 
 // เมนูภายในที่ผู้ช่วยแนะนำได้ (ลิงก์ในเว็บนี้เท่านั้น — หน้าเว็บแปลง #รหัส เป็นลิงก์)
 export const NAV_HINTS = [
@@ -133,7 +140,7 @@ export function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
     if (sm) { add('ทะเบียนยานพาหนะ ' + SM + ' (อ่านสด)', dTh(sm.range.from) + ' – ' + dTh(sm.range.to), 'รายการลงทะเบียน ' + n(sm.registrations) + ' รายการ (1 RefCode = 1 รายการ · RefCode ซ้ำ ' + n(sm.duplicateRefs) + ' แถวนับครั้งเดียว · แถวไม่มี RefCode ' + n(sm.rowsWithoutRef) + ' แถวไม่นับ) · จำนวนรถตามที่กรอก ' + n(sm.vehiclesDeclared) + ' คัน (ไม่กรอก ' + n(sm.rowsNoCount) + ' รายการ) · ช่องทะเบียนรถที่กรอก ' + n(sm.platesFilled) + ' ช่อง (จำนวนรถไม่ตรงกับช่องทะเบียน ' + n(sm.rowsCountMismatch) + ' รายการ)', dTh(sm.checkedAt));
       add('ทะเบียนยานพาหนะ ' + SM + ' (อ่านสด)', 'แยกตามหมวด (หน่วย: รายการลงทะเบียน)', 'วิทยาเขต: ' + topObj(sm.byCampus) + ' · ประเภทเครื่องยนต์: ' + topObj(sm.byEngine) + ' · คณะ/ส่วนงาน (อันดับแรก): ' + topObj(sm.byFaculty, 6), dTh(sm.checkedAt)); }
     const tot = have.reduce((a, k) => a + vr.rows[k], 0);
-    add('ทะเบียนยานพาหนะ', 'ยอดรวม (ตัวเลขเดียวกับหน้าเว็บ)', 'รวม ' + n(tot) + ' รายการ จาก ' + have.length + ' ประเภทที่มีข้อมูล (' + have.join(', ') + ')' + (have.length < ks.length ? ' — ไม่รวม ' + ks.filter((k) => vr.rows[k] == null).join(', ') + ' เพราะไม่มีข้อมูลยืนยัน' : '') + (sm ? ' · หมายเหตุ: ' + SM + ' อ่านสดและนับตาม RefCode ส่วนประเภทอื่นเป็นยอดจากไฟล์สรุป ณ ' + dTh(vr.updated) + ' นับตามแถว จึงเป็นการรวมตัวเลขต่างเวลา/ต่างนิยาม' : ''), sm ? dTh(sm.checkedAt) + ' (สด) / ' + dTh(vr.updated) + ' (ไฟล์สรุป)' : dTh(vr.updated)); }
+    add('ทะเบียนยานพาหนะ', 'ยอดรวม (ตัวเลขเดียวกับหน้าเว็บ)', 'รวม ' + n(tot) + ' รายการ จาก ' + have.length + ' ประเภทที่มีข้อมูล (' + have.join(', ') + ')' + (have.length < ks.length ? ' — ไม่รวม ' + ks.filter((k) => vr.rows[k] == null).join(', ') + ' เพราะไม่มีข้อมูลยืนยัน' : '') + (sm ? ' · หมายเหตุ: ยอดรวมนี้ไม่ใช่ข้อมูลสดทั้งหมด — สดเฉพาะ ' + SM + ' (นับตาม RefCode) ส่วนประเภทอื่นเป็นยอดจากไฟล์สรุป ณ ' + dTh(vr.updated) + ' นับตามแถว จึงเป็นการรวมตัวเลขต่างเวลา/ต่างนิยาม ห้ามเรียกยอดรวมนี้ว่า “ข้อมูลสด”' : ''), sm ? dTh(sm.checkedAt) + ' (สด) / ' + dTh(vr.updated) + ' (ไฟล์สรุป)' : dTh(vr.updated)); }
   const oc = X.opsCheck;
   if (oc && use.has('ops')) { src.ops = 'ข้อมูลงานจราจรออนไลน์'; add('ทะเบียนของงานจราจร', 'ยอดล่าสุด', 'ลานจอดรถ ' + n(oc.parkingLots) + ' ลาน, ยานพาหนะของงาน ' + n(oc.vehicles.total) + ' คัน, อุปกรณ์ดับเพลิง ' + n(oc.fireEquipment.total) + ' ชิ้น (ไม่รวม AED)', dTh(oc.checkedAt)); }
   const rt = X.ruenthaiSurvey;
@@ -144,7 +151,7 @@ export function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
   const others = Object.keys(TOPICS).filter((k) => !use.has(k));
   if (others.length) L.push('หัวข้ออื่นที่ระบบมีข้อมูล (ไม่ได้แนบมาในรอบนี้ — ถ้าผู้ใช้ถามถึง ให้บอกว่าถามเรื่องนั้นโดยตรงได้): ' + others.map((k) => ({ incidents: 'เหตุการณ์/อุบัติเหตุ', lostfound: 'Lost & Found', gate: 'รถเข้าและหมวกนิรภัย', cctv: 'คำขอดูกล้อง CCTV', anywheel: 'จักรยาน Anywheel', tram: 'รถราง', guard: 'ความพึงพอใจ รปภ.', vehicle: 'ทะเบียนยานพาหนะ', ops: 'ลานจอด/ยานพาหนะของงาน/อุปกรณ์ดับเพลิง', ruenthai: 'ลานจอดเรือนไทย' })[k]).join(', '));
   L.push('เมนูในเว็บนี้ที่แนะนำได้ (เขียนเป็น #รหัส เช่น #traffic หน้าเว็บจะทำเป็นลิงก์ให้): ' + NAV_HINTS.map((h) => h[0] + ' #' + h[1]).join(' · '));
-  return { text: L.join('\n'), sources: Object.keys(src).map((k) => src[k]), topics: Object.keys(src), live: Object.keys(src).filter((k) => LI.topics && LI.topics[k]), snapshot: Object.keys(src).filter((k) => !(LI.topics && LI.topics[k])).map((k) => src[k]), asOf: asOfSeen.length ? asOfSeen.slice(0, 4).join(' · ') : dTh(String((X.generatedAt || (stats && stats.generatedAt) || '')).slice(0, 16).replace('T', ' ')) };
+  return { text: L.join('\n'), sources: Object.keys(src).map((k) => src[k]), topics: Object.keys(src), live: Object.keys(src).filter((k) => LI.topics && LI.topics[k]), snapshot: Object.keys(src).filter((k) => !(LI.topics && LI.topics[k])).map((k) => src[k]).concat(src.vehicle && LI.topics && LI.topics.vehicle ? ['ทะเบียนยานพาหนะ (บุคลากร และนักศึกษา–รถยนต์)'] : []), asOf: asOfSeen.length ? asOfSeen.slice(0, 4).join(' · ') : dTh(String((X.generatedAt || (stats && stats.generatedAt) || '')).slice(0, 16).replace('T', ' ')) };
 }
 
 // ตัวเลขในคำตอบต้องมาจากข้อเท็จจริง คำถาม/บทสนทนาก่อนหน้า หรือเป็นส่วนของวันที่/เวลา/ปี — นอกนั้นถือว่าโมเดลคิดเลขเอง/เดา แล้วไม่ส่งคำตอบนั้นออกไป
