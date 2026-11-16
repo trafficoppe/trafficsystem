@@ -595,6 +595,14 @@ details.fold>summary:focus-visible{outline:3px solid rgba(11,122,90,.35);border-
 .chat-fab .fab-t{font-weight:600;font-size:.95rem;white-space:nowrap}
 @media (max-width:640px){.chat-fab{padding:0;min-width:48px;width:48px}.chat-fab .fab-t{display:none}}
 
+/* ผู้ช่วย AI: จอกว้างเปิดเป็นแถบด้านขวาและดันเนื้อหาเข้าไป (ไม่บังตัวเลข/แผนที่) · จอแคบเป็นแผ่นด้านล่างพร้อมปุ่มปิด */
+body.chat-open .chat-fab{display:none}
+@media (min-width:1100px){
+  .chat-panel{top:76px;bottom:16px;right:16px;width:372px;max-height:none}
+  body.chat-open .main{padding-right:396px}
+}
+@media (max-width:640px){.chat-panel{max-height:78dvh}}
+
 </style>
 <style>
 /* required styles */
@@ -3401,7 +3409,12 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
     var form = el('form', { class: 'chat-form' }, [inp, send]);
     var panel = el('section', { id: 'chatPanel', class: 'chat-panel', hidden: '', 'aria-label': 'ผู้ช่วย AI ถามสถิติ' }, [el('div', { class: 'chat-h' }, [el('div', {}, [el('strong', { text: 'ผู้ช่วยถามสถิติ' }), scope]), closeB]), log, quick, form]);
     function add(role, text, extraNode) { var m = el('div', { class: 'chat-m ' + role }, [el('p', { text: text }), extraNode || null]); log.appendChild(m); log.scrollTop = log.scrollHeight; return m; }
-    function ctx() { var Q = periodOf(); return { today: todayStr(), page: currentPage(), period: Q.kind, from: state.from, to: state.to, dataAsOf: (DATA && ((DATA.extra || {}).generatedAt || DATA.stats.generatedAt)) || '' }; }
+    /* ช่วงที่ส่งให้ผู้ช่วย = ช่วงที่ผู้ใช้เห็นอยู่จริง: หน้าแรกใช้ปุ่ม วันนี้/เดือนนี้/ปีนี้/กำหนดช่วง · หน้าอื่นใช้ช่วงเดือนของหน้านั้น */
+    function chatScope() {
+      if (currentPage() === 'dashboard') { var Q = periodOf(), ms = Q.months && Q.months.length ? Q.months : [Q.cm]; return { kind: Q.kind, label: Q.label, from: ms[0], to: ms[ms.length - 1] }; }
+      return { kind: 'range', label: rangeText(), from: state.from || MONTHS[0], to: state.to || MONTHS[MONTHS.length - 1] };
+    }
+    function ctx() { var sc = chatScope(); return { today: todayStr(), page: currentPage(), period: sc.kind, label: sc.label, from: sc.from, to: sc.to, dataAsOf: (DATA && ((DATA.extra || {}).generatedAt || DATA.stats.generatedAt)) || '' }; }
     function ask(text) {
       if (chat.busy || !text) return; chat.busy = true; chat.last = text; send.disabled = true; quick.textContent = '';
       add('user', text); var wait = add('ai wait', 'กำลังตอบ…'), ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(function () { if (ctl) ctl.abort(); }, 45000);
@@ -3421,8 +3434,8 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
     }
     function open(on) {
       panel.hidden = !on; fab.setAttribute('aria-expanded', String(on)); document.body.classList.toggle('chat-open', on);
-      if (!on) { fab.focus(); return; }
-      scope.textContent = 'ช่วงที่กำลังดู: ' + rangeText();
+      if (!on) { window.dispatchEvent(new Event('resize')); fab.focus(); return; }
+      scope.textContent = 'ช่วงที่กำลังดู: ' + chatScope().label; window.dispatchEvent(new Event('resize'));
       if (!log.childNodes.length) {
         if (!HCFG.aiApiUrl) { add('ai note', 'ยังเชื่อมต่อผู้ช่วย AI ไม่ได้', el('p', { class: 'chat-src' }, ['เว็บไซต์นี้ยังไม่ได้ตั้งค่าบริการผู้ช่วย AI ที่ตรวจตัวตน จึงยังถามตอบไม่ได้ — ', el('a', { href: '#ai', text: 'ดูสิ่งที่ต้องตั้งค่า' })])); inp.disabled = true; send.disabled = true; }
         else { add('ai', 'ถามสถิติรวมของงานจราจรและความปลอดภัยได้ เช่น จำนวนอุบัติเหตุ รถเข้า หรือของหาย ในช่วงที่กำลังดู'); ['อุบัติเหตุเดือนนี้มีกี่ครั้ง', 'สรุป Lost & Found ปีนี้', 'รถเข้ามหาวิทยาลัยล่าสุดวันไหน เท่าไร'].forEach(function (t) { quick.appendChild(el('button', { type: 'button', class: 'chip', text: t, onclick: function () { ask(t); } })); }); }

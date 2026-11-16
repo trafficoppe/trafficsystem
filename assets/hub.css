@@ -583,3 +583,11 @@ details.fold>summary:focus-visible{outline:3px solid rgba(11,122,90,.35);border-
 .chat-fab{display:inline-flex;align-items:center;justify-content:center;width:auto;min-width:56px;padding:0 16px;gap:8px;border-radius:999px}
 .chat-fab .fab-t{font-weight:600;font-size:.95rem;white-space:nowrap}
 @media (max-width:640px){.chat-fab{padding:0;min-width:48px;width:48px}.chat-fab .fab-t{display:none}}
+
+/* ผู้ช่วย AI: จอกว้างเปิดเป็นแถบด้านขวาและดันเนื้อหาเข้าไป (ไม่บังตัวเลข/แผนที่) · จอแคบเป็นแผ่นด้านล่างพร้อมปุ่มปิด */
+body.chat-open .chat-fab{display:none}
+@media (min-width:1100px){
+  .chat-panel{top:76px;bottom:16px;right:16px;width:372px;max-height:none}
+  body.chat-open .main{padding-right:396px}
+}
+@media (max-width:640px){.chat-panel{max-height:78dvh}}

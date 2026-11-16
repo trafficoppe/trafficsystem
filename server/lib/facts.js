@@ -14,7 +14,7 @@ export function buildFacts(stats, extra, ctx, nowMs) {
   const from = ctx && isMonth(ctx.from) ? ctx.from : null, to = ctx && isMonth(ctx.to) ? ctx.to : null;
   const inR = (m) => from && to && m >= from && m <= to, rLabel = from && to ? (from === to ? mTh(from) : mTh(from) + ' – ' + mTh(to)) : '';
   const add = (topic, period, text, asOf) => L.push('[' + topic + ' | ' + period + (asOf ? ' | ข้อมูล ณ ' + asOf : '') + '] ' + text);
-  L.push('วันนี้ (เวลาไทย) คือ ' + dTh(today) + (rLabel ? ' · ช่วงที่ผู้ใช้กำลังดูบนหน้าเว็บ: ' + rLabel : ''));
+  L.push('วันนี้ (เวลาไทย) คือ ' + dTh(today) + (ctx && ctx.period === 'today' ? ' · ผู้ใช้กำลังดู “ข้อมูลวันนี้” บนหน้าเว็บ (ถ้าคำถามไม่ระบุช่วง ให้ตอบของวันนี้ และบอกว่าเป็นของวันนี้)' : rLabel ? ' · ช่วงที่ผู้ใช้กำลังดูบนหน้าเว็บ: ' + rLabel + ' (ถ้าคำถามไม่ระบุช่วง ให้ตอบของช่วงนี้ และบอกช่วงนี้ในคำตอบ)' : ''));
 
   const inc = M.incidents, incD = X.incidentsDaily;
   if (inc && inc.monthly) {

@@ -97,7 +97,9 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   // ---------- 7) ผู้ช่วย AI ----------
   await go(page, 'dashboard'); await page.waitForSelector('.now');
   ok('ปุ่มผู้ช่วย: รูปหุ่นยนต์ + ชื่อสั้น “ถาม AI” + Tooltip “ถาม AI เรื่องสถิติ”', (await txt(page, '#chatFab')) === 'ถาม AI' && await page.getAttribute('#chatFab', 'title') === 'ถาม AI เรื่องสถิติ' && await T(page, '#chatFab svg rect').count() === 1);
-  await page.click('#chatFab'); await page.fill('#chatPanel textarea, #chatPanel input[type=text]', 'เดือนนี้มีเหตุการณ์กี่ครั้ง'); await page.keyboard.press('Enter'); await page.waitForFunction(() => /คำตอบจากบริการ AI จำลอง/.test(document.getElementById('chatPanel').textContent), null, { timeout: 8000 }).catch(() => {});
+  await page.click('#chatFab'); await page.waitForTimeout(350);
+  ok('เปิดผู้ช่วยบนจอกว้าง: เป็นแถบด้านขวา เนื้อหาถูกดันเข้า — ไม่ทับการ์ดตัวเลขและแผนที่ · ระบุช่วงตรงกับปุ่ม “วันนี้” ของหน้าแรก', await page.evaluate(() => { const p = document.getElementById('chatPanel').getBoundingClientRect(); const hit = [...document.querySelectorAll('.now, .trend, .dash-map')].some((e) => { const r = e.getBoundingClientRect(); return r.right > p.left + 1 && r.left < p.right && r.bottom > p.top && r.top < p.bottom; }); return !hit && /ช่วงที่กำลังดู: วันนี้ \d+ /.test(document.getElementById('chatPanel').textContent) && document.documentElement.scrollWidth <= window.innerWidth; }), await txt(page, '#chatPanel'));
+  await page.fill('#chatPanel textarea, #chatPanel input[type=text]', 'เดือนนี้มีเหตุการณ์กี่ครั้ง'); await page.keyboard.press('Enter'); await page.waitForFunction(() => /คำตอบจากบริการ AI จำลอง/.test(document.getElementById('chatPanel').textContent), null, { timeout: 8000 }).catch(() => {});
   ok('[MOCK AI] ถามผ่าน /api/chat ด้วย session เดียวกัน → ได้คำตอบพร้อมแหล่งข้อมูล', /คำตอบจากบริการ AI จำลอง/.test(await txt(page, '#chatPanel')) && log.api.some((a) => a === 'POST /api/chat'), (await txt(page, '#chatPanel')).slice(-200));
   await shot(page, '05_chat_MOCK_AI'); await page.keyboard.press('Escape');
 
@@ -132,6 +134,9 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   await login(page, '0123'); await page.waitForSelector('.now'); await go(page, 'traffic'); await page.waitForSelector('.kstrip');
   ok('มือถือ: บล็อกเหตุการณ์ไม่ล้นจอ · ปุ่มผู้ช่วยเป็นไอคอน (ไม่มีข้อความทับเนื้อหา) และหลบเมื่อเลื่อนลง', await page.evaluate(async () => { const w = (ms) => new Promise((r) => setTimeout(r, ms)), f = document.getElementById('chatFab'); const fit = document.documentElement.scrollWidth <= 390 && f.getBoundingClientRect().width <= 50 && getComputedStyle(f.querySelector('.fab-t')).display === 'none'; window.scrollTo(0, 400); await w(120); window.scrollTo(0, 900); await w(350); return fit && f.classList.contains('fab-away'); }));
   await shot(page, '08_incident_block_mobile');
+  await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(300); await page.tap('#chatFab'); await page.waitForTimeout(300);
+  ok('มือถือ: หน้าต่างผู้ช่วยอยู่ในจอ มีปุ่มปิดที่แตะได้ และปิดแล้วปุ่มกลับมา', await page.evaluate(() => { const p = document.getElementById('chatPanel').getBoundingClientRect(), b = document.querySelector('#chatPanel .chat-x, #chatPanel button[aria-label*="ปิด"]'); return p.left >= 0 && p.right <= 391 && p.top >= 0 && !!b && b.getBoundingClientRect().width >= 36; }) && await (async () => { await page.tap('#chatPanel .chat-x, #chatPanel button[aria-label*="ปิด"]'); await page.waitForTimeout(200); return await page.locator('#chatPanel').isHidden() && await page.locator('#chatFab').isVisible(); })());
+  await shot(page, '09_chat_mobile_closed');
   ok('ไม่มี Console error จากโค้ดของระบบ (มือถือ)', log.err.length === 0, log.err.join(' | '));
   await browser.close();
   console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (หน้าเว็บ + บริการตัวจริงบนเครื่อง · แหล่งข้อมูล/AI/รหัสพนักงานเป็นของจำลอง)'); process.exit(fails ? 1 : 0);
