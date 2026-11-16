@@ -209,7 +209,17 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   ok('ลานจอด: ต้นทางไม่มีรูป → ไม่แสดงกรอบรูปเปล่า และบอกว่าต้นทางยังไม่มีภาพ/พิกัด', await T(page, '.dv .it .it-pic').count() === 0 && /ต้นทางยังไม่มีภาพและพิกัดของลานจอด/.test(await text(page, '.dv')));
   await page.click('.lu-pager button:has-text("ถัดไป")'); await page.waitForTimeout(250); ok('แบ่งหน้าทำงาน', /หน้า 2 \/ 3/.test(await text(page, '.lu-pager')));
   await page.screenshot({ path: OUT + '/08_parking_lots_MOCKDATA.png', fullPage: true });
-  tx = await open(page, 'forms'); await page.waitForSelector('.list.forms li'); ok('[MOCK gviz] แบบฟอร์ม: 7 รายการจากต้นทาง + 4 แบบฟอร์มที่กรอกในระบบนี้', await T(page, '.dv .list.forms li').count() === 7 && await T(page, '.list.forms a[href^="#form"]').count() === 4);
+  tx = await open(page, 'forms'); await page.waitForSelector('.list.forms li');
+  { const t = await text(page, '#view'), hrefs = await page.$$eval('.list.forms a', (a) => a.map((x) => x.getAttribute('href')));
+    const once = (n) => t.split(n).length - 1 === 1;
+    ok('แบบฟอร์ม: ชื่อใหม่ครบและไม่ซ้ำ (แจ้งเหตุ AI · รถเข้า+หมวก · ตรวจสภาพยานพาหนะ · ขอดูกล้อง · ตรวจและเติมสารดับเพลิง)', once('ระบบรายงานเหตุการณ์/แจ้งเหตุ (AI)') && once('แบบฟอร์มบันทึกจำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัย') && once('แบบฟอร์มตรวจสภาพยานพาหนะ') && once('แบบฟอร์มขอดูกล้องวงจรปิด') && once('แบบฟอร์มตรวจและเติมสารอุปกรณ์ดับเพลิง'));
+    ok('แบบฟอร์ม: ไม่มีชื่อเดิม/รายการซ้ำ/แบบบันทึกขยะ', !/แบบฟอร์มรายงานเหตุการณ์ไม่ปกติ|แบบฟอร์มบันทึกรถเข้ามหาวิทยาลัย|ระบบขอดูกล้องวงจรปิด \(CCTV\)|ระบบตรวจถังดับเพลิง|การจัดการขยะ/.test(t));
+    ok('แบบฟอร์ม: ลิงก์ตามที่กำหนด', ['https://trafficoppe.github.io/report-incident-AI-v1/', 'https://trafficoppe.github.io/Form-Gate-Tracker-AI-v1/', 'https://trafficoppe.github.io/trafficsystem/form.html', 'https://trafficoppe.github.io/trafficoppe/', 'https://trafficoppe.github.io/-v1/'].every((u) => hrefs.filter((h) => h === u).length === 1), JSON.stringify(hrefs));
+    ok('แบบฟอร์ม: แบบบันทึกย่อย (ทำความสะอาด · เติมสารถังดับเพลิง) อยู่ใต้แบบฟอร์มหลักพร้อมข้อความเติมอัตโนมัติ', await T(page, '.list.forms li.f-sub').count() === 2 && /เลือกยานพาหนะจากหน้า ‘ยานพาหนะทั้งหมด’ เพื่อเติมรุ่นและทะเบียนให้อัตโนมัติ/.test(t) && /เลือกถังจากหน้า ‘อุปกรณ์ดับเพลิง’ เพื่อเติมชนิดและเลขที่ถังให้อัตโนมัติ/.test(t));
+    ok('แบบฟอร์ม: ลิงก์ภายนอกเปิดแท็บใหม่ · ลิงก์ภายในไม่เปิดแท็บใหม่', (await page.$$eval('.list.forms a[href^="https"]', (a) => a.every((x) => x.target === '_blank'))) && (await page.$$eval('.list.forms a[href^="#"]', (a) => a.every((x) => !x.target))));
+    await page.fill('.lu-bar input[type=search]', 'ดับเพลิง'); await page.waitForTimeout(350); ok('แบบฟอร์ม: ค้นหา “ดับเพลิง” → แบบฟอร์มหลัก + แบบบันทึกย่อย', await T(page, '.list.forms li').count() === 2, String(await T(page, '.list.forms li').count()));
+    await page.fill('.lu-bar input[type=search]', 'ขยะ'); await page.waitForTimeout(350); ok('แบบฟอร์ม: ค้นหา “ขยะ” → ไม่พบ', /ไม่พบแบบฟอร์ม/.test(await text(page, '#view')));
+    await page.goto(URL0 + '#form-waste'); await page.waitForTimeout(300); ok('ลิงก์เดิม #form-waste → หน้าแบบฟอร์ม (ไม่ใช่หน้าว่าง)', /แบบฟอร์มทั่วไป/.test(await text(page, 'h1'))); }
   await page.screenshot({ path: OUT + '/09_forms_MOCKDATA.png', fullPage: true });
   tx = await open(page, 'inspection-history'); await page.waitForSelector('.tbl');
   ok('[MOCK gviz] ประวัติตรวจสภาพ: 118 ครั้ง · ตาราง 20/หน้า · เปิดผลตรวจ 9 ข้อ', /118/.test(await text(page, '.kpis')) && await T(page, '.tbl tbody tr').count() === 20);
@@ -253,14 +263,14 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   await fill('น้ำหนักหลังเติม', '10'); await page.click('.hform button[type=submit]'); await page.waitForTimeout(200);
   ok('ยังไม่ได้เชื่อมบริการบันทึก → บอกว่า “ยังไม่ได้บันทึก” ไม่ส่งข้อมูล ไม่ขึ้น “บันทึกแล้ว”', /ยังไม่ได้บันทึก/.test(await text(page, '.hform-msg')) && !/^บันทึกแล้ว/.test(await text(page, '.hform-msg')) && log.posts.length === 0 && log.ext.filter(u => /script\.google/.test(u)).length === 0);
   await page.screenshot({ path: OUT + '/14_form_refill_validation.png' });
-  for (const f of ['form-clean', 'form-waste', 'forms-radio']) { await page.goto(URL0 + '#' + f); await page.waitForSelector('.hform'); await page.click('.hform button[type=submit]'); await page.waitForTimeout(120); ok('แบบฟอร์ม ' + f + ': แสดงผลและตรวจข้อมูลได้', /ยังบันทึกไม่ได้/.test(await text(page, '.hform-msg'))); }
+  for (const f of ['form-clean', 'forms-radio']) { await page.goto(URL0 + '#' + f); await page.waitForSelector('.hform'); await page.click('.hform button[type=submit]'); await page.waitForTimeout(120); ok('แบบฟอร์ม ' + f + ': แสดงผลและตรวจข้อมูลได้', /ยังบันทึกไม่ได้/.test(await text(page, '.hform-msg'))); }
   await ctx.close();
-  ({ ctx, page, log } = await newPage(browser, { cfg: { formApiUrl: BASE + '/mock-api/form' } })); await page.goto(URL0 + '#form-waste'); await page.waitForSelector('.hform');
-  await page.fill('.hform-f:has(label:has-text("ผู้รายงาน")) input', 'ผู้ทดสอบ (MOCK)'); await page.fill('.hform-f:has(label:has-text("ตำแหน่ง")) input', 'ทดสอบ'); await page.fill('.hform-f:has(label:has-text("ขยะทั่วไป")) input', '3.5'); await page.click('.hform button[type=submit]'); await page.waitForTimeout(400);
+  ({ ctx, page, log } = await newPage(browser, { cfg: { formApiUrl: BASE + '/mock-api/form' } })); await page.goto(URL0 + '#forms-radio'); await page.waitForSelector('.hform');
+  await page.fill('.hform-f:has(label:has-text("ประเภทเหตุการณ์")) input', 'ทดสอบ (MOCK)'); await page.selectOption('.hform-f:has(label:has-text("สถานะ")) select', 'รับแจ้ง'); await page.click('.hform button[type=submit]'); await page.waitForTimeout(400);
   ok('[MOCK บริการบันทึก] ตอบ ok → “บันทึกแล้ว” พร้อมเลขอ้างอิง (ส่งไปที่ mock เท่านั้น)', /บันทึกแล้ว · เลขอ้างอิง MOCK-REF-1/.test(await text(page, '.hform-msg')) && log.posts.length === 1); await ctx.close();
-  ({ ctx, page, log } = await newPage(browser, { cfg: { formApiUrl: BASE + '/mock-api/form' }, formStatus: 500 })); await page.goto(URL0 + '#form-waste'); await page.waitForSelector('.hform');
-  await page.fill('.hform-f:has(label:has-text("ผู้รายงาน")) input', 'x'); await page.fill('.hform-f:has(label:has-text("ตำแหน่ง")) input', 'y'); await page.fill('.hform-f:has(label:has-text("ขยะทั่วไป")) input', '1'); await page.click('.hform button[type=submit]'); await page.waitForTimeout(400);
-  ok('[MOCK บริการบันทึก 500] → “ยังไม่ได้บันทึก” และข้อมูลที่กรอกยังอยู่', /ยังไม่ได้บันทึก/.test(await text(page, '.hform-msg')) && await page.inputValue('.hform-f:has(label:has-text("ผู้รายงาน")) input') === 'x'); await ctx.close();
+  ({ ctx, page, log } = await newPage(browser, { cfg: { formApiUrl: BASE + '/mock-api/form' }, formStatus: 500 })); await page.goto(URL0 + '#forms-radio'); await page.waitForSelector('.hform');
+  await page.fill('.hform-f:has(label:has-text("ประเภทเหตุการณ์")) input', 'x'); await page.selectOption('.hform-f:has(label:has-text("สถานะ")) select', 'รับแจ้ง'); await page.click('.hform button[type=submit]'); await page.waitForTimeout(400);
+  ok('[MOCK บริการบันทึก 500] → “ยังไม่ได้บันทึก” และข้อมูลที่กรอกยังอยู่', /ยังไม่ได้บันทึก/.test(await text(page, '.hform-msg')) && await page.inputValue('.hform-f:has(label:has-text("ประเภทเหตุการณ์")) input') === 'x'); await ctx.close();
 
   // ===== H) ผู้ช่วย AI =====
   ({ ctx, page, log } = await newPage(browser)); await page.goto(URL0); await page.waitForSelector('#chatFab');
@@ -272,10 +282,24 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   ok('[MOCK AI 500] แสดงข้อผิดพลาด + ปุ่มลองใหม่', /ตอบกลับผิดพลาด/.test(await text(page, '.chat-m.err')));
   await page.click('.chat-m.err button'); await page.waitForSelector('.chat-m.ai:not(.wait):not(.err) >> nth=1');
   const sent = log.posts[log.posts.length - 1];
-  ok('[MOCK AI] ลองใหม่สำเร็จ: คำตอบ + แหล่งข้อมูล/เวลา · ส่งเฉพาะคำถาม ประวัติ และช่วงเวลา (ไม่มีข้อมูลสถิติหรือรายบุคคล)', /คำตอบสมมติ \(MOCK\)/.test(await text(page, '.chat-log')) && /แหล่งข้อมูล: รายงานเหตุการณ์ · ข้อมูล ณ/.test(await text(page, '.chat-log')) && sent.action === 'chat' && Object.keys(sent).sort().join() === 'action,chatHistory,context,userMessage' && sent.context.today === '2026-11-15' && sent.context.period === 'today');
+  ok('[MOCK AI] ลองใหม่สำเร็จ: คำตอบ + แหล่งข้อมูล/เวลา · ส่งเฉพาะคำถาม ประวัติ และช่วงเวลา (ไม่มีข้อมูลสถิติหรือรายบุคคล)', /คำตอบสมมติ \(MOCK\)/.test(await text(page, '.chat-log')) && /ที่มา: รายงานเหตุการณ์ · ข้อมูล ณ/.test(await text(page, '.chat-log')) && sent.action === 'chat' && Object.keys(sent).sort().join() === 'action,chatHistory,context,userMessage' && sent.context.today === '2026-11-15' && sent.context.period === 'today');
   await page.fill('.chat-form textarea', 'ถามต่อ'); await page.keyboard.press('Enter'); await page.waitForTimeout(500);
   ok('[MOCK AI] ถามต่อเนื่อง: ส่งประวัติก่อนหน้าไปด้วย', log.posts[log.posts.length - 1].chatHistory.length === 2);
   await page.screenshot({ path: OUT + '/16_chat_MOCK_reply.png' }); await ctx.close();
+  // หุ่นยนต์ผู้ช่วย: รูปโหลดได้ (ฝังในไฟล์ Preview) · ปิดหน้าต่างแชต ≠ ซ่อนปุ่ม · ซ่อนแล้วจำไว้ · เปิดกลับจากหน้าตั้งค่า · โหมดปุ่มข้อความ
+  ({ ctx, page, log } = await newPage(browser, { cfg: { aiApiUrl: BASE + '/mock-api/chat' } })); await page.goto(URL0); await page.waitForSelector('#chatFab');
+  ok('หุ่นยนต์ผู้ช่วย: รูปโหลดสำเร็จ (object-fit: contain) + ป้าย “ถาม AI” + aria-label', await page.evaluate(() => { const i = document.querySelector('#chatFab .fab-bot'); return i.complete && i.naturalWidth === 256 && getComputedStyle(i).objectFit === 'contain'; }) && /ถาม AI/.test(await text(page, '#chatFab')) && !!(await T(page, '#chatFab').getAttribute('aria-label')));
+  { const b = await T(page, '#chatFab').boundingBox(); ok('หุ่นยนต์ผู้ช่วย: ขนาดกดง่าย (≥ 44px)', b.width >= 44 && b.height >= 44); }
+  ok('หุ่นยนต์ผู้ช่วย: ไม่เปิดหน้าต่างเอง', await T(page, '#chatPanel').isHidden());
+  await page.focus('#chatFab'); await page.keyboard.press('Enter'); await page.waitForTimeout(200); ok('หุ่นยนต์ผู้ช่วย: เปิดด้วยแป้นพิมพ์ได้ + รูปหุ่นยนต์ที่หัวหน้าต่างแชต', await T(page, '#chatPanel').isVisible() && await page.evaluate(() => document.querySelector('.chat-ava').naturalWidth > 0));
+  await page.click('.chat-x'); await page.waitForTimeout(150); ok('ปิดหน้าต่างแชต → ปุ่มหุ่นยนต์ยังอยู่', await T(page, '#chatPanel').isHidden() && await T(page, '#chatFab').isVisible());
+  await page.click('#chatFab'); await page.click('.chat-hide'); await page.waitForTimeout(150); ok('ซ่อนปุ่ม → ปุ่มลอยหายและหน้าต่างปิด', await T(page, '#chatFab').isHidden() && await T(page, '#chatPanel').isHidden());
+  await page.reload(); await page.waitForTimeout(600); ok('ซ่อนปุ่ม: จำไว้หลังโหลดหน้าใหม่ (เบราว์เซอร์เดิม)', await T(page, '#chatFab').isHidden());
+  await page.goto(URL0 + '#settings'); await page.waitForSelector('#set-ai-fab'); await page.click('#set-ai-fab button:has-text("ปุ่มข้อความ")'); await page.waitForTimeout(200);
+  ok('เปิดกลับจากหน้าตั้งค่า: โหมดปุ่มข้อความ “ถาม AI” (ไม่มีรูป)', await T(page, '#chatFab').isVisible() && await page.evaluate(() => getComputedStyle(document.querySelector('#chatFab .fab-bot')).display === 'none'));
+  await page.click('#set-ai-fab button:has-text("หุ่นยนต์")'); await page.waitForTimeout(200); ok('กลับเป็นโหมดหุ่นยนต์ได้', await page.evaluate(() => getComputedStyle(document.querySelector('#chatFab .fab-bot')).display === 'block'));
+  await page.emulateMedia({ reducedMotion: 'reduce' }); ok('prefers-reduced-motion → ไม่มีภาพเคลื่อนไหว', await page.evaluate(() => getComputedStyle(document.querySelector('#chatFab .fab-bot')).animationName === 'none'));
+  await page.screenshot({ path: OUT + '/16b_robot_fab.png' }); await ctx.close();
 
   // ===== I) Lost & Found =====
   ({ ctx, page, log } = await newPage(browser)); tx = await open(page, 'lostfound');
@@ -299,7 +323,7 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   const overflow = async () => page.evaluate(() => { const w = document.documentElement.clientWidth; return Array.from(document.querySelectorAll('#view *')).filter(n => { const r = n.getBoundingClientRect(); return r.width > 0 && (r.right > w + 1 || r.left < -1) && !n.closest('.tbl-wrap, .jump, .leaflet-container, svg, .chips'); }).slice(0, 4).map(n => n.className || n.tagName).join(','); });
   ok('มือถือ หน้าแรก: ไม่ล้นจอ · ไม่มีตาราง · 8 การ์ด', (await overflow()) === '' && await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1) && await T(page, '#view table').count() === 0 && await T(page, '.now').count() === 8, await overflow());
   await page.screenshot({ path: OUT + '/17_mobile_dashboard_top.png' }); await page.screenshot({ path: OUT + '/18_mobile_dashboard_full.png', fullPage: true });
-  const fabBox = await T(page, '#chatFab').boundingBox(); ok('มือถือ: ปุ่มผู้ช่วย AI อยู่มุมล่างขวา ไม่ทับการ์ดเมื่อเลื่อนสุด', fabBox.x > 300 && fabBox.y > 760 && await page.evaluate(() => { document.documentElement.style.scrollBehavior = 'auto'; window.scrollTo(0, document.body.scrollHeight); const f = document.getElementById('chatFab').getBoundingClientRect(), last = Array.from(document.querySelectorAll('.trend')).pop().getBoundingClientRect(); return last.bottom <= f.top + 2; }));
+  const fabBox = await T(page, '#chatFab').boundingBox(); ok('มือถือ: ปุ่มผู้ช่วย AI (หุ่นยนต์ + ถาม AI) อยู่มุมล่างขวา ไม่ทับการ์ดเมื่อเลื่อนสุด', fabBox.x > 290 && fabBox.x + fabBox.width >= 370 && fabBox.y + fabBox.height >= 820 && await page.evaluate(() => { document.documentElement.style.scrollBehavior = 'auto'; window.scrollTo(0, document.body.scrollHeight); const f = document.getElementById('chatFab').getBoundingClientRect(), last = Array.from(document.querySelectorAll('.trend')).pop().getBoundingClientRect(); return last.bottom <= f.top + 2; }));
   ok('มือถือ: เลื่อนลงอ่านข้อมูล → ปุ่มผู้ช่วย AI หลบออก (ไม่บังตัวเลขในการ์ด) · เลื่อนขึ้น → กลับมา', await page.evaluate(async () => { const f = document.getElementById('chatFab'), w = (ms) => new Promise(r => setTimeout(r, ms));
     window.scrollTo(0, 0); await w(120); const top = !f.classList.contains('fab-away'); window.scrollTo(0, 500); await w(120); window.scrollTo(0, 900); await w(350); const away = f.classList.contains('fab-away') && getComputedStyle(f).pointerEvents === 'none' && +getComputedStyle(f).opacity < 0.05;
     window.scrollTo(0, 820); await w(350); const back = !f.classList.contains('fab-away'); return top && away && back; }));

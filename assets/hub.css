@@ -595,3 +595,92 @@ body.chat-open .chat-fab{display:none}
 .chat-fab{transition:transform .2s ease,opacity .2s ease}
 .chat-fab.fab-away{transform:translateY(96px);opacity:0;pointer-events:none}
 @media (min-width:1100px){body.chat-open .nows{grid-template-columns:repeat(2,minmax(0,1fr))}body.chat-open .trends{grid-template-columns:minmax(0,1fr)}}
+
+/* ===== รอบ 9 ===== */
+/* เมนูระดับที่ 3 (เช่น GPS ใต้ ปีการศึกษา 2568) */
+.sub3{list-style:none;margin:0 0 2px!important;padding:0!important}
+.sub3 .nav-a{min-height:34px;padding:5px 10px 5px 50px;font-size:.85rem;font-weight:500;color:#cfe4db;position:relative}
+.sub3 .nav-a::before{content:"";position:absolute;left:38px;top:50%;width:7px;height:7px;border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-70%);opacity:.6}
+.sub3 .nav-a[aria-current="page"]{color:var(--brand-d);font-weight:700}
+/* รายละเอียดเหตุการณ์ (หน้าแรก + หน้าต่างรายละเอียดของหน้ารายงาน) */
+.incd{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:18px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.dlg .incd{border:0;padding:0;background:none}
+.incd-top{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.incd-top h3{font-size:1.12rem;margin:0}
+.incd-top .tag{align-self:flex-start}
+.incd-kpi{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.incd-kpi li{font-size:.82rem;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--card2);border:1px solid var(--line)}
+.incd-kpi li.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,transparent);background:color-mix(in srgb,var(--ok) 9%,transparent)}
+.incd-kpi li.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent);background:color-mix(in srgb,var(--bad) 8%,transparent)}
+.incd-dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 14px;margin:0;font-size:.93rem}
+.incd-dl dt{font-weight:700;color:var(--muted)}
+.incd-dl dd{margin:0;white-space:pre-line;overflow-wrap:anywhere}
+.incd-dl dd.ok{color:var(--ok);font-weight:700}.incd-dl dd.bad{color:var(--bad);font-weight:600}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin:0 0 12px}
+.gal-pic{border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden;background:var(--card2);cursor:zoom-in;aspect-ratio:4/3;display:grid;place-items:center;color:var(--muted);font:inherit;font-size:.8rem}
+.gal-pic img{width:100%;height:100%;object-fit:cover;display:block}
+.gal-pic:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.gal-pic.noimg{cursor:default}
+.incd-gal{grid-template-columns:repeat(2,minmax(0,1fr))}
+.incd-gal .gal-pic:first-child:nth-last-child(odd){grid-column:1 / -1;aspect-ratio:16/10}
+.incd-gal .gal-pic img{object-fit:contain;background:#0d1a15}
+.lb-nav{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.lb-nav .btn{min-width:48px;min-height:44px}
+.tdi-sum{margin:0 0 10px;font-size:.95rem}
+.tdi-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.tdi-bar select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:inherit;min-height:42px}
+.tdi-nav{display:flex;align-items:center;gap:8px;font-weight:700}
+.tdi-nav .btn-ghost{min-width:44px;min-height:42px;font-size:1.2rem}
+.tdi-empty{font-weight:600}
+.tdi-latest{margin-top:12px}.tdi-latest h3{font-size:.95rem;color:var(--muted);margin:0 0 6px}
+.lu-bar .di{display:flex;flex-direction:column;gap:2px;font-size:.78rem;color:var(--muted)}
+@media (max-width:760px){.incd{grid-template-columns:1fr;padding:12px}.incd-dl{grid-template-columns:1fr;gap:1px}.incd-dl dd{margin-bottom:6px}}
+/* ตารางเวร: รายชื่อแต่ละผลัดอยู่เหนือตาราง และติดด้านบน (ใต้แถบหัวเว็บ) เฉพาะช่วงที่เลื่อนอยู่ในส่วนตารางเวร */
+.ros-wrap{position:relative}
+.ros-names{position:sticky;top:var(--tb);z-index:20;background:var(--bg);padding:8px 0 10px;margin-bottom:6px;box-shadow:0 6px 10px -8px rgba(0,0,0,.25)}
+.ros-names .sec-h{margin-bottom:6px}
+.ros-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.ros-team{padding:8px 10px;border-top:3px solid var(--sh,var(--line))}
+.ros-team h3{font-size:.92rem;margin:0 0 4px;display:flex;justify-content:space-between;gap:6px;align-items:baseline}
+.ros-team h3 small{font-weight:600;font-size:.74rem;color:var(--muted)}
+.ros-team ul{list-style:none;margin:0;padding:0;font-size:.82rem}
+.ros-team li{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px dashed var(--line)}
+.ros-team li:last-child{border-bottom:0}.ros-team li span{color:var(--muted);text-align:right}
+.ros-names.collapsed .ros-team ul{display:none}
+.ros-tog{margin-left:auto;min-height:40px}
+@media (max-width:900px){.ros-strip{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}.ros-team{flex:0 0 min(240px,78vw);scroll-snap-align:start}}
+/* แบบฟอร์ม: แบบบันทึกย่อยแสดงใต้แบบฟอร์มหลัก */
+.list.forms li.f-sub{margin-left:28px;border-left:3px solid var(--line);padding-left:12px}
+@media (max-width:640px){.list.forms li.f-sub{margin-left:12px}}
+.set-ai{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* ปุ่มผู้ช่วย AI แบบหุ่นยนต์ (รูปเดิม ไม่ตัดส่วนสีดำ · object-fit: contain) + ป้าย “ถาม AI” */
+.chat-fab .fab-bot{display:none}
+.chat-fab.mode-robot{background:transparent;box-shadow:none;padding:0;width:auto;min-width:0;height:auto;border-radius:16px;flex-direction:column;gap:0;align-items:center;color:#fff}
+.chat-fab.mode-robot:hover{background:transparent}
+.chat-fab.mode-robot .fab-bot{display:block;width:76px;height:76px;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));animation:botFloat 3.4s ease-in-out infinite;transition:transform .18s ease}
+.chat-fab.mode-robot .fab-t{display:inline-block;margin-top:-6px;padding:4px 12px;border-radius:999px;background:var(--brand-d);font-size:.82rem;box-shadow:0 4px 10px rgba(0,0,0,.22)}
+.chat-fab.mode-robot:hover .fab-bot,.chat-fab.mode-robot:focus-visible .fab-bot{transform:translateY(-3px) scale(1.06)}
+.chat-fab.mode-robot:active .fab-bot{transform:scale(.94)}
+.chat-fab.mode-robot:focus-visible{outline:3px solid var(--brand);outline-offset:3px}
+.chat-fab.busy .fab-bot,.chat-ava.busy{animation:botThink 1s ease-in-out infinite}
+.chat-fab[hidden]{display:none!important}
+@keyframes botFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes botThink{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg) translateY(-2px)}}
+body.tab-hidden .chat-fab .fab-bot,body.chat-open .chat-fab .fab-bot,body.tab-hidden .chat-ava{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.chat-fab .fab-bot,.chat-ava,.chat-fab.busy .fab-bot{animation:none!important;transition:none!important}}
+.chat-ava{width:40px;height:40px;flex:0 0 40px;object-fit:contain;border-radius:50%;background:rgba(255,255,255,.92);padding:2px}
+.chat-h{justify-content:flex-start}
+.chat-h > div{flex:1}
+.chat-hide{border:1px solid rgba(255,255,255,.45);background:none;color:#fff;font:inherit;font-size:.78rem;padding:4px 10px;border-radius:8px;cursor:pointer;min-height:34px;white-space:nowrap}
+.chat-hide:hover{background:rgba(255,255,255,.16)}
+.chat-m a{color:var(--brand-d);font-weight:700;text-decoration:underline}
+.chat-m.user a{color:#fff}
+@media (max-width:640px){
+  .chat-fab.mode-robot{right:8px;bottom:8px;width:auto;padding:0}
+  .chat-fab.mode-robot .fab-bot{width:60px;height:60px}
+  .chat-fab.mode-robot .fab-t{display:inline-block;font-size:.74rem;padding:3px 9px}
+  .chat-fab.mode-text{padding:0 14px;width:auto;min-width:48px}
+  .chat-fab.mode-text .fab-t{display:inline}
+}
+.view{padding-bottom:116px}
+@media (max-width:640px){.ros-names{padding:6px 0 8px}.ros-names .sec-h{flex-wrap:nowrap;align-items:center;gap:8px;margin-bottom:4px}.ros-names .sec-h h2{font-size:1rem}.ros-names .sec-h .note{display:none}.ros-tog{min-height:38px;padding:6px 10px}.ros-team{padding:6px 8px}}

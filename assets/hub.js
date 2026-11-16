@@ -43,6 +43,7 @@
 
   /* ---------- เมนู 15 หมวด (ลำดับและชื่อตามระบบเดิมใน branch main + ระบบที่สำรวจเพิ่ม) ---------- */
   var GUARD_AREAS = [['central', 'ส่วนกลาง'], ['mlc', 'ศูนย์การเรียนรู้มหิดล'], ['pmh', 'มหิดลสิทธาคาร'], ['la', 'อาคารสิริวิทยา'], ['sr', 'สิรีรุกขชาติ'], ['dorm', 'หอพักนักศึกษา']];
+  var GPS_TITLE = 'รายงาน รปภ.ปริญญา (GPS) ปีการศึกษา 2568';   // ปีการศึกษา 2568 (พิธีจัดเดือน ต.ค. 2569) — ใช้ชื่อเดียวกันทั้งเมนู หัวข้อ breadcrumb การ์ด และลิงก์
   var NAV = [
     { id: 'dashboard', label: 'หน้าหลัก / Dashboard', icon: 'home', fixed: true },
     { group: 'g-staff', label: 'บุคลากร/พนักงาน', icon: 'users', children: [
@@ -55,7 +56,7 @@
       { id: 'traffic', label: 'ระบบรายงานเหตุการณ์' }, { id: 'accident-map', label: 'แผนที่จุดเกิดอุบัติเหตุ' }, { id: 'gate', label: 'รายงานจำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัย' },
       { id: 'event-incident', label: 'เหตุการณ์กิจกรรมพิเศษ' }, { id: 'helmet-quiz', label: 'แบบทดสอบรณรงค์สวมหมวกนิรภัย' }] },
     { id: 'cctv', label: 'กล้องวงจรปิด (CCTV)', icon: 'camera' },
-    { group: 'g-grad', label: 'พิธีพระราชทานปริญญาบัตร', icon: 'cap', children: [{ id: 'graduation', label: 'ปีการศึกษา 2568 (ล่าสุด)' }, { id: 'grad-guard', label: 'รายงาน รปภ. งานปริญญา (GPS)' }] },
+    { group: 'g-grad', label: 'พิธีพระราชทานปริญญาบัตร', icon: 'cap', children: [{ id: 'graduation', label: 'ปีการศึกษา 2568 (ล่าสุด)', children: [{ id: 'grad-2568-gps', label: GPS_TITLE }] }] },
     { group: 'g-guard', label: 'ควบคุมงาน รปภ.เอกชน', icon: 'shield', children: GUARD_AREAS.map(function (a) { return { id: 'guard-' + a[0], label: a[1] }; }).concat([
       { id: 'guard-scan', label: 'การสแกนจุดและรายงานปฏิบัติงาน' }]) },
     { id: 'borrow', label: 'ยืม-คืนอุปกรณ์และรถกอล์ฟ', icon: 'box' },
@@ -68,9 +69,9 @@
     { id: 'inspection-history', label: 'ประวัติการตรวจสภาพ', icon: 'print' },
     { group: 'g-settings', label: 'ตั้งค่าระบบ', icon: 'gear', fixed: true, children: [{ id: 'settings', label: 'ตั้งค่าการแสดงผล' }, { id: 'systems', label: 'สถานะระบบและการเชื่อมต่อ' }, { id: 'ai', label: 'ผู้ช่วย AI ถามสถิติ' }, { id: 'admin-info', label: 'ข้อมูลระบบเพิ่มเติม' }] }
   ];
-  var ALIAS = { 'guard-satisfaction': 'report-guard', 'guard-fines': 'report-guard', 'guard': 'guard-central' };   // ลิงก์รุ่นก่อนยังเปิดได้
-  var PAGE_TITLE = {}, PAGE_GROUP = {};
-  NAV.forEach(function (n) { n.key = n.id || n.group; if (n.id) PAGE_TITLE[n.id] = n.label; (n.children || []).forEach(function (c) { PAGE_TITLE[c.id] = c.label; PAGE_GROUP[c.id] = n; }); });
+  var ALIAS = { 'guard-satisfaction': 'report-guard', 'guard-fines': 'report-guard', 'guard': 'guard-central', 'grad-guard': 'grad-2568-gps' };   // ลิงก์รุ่นก่อนยังเปิดได้
+  var PAGE_TITLE = {}, PAGE_GROUP = {}, PAGE_PARENT = {};      // PAGE_PARENT: หน้าระดับที่ 3 (เช่น GPS ใต้ ปีการศึกษา 2568)
+  NAV.forEach(function (n) { n.key = n.id || n.group; if (n.id) PAGE_TITLE[n.id] = n.label; (n.children || []).forEach(function (c) { PAGE_TITLE[c.id] = c.label; PAGE_GROUP[c.id] = n; (c.children || []).forEach(function (g) { PAGE_TITLE[g.id] = g.label; PAGE_GROUP[g.id] = n; PAGE_PARENT[g.id] = c; }); }); });
   PAGE_TITLE.graduation = 'พิธีพระราชทานปริญญาบัตร ปีการศึกษา 2568';
 
   /* ---------- helpers ---------- */
@@ -146,7 +147,7 @@
         onclick: function () { openGroups[n.group] = !openGroups[n.group]; buildNav(); markActive(); var b = document.querySelector('.nav-g[data-group="' + n.group + '"]'); if (b) b.focus(); }
       }, [ic(n.icon), el('span', { class: 'nav-lbl', text: n.label }), chev()]);
       var sub = el('ul', { class: 'sub', id: subId, hidden: open ? null : 'hidden' });
-      n.children.forEach(function (c) { sub.appendChild(el('li', {}, [navLink(c.id, c.label)])); });
+      n.children.forEach(function (c) { sub.appendChild(el('li', {}, [navLink(c.id, c.label), c.children ? el('ul', { class: 'sub3' }, c.children.map(function (g) { return el('li', {}, [navLink(g.id, g.label)]); })) : null])); });
       ul.appendChild(el('li', {}, [btn, sub]));
     });
     nav.appendChild(ul);
@@ -242,7 +243,7 @@
     if (grp) openGroups[grp.group] = true;
     buildNav(); markActive(); tipHide();
     var crumb = $('crumb'); crumb.textContent = '';
-    if (grp) crumb.appendChild(el('span', { class: 'crumb-g', text: grp.label + ' › ' }));
+    if (grp) crumb.appendChild(el('span', { class: 'crumb-g', text: grp.label + ' › ' + (PAGE_PARENT[page] ? PAGE_PARENT[page].label.replace(/\s*\(ล่าสุด\)$/, '') + ' › ' : '') }));
     crumb.appendChild(document.createTextNode(PAGE_TITLE[page] || ''));
     document.title = (page === 'dashboard' ? '' : (PAGE_TITLE[page] + ' · ')) + SYS_NAME;
     var view = $('view'); view.textContent = '';
@@ -897,7 +898,7 @@
       v.appendChild(kpiGrid(gr.days.map(function (d, i) { return { icon: 'cap', label: 'รถในลานจอด ' + dLabel(d.date), value: num(d.latestCount), unit: 'คัน', sub: d.occupancyPercent + '% ของความจุ ' + num(d.capacity) + ' คัน (' + d.lots + ' ลาน)', updated: gr.updated, color: [C.c1, C.c3, C.c4][i] }; })));
       v.appendChild(el('div', { class: 'sec' }, [figure('อัตราการใช้ลานจอดรวม', 'ที่มา: SUMMARY_2569 · จำนวนรถล่าสุดที่บันทึกของแต่ละลาน', hbars(gr.days.map(function (d) { return { label: dLabel(d.date), value: d.occupancyPercent, note: num(d.latestCount) + ' / ' + num(d.capacity) + ' คัน', color: C.c3 }; }), 100, { ticks: [0, 25, 50, 75, 100], labelW: 120 }))]));
     }
-    var gg = extra('gradGuardGps'); if (gg) v.appendChild(section('รายงาน รปภ. งานปริญญา (GPS)', { more: 'grad-guard' }, [kpiGrid([{ icon: 'file', label: 'รายงานทั้งหมด', value: num(gg.total), unit: 'รายงาน', sub: dLabel(gg.days[0].date).replace(/ \d{4}$/, '') + ' – ' + dLabel(gg.updated), color: C.c3 }])]));
+    var gg = extra('gradGuardGps'); if (gg) v.appendChild(section(GPS_TITLE, { more: 'grad-2568-gps' }, [kpiGrid([{ icon: 'file', label: 'รายงานทั้งหมด', value: num(gg.total), unit: 'รายงาน', sub: dLabel(gg.days[0].date).replace(/ \d{4}$/, '') + ' – ' + dLabel(gg.updated), color: C.c3 }])]));
     v.appendChild(systemsSection(['grad-parking', 'grad-guard-report']));
   };
   PAGES['guard-scan'] = function (v) {
@@ -1158,8 +1159,8 @@
   function extra(k) { return (DATA.extra || {})[k] || null; }
   function oldUrl() { return (SYS['old-hub'] && SYS['old-hub'].links[0] && SYS['old-hub'].links[0].url) || ''; }
   function tabsOf(group, page) {
-    var n = NAV.filter(function (g) { return g.group === group; })[0]; if (!n || n.children.length < 2) return null;
-    return el('nav', { class: 'tabs', 'aria-label': 'แถบย่อยของ ' + n.label }, n.children.map(function (c) { return el('a', { href: '#' + c.id, 'aria-current': c.id === page ? 'page' : null, text: c.label }); }));
+    var n = NAV.filter(function (g) { return g.group === group; })[0], list = n ? n.children.reduce(function (a, c) { return a.concat([c], c.children || []); }, []) : []; if (list.length < 2) return null;
+    return el('nav', { class: 'tabs', 'aria-label': 'แถบย่อยของ ' + n.label }, list.map(function (c) { return el('a', { href: '#' + c.id, 'aria-current': c.id === page ? 'page' : null, text: c.label }); }));
   }
   function extBtn(label, url, sec) { return el('a', { class: 'btn' + (sec ? ' sec' : ''), href: url, target: '_blank', rel: 'noopener' }, [label, ic('ext', 15)]); }
   /** หน้าทางเข้า: ฟังก์ชันที่ยังทำงานในระบบเดิม (branch main) และมีข้อมูลรายบุคคล/รายครั้ง จึงเปิดในระบบต้นทางแทนการคัดลอกข้อมูลมาแสดง */
@@ -1198,12 +1199,47 @@
   simpleSys('event-incident', 'ระบบเหตุการณ์กิจกรรมพิเศษ', 'แบบฟอร์มและแดชบอร์ดรายงานเหตุการณ์ช่วงกิจกรรมพิเศษ — ยังไม่มีสถิติที่ยืนยันแหล่งข้อมูลได้ จึงแสดงเป็นลิงก์', ['event-incident'], 'ระบบต้นทาง');
   simpleSys('helmet-quiz', 'แบบทดสอบโครงการรณรงค์สวมหมวกนิรภัย', 'สื่อและแบบทดสอบความรู้ — ลิงก์ตรวจแล้วเปิดได้ · ยังไม่มีสถิติผลทดสอบที่ยืนยันแหล่งข้อมูลได้', ['helmet-quiz', 'gate-tracker'], 'ระบบต้นทาง');
   simpleSys('aed', 'เครื่อง AED', 'แผนที่ตำแหน่งและความพร้อมใช้งานเครื่อง AED ในวิทยาเขตศาลายา (Google My Maps) — ไม่มีข้อมูลจำนวนเครื่องในรูปแบบที่ระบบอ่านยืนยันได้ จึงแสดงเป็นลิงก์', ['aed-map'], 'ระบบต้นทาง');
+  /* ทะเบียนแบบฟอร์ม (แหล่งเดียวของเมนู การ์ด และช่องค้นหาในหน้านี้) — แบบฟอร์มหลัก + แบบบันทึกย่อยที่เติมข้อมูลอัตโนมัติ · ไม่มีรายการซ้ำ
+   * ลิงก์ภายนอกเปิดแท็บใหม่ · แบบฟอร์มในระบบนี้ (#form-…) เปิดในหน้าเดียวกันและแสดงสถานะการบันทึกตามจริง */
+  var FORM_REG = [
+    { icon: '🚨', name: 'ระบบรายงานเหตุการณ์/แจ้งเหตุ (AI)', desc: 'แบบฟอร์มบันทึกเหตุการณ์ อุบัติเหตุ และการรับส่งผู้ป่วย พร้อมพิกัดจุดเกิดเหตุ', url: 'https://trafficoppe.github.io/report-incident-AI-v1/' },
+    { icon: '🚗', name: 'แบบฟอร์มบันทึกจำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัย', desc: 'แบบฟอร์มบันทึกจำนวนรถยนต์/รถจักรยานยนต์ และผู้ไม่สวมหมวกนิรภัย แยกประตู 1, 3, 4, 5, 6', url: 'https://trafficoppe.github.io/Form-Gate-Tracker-AI-v1/' },
+    { icon: '🔍', name: 'แบบฟอร์มตรวจสภาพยานพาหนะ', desc: 'ตรวจสภาพยานพาหนะของงานตามรายการตรวจ 9 ข้อ', url: 'https://trafficoppe.github.io/trafficsystem/form.html',
+      subs: [{ icon: '🧽', id: 'form-clean', desc: 'เลือกยานพาหนะจากหน้า ‘ยานพาหนะทั้งหมด’ เพื่อเติมรุ่นและทะเบียนให้อัตโนมัติ', from: 'vehicle-fleet' }] },
+    { icon: '📄', name: 'แบบฟอร์มขอดูกล้องวงจรปิด', desc: 'ยื่นคำขอดูภาพจากกล้องวงจรปิด (CCTV) ส่วนกลาง', url: 'https://trafficoppe.github.io/trafficoppe/' },
+    { icon: '🧯', name: 'แบบฟอร์มตรวจและเติมสารอุปกรณ์ดับเพลิง', desc: 'ตรวจสภาพถังดับเพลิงและอุปกรณ์ดับเพลิงตามจุดติดตั้ง', url: 'https://trafficoppe.github.io/-v1/',
+      subs: [{ icon: '🧯', id: 'form-refill', desc: 'เลือกถังจากหน้า ‘อุปกรณ์ดับเพลิง’ เพื่อเติมชนิดและเลขที่ถังให้อัตโนมัติ', from: 'safety' }] },
+    { icon: '🗺️', name: 'แบบฟอร์มรายงานการตรวจพื้นที่', desc: 'รายงานการตรวจพื้นที่ส่วนกลางพร้อมภาพ', url: 'https://docs.google.com/forms/d/e/1FAIpQLSfpYUu2jUggLW433-8F2N6tNxQ6Q84V-DY3wRkgOFXA3b_Ytw/viewform' },
+    { icon: '🎒', name: 'แบบฟอร์ม Lost and Found', desc: 'แจ้งของหาย / แจ้งเก็บของได้ / รับของคืน', url: 'https://trafficoppe.github.io/lostfound/lostfound_form.html' },
+    { icon: '📻', id: 'forms-radio', desc: 'บันทึกการรับแจ้งและการสั่งการของศูนย์วิทยุสื่อสาร' }
+  ];
+  var FORM_SYS = ['event-incident', 'borrow', 'guard-scan', 'guard-shift', 'guard-feedback-central', 'guard-feedback-unit', 'veh-staff', 'ruenthai', 'grad-parking', 'helmet-quiz'];
+  function formState(id) { return HCFG.formApiUrl ? 'บันทึกผ่านบริการภายใน' : 'ตรวจความครบถ้วนได้ แต่ยังไม่เปิดการบันทึก'; }
+  function formRow(f, sub) {
+    var name = f.id ? FORM_DEFS[f.id].title : f.name, local = !!f.id;
+    return el('li', { class: sub ? 'f-sub' : null }, [el('div', {}, [el('b', {}, [el('span', { class: 'f-ico', 'aria-hidden': 'true', text: f.icon }), ' ' + name]),
+      el('span', { text: f.desc + (local ? ' · ' + formState(f.id) : ' · ' + formKind(f.url)) })]),
+      local ? el('a', { class: 'btn sec', href: '#' + (f.from || f.id), text: f.from ? 'เลือกรายการ' : 'เปิดแบบฟอร์ม' }) : extBtn('เปิดแบบฟอร์ม', f.url, true)]);
+  }
   PAGES.forms = function (v) {
-    v.appendChild(pageHead('แบบฟอร์มทั่วไป', 'แบบฟอร์มที่ใช้งานอยู่ของงานจราจรและความปลอดภัย')); v.appendChild(formsSection());
-    var ids = ['incident-report', 'gate-tracker', 'event-incident', 'cctv', 'borrow', 'lostfound', 'guard-scan', 'guard-shift', 'guard-feedback-central', 'guard-feedback-unit', 'veh-staff', 'ruenthai', 'grad-parking', 'fire', 'helmet-quiz'];
-    v.appendChild(section('แบบฟอร์มของระบบที่สำรวจแล้ว', { note: 'ลิงก์ตามบัญชีระบบ · ตรวจล่าสุด 14 พ.ย. 2569' }, [el('ul', { class: 'list' }, ids.map(function (id) { return SYS[id]; }).filter(function (s) { return s && s.links.length; }).map(function (s) {
-      return el('li', {}, [el('div', {}, [el('b', { text: s.name }), el('span', { text: s.desc })]), extBtn(s.links[0].label, s.links[0].url, true)]); }))]));
-    v.appendChild(localFormsSection());
+    v.appendChild(pageHead('แบบฟอร์มทั่วไป', 'แบบฟอร์มที่ใช้งานอยู่ของงานจราจรและความปลอดภัย'));
+    var q = el('input', { type: 'search', placeholder: 'ค้นหาชื่อแบบฟอร์ม…', 'aria-label': 'ค้นหาแบบฟอร์ม', value: state.formQ || '' }), box = el('div'), tm = null;
+    var sys = FORM_SYS.map(function (id) { return SYS[id]; }).filter(function (x) { return x && x.links.length; });
+    function hit(t) { var k = (state.formQ || '').trim().toLowerCase(); return !k || String(t).toLowerCase().indexOf(k) >= 0; }
+    function draw() {
+      box.textContent = ''; var n = 0;
+      var main = el('ul', { class: 'list forms' }); FORM_REG.forEach(function (f) {
+        var subs = (f.subs || []).filter(function (x) { return hit(FORM_DEFS[x.id].title + ' ' + x.desc); }), me = hit((f.name || FORM_DEFS[f.id].title) + ' ' + f.desc);
+        if (!me && !subs.length) return; main.appendChild(formRow(f)); n++; subs.forEach(function (x) { main.appendChild(formRow(x, true)); n++; }); });
+      var other = el('ul', { class: 'list forms' }); sys.filter(function (x) { return hit(x.name + ' ' + x.desc); }).forEach(function (x) { n++;
+        other.appendChild(el('li', {}, [el('div', {}, [el('b', {}, [el('span', { class: 'f-ico', 'aria-hidden': 'true', text: formIcon(x.name) }), ' ' + x.name]), el('span', { text: x.desc })]), extBtn(x.links[0].label, x.links[0].url, true)])); });
+      box.appendChild(el('p', { class: 'lu-count', role: 'status', text: num(n) + ' แบบฟอร์ม' }));
+      if (main.childNodes.length) box.appendChild(section('แบบฟอร์มหลัก', { note: 'แบบบันทึกย่อยแสดงใต้แบบฟอร์มหลัก' }, [main]));
+      if (other.childNodes.length) box.appendChild(section('แบบฟอร์มของระบบอื่นที่เกี่ยวข้อง', { note: 'เปิดในแท็บใหม่' }, [other]));
+      if (!n) box.appendChild(el('div', { class: 'empty', text: 'ไม่พบแบบฟอร์มที่ตรงกับคำค้นหา' }));
+    }
+    q.oninput = function () { clearTimeout(tm); tm = setTimeout(function () { state.formQ = q.value; draw(); }, 200); };
+    v.appendChild(el('div', { class: 'lu-bar' }, [q])); v.appendChild(box); draw();
   };
 
   /* ---------- ตารางเวร (คำนวณจากกติกาในไฟล์ Excel — ไม่มีรายชื่อใน Repository) ---------- */
@@ -1250,12 +1286,18 @@
     }
     var tblWrap = el('div', { class: 'tbl-wrap' }, [shown ? el('table', { class: 'tbl roster' }, [el('thead', {}, [head]), tb]) : el('div', { class: 'empty', text: 'ไม่พบวันที่หรือกะที่ค้นหาในเดือนนี้' })]);
     q.oninput = function () { state.rosterQ = q.value; clearTimeout(q._t); q._t = setTimeout(function () { var pos = q.selectionStart; route(true); var n2 = document.querySelector('.view input[type=search]'); if (n2) { n2.focus(); try { n2.setSelectionRange(pos, pos); } catch (e) {} } }, 250); };
-    v.appendChild(section('ตารางเวรเดือน' + TH_MF[M - 1] + ' ' + (Y + 543), { note: shown + ' วัน · แถวสีเหลือง = วันนี้' }, [el('div', { class: 'ctrls', style: 'margin-bottom:10px' }, [ic('search'), q,
-      el('span', { class: 'legend', style: 'margin:0' }, ['M', 'A', 'N', 'R'].map(function (c) { var s = ro.shifts[c]; return el('span', {}, [el('i', { style: 'background:' + SH[c] }), s.name + (s.start ? ' ' + s.start + '–' + s.end : '')]); }))]), tblWrap]));
-
-    v.appendChild(section('ตำแหน่งในแต่ละผลัด', { note: rosterNames ? 'แสดงรายชื่อจากแหล่งข้อมูลที่จำกัดสิทธิ์ (ไม่ถูกบันทึกในเครื่อง)' : 'รายชื่อไม่แสดงในรุ่นสาธารณะ' }, [el('div', { class: 'team-grid' }, ro.teams.map(function (t) {
-      var names = rosterNames && rosterNames[String(t.no)] || [];
-      return el('div', { class: 'card team' }, [el('h3', { text: 'ผลัด ' + t.no }), el('ul', {}, names.length ? names.map(function (p) { return el('li', {}, [el('b', { text: String(p.role || '') }), el('span', { text: String(p.name || '') })]); }) : t.roles.map(function (r) { return el('li', {}, [el('b', { text: r }), el('span', { text: 'ไม่แสดงชื่อ' })]); }))]); }))]));
+    var tableSec = section('ตารางเวรเดือน' + TH_MF[M - 1] + ' ' + (Y + 543), { note: shown + ' วัน · แถวสีเหลือง = วันนี้' }, [el('div', { class: 'ctrls', style: 'margin-bottom:10px' }, [ic('search'), q,
+      el('span', { class: 'legend', style: 'margin:0' }, ['M', 'A', 'N', 'R'].map(function (c) { var s = ro.shifts[c]; return el('span', {}, [el('i', { style: 'background:' + SH[c] }), s.name + (s.start ? ' ' + s.start + '–' + s.end : '')]); }))]), tblWrap]);
+    /* รายชื่อ/ตำแหน่งแต่ละผลัด: อยู่เหนือหัวข้อตารางเวรของเดือนที่เลือก และติดด้านบน (ใต้แถบหัวเว็บ) เฉพาะขณะเลื่อนดูตารางเวรเท่านั้น
+     * จอเล็ก: ย่อ/ขยายได้ และเลื่อนแนวนอนดูครบ 4 ผลัด · รายชื่อมาจากฐานข้อมูลภายในหลัง Login (ไม่บันทึกในเครื่อง) */
+    var collapsed = state.rosNamesCollapsed == null ? isMobile() : state.rosNamesCollapsed, strip = el('div', { class: 'ros-strip', id: 'rosStrip' }, ro.teams.map(function (t) {
+      var names = rosterNames && rosterNames[String(t.no)] || [], code = today.charAt(t.no - 1);
+      return el('div', { class: 'card ros-team', style: '--sh:' + SH[code] }, [el('h3', {}, ['ผลัด ' + t.no, el('small', { text: 'วันนี้: ' + (code === 'R' ? 'พักกะ' : 'เวร' + ro.shifts[code].name) })]),
+        el('ul', {}, names.length ? names.map(function (p) { return el('li', {}, [el('b', { text: String(p.role || '') }), el('span', { text: String(p.name || '') })]); }) : t.roles.map(function (r) { return el('li', {}, [el('b', { text: r }), el('span', { text: rosterNamesState === 'loading' ? 'กำลังโหลด…' : 'ไม่แสดงชื่อ' })]); }))]); }));
+    var tog = el('button', { type: 'button', class: 'btn-ghost ros-tog', 'aria-expanded': String(!collapsed), 'aria-controls': 'rosStrip', text: collapsed ? 'แสดงรายชื่อ' : 'ย่อรายชื่อ', onclick: function () { state.rosNamesCollapsed = !collapsed; route(true); } });
+    var namesSec = el('section', { class: 'sec ros-names' + (collapsed ? ' collapsed' : ''), 'aria-label': 'ตำแหน่งและรายชื่อในแต่ละผลัด' }, [el('div', { class: 'sec-h' }, [el('h2', { text: 'ตำแหน่งในแต่ละผลัด' }),
+      el('span', { class: 'note', text: rosterNames ? 'รายชื่อจากฐานข้อมูลภายใน (ไม่ถูกบันทึกในเครื่อง)' : rosterNamesState === 'failed' ? 'โหลดรายชื่อไม่สำเร็จ — แสดงเฉพาะตำแหน่ง' : 'รายชื่อไม่แสดงในรุ่นสาธารณะ' }), tog]), strip]);
+    v.appendChild(el('div', { class: 'ros-wrap' }, [namesSec, tableSec]));
     if (CFG.rosterApiUrl && rosterNamesState === 'none') { rosterNamesState = 'loading';
       fetch(CFG.rosterApiUrl, { credentials: 'include', cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function (j) { rosterNames = j && j.teams || null; rosterNamesState = 'ok'; if (currentPage() === 'roster') route(true); }).catch(function () { rosterNamesState = 'failed'; }); }
@@ -1264,7 +1306,8 @@
       el('div', { class: 'card box' }, [el('h3', { text: 'กติกาที่ใช้คำนวณ' }), el('p', { class: 'def', text: 'อ่านจากไฟล์ ' + ro.sourceFile + ' — ' + ro.anchor.note + ' แล้วอ่านกะของผลัด 1–4 จากตารางรอบ ' + ro.cycleDays + ' วัน' }), notesList(ro.notes),
         el('p', { class: 'src', text: 'หน้าตารางเวรของระบบเดิมอ่านจาก ' + OLD_SHEET + ' แท็บ ตารางเวร ซึ่งลำดับเวรบางช่วงไม่ตรงกับไฟล์ Excel ฉบับนี้ ควรยืนยันฉบับที่ใช้จริงก่อนเผยแพร่' })]),
       el('div', { class: 'card box' }, [el('h3', { text: 'การแสดงรายชื่อเจ้าหน้าที่' }), el('p', { class: 'def', text: CFG.rosterApiUrl ? (rosterNamesState === 'failed' ? 'เชื่อมต่อแหล่งรายชื่อที่จำกัดสิทธิ์ไม่สำเร็จ จึงแสดงเฉพาะผลัดและตำแหน่ง' : 'ตั้งค่าแหล่งรายชื่อที่จำกัดสิทธิ์ไว้แล้ว') : 'ยังไม่เชื่อมต่อแหล่งรายชื่อ — Repository นี้เป็นสาธารณะ จึงไม่มีชื่อเจ้าหน้าที่อยู่ในไฟล์ใดของหน้ารวม' }),
-        notesList(['ถ้าต้องการแสดงชื่อ ต้องให้หน้าเว็บอยู่หลังการยืนยันตัวตน (เช่น Cloudflare Access จำกัดบัญชี mahidol.ac.th) และเก็บรายชื่อในที่จัดเก็บที่จำกัดสิทธิ์ ไม่ใช่ใน Repository',
+        notesList(AUTH.on ? ['รายชื่อเก็บในฐานข้อมูลของระบบภายใน และแสดงหลังเข้าสู่ระบบด้วยรหัสพนักงานเท่านั้น (ไม่บันทึกในเครื่อง)', 'ผู้ดูแลแก้ไขรายชื่อได้ที่ ตั้งค่า › ตั้งค่าการแสดงผล หัวข้อ “รายชื่อประจำผลัด”']
+          : ['ถ้าต้องการแสดงชื่อ ต้องให้หน้าเว็บอยู่หลังการยืนยันตัวตน และเก็บรายชื่อในที่จัดเก็บที่จำกัดสิทธิ์ ไม่ใช่ใน Repository',
           'เมื่อพร้อม ให้ใส่ URL ของแหล่งรายชื่อใน config.js (rosterApiUrl) หน้านี้จะดึงชื่อมาแสดงเฉพาะในหน่วยความจำของเบราว์เซอร์', 'ดูขั้นตอนใน docs/PREVIEW_V3.md หัวข้อ “ตารางเวร”']),
         el('div', { class: 'btns' }, [oldUrl() ? extBtn('เปิดตารางเวรในระบบเดิม', oldUrl(), true) : null])])])]));
   };
@@ -1306,10 +1349,12 @@
       el('div', { class: 'card set' }, [el('div', {}, [el('h3', { text: 'แถบเมนูด้านซ้าย (Sidebar)' }), el('p', { text: 'ย่ออัตโนมัติ = เหลือแถบไอคอน ขยายเมื่อชี้เมาส์ โฟกัสด้วยคีย์บอร์ด หรือกดปุ่มเมนู · เปิดค้าง = แสดงชื่อเมนูตลอด (บนมือถือเป็นเมนูเลื่อนออกเสมอ)' })]),
         segOf('โหมด Sidebar', [['auto', 'ย่ออัตโนมัติ'], ['pinned', 'เปิดค้าง', 'pin']], sbMode, setSbMode)]),
       el('div', { class: 'card set' }, [el('div', {}, [el('h3', { text: 'โหมดหน้าจอ' }), el('p', { text: 'สลับระหว่างโหมดสว่างและโหมดมืด (ตามฟังก์ชันของระบบเดิม)' })]), segOf('โหมดหน้าจอ', [['light', 'สว่าง', 'sun'], ['dark', 'มืด', 'moon']], theme, setTheme)]),
+      el('div', { class: 'card set', id: 'set-ai-fab' }, [el('div', {}, [el('h3', { text: 'ปุ่มผู้ช่วย AI' }), el('p', { text: 'เลือกรูปแบบปุ่มลอยมุมขวาล่าง: รูปหุ่นยนต์ ปุ่มข้อความ “ถาม AI” หรือซ่อนไว้ (จำเฉพาะเบราว์เซอร์นี้) — ซ่อนแล้วยังเปิดผู้ช่วยได้จากปุ่มด้านขวานี้' })]),
+        el('div', { class: 'set-ai' }, [fabModeCtl(), el('button', { type: 'button', class: 'btn sec', text: 'เปิดผู้ช่วย AI', onclick: function () { if (window.hubOpenChat) window.hubOpenChat(); } })])]),
       el('div', { class: 'card set' }, [el('div', {}, [el('h3', { text: 'ภาษาของระบบ' }), el('p', { text: 'รุ่นทดลองนี้มีเฉพาะภาษาไทย · ระบบเดิมสลับ TH/EN ได้ — ยังไม่ได้แปลหน้ารวมรุ่นใหม่เป็นภาษาอังกฤษ' })]), el('span', { class: 'pill s-link', text: 'ไทย (TH)' })]),
       el('div', { class: 'card set' }, [el('div', { style: 'flex-basis:100%' }, [el('h3', { text: 'หมวดที่แสดงในเมนู' }), el('p', { text: 'เอาเครื่องหมายออกเพื่อซ่อนหมวดที่ไม่ได้ใช้ (หน้าหลักและตั้งค่าระบบซ่อนไม่ได้ · หน้าที่ซ่อนยังเปิดจากลิงก์ตรงได้)' })]), checks]),
       el('div', { class: 'card set' }, [el('div', {}, [el('h3', { text: 'ล้างค่าที่บันทึกในเครื่องนี้' }), el('p', { text: 'คืนค่า Sidebar โหมดหน้าจอ และหมวดที่ซ่อน กลับเป็นค่าเริ่มต้น' })]),
-        el('button', { type: 'button', class: 'btn sec', text: 'คืนค่าเริ่มต้น', onclick: function () { ['hub.sb', 'hub.hide', 'hub.theme', 'hub.mini'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} }); hiddenCats = {}; setTheme('light', true); setSbMode('auto'); route(true); } })])]));
+        el('button', { type: 'button', class: 'btn sec', text: 'คืนค่าเริ่มต้น', onclick: function () { ['hub.sb', 'hub.hide', 'hub.theme', 'hub.mini', 'hub.aiFab'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} }); hiddenCats = {}; setTheme('light', true); setSbMode('auto'); route(true); } })])]));
     var g = DATA.stats.generatedAt || '', mods = DATA.stats.modules || {};
     v.appendChild(section('สถานะข้อมูลและเวลาอัปเดต', { note: 'ไฟล์สถิติรวมสร้างเมื่อ ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) + ' (เวลาไทย)', more: 'systems' }, [table(['ชุดข้อมูล', 'สถานะ', 'แหล่งข้อมูล', 'อัปเดตล่าสุดของต้นทาง'],
       Object.keys(MOD_NAME).filter(function (k2) { return mods[k2]; }).map(function (k2) { var m = mods[k2], st = m.status || 'connected', up = m.updated || m.computedAt || (m.central && m.central.updated);
@@ -1325,6 +1370,8 @@
   PAGES.ai = function (v) {
     v.appendChild(pageHead('ผู้ช่วย AI ถามสถิติ', 'สถานะการเชื่อมต่อและเงื่อนไขความปลอดภัยก่อนเปิดใช้ในหน้ารวม'));
     v.appendChild(el('div', { class: 'sec' }, [aiStatusCard()]));
+    v.appendChild(el('div', { class: 'sec' }, [el('div', { class: 'card set' }, [el('div', {}, [el('h3', { text: 'ปุ่มผู้ช่วย AI' }), el('p', { text: fabMode() === 'hidden' ? 'ขณะนี้ซ่อนปุ่มลอยไว้ — เลือกแบบปุ่มเพื่อแสดงอีกครั้ง หรือกด “เปิดผู้ช่วย AI”' : 'เลือกรูปแบบปุ่มลอยมุมขวาล่าง' })]),
+      el('div', { class: 'set-ai' }, [fabModeCtl(), el('button', { type: 'button', class: 'btn sec', text: 'เปิดผู้ช่วย AI', onclick: function () { if (window.hubOpenChat) window.hubOpenChat(); } })])])]));
     v.appendChild(section('ผลการตรวจ Endpoint ของระบบ AI เดิม', {}, [el('div', { class: 'grid2' }, [
       el('div', { class: 'card box' }, [el('h3', { text: 'สิ่งที่พบ (อ่านจากซอร์สโค้ด ไม่ได้ส่งคำถามทดสอบ)' }), notesList([
         'ระบบเดิมส่งคำถามและประวัติสนทนาไปยัง Apps Script Web App ตัวเดียวกับที่ใช้ดึงข้อมูลแดชบอร์ด โดยไม่มีการยืนยันตัวตนผู้เรียก',
@@ -1436,6 +1483,10 @@
   /* ---------- เหตุการณ์กิจกรรมพิเศษ · แบบทดสอบหมวกนิรภัย · ข้อมูลระบบเพิ่มเติม ---------- */
   PAGES['event-incident'] = function (v) {
     var e = extra('eventIncidents');
+    if (AUTH.on && AUTH.user) {                 /* หลัง Login: รายการจริงจาก Sheet1 ผ่านบริการภายใน (ไม่ใช้ภาพรวมจากไฟล์ที่สร้างไว้ก่อน) */
+      v.appendChild(pageHead('รายงานเหตุการณ์กิจกรรมพิเศษ', 'รายการเหตุการณ์ช่วงกิจกรรมพิเศษจากแบบรายงานต้นทาง — ค้นหา กรองวันที่ ประเภท และระดับ พร้อมภาพประกอบ'));
+      v.appendChild(eventsSection()); v.appendChild(systemsSection(['event-incident'], 'ระบบต้นทาง (เปิดเมื่อต้องรายงานเหตุการณ์จริง)')); return;
+    }
     v.appendChild(pageHead('ระบบเหตุการณ์กิจกรรมพิเศษ', 'สรุปรายงานเหตุการณ์ช่วงกิจกรรมพิเศษ — เฉพาะจำนวนรวม ไม่มีชื่อผู้รายงานหรือรายละเอียดรายครั้ง'));
     if (!e) { v.appendChild(el('div', { class: 'card box' }, [el('p', { class: 'kpi-na', text: 'ยังเชื่อมต่อไม่ได้' })])); }
     else { var lv = e.levels.map(function (_, i) { return e.byType.reduce(function (a, t) { return a + t.counts[i]; }, 0); }), col = [C.fine, C.c2, C.c1];
@@ -1451,9 +1502,13 @@
       el('div', { class: 'btns' }, [s && s.links[0] ? extBtn('กดเพื่อทำแบบทดสอบ', s.links[0].url) : el('span', { class: 'kpi-na', text: 'ไม่มีลิงก์ที่ยืนยันได้' })])])]));
   };
   /* รายงาน รปภ. งานปริญญา (GPS): เฉพาะจำนวนรวมตามวันและสถานะพิกัด — ไม่มีชื่อ พิกัดรายรายงาน รูป หรือเส้นทางบุคคล และแยกจากแผนที่อุบัติเหตุ */
-  PAGES['grad-guard'] = function (v) {
+  PAGES['grad-2568-gps'] = function (v) {
     var gps = extra('gradGuardGps'), K = ['within', 'outside', 'postNoCoords', 'lowAccuracy'], col = [C.c1, C.c2, C.c5, C.fine];
-    v.appendChild(pageHead('รายงาน รปภ. งานปริญญา (GPS)', 'รายงานการปฏิบัติงาน รปภ.เอกชน ช่วงพิธีพระราชทานปริญญาบัตร ปีการศึกษา 2568 — จำนวนรายงานตามวันและสถานะพิกัดเทียบจุดปฏิบัติงาน · ตรวจ ' + ((extra('gradGuardGps') || {}).checkedAt ? dLabel(extra('gradGuardGps').checkedAt) : '')));
+    if (AUTH.on && AUTH.user) {                 /* หลัง Login: อ่านแท็บ Reports จริงผ่านบริการภายใน */
+      v.appendChild(pageHead(GPS_TITLE, 'รายงานการปฏิบัติงาน รปภ.เอกชน ช่วงพิธีพระราชทานปริญญาบัตร ปีการศึกษา 2568 (จัดเดือน ต.ค. 2569) — พิกัดเป็นของรายงาน ณ เวลาที่ส่ง ไม่ใช่ตำแหน่งสด'));
+      v.appendChild(gpsSection()); v.appendChild(systemsSection(['grad-guard-report'], 'ระบบต้นทาง (เปิดเมื่อต้องส่งรายงาน)')); return;
+    }
+    v.appendChild(pageHead(GPS_TITLE, 'รายงานการปฏิบัติงาน รปภ.เอกชน ช่วงพิธีพระราชทานปริญญาบัตร ปีการศึกษา 2568 — จำนวนรายงานตามวันและสถานะพิกัดเทียบจุดปฏิบัติงาน · ตรวจ ' + ((extra('gradGuardGps') || {}).checkedAt ? dLabel(extra('gradGuardGps').checkedAt) : '')));
     if (!gps) { v.appendChild(el('div', { class: 'card box' }, [el('p', { class: 'kpi-na', text: 'ยังเชื่อมต่อไม่ได้' })])); return; }
     var sum = function (k2, days) { return (days || gps.days).reduce(function (a, d) { return a + d[k2]; }, 0); }, ev = gps.days.filter(function (d) { return gps.eventDays.indexOf(d.date) >= 0; });
     v.appendChild(el('div', { class: 'sec' }, [kpiGrid([
@@ -1867,18 +1922,8 @@
   }
 
   /* ---------- แบบฟอร์ม ---------- */
-  var LOCAL_FORMS = [
-    ['แบบฟอร์มตรวจสภาพยานพาหนะ / อุปกรณ์ดับเพลิง', 'form.html', 'เลือกรายการจากหน้า ยานพาหนะ หรือ อุปกรณ์ดับเพลิง ในระบบเดิมเพื่อเติมข้อมูลอัตโนมัติ'],
-    ['แบบบันทึกการทำความสะอาดยานพาหนะ', 'page_clean_vehicle_form.html', ''], ['แบบบันทึกการเติมสารถังดับเพลิง', 'page_refill_form.html', ''], ['แบบบันทึกการจัดการขยะ', 'page_waste_form.html', '']];
   function formKind(u) { return /docs\.google\.com\/forms/.test(u) ? 'Google Forms' : /github\.io/.test(u) ? 'ระบบที่พัฒนาเอง' : 'ลิงก์ภายนอก'; }
   function formIcon(n) { n = String(n || ''); return /ไม่ปกติ|เหตุการณ์|อุบัติเหตุ/.test(n) ? '🚨' : /วิทยุ/.test(n) ? '📻' : /ขยะ/.test(n) ? '🗑️' : /เติมสาร|ดับเพลิง/.test(n) ? '🧯' : /ทำความสะอาด|ล้าง/.test(n) ? '🧽' : /ตรวจ/.test(n) ? '🔍' : /รถ|ยานพาหนะ/.test(n) ? '🚗' : /ของหาย|ทรัพย์สิน/.test(n) ? '🎒' : '📄'; }
-  function formsSection() {
-    return section('แบบฟอร์มที่ใช้งาน', {}, [dataView('forms', function (rows, d) {
-      rows = rows.filter(function (r) { return r.name && /^https:\/\//.test(r.url); });
-      return el('div', {}, [listUI({ rows: rows, unit: 'แบบฟอร์ม', placeholder: 'ค้นหาชื่อแบบฟอร์ม…', text: function (r) { return r.name; }, per: 30,
-        render: function (page) { return el('ul', { class: 'list forms' }, page.map(function (r) { return el('li', {}, [el('div', {}, [el('b', {}, [el('span', { class: 'f-ico', 'aria-hidden': 'true', text: formIcon(r.name) }), ' ' + r.name]), el('span', { text: formKind(r.url) + ' · เปิดในแท็บใหม่ (ฟอร์มต้นทางไม่อนุญาตให้ฝังหรือจำเป็นต้องเข้าสู่ระบบของต้นทาง)' })]), extBtn('เปิดแบบฟอร์ม', r.url, true)]); })); } }), liveNote(d, 'forms')]);
-    })]);
-  }
 
   /* ---------- ประวัติการตรวจสภาพ ---------- */
   var CHECK_LABELS = ['1. ลมยาง', '2. สภาพเนื้อยาง/ดอกยาง', '3. กะทะล้อ/น็อตล้อ', '4. ระบบเบรก', '5. ช่วงล่าง/โช้คอัพ', '6. ระบบไฟฟ้า/แตร', '7. แบตเตอรี่/ของเหลว', '8. ระบบขับเคลื่อน', '9. สภาพตัวถัง'];
@@ -2037,67 +2082,89 @@
       v.appendChild(el('div', { class: 'sec' }, [form]));
     };
   }
+  delete FORM_DEFS['form-waste']; ALIAS['form-waste'] = 'forms';     /* รอบ 9: เลิกแสดงแบบบันทึกการจัดการขยะในเว็บนี้ (ไม่ลบข้อมูลต้นทาง) — ลิงก์เดิมพาไปหน้าแบบฟอร์ม */
   Object.keys(FORM_DEFS).forEach(function (id) { PAGES[id] = formPage(id); PAGE_TITLE[id] = FORM_DEFS[id].title; if (id !== 'forms-radio') PAGE_GROUP[id] = PAGE_GROUP.forms; });
-  function localFormsSection() {
-    return section('แบบฟอร์มที่กรอกในระบบนี้', {}, [el('ul', { class: 'list forms' }, [['form-clean', 'เลือกยานพาหนะจากหน้า “ยานพาหนะทั้งหมด” เพื่อเติมรุ่นและทะเบียนให้อัตโนมัติ'], ['form-refill', 'เลือกถังจากหน้า “อุปกรณ์ดับเพลิง” เพื่อเติมชนิดและเลขที่ถังให้อัตโนมัติ'], ['form-waste', ''], ['forms-radio', '']].map(function (x) {
-      return el('li', {}, [el('div', {}, [el('b', { text: FORM_DEFS[x[0]].title }), el('span', { text: x[1] || 'บันทึกลงแท็บ “' + FORM_DEFS[x[0]].sheet + '”' })]), el('a', { class: 'btn sec', href: '#' + x[0], text: 'เปิดแบบฟอร์ม' })]); }))]);
-  }
   function formLink(id, params, label) { return el('a', { class: 'btn sec', href: '#' + id + '?' + Object.keys(params).filter(function (k) { return params[k] !== '' && params[k] != null; }).map(function (k) { return k + '=' + encodeURIComponent(params[k]); }).join('&'), text: label, onclick: function () { var d = document.querySelector('.dlg-ov'); if (d) d.remove(); } }); }
 
   /* ---------- ผู้ช่วย AI (ปุ่มมุมล่างขวา) ----------
    * ส่งคำถาม + ช่วงเวลาที่กำลังดู ไปยังบริการ (config.js → aiApiUrl) ที่ตรวจตัวตน จำกัดจำนวนคำถาม และคำนวณตัวเลขจากไฟล์สถิติรวมฝั่งบริการ
    * หน้าเว็บไม่มี key/token และไม่ส่งรายชื่อ รูป หรือรายละเอียดรายบุคคล · ยังไม่ได้ตั้งค่า = แจ้งว่ายังเชื่อมต่อไม่ได้ (ไม่มีคำตอบจำลอง) */
   var chat = { hist: [], busy: false, last: '' };
+  /* ปุ่มผู้ช่วย AI: 3 แบบ (จำแยกตามเบราว์เซอร์ เป็นค่าการแสดงผลเท่านั้น ไม่ใช่สิทธิ์) — robot = รูปหุ่นยนต์ + “ถาม AI” · text = ปุ่มข้อความ “ถาม AI” · hidden = ซ่อนปุ่มลอย (เปิดกลับได้ที่หน้าตั้งค่า/หน้าผู้ช่วย AI) */
+  var ROBOT_SRC = window.__HUB_ROBOT__ || 'assets/images/ai-assistant.png';
+  function fabMode() { var m = store('hub.aiFab'); return m === 'text' || m === 'hidden' ? m : 'robot'; }
+  function setFabMode(m) { store('hub.aiFab', m); var f = $('chatFab'); if (f) { f.className = 'chat-fab mode-' + m; f.hidden = m === 'hidden'; } }
+  function fabModeCtl() {
+    return el('div', { class: 'seg', role: 'group', 'aria-label': 'รูปแบบปุ่มผู้ช่วย AI' }, [['robot', 'หุ่นยนต์ + “ถาม AI”'], ['text', 'ปุ่มข้อความ “ถาม AI”'], ['hidden', 'ซ่อนปุ่ม']].map(function (o) {
+      return el('button', { type: 'button', 'aria-pressed': String(fabMode() === o[0]), text: o[1], onclick: function () { setFabMode(o[0]); route(true); } }); }));
+  }
+  /* ข้อความตอบ: แปลง #รหัสหน้า ที่มีอยู่จริงในเว็บนี้เป็นลิงก์ภายใน (ไม่สร้างลิงก์ภายนอก) */
+  function richText(t) {
+    var p = el('p'); String(t).split(/(#[a-z0-9-]+)/).forEach(function (x) { var id = x.charAt(0) === '#' ? ALIAS[x.slice(1)] || x.slice(1) : ''; if (id && PAGES[id]) p.appendChild(el('a', { href: '#' + id, text: PAGE_TITLE[id] || id })); else p.appendChild(document.createTextNode(x)); });
+    return p;
+  }
+  var CHAT_ERR = { 'rate-limited': 'ถามถี่เกินกำหนด (จำกัดต่อนาที/ต่อวันเพื่อไม่ให้เกินโควตาฟรี) — รอสักครู่แล้วลองใหม่', 'llm-quota': 'โควตาบริการ AI แบบไม่มีค่าใช้จ่ายของวันนี้หมดแล้ว — ลองใหม่พรุ่งนี้ หรือดูตัวเลขจากหน้ารายงานได้ตามปกติ',
+    'llm-timeout': 'บริการ AI ใช้เวลานานเกินไป — ลองถามใหม่ให้สั้นลง', 'llm-unreachable': 'เชื่อมต่อบริการ AI ไม่ได้ชั่วคราว — ลองใหม่อีกครั้ง', 'llm-schema': 'บริการ AI ตอบกลับไม่สมบูรณ์ — ลองใหม่อีกครั้ง',
+    'llm-not-configured': 'บริการผู้ช่วย AI ยังตั้งค่าไม่ครบ จึงยังตอบไม่ได้', 'stats-unavailable': 'อ่านสถิติรวมไม่สำเร็จ จึงยังตอบไม่ได้ — ลองใหม่อีกครั้ง', 'bad-origin': 'คำขอไม่ได้มาจากหน้าเว็บนี้' };
   function setupChat() {
-    var log = el('div', { class: 'chat-log', role: 'log', 'aria-live': 'polite', 'aria-label': 'ข้อความสนทนา' }), inp = el('textarea', { rows: '1', placeholder: 'พิมพ์คำถามเกี่ยวกับสถิติ…', 'aria-label': 'คำถาม', maxlength: '500' });
+    var log = el('div', { class: 'chat-log', role: 'log', 'aria-live': 'polite', 'aria-label': 'ข้อความสนทนา' }), inp = el('textarea', { rows: '1', placeholder: 'พิมพ์คำถาม เช่น อุบัติเหตุเดือนนี้เทียบเดือนก่อน…', 'aria-label': 'คำถาม', maxlength: '500' });
     var send = el('button', { type: 'submit', class: 'btn', text: 'ส่ง' }), quick = el('div', { class: 'chat-quick' });
-    var bubble = svg('svg', { viewBox: '0 0 24 24', width: 26, height: 26, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' }, [svg('path', { d: 'M12 2.5v3' }), svg('rect', { x: 4.5, y: 5.5, width: 15, height: 11.5, rx: 3 }), svg('path', { d: 'M9 10.5h.01M15 10.5h.01M9.5 13.8h5M2.5 10v3M21.5 10v3M8.5 20.5h7' })]);
-    var fab = el('button', { type: 'button', id: 'chatFab', class: 'chat-fab', 'aria-label': 'ถาม AI เรื่องสถิติ', title: 'ถาม AI เรื่องสถิติ', 'aria-expanded': 'false', 'aria-controls': 'chatPanel' }, [bubble, el('span', { class: 'fab-t', text: 'ถาม AI' })]);
-    /* จอแคบ: ปุ่มลอยหลบลงเมื่อเลื่อนลงอ่านข้อมูล (ไม่บังตัวเลขในการ์ด) และกลับมาเมื่อเลื่อนขึ้น อยู่บนสุด หรือถึงท้ายหน้า (ท้ายหน้ามีพื้นที่ว่างเผื่อไว้) */
+    var robot = function (cls) { return el('img', { class: cls, src: ROBOT_SRC, alt: '', width: '256', height: '256', decoding: 'async', draggable: 'false' }); };
+    var fab = el('button', { type: 'button', id: 'chatFab', class: 'chat-fab mode-' + fabMode(), 'aria-label': 'เปิดผู้ช่วย AI (ถาม AI)', title: 'ถาม AI', 'aria-expanded': 'false', 'aria-controls': 'chatPanel', hidden: fabMode() === 'hidden' ? '' : null }, [robot('fab-bot'), el('span', { class: 'fab-t', text: 'ถาม AI' })]);
+    /* จอแคบ: ปุ่มลอยหลบลงเมื่อเลื่อนลงอ่านข้อมูล และกลับมาเมื่อเลื่อนขึ้น/อยู่บนสุด/ถึงท้ายหน้า · ขณะพิมพ์ในช่องกรอก (แป้นพิมพ์มือถือเปิด) ปุ่มหลบไม่บังช่องกรอก */
     var lastY = window.pageYOffset || 0;
     window.addEventListener('scroll', function () {
       var y = window.pageYOffset || 0, end = window.innerHeight + y >= document.documentElement.scrollHeight - 96;
-      if (y < 24 || end || y < lastY - 6) fab.classList.remove('fab-away'); else if (y > lastY + 6) fab.classList.add('fab-away');
+      if (isTyping() && isMobile()) fab.classList.add('fab-away'); else if (y < 24 || end || y < lastY - 6) fab.classList.remove('fab-away'); else if (y > lastY + 6) fab.classList.add('fab-away');
       lastY = y;
     }, { passive: true });
-    var closeB = el('button', { type: 'button', class: 'chat-x', 'aria-label': 'ปิดผู้ช่วย AI', text: '×' }), scope = el('span', { class: 'chat-scope' });
-    var form = el('form', { class: 'chat-form' }, [inp, send]);
-    var panel = el('section', { id: 'chatPanel', class: 'chat-panel', hidden: '', 'aria-label': 'ผู้ช่วย AI ถามสถิติ' }, [el('div', { class: 'chat-h' }, [el('div', {}, [el('strong', { text: 'ผู้ช่วยถามสถิติ' }), scope]), closeB]), log, quick, form]);
-    function add(role, text, extraNode) { var m = el('div', { class: 'chat-m ' + role }, [el('p', { text: text }), extraNode || null]); log.appendChild(m); log.scrollTop = log.scrollHeight; return m; }
-    /* ช่วงที่ส่งให้ผู้ช่วย = ช่วงที่ผู้ใช้เห็นอยู่จริง: หน้าแรกใช้ปุ่ม วันนี้/เดือนนี้/ปีนี้/กำหนดช่วง · หน้าอื่นใช้ช่วงเดือนของหน้านั้น */
+    document.addEventListener('focusin', function (e) { if (isMobile() && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !panel.contains(e.target)) fab.classList.add('fab-away'); });
+    document.addEventListener('focusout', function () { setTimeout(function () { if (!isTyping()) fab.classList.remove('fab-away'); }, 150); });
+    document.addEventListener('visibilitychange', function () { document.body.classList.toggle('tab-hidden', document.hidden); });     // หยุดการเคลื่อนไหวเมื่อสลับแท็บ
+    var closeB = el('button', { type: 'button', class: 'chat-x', 'aria-label': 'ปิดหน้าต่างแชต', title: 'ปิดหน้าต่างแชต', text: '×' }), scope = el('span', { class: 'chat-scope' });
+    var hideB = el('button', { type: 'button', class: 'chat-hide', title: 'ซ่อนปุ่มผู้ช่วย AI (เปิดกลับได้ที่ ตั้งค่า › ตั้งค่าการแสดงผล)', text: 'ซ่อนปุ่ม' });
+    var form = el('form', { class: 'chat-form' }, [inp, send]), ava = robot('chat-ava');
+    var panel = el('section', { id: 'chatPanel', class: 'chat-panel', hidden: '', 'aria-label': 'ผู้ช่วย AI' }, [el('div', { class: 'chat-h' }, [ava, el('div', {}, [el('strong', { text: 'ผู้ช่วย AI' }), scope]), hideB, closeB]), log, quick, form]);
+    function add(role, text, extraNode) { var m = el('div', { class: 'chat-m ' + role }, [role.indexOf('ai') === 0 ? richText(text) : el('p', { text: text }), extraNode || null]); log.appendChild(m); log.scrollTop = log.scrollHeight; return m; }
+    /* ช่วงที่ส่งให้ผู้ช่วย = ช่วงที่ผู้ใช้เห็นอยู่จริง: หน้าแรกใช้ปุ่ม วันนี้/เดือนนี้/ปีนี้/กำหนดช่วง · หน้าอื่นใช้ช่วงเดือนของหน้านั้น (คำถามที่ระบุช่วงเองจะใช้ช่วงในคำถาม) */
     function chatScope() {
       if (currentPage() === 'dashboard') { var Q = periodOf(), ms = Q.months && Q.months.length ? Q.months : [Q.cm]; return { kind: Q.kind, label: Q.label, from: ms[0], to: ms[ms.length - 1] }; }
       return { kind: 'range', label: rangeText(), from: state.from || MONTHS[0], to: state.to || MONTHS[MONTHS.length - 1] };
     }
     function ctx() { var sc = chatScope(); return { today: todayStr(), page: currentPage(), period: sc.kind, label: sc.label, from: sc.from, to: sc.to, dataAsOf: (DATA && ((DATA.extra || {}).generatedAt || DATA.stats.generatedAt)) || '' }; }
+    function busy(on) { chat.busy = on; send.disabled = on; fab.classList.toggle('busy', on); ava.classList.toggle('busy', on); }
     function ask(text) {
-      if (chat.busy || !text) return; chat.busy = true; chat.last = text; send.disabled = true; quick.textContent = '';
-      add('user', text); var wait = add('ai wait', 'กำลังตอบ…'), ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(function () { if (ctl) ctl.abort(); }, 45000);
+      if (chat.busy || !text) return; chat.last = text; busy(true); quick.textContent = '';
+      add('user', text); var wait = add('ai wait', 'กำลังคิดคำตอบ…'), ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(function () { if (ctl) ctl.abort(); }, 40000);
       var fail = function (t) { wait.remove(); add('ai err', t, el('button', { type: 'button', class: 'btn-ghost', text: 'ลองใหม่', onclick: function (e) { e.target.closest('.chat-m').remove(); ask(chat.last); } })); };
       fetch(HCFG.aiApiUrl, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, signal: ctl ? ctl.signal : undefined,
-        body: JSON.stringify({ action: 'chat', userMessage: text, chatHistory: chat.hist.slice(-8), context: ctx() }) })
+        body: JSON.stringify({ action: 'chat', userMessage: text, chatHistory: chat.hist.slice(-6), context: ctx() }) })
         .then(function (r) { return r.json().then(function (j) { return { s: r.status, j: j }; }, function () { return { s: r.status, j: null }; }); })
         .then(function (x) {
-          if (x.s === 401 || x.s === 403) return fail('ยังไม่ได้เข้าสู่ระบบ หรือบัญชีนี้ไม่มีสิทธิ์ใช้ผู้ช่วย AI');
-          if (x.s === 429) return fail('ถามถี่เกินกำหนด — รอสักครู่แล้วลองใหม่');
-          if (x.s === 503) return fail('บริการผู้ช่วย AI ยังตั้งค่าไม่ครบ จึงยังตอบไม่ได้');
+          var code = x.j && x.j.code;
+          if (x.s === 401) { if (AUTH.on) authLost(); return fail('หมดเวลาการเข้าสู่ระบบ — เข้าสู่ระบบใหม่แล้วถามอีกครั้ง'); }
+          if (x.s === 403 && code !== 'bad-origin') return fail('บัญชีนี้ไม่มีสิทธิ์ใช้ผู้ช่วย AI');
+          if (code && CHAT_ERR[code]) return fail(CHAT_ERR[code]);
           if (!x.j || x.j.status !== 'success' || typeof x.j.reply !== 'string') return fail('ผู้ช่วย AI ตอบกลับผิดพลาด (HTTP ' + x.s + ')');
-          wait.remove(); chat.hist.push({ role: 'User', text: text }); chat.hist.push({ role: 'AI', text: x.j.reply });
-          add('ai', x.j.reply, x.j.sources && x.j.sources.length ? el('p', { class: 'chat-src', text: 'แหล่งข้อมูล: ' + x.j.sources.join(' · ') + (x.j.asOf ? ' · ข้อมูล ณ ' + x.j.asOf : '') }) : null);
+          wait.remove(); if (x.j.verified !== false) { chat.hist.push({ role: 'User', text: text }); chat.hist.push({ role: 'AI', text: x.j.reply }); }
+          add('ai', x.j.reply, x.j.sources && x.j.sources.length ? el('p', { class: 'chat-src', text: 'ที่มา: ' + x.j.sources.join(' · ') + (x.j.asOf ? ' · ข้อมูล ณ ' + x.j.asOf : '') }) : null);
         }, function () { fail('เชื่อมต่อผู้ช่วย AI ไม่ได้ หรือใช้เวลานานเกินไป'); })
-        .then(function () { clearTimeout(tm); chat.busy = false; send.disabled = false; });
+        .then(function () { clearTimeout(tm); busy(false); });
     }
     function open(on) {
       panel.hidden = !on; fab.setAttribute('aria-expanded', String(on)); document.body.classList.toggle('chat-open', on);
-      if (!on) { window.dispatchEvent(new Event('resize')); fab.focus(); return; }
+      if (!on) { window.dispatchEvent(new Event('resize')); if (!fab.hidden) fab.focus(); return; }
       scope.textContent = 'ช่วงที่กำลังดู: ' + chatScope().label; window.dispatchEvent(new Event('resize'));
       if (!log.childNodes.length) {
         if (!HCFG.aiApiUrl) { add('ai note', 'ยังเชื่อมต่อผู้ช่วย AI ไม่ได้', el('p', { class: 'chat-src' }, ['เว็บไซต์นี้ยังไม่ได้ตั้งค่าบริการผู้ช่วย AI ที่ตรวจตัวตน จึงยังถามตอบไม่ได้ — ', el('a', { href: '#ai', text: 'ดูสิ่งที่ต้องตั้งค่า' })])); inp.disabled = true; send.disabled = true; }
-        else { add('ai', 'ถามสถิติรวมของงานจราจรและความปลอดภัยได้ เช่น จำนวนอุบัติเหตุ รถเข้า หรือของหาย ในช่วงที่กำลังดู'); ['อุบัติเหตุเดือนนี้มีกี่ครั้ง', 'สรุป Lost & Found ปีนี้', 'รถเข้ามหาวิทยาลัยล่าสุดวันไหน เท่าไร'].forEach(function (t) { quick.appendChild(el('button', { type: 'button', class: 'chip', text: t, onclick: function () { ask(t); } })); }); }
+        else { add('ai', 'สวัสดีครับ ผมช่วยสรุปสถิติของงานจราจรและความปลอดภัยได้ เช่น อุบัติเหตุ รถเข้า หรือของหาย และบอกได้ว่าดูรายละเอียดที่เมนูไหน — ถามต่อเนื่องได้เลย เช่น “แล้วเดือนก่อนล่ะ”');
+          ['อุบัติเหตุเดือนนี้เทียบเดือนก่อน', 'สรุป Lost & Found เดือนนี้', 'รถเข้ามหาวิทยาลัยล่าสุดวันไหน', 'ดูรายละเอียดเหตุการณ์ได้ที่ไหน'].forEach(function (t) { quick.appendChild(el('button', { type: 'button', class: 'chip', text: t, onclick: function () { ask(t); } })); }); }
       }
       if (!inp.disabled) inp.focus(); else closeB.focus();
     }
     fab.onclick = function () { open(panel.hidden); }; closeB.onclick = function () { open(false); };
+    hideB.onclick = function () { open(false); setFabMode('hidden'); showBanner('ซ่อนปุ่มผู้ช่วย AI แล้ว — เปิดกลับได้ที่ ตั้งค่า › ตั้งค่าการแสดงผล (หัวข้อ “ปุ่มผู้ช่วย AI”)'); setTimeout(function () { var b = $('banner'); if (b) b.hidden = true; }, 6000); };
+    window.hubOpenChat = function () { if (fabMode() === 'hidden') setFabMode('robot'); open(true); };
     form.onsubmit = function (e) { e.preventDefault(); var t = inp.value.trim(); if (t) { inp.value = ''; ask(t); } };
     inp.onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.dispatchEvent(new Event('submit', { cancelable: true })); } };
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.hidden && !document.querySelector('.dlg-ov, .lightbox')) open(false); });
@@ -2222,12 +2289,7 @@
       if (st.from < min || st.from > max) st.from = min; if (st.to > max || st.to < min) st.to = max;
       var host = el('div', { class: 'incb' }), kp = el('div', { class: 'kstrips' }), yr = el('div'), list = el('div', { class: 'incb-list' }), mapBox = el('div');
       var inRangeRows = function () { return all.filter(function (r) { return r.date >= st.from && r.date <= st.to; }); };
-      function open(r) {
-        var ps = (r.persons || []).map(function (p, i) { return 'คนที่ ' + (i + 1) + ': ' + (p.type || 'ไม่ระบุประเภท') + (p.name ? ' · ' + p.name : '') + (p.symptom ? ' · ' + p.symptom : ''); }).join('\n');
-        detailDlg(r.type + ' — ' + (r.place || 'ไม่ระบุสถานที่'), [['รหัสเหตุการณ์', r.id], ['วันที่เกิดเหตุ', fdate(r.date) + (r.time ? ' เวลา ' + r.time + ' น.' : '')], ['สถานที่', r.place], ['รับแจ้ง', [r.reporterType, r.channel].filter(Boolean).join(' · ')], ['เวลาได้รับแจ้ง / เข้าถึง', [r.notified, r.arrived].filter(Boolean).join(' / ')],
-          ['พาหนะ', [r.vehicle1 && r.vehicle1 + (r.driver1 ? ' (' + r.driver1 + ')' : ''), r.vehicle2 && r.vehicle2 + (r.driver2 ? ' (' + r.driver2 + ')' : '')].filter(Boolean).join(' กับ ')], ['ผู้บาดเจ็บ/ผู้ป่วย', r.injured == null ? (r.hasInjured || '') : r.injured + ' คน'], ['รายละเอียดบุคคล', ps],
-          ['ทรัพย์สินเสียหาย', [r.damage, r.damageDetail].filter(Boolean).join(' · ')], ['สาเหตุ', r.cause], ['การเคลื่อนย้าย', [r.transport, r.hospital].filter(Boolean).join(' → ')], ['รายละเอียดเพิ่มเติม', r.detail], ['KPI การเข้าถึง', (r.kpi || '').replace(/\s*\|\s*/g, '\n')]], r.images);
-      }
+      function open(r) { openIncident(r); }                       /* รายละเอียดแบบเดียวกับ “รายละเอียดเหตุการณ์วันนี้” บนหน้าแรก (incDetail) */
       function drawKpi(rows) {
         var k = incKpi(rows), by = function (o) { return [['นักศึกษา', num(o.student)], ['บุคลากร', num(o.staff)], ['ภายนอก', num(o.outsider)], ['Outsource', num(o.outsource)]].concat(o.unknown ? [['ไม่ระบุ', num(o.unknown)]] : []); };
         kp.textContent = '';
@@ -2318,26 +2380,182 @@
   }
 
   /* ---------- กิจกรรมพิเศษ / GPS งานปริญญา: รายการจริงหลัง Login (GPS = รายงานย้อนหลัง ไม่ใช่ตำแหน่งสด และไม่แสดงเป็นเส้นทางรายบุคคล) ---------- */
-  function eventsSection() {
-    return section('รายการเหตุการณ์กิจกรรมพิเศษ', { note: 'ข้อมูลภายใน' }, [dataView('events', function (rows) {
-      rows = rows.slice().sort(function (a, b) { return a.at < b.at ? 1 : -1; }); var lv = {}; rows.forEach(function (r) { lv[r.level || '(ไม่ระบุ)'] = 1; });
-      return listUI({ rows: rows, per: 12, unit: 'เหตุการณ์', placeholder: 'ค้นหาประเภท สถานที่ หรือรายละเอียด…', text: function (r) { return [r.type, r.place, r.detail, r.unit, r.at].join(' '); },
-        filters: [{ id: 'all', label: 'ทุกระดับ', test: function () { return true; } }].concat(Object.keys(lv).sort().map(function (k) { return { id: k, label: k, test: function (r) { return (r.level || '(ไม่ระบุ)') === k; } }; })),
-        render: function (page) { return el('div', { class: 'it-grid' }, page.map(function (r) { return itemCard({ img: (r.images || [])[0], tag: r.level || 'ไม่ระบุระดับ', title: r.type || 'ไม่ระบุประเภท', sub: [r.place, fdate(r.at)].filter(Boolean).join(' · '), meta: r.unit,
-          open: function () { detailDlg(r.type || 'เหตุการณ์', [['วันเวลา', fdate(r.at)], ['ระดับ', r.level], ['สถานที่', r.place], ['หน่วยงาน', r.unit], ['รายละเอียด', r.detail]], r.images); } }); })); } });
+  /* ================= รอบ 9: รายละเอียดเหตุการณ์ (ใช้ร่วม Dashboard + หน้ารายงาน) · กิจกรรมพิเศษ · GPS ปริญญา ================= */
+  function bkkStamp(dt) { var d = new Date((dt instanceof Date ? dt.getTime() : Date.now()) + 7 * 3600000); return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate()) + ' ' + pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()); }
+  function readNote(d, src) { return el('p', { class: 'src', text: 'แหล่งข้อมูล: ' + src + ' · อ่านเมื่อ ' + fdate(bkkStamp(d && d.at)) + ' (เวลาไทย)' }); }
+  function countBy(rows, f) { var o = {}; rows.forEach(function (r) { var k = f(r); o[k] = (o[k] || 0) + 1; }); return o; }
+  function optsOf(label, o) { return [['all', label]].concat(Object.keys(o).sort().map(function (k) { return [k, k + ' (' + num(o[k]) + ')']; })); }
+  /* ภาพหลายภาพ: กดภาพใดก็ได้เพื่อขยาย แล้วเลื่อน ‹ › ดูภาพอื่นในชุดเดียวกัน (ปุ่มลูกศรซ้าย/ขวาบนแป้นพิมพ์ใช้ได้) */
+  function lightboxSet(list, i, caption) {
+    var last = document.activeElement, n = list.length, img = el('img', { alt: '', referrerpolicy: 'no-referrer' }), msg = el('p'), close, onKey;
+    function show() { img.hidden = false; img.alt = caption + ' ภาพที่ ' + (i + 1); msg.textContent = caption + (n > 1 ? ' — ภาพที่ ' + (i + 1) + ' / ' + n : ''); img.src = imgSrc(list[i], 'w1600'); }
+    img.onerror = function () { img.hidden = true; msg.textContent = 'โหลดภาพขนาดใหญ่ไม่ได้ (อาจไม่มีสิทธิ์เปิดไฟล์นี้) — ' + caption + (n > 1 ? ' ภาพที่ ' + (i + 1) : ''); };
+    var goPrev = function () { i = (i + n - 1) % n; show(); }, goNext = function () { i = (i + 1) % n; show(); };
+    var prev = el('button', { type: 'button', class: 'btn sec', 'aria-label': 'ภาพก่อนหน้า', text: '‹', onclick: goPrev }), next = el('button', { type: 'button', class: 'btn sec', 'aria-label': 'ภาพถัดไป', text: '›', onclick: goNext });
+    var btn = el('button', { type: 'button', class: 'btn sec', text: 'ปิด' });
+    var ov = el('div', { class: 'lightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'ภาพขยาย: ' + caption, onclick: function (e) { if (e.target === ov) close(); } }, [el('div', { class: 'lb-in' }, [img, msg, el('div', { class: 'lb-nav' }, n > 1 ? [prev, btn, next] : [btn])])]);
+    close = function () { ov.remove(); document.removeEventListener('keydown', onKey); if (last && last.focus) last.focus(); };
+    onKey = function (e) { if (e.key === 'Escape') close(); else if (n > 1 && e.key === 'ArrowLeft') goPrev(); else if (n > 1 && e.key === 'ArrowRight') goNext(); };
+    btn.addEventListener('click', function () { close(); }); show(); document.body.appendChild(ov); document.addEventListener('keydown', onKey); btn.focus();
+  }
+  function gallery(list, caption, cls) {
+    list = (list || []).filter(function (u) { return imgSrc(u); });
+    if (!list.length) return el('p', { class: 'src', text: 'ไม่มีภาพประกอบ' });
+    return el('div', { class: cls || 'gal' }, list.map(function (u, i) {
+      var b = el('button', { type: 'button', class: 'gal-pic', 'aria-label': 'ขยายภาพ ' + caption + ' ภาพที่ ' + (i + 1) + ' จาก ' + list.length, onclick: function (e) { e.stopPropagation(); lightboxSet(list, i, caption); } });
+      var im = el('img', { alt: caption + ' ภาพที่ ' + (i + 1), loading: 'lazy', referrerpolicy: 'no-referrer' });
+      im.onerror = function () { b.textContent = 'โหลดภาพไม่ได้'; b.classList.add('noimg'); b.disabled = true; };
+      im.src = imgSrc(u, 'w400'); b.appendChild(im); return b; }));
+  }
+  function panelDlg(title, body) {
+    var last = document.activeElement, close = function () { ov.remove(); document.removeEventListener('keydown', onKey); if (last && last.focus) last.focus(); }, onKey = function (e) { if (e.key === 'Escape' && !document.querySelector('.lightbox')) close(); };
+    var btn = el('button', { type: 'button', class: 'btn sec', text: 'ปิด', onclick: close });
+    var ov = el('div', { class: 'dlg-ov', role: 'dialog', 'aria-modal': 'true', 'aria-label': title, onclick: function (e) { if (e.target === ov) close(); } }, [el('div', { class: 'dlg' }, [el('div', { class: 'dlg-h' }, [el('h3', { text: title }), btn]), body])]);
+    document.body.appendChild(ov); document.addEventListener('keydown', onKey); btn.focus();
+  }
+
+  /* รายละเอียดเหตุการณ์แบบเดียวกับ Dashboard เดิม (Main-AI-v1): KPI การเข้าถึง → วันเวลา → รับแจ้งจาก → พาหนะ → สถานที่ → ผู้บาดเจ็บ → สาเหตุ → การดำเนินการ → รายละเอียด + ภาพ
+   * ใช้ร่วมทั้ง “รายละเอียดเหตุการณ์วันนี้” บนหน้าแรก และหน้ารายงานเหตุการณ์ (opt.names = แสดงชื่อบุคคล เฉพาะหน้าต่างรายละเอียดของหน้ารายงาน) */
+  function incDetail(r, opt) {
+    opt = opt || {}; var dl = el('dl', { class: 'incd-dl' }), add = function (k, v, cls) { if (v === '' || v == null) return; dl.appendChild(el('dt', { text: k })); dl.appendChild(el('dd', { class: cls || null, text: String(v) })); };
+    var kpi = String(r.kpi || '').split('|').map(function (x) { return x.trim(); }).filter(function (x) { return x && x !== '-'; });
+    add('วันที่เกิดเหตุ', fdate(r.date) + (r.time ? ' เวลา ' + r.time + ' น.' : ''));
+    add('รับแจ้งจาก', [r.reporterType ? r.reporterType + (r.reporterUnit ? ' (' + r.reporterUnit + ')' : '') : r.reporterUnit, r.channel ? 'รับแจ้งทาง ' + r.channel : ''].filter(Boolean).join(' · '));
+    if (incCat(r) === 'road' && r.vehicle1) add('ยานพาหนะ', r.vehicle1 + (r.driver1 ? ' ของ' + r.driver1 : '') + (!r.vehicle2 ? '' : /ล้มเอง|ชนทรัพย์สิน/.test(r.vehicle2) ? ' (' + r.vehicle2 + ')' : ' ชนกับ ' + r.vehicle2 + (r.driver2 ? ' ของ' + r.driver2 : '')));
+    else if (r.vehicle1) add('ยานพาหนะ', [r.vehicle1, r.vehicle2].filter(Boolean).join(' / '));
+    add('สถานที่', r.place);
+    var ps = r.persons || [], none = r.injured === 0 || (r.injured == null && /^ไม่มี/.test(r.hasInjured || ''));
+    if (none) add('ผู้บาดเจ็บ/ผู้ป่วย', 'ไม่มีผู้ได้รับบาดเจ็บ', 'ok');
+    else if (r.injured != null || ps.length || /^มี/.test(r.hasInjured || '')) add('ผู้บาดเจ็บ/ผู้ป่วย', (r.injured != null ? r.injured + ' คน' : ps.length ? ps.length + ' คน' : 'มี (ไม่ได้กรอกจำนวน)') + (ps.length ? ' — ' + ps.map(function (p, i) { return (ps.length > 1 ? (i + 1) + ') ' : '') + [p.type || 'ไม่ระบุประเภท', opt.names ? p.name : '', p.symptom].filter(Boolean).join(' · '); }).join(' ') : ''), 'bad');
+    add('ทรัพย์สินเสียหาย', [r.damage, r.damageDetail].filter(function (x) { return x && x !== 'ไม่มี'; }).join(' · '));
+    add('สาเหตุ', r.cause);
+    add('การดำเนินการ', [r.transport, r.hospital ? 'ส่งต่อ ' + r.hospital : ''].filter(Boolean).join(' → '));
+    add('เวลาตอบสนอง', [r.notified ? 'ได้รับแจ้ง ' + r.notified : '', r.arrived ? 'ถึงที่เกิดเหตุ ' + r.arrived : '', r.serviceArrived ? 'รถบริการถึง ' + r.serviceArrived : '', r.hospitalArrived ? 'ถึงสถานพยาบาล ' + r.hospitalArrived : ''].filter(Boolean).join(' · '));
+    add(r.summary ? 'สรุปเหตุการณ์' : 'รายละเอียด', r.summary || r.detail);
+    if (r.summary && r.detail && opt.names) add('รายละเอียดเพิ่มเติม', r.detail);
+    add('รหัสเหตุการณ์', r.id && !/^ROW-/.test(r.id) ? r.id : '');
+    return el('article', { class: 'incd' }, [el('div', { class: 'incd-media' }, [gallery(r.images, (r.type || 'เหตุการณ์') + ' — ' + (r.place || ''), 'gal incd-gal')]),
+      el('div', { class: 'incd-body' }, [el('div', { class: 'incd-top' }, [el('span', { class: 'tag', text: r.type || 'ไม่ระบุประเภท' }), el('h3', { text: r.place || 'ไม่ระบุสถานที่' })]),
+        kpi.length ? el('ul', { class: 'incd-kpi', 'aria-label': 'ผลตรวจ KPI การเข้าถึง' }, kpi.map(function (k) { return el('li', { class: /✅|ผ่าน/.test(k) && !/ไม่ผ่าน|❌/.test(k) ? 'ok' : /❌|ไม่ผ่าน|เกิน/.test(k) ? 'bad' : '', text: k }); })) : null, dl])]);
+  }
+  function openIncident(r) { panelDlg((r.type || 'เหตุการณ์') + ' — ' + (r.place || 'ไม่ระบุสถานที่'), incDetail(r, { names: true })); }
+
+  /* หน้าแรก: รายละเอียดเหตุการณ์วันนี้ — วันนี้ = วันที่ปัจจุบันตามเวลาไทย และเลือกตาม “วันที่เกิดเหตุ” (ไม่ใช่วันที่บันทึก)
+   * อ่านสำเร็จแต่ไม่มีรายการ → บอกว่าไม่พบ ณ เวลาตรวจ · อ่านไม่สำเร็จ → แสดงข้อผิดพลาดพร้อมปุ่มลองใหม่ (dataView) ไม่แสดง 0 */
+  function todayIncidentsSection() {
+    var t = todayStr();
+    return section('รายละเอียดเหตุการณ์วันนี้', { note: dLabel(t) + ' · ตามวันที่เกิดเหตุ (เวลาไทย)', more: 'traffic' }, [dataView('incidents', function (all, d) {
+      var tk = function (r) { var m = /^(\d{1,2})[:.](\d{2})/.exec(r.time || ''); return (m ? pad2(+m[1]) + ':' + m[2] : '99:99') + (r.rec || ''); };      // เวลาแบบ 8:10 / 11:25 → เรียงตามเวลาจริง
+      var rows = all.filter(function (r) { return r.date === t; }).sort(function (a, b) { return tk(a) < tk(b) ? 1 : -1; });
+      var st = state.todayInc && state.todayInc.day === t ? state.todayInc : (state.todayInc = { day: t, type: 'all', i: 0 }), host = el('div', { class: 'tdi' }), body = el('div');
+      var checked = fdate(bkkStamp(d.at)).replace(/^.* (\d{2}:\d{2} น\.)$/, '$1');
+      if (!rows.length) {
+        host.appendChild(el('div', { class: 'empty tdi-empty', role: 'status', text: 'ไม่พบรายการของวันนี้ ณ เวลาตรวจ ' + checked }));
+        var latest = all.slice().sort(function (a, b) { return a.date + (a.time || '') < b.date + (b.time || '') ? 1 : -1; }).slice(0, 3);
+        if (latest.length) host.appendChild(el('div', { class: 'tdi-latest' }, [el('h3', { text: 'เหตุการณ์ล่าสุดในระบบ (ไม่ใช่ของวันนี้)' }), el('ul', { class: 'list' }, latest.map(function (r) {
+          return el('li', {}, [el('div', {}, [el('b', { text: (r.type || 'เหตุการณ์') + ' — ' + (r.place || 'ไม่ระบุสถานที่') }), el('span', { text: fdate(r.date) + (r.time ? ' เวลา ' + r.time + ' น.' : '') })]), el('button', { type: 'button', class: 'btn sec', text: 'ดูรายละเอียด', onclick: function () { openIncident(r); } })]); }))]));
+        host.appendChild(readNote(d, 'รายงานเหตุการณ์')); return host;
+      }
+      var types = countBy(rows, function (r) { return r.type || 'ไม่ระบุประเภท'; });
+      host.appendChild(el('p', { class: 'tdi-sum', role: 'status' }, [el('b', { text: 'วันนี้ ' + num(rows.length) + ' เหตุการณ์' }), ' — ' + Object.keys(types).map(function (k) { return k + ' ' + num(types[k]); }).join(' · ')]));
+      function draw() {
+        var f = rows.filter(function (r) { return st.type === 'all' || (r.type || 'ไม่ระบุประเภท') === st.type; }); if (st.i >= f.length) st.i = 0;
+        body.textContent = '';
+        var bar = el('div', { class: 'tdi-bar' }, [selectOf('กรองประเภทเหตุการณ์ของวันนี้', optsOf('ทุกประเภท (' + num(rows.length) + ')', types), types[st.type] ? st.type : 'all', function (v) { st.type = v; st.i = 0; draw(); })]);
+        if (f.length > 1) { bar.appendChild(el('div', { class: 'tdi-nav' }, [el('button', { type: 'button', class: 'btn-ghost', 'aria-label': 'เหตุการณ์ก่อนหน้า', text: '‹', onclick: function () { st.i = (st.i + f.length - 1) % f.length; draw(); } }),
+          el('span', { 'aria-live': 'polite', text: 'เหตุการณ์ที่ ' + (st.i + 1) + ' / ' + f.length }), el('button', { type: 'button', class: 'btn-ghost', 'aria-label': 'เหตุการณ์ถัดไป', text: '›', onclick: function () { st.i = (st.i + 1) % f.length; draw(); } })])); }
+        else bar.appendChild(el('span', { class: 'tdi-nav', text: 'เหตุการณ์ที่ 1 / 1' }));
+        body.appendChild(bar); body.appendChild(incDetail(f[st.i]));
+      }
+      draw(); host.appendChild(body); host.appendChild(el('p', { class: 'src' }, ['อ่านเมื่อ ' + checked + ' (เวลาไทย) · ', el('a', { href: '#traffic', text: 'ดูรายงานเหตุการณ์ทั้งหมด →' })])); return host;
     })]);
   }
+
+  /* กิจกรรมพิเศษ (Sheet1): วันเวลา ประเภท/ระดับ สถานที่ หน่วยงาน รายละเอียด ภาพ · ตัวกรองวันที่ ประเภท ระดับ ค้นหา แบ่งหน้า · ไม่มีชื่อ/ตำแหน่งผู้รายงาน */
+  function eventsSection() {
+    return section('รายการเหตุการณ์กิจกรรมพิเศษ', { note: 'ข้อมูลภายใน — Sheet1 ของแบบรายงานกิจกรรมพิเศษ' }, [dataView('events', function (all, d) {
+      all = all.slice().sort(function (a, b) { return String(a.at) < String(b.at) ? 1 : -1; });
+      var host = el('div');
+      if (!all.length) { host.appendChild(el('div', { class: 'empty', role: 'status', text: 'อ่านแหล่งข้อมูลสำเร็จ แต่ยังไม่มีรายการเหตุการณ์' })); host.appendChild(readNote(d, 'Sheet1')); return host; }
+      var days = all.map(function (r) { return String(r.at).slice(0, 10); }).filter(function (x) { return /^\d{4}-\d{2}-\d{2}$/.test(x); }).sort(), min = days[0] || '', max = days[days.length - 1] || '';
+      var st = state.evB || (state.evB = { from: min, to: max, type: 'all', level: 'all', q: '', page: 0 }); if (!st.from || st.from < min) st.from = min; if (!st.to || st.to > max) st.to = max;
+      var tOf = function (r) { return r.type || 'ไม่ระบุประเภท'; }, lOf = function (r) { return r.level || 'ไม่ระบุระดับ'; };
+      var kp = el('div'), bar = el('div', { class: 'lu-bar' }), body = el('div');
+      function open(r) { panelDlg(tOf(r) + ' — ' + (r.place || 'ไม่ระบุสถานที่'), el('div', {}, [gallery(r.images, tOf(r)), (function () { var dl = el('dl', { class: 'dlg-dl' }); [['วันเวลา', fdate(r.at)], ['ประเภทเหตุการณ์', tOf(r)], ['ระดับเหตุการณ์', lOf(r)], ['สถานที่เกิดเหตุ', r.place || 'ไม่ระบุ'], ['หน่วยงานที่รายงาน', r.unit], ['รายละเอียด', r.detail]].forEach(function (f) { if (f[1]) { dl.appendChild(el('dt', { text: f[0] })); dl.appendChild(el('dd', { text: f[1] })); } }); return dl; })()])); }
+      function draw() {
+        var inDate = all.filter(function (r) { var x = String(r.at).slice(0, 10); return !/^\d{4}/.test(x) || (x >= st.from && x <= st.to); });
+        var ty = countBy(inDate, tOf), lv = countBy(inDate, lOf);
+        var f = inDate.filter(function (r) { return (st.type === 'all' || tOf(r) === st.type) && (st.level === 'all' || lOf(r) === st.level) && (!st.q || [r.type, r.place, r.detail, r.unit, r.level, r.at].join(' ').toLowerCase().indexOf(st.q) >= 0); });
+        var fl = countBy(f, lOf), per = 12, pages = Math.max(1, Math.ceil(f.length / per)); if (st.page >= pages) st.page = pages - 1;
+        kp.textContent = ''; kp.appendChild(kpiGrid([{ icon: 'alert', label: 'เหตุการณ์ตามตัวกรอง', value: num(f.length), unit: 'รายการ', sub: 'จากทั้งหมด ' + num(all.length) + ' · ' + fdate(st.from) + ' – ' + fdate(st.to), color: C.c3 }].concat(Object.keys(fl).sort().map(function (k, i) { return { icon: 'alert', label: 'ระดับ: ' + k, value: num(fl[k]), unit: 'รายการ', color: [C.c2, C.c1, C.c5, C.fine][i % 4] }; }))));
+        bar.textContent = '';
+        bar.appendChild(dateIn('ตั้งแต่', st.from, min, max, function (v) { if (v && v <= st.to) { st.from = v; st.page = 0; draw(); } }));
+        bar.appendChild(dateIn('ถึง', st.to, min, max, function (v) { if (v && v >= st.from) { st.to = v; st.page = 0; draw(); } }));
+        bar.appendChild(el('button', { type: 'button', class: 'btn-ghost', text: 'ทั้งช่วงข้อมูล', onclick: function () { st.from = min; st.to = max; st.page = 0; draw(); } }));
+        bar.appendChild(selectOf('ประเภทเหตุการณ์', optsOf('ทุกประเภท', ty), ty[st.type] ? st.type : 'all', function (v) { st.type = v; st.page = 0; draw(); }));
+        bar.appendChild(selectOf('ระดับเหตุการณ์', optsOf('ทุกระดับ', lv), lv[st.level] ? st.level : 'all', function (v) { st.level = v; st.page = 0; draw(); }));
+        var q = el('input', { type: 'search', placeholder: 'ค้นหาสถานที่ รายละเอียด หรือหน่วยงาน…', 'aria-label': 'ค้นหาเหตุการณ์กิจกรรมพิเศษ', value: st.q }), tm = null;
+        q.oninput = function () { clearTimeout(tm); tm = setTimeout(function () { st.q = q.value.trim().toLowerCase(); st.page = 0; draw(); var n2 = bar.querySelector('input[type=search]'); if (n2) { n2.focus(); n2.setSelectionRange(n2.value.length, n2.value.length); } }, 250); };
+        bar.appendChild(q);
+        body.textContent = '';
+        body.appendChild(el('p', { class: 'lu-count', role: 'status', text: num(f.length) + ' เหตุการณ์' + (f.length !== all.length ? ' (จากทั้งหมด ' + num(all.length) + ')' : '') + ' · เรียงจากล่าสุด' }));
+        if (!f.length) { body.appendChild(el('div', { class: 'empty', text: 'ไม่พบรายการที่ตรงกับเงื่อนไข' })); return; }
+        body.appendChild(el('div', { class: 'it-grid' }, f.slice(st.page * per, st.page * per + per).map(function (r) { var n = (r.images || []).length;
+          return itemCard({ img: (r.images || [])[0], tag: lOf(r), title: tOf(r), sub: [r.place || 'ไม่ระบุสถานที่', fdate(r.at)].join(' · '), meta: (r.unit || '') + (n > 1 ? ' · ภาพ ' + n + ' ภาพ' : ''), open: function () { open(r); } }); })));
+        var pg = pager(st, pages, draw, host); if (pg) body.appendChild(pg);
+      }
+      host.appendChild(kp); host.appendChild(bar); host.appendChild(body); host.appendChild(readNote(d, 'Sheet1 (แบบรายงานเหตุการณ์กิจกรรมพิเศษ)')); draw(); return host;
+    })]);
+  }
+
+  /* GPS ปริญญา (แท็บ Reports): สรุปตามตัวกรอง + รายการ · ไม่มีชื่อ/รหัส รปภ. · พิกัด = ณ เวลาส่งรายงาน ไม่ใช่ตำแหน่งสด */
+  var GEO_TH = { WITHIN_RADIUS: 'อยู่ในรัศมีจุดปฏิบัติงาน', OUTSIDE_RADIUS: 'อยู่นอกรัศมีจุด', POST_NO_COORDS: 'จุดยังไม่มีพิกัดอ้างอิง', LOW_ACCURACY: 'GPS แม่นยำต่ำ' };
+  function geoTh(k) { return GEO_TH[k] || k || 'ไม่มีสถานะพิกัด'; }
   function gpsSection() {
-    return section('รายงาน รปภ. งานปริญญา (แท็บ Reports)', { note: 'ข้อมูลภายใน — พิกัดเป็นของรายงาน ณ เวลานั้น ไม่ใช่ตำแหน่งปัจจุบัน' }, [dataView('gps', function (rows) {
-      rows = rows.slice().sort(function (a, b) { return (a.date + a.time) < (b.date + b.time) ? 1 : -1; });
-      var c = function (k) { var o = {}; rows.forEach(function (r) { var v = r[k] || '(ว่าง)'; o[v] = (o[v] || 0) + 1; }); return o; }, rec = c('record'), geo = c('geo'), acc = rows.map(function (r) { return +r.accuracy; }).filter(function (x) { return x > 0; }).sort(function (a, b) { return a - b; });
-      return el('div', {}, [kpiGrid([{ icon: 'file', label: 'รายงานทั้งหมด', value: num(rows.length), unit: 'รายงาน', color: C.c1 }, { icon: 'check', label: 'Record_Status', value: Object.keys(rec).map(function (k) { return k + ' ' + num(rec[k]); }).join(' · '), color: C.c3 },
-        { icon: 'map', label: 'Geo_Status', value: Object.keys(geo).map(function (k) { return k + ' ' + num(geo[k]); }).join(' · '), color: C.c2 }, { icon: 'map', label: 'ความแม่นยำ GPS (ค่ากลาง)', value: acc.length ? num(acc[Math.floor(acc.length / 2)]) : '–', unit: acc.length ? 'เมตร' : '', color: C.c5 }]),
-        el('div', { style: 'margin-top:14px' }, [listUI({ rows: rows, per: 12, unit: 'รายงาน', placeholder: 'ค้นหาจุด โซน หรือวันที่…', text: function (r) { return [r.post, r.zone, r.date, r.kind, r.eventType, r.id].join(' '); },
-          filters: [{ id: 'all', label: 'ทั้งหมด', test: function () { return true; } }].concat(Object.keys(geo).sort().map(function (k) { return { id: k, label: k, test: function (r) { return (r.geo || '(ว่าง)') === k; } }; })),
-          render: function (page) { return el('div', { class: 'it-grid' }, page.map(function (r) { return itemCard({ img: (r.images || [])[0], tag: r.geo || 'ไม่มีสถานะพิกัด', title: r.post || 'ไม่ระบุจุด', sub: fdate(r.date) + (r.time ? ' ' + r.time : '') + (r.zone ? ' · โซน ' + r.zone : ''), meta: (r.kind || '') + ' · ' + (r.record || ''),
-            open: function () { detailDlg(r.post || 'รายงาน', [['รหัสรายงาน', r.id], ['วันที่ เวลา', fdate(r.date) + ' ' + (r.time || '')], ['ชนิดรายงาน', r.kind], ['โซน / หน้าที่', [r.zone, r.duty].filter(Boolean).join(' / ')], ['บริษัท', r.company], ['เหตุการณ์', [r.eventType, r.severity].filter(Boolean).join(' · ')], ['รายละเอียด', r.detail],
-              ['พิกัดของรายงาน', r.lat != null && r.lng != null ? r.lat + ', ' + r.lng : ''], ['ความแม่นยำ GPS', r.accuracy ? r.accuracy + ' เมตร' : ''], ['ระยะจากจุดประจำ', r.distance ? r.distance + ' เมตร' : ''], ['Geo_Status / GPS_Status', [r.geo, r.gpsStatus].filter(Boolean).join(' / ')], ['Record_Status', r.record]], r.images); } }); })); } })])]);
+    return section('รายการรายงาน (แท็บ Reports)', { note: 'ข้อมูลภายใน — พิกัดเป็นของรายงาน ณ เวลาที่ส่ง ไม่ใช่ตำแหน่งปัจจุบัน' }, [dataView('gps', function (all, d) {
+      all = all.slice().sort(function (a, b) { return (a.date + a.time) < (b.date + b.time) ? 1 : -1; });
+      var host = el('div');
+      if (!all.length) { host.appendChild(el('div', { class: 'empty', role: 'status', text: 'อ่านแหล่งข้อมูลสำเร็จ แต่ยังไม่มีรายงาน' })); host.appendChild(readNote(d, 'แท็บ Reports')); return host; }
+      var days = all.map(function (r) { return r.date; }).filter(function (x) { return /^\d{4}-\d{2}-\d{2}$/.test(x); }).sort(), min = days[0] || '', max = days[days.length - 1] || '';
+      var st = state.gpsB || (state.gpsB = { from: min, to: max, zone: 'all', post: 'all', geo: 'all', rec: 'all', q: '', page: 0 }); if (!st.from || st.from < min) st.from = min; if (!st.to || st.to > max) st.to = max;
+      var kp = el('div'), bar = el('div', { class: 'lu-bar' }), body = el('div');
+      function open(r) {
+        var dl = el('dl', { class: 'dlg-dl' });
+        [['รหัสรายงาน', r.id], ['วันที่ เวลา', fdate(r.date) + (r.time ? ' เวลา ' + r.time.slice(0, 5) + ' น.' : '')], ['ชนิดรายงาน', r.kind], ['จุดปฏิบัติงาน', r.post], ['โซน / หน้าที่', [r.zone, r.duty].filter(Boolean).join(' / ')], ['บริษัท', r.company],
+          ['เหตุการณ์', [r.eventType, r.severity].filter(Boolean).join(' · ')], ['รายละเอียด', r.detail], ['สถานะบันทึก', r.record], ['สถานะพิกัด', [geoTh(r.geo), r.gpsStatus].filter(Boolean).join(' · ')],
+          ['ความแม่นยำ GPS', r.accuracy ? num(+r.accuracy) + ' เมตร' : ''], ['ระยะจากจุดประจำ', r.distance ? num(+r.distance) + ' เมตร' : ''], ['พิกัดของรายงาน (ณ เวลาที่ส่ง)', r.lat != null && r.lng != null ? r.lat + ', ' + r.lng : '']].forEach(function (f) { if (f[1]) { dl.appendChild(el('dt', { text: f[0] })); dl.appendChild(el('dd', { text: f[1] })); } });
+        panelDlg((r.post || 'รายงาน') + ' — ' + fdate(r.date), el('div', {}, [gallery(r.images, 'ภาพประกอบรายงาน ' + (r.post || '')), dl]));
+      }
+      function draw() {
+        var inD = all.filter(function (r) { return r.date >= st.from && r.date <= st.to; }), zo = countBy(inD, function (r) { return r.zone || 'ไม่ระบุโซน'; });
+        var inZ = inD.filter(function (r) { return st.zone === 'all' || (r.zone || 'ไม่ระบุโซน') === st.zone; }), po = countBy(inZ, function (r) { return r.post || 'ไม่ระบุจุด'; }), ge = countBy(inZ, function (r) { return geoTh(r.geo); }), rc = countBy(inZ, function (r) { return r.record || '(ว่าง)'; });
+        var f = inZ.filter(function (r) { return (st.post === 'all' || (r.post || 'ไม่ระบุจุด') === st.post) && (st.geo === 'all' || geoTh(r.geo) === st.geo) && (st.rec === 'all' || (r.record || '(ว่าง)') === st.rec) && (!st.q || [r.post, r.zone, r.duty, r.kind, r.eventType, r.detail, r.id, r.company].join(' ').toLowerCase().indexOf(st.q) >= 0); });
+        var fg = countBy(f, function (r) { return r.geo || ''; }), acc = f.map(function (r) { return +r.accuracy; }).filter(function (x) { return x > 0; }).sort(function (a, b) { return a - b; }), photos = f.filter(function (r) { return (r.images || []).length; }).length;
+        var pct = function (k) { return f.length ? ' (' + num(Math.round(1000 * (fg[k] || 0) / f.length) / 10) + '%)' : ''; };
+        kp.textContent = ''; kp.appendChild(kpiGrid([{ icon: 'file', label: 'รายงานตามตัวกรอง', value: num(f.length), unit: 'รายงาน', sub: 'จากทั้งหมด ' + num(all.length) + ' · ' + fdate(st.from) + ' – ' + fdate(st.to), color: C.c3 },
+          { icon: 'check', label: GEO_TH.WITHIN_RADIUS, value: num(fg.WITHIN_RADIUS || 0), unit: 'รายงาน', sub: pct('WITHIN_RADIUS').replace(/[()]/g, '').trim() + ' ของรายงานตามตัวกรอง', color: C.c1 },
+          { icon: 'alert', label: GEO_TH.OUTSIDE_RADIUS, value: num(fg.OUTSIDE_RADIUS || 0), unit: 'รายงาน', sub: 'GPS แม่นยำต่ำ ' + num(fg.LOW_ACCURACY || 0) + ' · จุดไม่มีพิกัดอ้างอิง ' + num(fg.POST_NO_COORDS || 0), color: C.c2 },
+          { icon: 'map', label: 'ความแม่นยำ GPS (ค่ากลาง)', value: acc.length ? num(acc[Math.floor(acc.length / 2)]) : '–', unit: acc.length ? 'เมตร' : '', sub: 'มีภาพประกอบ ' + num(photos) + ' รายงาน', color: C.c5 }]));
+        bar.textContent = '';
+        bar.appendChild(dateIn('ตั้งแต่', st.from, min, max, function (v) { if (v && v <= st.to) { st.from = v; st.page = 0; draw(); } }));
+        bar.appendChild(dateIn('ถึง', st.to, min, max, function (v) { if (v && v >= st.from) { st.to = v; st.page = 0; draw(); } }));
+        bar.appendChild(el('button', { type: 'button', class: 'btn-ghost', text: 'ทุกวัน', onclick: function () { st.from = min; st.to = max; st.page = 0; draw(); } }));
+        bar.appendChild(selectOf('โซน', optsOf('ทุกโซน', zo), zo[st.zone] ? st.zone : 'all', function (v) { st.zone = v; st.post = 'all'; st.page = 0; draw(); }));
+        bar.appendChild(selectOf('จุดปฏิบัติงาน', optsOf('ทุกจุด', po), po[st.post] ? st.post : 'all', function (v) { st.post = v; st.page = 0; draw(); }));
+        bar.appendChild(selectOf('สถานะพิกัด', optsOf('ทุกสถานะพิกัด', ge), ge[st.geo] ? st.geo : 'all', function (v) { st.geo = v; st.page = 0; draw(); }));
+        bar.appendChild(selectOf('สถานะบันทึก', optsOf('ทุกสถานะบันทึก', rc), rc[st.rec] ? st.rec : 'all', function (v) { st.rec = v; st.page = 0; draw(); }));
+        var q = el('input', { type: 'search', placeholder: 'ค้นหาจุด หน้าที่ เหตุการณ์ หรือรหัสรายงาน…', 'aria-label': 'ค้นหารายงาน', value: st.q }), tm = null;
+        q.oninput = function () { clearTimeout(tm); tm = setTimeout(function () { st.q = q.value.trim().toLowerCase(); st.page = 0; draw(); var n2 = bar.querySelector('input[type=search]'); if (n2) { n2.focus(); n2.setSelectionRange(n2.value.length, n2.value.length); } }, 250); };
+        bar.appendChild(q);
+        var per = 12, pages = Math.max(1, Math.ceil(f.length / per)); if (st.page >= pages) st.page = pages - 1;
+        body.textContent = '';
+        body.appendChild(el('p', { class: 'lu-count', role: 'status', text: num(f.length) + ' รายงาน · เรียงจากล่าสุด' }));
+        if (!f.length) { body.appendChild(el('div', { class: 'empty', text: 'ไม่พบรายงานที่ตรงกับเงื่อนไข' })); return; }
+        body.appendChild(el('div', { class: 'it-grid' }, f.slice(st.page * per, st.page * per + per).map(function (r) {
+          return itemCard({ img: (r.images || [])[0], tag: geoTh(r.geo), title: r.post || 'ไม่ระบุจุด', sub: fdate(r.date) + (r.time ? ' ' + r.time.slice(0, 5) + ' น.' : '') + (r.zone ? ' · โซน ' + r.zone : ''), meta: [r.kind, r.eventType, r.record].filter(Boolean).join(' · '), open: function () { open(r); } }); })));
+        var pg = pager(st, pages, draw, host); if (pg) body.appendChild(pg);
+      }
+      host.appendChild(kp); host.appendChild(bar); host.appendChild(body); host.appendChild(readNote(d, 'แท็บ Reports (ระบบรายงาน รปภ. งานปริญญา)')); draw(); return host;
     })]);
   }
 
@@ -2393,9 +2611,8 @@
   function wrapPage(id, fn) { var old = PAGES[id]; if (old) PAGES[id] = function (v) { old(v); if (AUTH.on && AUTH.user) fn(v); }; }
   wrapPage('traffic', function (v) { var last = v.lastElementChild; v.insertBefore(incidentBlock(), last && /ระบบ/.test(last.getAttribute('aria-label') || '') ? last : null); });
   wrapPage('lostfound', function (v) { var old = $('lfList'), sec = old && old.closest ? old.closest('section') : null; if (sec) sec.parentNode.replaceChild(lfListSection(), sec); else v.appendChild(lfListSection()); });
-  wrapPage('event-incident', function (v) { v.appendChild(eventsSection()); });
-  wrapPage('grad-guard', function (v) { v.appendChild(gpsSection()); });
   wrapPage('settings', function (v) { v.appendChild(rosterAdminSection()); });
+  wrapPage('dashboard', function (v) { var tr = v.querySelector('section[aria-label="แนวโน้มรายเดือน"]'); v.insertBefore(todayIncidentsSection(), tr || null); });
 
   function renderStamp() {
     var g = DATA.stats.generatedAt || '', g2 = (DATA.extra || {}).generatedAt || '', s = $('stamp'); if (g2 > g) g = g2; s.textContent = '';   /* เวลาที่ตรวจแหล่งข้อมูลครั้งล่าสุด (แต่ละเรื่องมีวันที่ของตัวเองกำกับในหน้า) */

@@ -25,7 +25,7 @@ const SHEETS = {
   '1811117659': [['วันที่บันทึก', 'ปี พ.ศ.', 'ประเภท', 'เลขอ้างอิง', 'สถานะ'], ['2026-11-15', 'พ.ศ. 2569', 'สิ่งของสูญหาย', 'LOS-MOCK-1', 'รอดำเนินการ'], ['2026-11-14', 'พ.ศ. 2569', 'พบสิ่งของ', 'FND-MOCK-2', 'เจ้าของยังไม่มารับคืน'], ['2026-10-02', 'พ.ศ. 2569', 'รับของคืน', '—', 'รับของคืนแล้ว']],
   '1509680619': [['วันที่/เวลา', 'ชื่อไฟล์', 'ลิงก์ภาพ', 'หมวดหมู่'], ['15/11/2026 7:00:00', 'a.jpg', 'https://drive.google.com/file/d/' + IMG1 + '/view', 'ตรวจพื้นที่']],
   '1354124607': [['วันเวลาที่บันทึก', 'เจ้าหน้าที่ศูนย์วิทยุ', 'หน่วยงานที่แจ้ง', 'ชื่อ รปภ./ผู้แจ้ง', 'ประเภทเหตุการณ์', 'สถานที่เกิดเหตุ', 'รายละเอียด/ข้อความ', 'การดำเนินการของศูนย์', 'สถานะ'], ['15/11/2026 6:00:00', 'ศูนย์สมมติ', 'หน่วยสมมติ', 'ผู้แจ้งสมมติ', 'แจ้งเหตุทั่วไป', 'จุดสมมติ', 'ข้อความสมมติ', 'รับทราบ', 'รับแจ้ง']],
-  '0': [['ด', 'ชื่อ นามสกุล', 'ตำแหน่ง', 'หน่วยงาน', 'ประเภทเหตุการณ์', 'ระดับเหตุการณ์', 'สถานที่เกิดเหตุ', 'รายละเอียดเพิ่มเติม', 'รูปภาพ 1', 'รูปภาพ 2', 'รูปภาพ 3'], ['04/09/2026 10:00:00', 'ชื่อสมมติ', 'ตำแหน่งสมมติ', 'หน่วยสมมติ', 'เหตุสมมติ', 'ต่ำ', 'จุดสมมติ', 'รายละเอียด', '', '', '']],
+  '0': [['ด', 'ชื่อ นามสกุล', 'ตำแหน่ง', 'หน่วยงาน', 'ประเภทเหตุการณ์', 'ระดับเหตุการณ์', 'สถานที่เกิดเหตุ', 'รายละเอียดเพิ่มเติม', 'รูปภาพ 1', 'รูปภาพ 2', 'รูปภาพ 3'], ['9/30/2026 14:05:00', 'ชื่อสมมติ', 'ตำแหน่งสมมติ', 'หน่วยสมมติ', 'เหตุสมมติ', 'ต่ำ', 'จุดสมมติ', 'รายละเอียด', '', '', '']],
   '1074767452': [['Report_ID', 'Report_Type', 'Guard_Name', 'Guard_Company', 'Duty_Post', 'Duty', 'Event_Type', 'Report_Detail', 'Latitude', 'Longitude', 'GPS_Accuracy_M', 'Distance_From_Post_M', 'Geo_Status', 'Photo_File_ID', 'Record_Status', 'Report_Code', 'Report_Date', 'Report_Time', 'Guard_ID', 'Zone', 'Event_Severity', 'GPS_Status'], ['1', 'CHECKIN', 'รปภ.สมมติ', 'บริษัทสมมติ', 'จุด 1', 'เวรสมมติ', '', 'ปกติ', '13.79', '100.32', '12', '5', 'IN_RANGE', IMG2, 'COMPLETE', 'R-1', '2026-10-05', '08:00', 'G-1', 'A', '', 'OK']]
 };
 let sourceDown = false, aiCalls = [];
@@ -40,7 +40,7 @@ const fetchMock = async (u, o) => { u = String(u);
 let NOW = Date.parse('2026-11-15T19:00:00+07:00');
 const deps = { fetch: fetchMock, now: () => NOW };
 const ENV = (o = {}) => Object.assign({ DB: db, ASSET_REF: '7c183a7', ADMIN_CODES: '4567', SHEET_MAIN: 'MOCKMAIN', SHEET_LF: 'MOCKLF', SHEET_OPS: 'MOCKOPS', SHEET_EVENTS: 'MOCKEV', SHEET_GPS: 'MOCKGPS', AI_MODEL: '@cf/mock/model',
-  AI: { run: async (model, input) => { aiCalls.push({ model, input }); return { response: ENV.aiReply || 'เดือน พ.ย. 2569 มีเหตุการณ์รวม 3 เหตุการณ์ (ข้อมูล ณ 15 พ.ย. 2569 19:00 น.)' }; } } }, o);
+  AI: { run: async (model, input) => { aiCalls.push({ model, input }); if (ENV.aiThrow) throw new Error(ENV.aiThrow); return { response: ENV.aiReply || 'เดือน พ.ย. 2569 มีเหตุการณ์รวม 3 เหตุการณ์ (ข้อมูล ณ 15 พ.ย. 2569 19:00 น.)' }; } } }, o);
 let db = d1();
 const req = (p, o = {}) => new Request('https://hub.example.test' + p, { method: o.method || 'GET', headers: Object.assign({ 'CF-Connecting-IP': o.ip || '10.20.5.9' }, o.cookie ? { Cookie: o.cookie } : {}, o.origin ? { Origin: o.origin } : {}, o.body ? { 'content-type': 'application/json' } : {}), body: o.body ? JSON.stringify(o.body) : undefined });
 const run = async (p, o = {}, env = ENV()) => { const r = await handle(req(p, o), env, deps); const ct = r.headers.get('content-type') || ''; return { s: r.status, j: /json/.test(ct) ? await r.json() : null, t: /json/.test(ct) ? '' : await r.text(), h: r.headers }; };
@@ -96,6 +96,7 @@ ok('เหตุการณ์: รหัส วันที่ พิกัด
 r = await run('/api/data?dataset=lostfound', { cookie: U }); ok('Lost & Found: LF_New ตามคอลัมน์จริง (ประเภท/สถานะแยกกัน, รูป, ช่องที่มีจุลภาค)', r.j.rows.length === 3 && r.j.rows[0].ref === 'LOS-MOCK-1' && r.j.rows[0].detail === 'กระเป๋า, "สีดำ"' && r.j.rows[0].images[0] === IMG2 && r.j.rows[1].at === '2026-11-14 20:34' && r.j.rows[2].status === 'รับของคืนแล้ว');
 r = await run('/api/data?dataset=areaPhotos', { cookie: U }); const r2 = await run('/api/data?dataset=radio', { cookie: U }), r3 = await run('/api/data?dataset=events', { cookie: U }), r4 = await run('/api/data?dataset=gps', { cookie: U });
 ok('ตรวจพื้นที่ / วิทยุ / กิจกรรมพิเศษ / GPS: session เดียวกันเปิดได้ทุกชุด', r.j.rows.length === 1 && r2.j.rows.length === 1 && r3.j.rows.length === 1 && r4.j.rows.length === 1);
+ok('กิจกรรมพิเศษ: วันที่ต้นทางแบบ เดือน/วัน/ปี (9/30/2026 14:05) → 2026-09-30 14:05 ไม่สลับวัน-เดือน และไม่ส่งชื่อ/ตำแหน่งผู้รายงาน', r3.j.rows[0].at === '2026-09-30 14:05' && !/ชื่อสมมติ|ตำแหน่งสมมติ/.test(JSON.stringify(r3.j)), JSON.stringify(r3.j.rows[0]));
 ok('กิจกรรมพิเศษไม่ส่งชื่อผู้รายงาน · GPS ไม่ส่งชื่อ/รหัส รปภ.', !/ชื่อสมมติ|ตำแหน่งสมมติ/.test(JSON.stringify(r3.j)) && !/รปภ\.สมมติ|G-1/.test(JSON.stringify(r4.j)) && r4.j.rows[0].record === 'COMPLETE' && r4.j.rows[0].geo === 'IN_RANGE');
 r = await run('/api/data?dataset=secrets', { cookie: U }); ok('ชุดข้อมูลนอกรายการ → 400', r.s === 400);
 sourceDown = true; _reset(); r = await run('/api/data?dataset=lostfound', { cookie: U }); ok('ต้นทางไม่ให้อ่าน → 502 source-private (ไม่ใช่ให้ Login ซ้ำ)', r.s === 502 && r.j.code === 'source-private'); sourceDown = false; _reset();
@@ -133,8 +134,17 @@ r = await run('/api/roster', { method: 'POST', cookie: A, origin: 'https://evil.
 const Q = { action: 'chat', userMessage: 'เดือนนี้มีเหตุการณ์กี่ครั้ง', chatHistory: [{ role: 'User', text: 'สวัสดี' }, { role: 'AI', text: 'สวัสดีครับ' }], context: { from: '2026-11', to: '2026-11' } };
 r = await run('/api/chat', { method: 'POST', body: Q }); ok('AI: ไม่มี session → 401', r.s === 401 && r.j.status === 'error');
 r = await run('/api/chat', { method: 'POST', cookie: U, body: Q });
-ok('[MOCK AI] AI: session เดียวกัน → ตอบ + แหล่งข้อมูล + ข้อมูล ณ + ใช้ตัวเลขสด', r.s === 200 && r.j.status === 'success' && r.j.verified === true && r.j.live === true && r.j.sources.length > 2, JSON.stringify(r.j).slice(0, 200));
+ok('[MOCK AI] AI: session เดียวกัน → ตอบ + อ้างเฉพาะแหล่งข้อมูลที่เกี่ยวกับคำถาม + ข้อมูล ณ + ใช้ตัวเลขสด', r.s === 200 && r.j.status === 'success' && r.j.verified === true && r.j.live === true && r.j.sources.length >= 1 && r.j.sources.indexOf('รายงานเหตุการณ์ (ฐานข้อมูลงานจราจร)') >= 0 && !!r.j.asOf, JSON.stringify(r.j).slice(0, 200));
 { const c = aiCalls[aiCalls.length - 1], sys = c.input.messages[0].content; ok('สิ่งที่ส่งให้ AI: สถิติรวมจากต้นทางสด (3 เหตุการณ์ของชุดจำลอง) ไม่มีชื่อ/เบอร์/รหัส/รายการรายชิ้น', /พ\.ย\. 2569[^\n]*รวม 3 เหตุการณ์/.test(sys) && !/สมมติ|MOCK|0123|LOS-|INC-/.test(JSON.stringify(c.input)) && c.model === '@cf/mock/model'); }
+{ const QF = { action: 'chat', userMessage: 'แล้วเดือนก่อนล่ะ', chatHistory: [{ role: 'User', text: 'เดือนนี้มีอุบัติเหตุกี่ครั้ง' }, { role: 'AI', text: 'เดือน พ.ย. 2569 มีเหตุการณ์รวม 3 เหตุการณ์' }], context: { from: '2026-11', to: '2026-11' } };
+  ENV.aiReply = 'สวัสดีครับ ถามเรื่องอุบัติเหตุหรือของหายได้เลยครับ ดูรายละเอียดได้ที่ #traffic'; r = await run('/api/chat', { method: 'POST', cookie: U, body: QF });
+  const sys = aiCalls[aiCalls.length - 1].input.messages[0].content;
+  ok('[MOCK AI] คำถามต่อเนื่อง “แล้วเดือนก่อนล่ะ” → ส่งสถิติหัวข้อเดิม (เหตุการณ์) ตามบทสนทนา + ไม่แนบหัวข้อที่ไม่เกี่ยว (รถราง)', /เหตุการณ์และอุบัติเหตุ/.test(sys) && !/\[รถรางบริการพิเศษ/.test(sys) && /เดือนก่อน = ต\.ค\. 2569/.test(sys));
+  ok('[MOCK AI] คำตอบไม่มีตัวเลข (ทักทาย/แนะนำเมนู) → ผ่าน และไม่แปะแหล่งข้อมูลทุกแหล่ง', r.j.verified === true && r.j.sources.length === 0 && /#traffic/.test(r.j.reply));
+  ENV.aiReply = 'ข้อมูล ณ 15 พ.ย. 2569 เวลา 19:00 น. เดือนพฤศจิกายน 2569 มี 3 เหตุการณ์'; r = await run('/api/chat', { method: 'POST', cookie: U, body: QF });
+  ok('[MOCK AI] ตัวเลขที่เป็นวันที่/ปี/เวลา ไม่ถูกตีเป็นตัวเลขแต่ง (ตัวตรวจผ่อนแล้ว)', r.j.verified === true, JSON.stringify(r.j).slice(0, 160));
+  ENV.aiReply = ''; ENV.aiThrow = 'AiError: 4006: you have used up your daily free allocation of 10,000 neurons'; r = await run('/api/chat', { method: 'POST', cookie: U, body: QF }); ENV.aiThrow = '';
+  ok('[MOCK AI] โควตาฟรีของวันหมด → 429 llm-quota (ไม่มีคำตอบจำลอง)', r.s === 429 && r.j.code === 'llm-quota', JSON.stringify(r.j)); }
 ENV.aiReply = 'มีผู้โดยสารประมาณ 98,765 คน'; r = await run('/api/chat', { method: 'POST', cookie: U, body: Q }); ok('[MOCK AI] โมเดลตอบตัวเลขที่ไม่มีในสถิติ → ไม่ส่งคำตอบนั้นออก', r.j.verified === false && !/98,765/.test(r.j.reply)); ENV.aiReply = '';
 r = await run('/api/chat', { method: 'POST', cookie: U, body: Q }, ENV({ AI: null })); ok('AI ยังไม่ตั้งค่า → 503 llm-not-configured (ไม่มีคำตอบจำลอง)', r.s === 503 && r.j.code === 'llm-not-configured');
 for (let i = 0; i < 6; i++) r = await run('/api/chat', { method: 'POST', cookie: U, body: Q }); ok('AI: ถามเกินกำหนดต่อนาที → 429', r.s === 429);

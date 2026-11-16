@@ -17,6 +17,7 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   let { ctx, page, log } = await mk();
 
   // ---------- 1) ก่อน Login ----------
+  await page.request.get(BASE + '/__test/today/off');            // เริ่มจากชุดข้อมูลจำลองมาตรฐาน (ไม่มีเหตุการณ์ของวันนี้)
   await page.goto(BASE + '/#staff'); await page.waitForSelector('#loginView');
   ok('ยังไม่ Login: เห็นเฉพาะหน้าเข้าสู่ระบบ ตัวระบบถูกซ่อน และไม่มีการเรียกข้อมูลภายใน', await T(page, '#app').isHidden() && !log.api.some((a) => /data|stats|roster|img|chat/.test(a)), log.api.join());
   ok('หน้า Login: ข้อความ 3 บรรทัดตามลำดับ + ตรา + ช่องรหัสพนักงาน + ปุ่ม', (await page.locator('.lg-title > span').allInnerTexts()).map((s) => s.replace(/\s+/g, ' ')).join('|') === 'ระบบฐานข้อมูล|งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม|มหาวิทยาลัยมหิดล' && await T(page, '.lg-logo').count() === 1 && (await txt(page, '.lg-form label')) === 'รหัสพนักงาน' && (await txt(page, '.lg-btn')) === 'เข้าสู่ระบบ');
@@ -82,9 +83,31 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   await go(page, 'area-inspect'); await page.waitForSelector('.ph-tile');
   ok('[MOCK ข้อมูล] ตรวจพื้นที่: สถิติจำนวนบันทึก (3 ภาพ 2 วัน) + ภาพ · ไม่เรียกว่าอัตราทำงานครบ', /ภาพบันทึกทั้งหมด\s*3/.test(await txt(page, '.kpis')) && /วันที่มีบันทึก\s*2/.test(await txt(page, '.kpis')) && await T(page, '.ph-tile').count() === 3 && /ไม่ใช่อัตราการทำงานครบ/.test(await txt(page, '#view')));
   await shot(page, '04_area_inspect', true);
-  await go(page, 'event-incident'); await page.waitForSelector('.dv[data-ds="events"] .it'); const evOk = await T(page, '.dv[data-ds="events"] .it').count() === 1;
+  await go(page, 'event-incident'); await page.waitForSelector('.dv[data-ds="events"] .it');
+  { const t = await txt(page, '#view');
+    ok('[MOCK ข้อมูล] กิจกรรมพิเศษ: รายการจริงหลัง Login 3 รายการ เรียงล่าสุดก่อน · ไม่มีการ์ด “ยังเชื่อมต่อไม่ได้” · ไม่มีชื่อ/ตำแหน่งผู้รายงาน', await T(page, '.dv[data-ds="events"] .it').count() === 3 && !/ยังเชื่อมต่อไม่ได้|ไม่มีข้อมูลยืนยัน|ยังระบุ Sheet/.test(t) && !/ชื่อสมมติ|ตำแหน่งสมมติ/.test(t), t.slice(0, 200));
+    ok('กิจกรรมพิเศษ: วันที่แบบ เดือน/วัน/ปี แปลงถูก (6 ต.ค. 2569 ก่อน 30 ก.ย. 2569 ก่อน 4 ก.ย. 2569) และประเภท/สถานที่ว่างแสดง “ไม่ระบุ…”', /6 ต\.ค\. 2569[\s\S]*30 ก\.ย\. 2569[\s\S]*4 ก\.ย\. 2569/.test(t) && /ไม่ระบุประเภท/.test(t) && /ไม่ระบุสถานที่/.test(t), t.slice(0, 400)); }
+  await page.selectOption('.dv[data-ds="events"] select[aria-label="ระดับเหตุการณ์"]', 'สูง'); await page.waitForTimeout(200);
+  ok('กิจกรรมพิเศษ: กรองระดับ → จำนวนตรงตัวกรอง (1)', /^1 เหตุการณ์/.test(await txt(page, '.dv[data-ds="events"] .lu-count')));
+  await page.selectOption('.dv[data-ds="events"] select[aria-label="ระดับเหตุการณ์"]', 'all'); await page.fill('.dv[data-ds="events"] input[aria-label="ตั้งแต่"]', '2026-09-15'); await page.dispatchEvent('.dv[data-ds="events"] input[aria-label="ตั้งแต่"]', 'change'); await page.waitForTimeout(200);
+  ok('กิจกรรมพิเศษ: กรองช่วงวันที่ → 2 รายการ', /^2 เหตุการณ์/.test(await txt(page, '.dv[data-ds="events"] .lu-count')));
+  await page.click('.dv[data-ds="events"] button:has-text("ทั้งช่วงข้อมูล")'); await page.waitForTimeout(200);
+  await page.click('.dv[data-ds="events"] .it:has-text("ประตู 1") .it-b'); await page.waitForSelector('.dlg .gal-pic img');
+  ok('กิจกรรมพิเศษ: รายละเอียด + ภาพ 3 ภาพผ่านบริการภาพของระบบ', await T(page, '.dlg .gal-pic').count() === 3 && await page.evaluate(() => [...document.querySelectorAll('.dlg .gal-pic img')].every((i) => /^\/api\/img\?id=/.test(i.getAttribute('src')))));
+  await page.click('.dlg .gal-pic >> nth=0'); await page.waitForSelector('.lightbox'); await page.keyboard.press('ArrowRight'); await page.waitForTimeout(150);
+  ok('ภาพขยาย: เลื่อนดูภาพถัดไปได้ (ภาพที่ 2 / 3)', /ภาพที่ 2 \/ 3/.test(await txt(page, '.lightbox'))); await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+  await shot(page, '04b_events', true);
   await go(page, 'grad-guard'); await page.waitForSelector('.dv[data-ds="gps"] .it');
-  ok('กิจกรรมพิเศษและ GPS (แท็บ Reports): session เดียวกันเปิดได้ · GPS แสดง Record_Status / Geo_Status และไม่มีชื่อ รปภ.', evOk && /COMPLETE 2/.test(await txt(page, '.dv[data-ds="gps"]')) && /IN_RANGE 1/.test(await txt(page, '.dv[data-ds="gps"]')) && !/รปภ\.สมมติ/.test(await txt(page, '.dv[data-ds="gps"]')));
+  ok('ลิงก์เดิม #grad-guard → หน้าใหม่ “' + 'รายงาน รปภ.ปริญญา (GPS) ปีการศึกษา 2568” (ไม่ว่าง ไม่ซ้ำเมนู)', (await txt(page, 'h1')) === 'รายงาน รปภ.ปริญญา (GPS) ปีการศึกษา 2568' && /พิธีพระราชทานปริญญาบัตร › ปีการศึกษา 2568 › รายงาน รปภ\.ปริญญา \(GPS\) ปีการศึกษา 2568/.test(await txt(page, '#crumb')) && await T(page, '.nav-a[data-page="grad-2568-gps"]').count() === 1 && await T(page, '.nav-a[data-page="grad-guard"]').count() === 0, await txt(page, '#crumb'));
+  ok('เมนู: GPS อยู่ใต้ “ปีการศึกษา 2568 (ล่าสุด)” และเป็นหน้าปัจจุบัน', await page.evaluate(() => { const a = document.querySelector('.nav-a[data-page="grad-2568-gps"]'); return !!a.closest('.sub3') && a.closest('li').parentNode.closest('li').querySelector('.nav-a').getAttribute('data-page') === 'graduation' && a.getAttribute('aria-current') === 'page'; }));
+  { const t = await txt(page, '.dv[data-ds="gps"]');
+    ok('[MOCK ข้อมูล] GPS: สรุป + รายการจริง (2 รายงาน · ในรัศมี 1 · นอกรัศมี 1) · ไม่มีชื่อ รปภ. · ไม่มีข้อความ “เชื่อมต่อไม่ได้/ต้องใช้บัญชี mahidol”', /รายงานตามตัวกรอง\s*2/.test(t) && /อยู่ในรัศมีจุดปฏิบัติงาน\s*1/.test(t) && /อยู่นอกรัศมีจุด\s*1/.test(t) && !/รปภ\.สมมติ|G-1/.test(t) && !/เชื่อมต่อไม่ได้|mahidol\.ac\.th จึงฝัง/.test(await txt(page, '#view')), t.slice(0, 300)); }
+  await page.selectOption('.dv[data-ds="gps"] select[aria-label="โซน"]', 'B'); await page.waitForTimeout(200);
+  ok('GPS: กรองโซน → 1 รายงาน (จุด 2)', /^1 รายงาน/.test(await txt(page, '.dv[data-ds="gps"] .lu-count')) && /จุด 2/.test(await txt(page, '.dv[data-ds="gps"] .it-grid')));
+  await page.selectOption('.dv[data-ds="gps"] select[aria-label="โซน"]', 'all'); await page.waitForTimeout(150); await page.click('.dv[data-ds="gps"] .it:has-text("จุด 1") .it-b'); await page.waitForSelector('.dlg');
+  ok('GPS: รายละเอียดมีความแม่นยำ ระยะจากจุด สถานะพิกัด พิกัด ณ เวลาที่ส่ง และภาพ', /ความแม่นยำ GPS\s*12 เมตร/.test(await txt(page, '.dlg')) && /ระยะจากจุดประจำ\s*5 เมตร/.test(await txt(page, '.dlg')) && /ณ เวลาที่ส่ง/.test(await txt(page, '.dlg')) && await T(page, '.dlg .gal-pic').count() === 1);
+  await page.keyboard.press('Escape'); await shot(page, '04c_gps', true);
+  await go(page, 'graduation'); ok('หน้า ปีการศึกษา 2568: การ์ด/ลิงก์ GPS ใช้ชื่อเดียวกันและพาไปหน้าใหม่', await T(page, 'section[aria-label="รายงาน รปภ.ปริญญา (GPS) ปีการศึกษา 2568"] a.more[href="#grad-2568-gps"]').count() === 1 && await T(page, '.tabs a[href="#grad-2568-gps"]').count() === 1);
   await go(page, 'report-radio'); await page.waitForSelector('.dv[data-ds="radio"]'); await page.waitForTimeout(400); ok('รายงานวิทยุ: เปิดได้โดยไม่ถาม Login ซ้ำ', !/ต้องเข้าสู่ระบบ|ยังไม่ได้เข้าสู่ระบบ/.test(await txt(page, '#view')) && await T(page, '#loginView').count() === 0);
 
   // ---------- 5.1) ทุกเมนูหลัง Login: ไม่มี undefined / null / NaN หลุดออกหน้า และไม่มีหน้าใดถาม Login ซ้ำ ----------
@@ -98,15 +121,47 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
 
   // ---------- 6) ตารางเวร / ตั้งค่า (ผู้ใช้ทั่วไป) ----------
   await go(page, 'roster'); await page.waitForFunction(() => /ชื่อสมมติ หนึ่ง/.test(document.getElementById('view').textContent));
+  { const ord = await page.evaluate(() => { const n = document.querySelector('.ros-names'), t = [...document.querySelectorAll('#view section h2')].find((h) => /^ตารางเวรเดือน/.test(h.textContent)); return { above: !!n && !!t && (n.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING) > 0, pos: getComputedStyle(n).position, once: document.querySelectorAll('.ros-names').length === 1 && !/ตำแหน่งในแต่ละผลัด[\s\S]*ตำแหน่งในแต่ละผลัด/.test(document.getElementById('view').innerText), head: t.textContent }; });
+    const now = new Date(Date.now() + 7 * 3600e3), TH = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    ok('ตารางเวร: รายชื่อแต่ละผลัดอยู่เหนือหัวข้อ “ตารางเวรเดือน…” ครั้งเดียว และเป็น sticky เฉพาะส่วนนี้', ord.above && ord.pos === 'sticky' && ord.once && ord.head === 'ตารางเวรเดือน' + TH[now.getUTCMonth()] + ' ' + (now.getUTCFullYear() + 543), JSON.stringify(ord));
+    await page.evaluate(() => { const t = document.querySelector('.tbl.roster tbody tr:nth-child(20)'); window.scrollTo(0, t.getBoundingClientRect().top + window.scrollY - 300); }); await page.waitForTimeout(200);
+    const st1 = await page.evaluate(() => { const n = document.querySelector('.ros-names').getBoundingClientRect(), tb = document.querySelector('.topbar').getBoundingClientRect(); return Math.abs(n.top - tb.bottom) <= 2; });
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await page.waitForTimeout(200);
+    const st2 = await page.evaluate(() => { const n = document.querySelector('.ros-names').getBoundingClientRect(), w = document.querySelector('.ros-wrap').getBoundingClientRect(); return n.bottom <= w.bottom + 1; });
+    ok('ตารางเวร: เลื่อนดูตาราง → แถบรายชื่อติดใต้แถบหัวเว็บ · เลื่อนพ้นตาราง → ไม่ลอยค้างนอกส่วนตารางเวร', st1 && st2, st1 + ' ' + st2);
+    await shot(page, '05b_roster_sticky'); await page.evaluate(() => window.scrollTo(0, 0));
+    await page.click('.ph button[aria-label="เดือนถัดไป"]'); await page.waitForTimeout(300);
+    ok('ตารางเวร: เปลี่ยนเดือน → หัวข้อเดือน/ปีตามที่เลือก และรายชื่อยังอยู่เหนือตาราง', /^ตารางเวรเดือน/.test(await page.evaluate(() => [...document.querySelectorAll('#view section h2')].find((h) => /^ตารางเวรเดือน/.test(h.textContent)).textContent)) && await T(page, '.ros-wrap > .ros-names + section').count() === 1); }
   ok('ตารางเวร: รายชื่อประจำผลัดจากฐานข้อมูลของระบบ (ตามบทบาทที่บันทึก)', /ส\.ต1\s*ชื่อสมมติ หนึ่ง \(MOCK\)/.test(await txt(page, '#view')) && /วิทยุ\s*ชื่อสมมติ สอง/.test(await txt(page, '#view')));
   await go(page, 'settings'); await page.waitForSelector('.ros-grid');
   ok('ตั้งค่า (ผู้ใช้ทั่วไป): เห็นรายชื่อแบบอ่านอย่างเดียว ไม่มีปุ่มแก้ไข/เพิ่ม', /อ่านอย่างเดียว/.test(await txt(page, '.dv:has(.ros-grid)')) && await T(page, '.ros-act, .ros-add').count() === 0);
   const forged = await page.evaluate(async () => { const r = await fetch('/api/roster', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: 0, op: 'add', team: '1', role: 'x', name: 'x' }) }); return r.status; });
   ok('ผู้ใช้ทั่วไปยิงคำสั่งแก้รายชื่อโดยตรง → บริการปฏิเสธ (403)', forged === 403);
 
+  // ---------- 6.5) หน้าแรก: รายละเอียดเหตุการณ์วันนี้ ----------
+  await page.request.get(BASE + '/__test/today/on'); await page.goto(BASE + '/#dashboard'); await page.reload(); await page.waitForSelector('.tdi .incd');   // โหลดหน้าใหม่ = อ่านข้อมูลใหม่
+  { const ord = await page.evaluate(() => [...document.querySelectorAll('#view > section')].map((e) => e.getAttribute('aria-label')));
+    ok('วันนี้: ส่วน “รายละเอียดเหตุการณ์วันนี้” อยู่หลังการ์ดข้อมูลวันนี้ และก่อนแนวโน้มรายเดือน', ord.indexOf('รายละเอียดเหตุการณ์วันนี้') === ord.indexOf('แนวโน้มรายเดือน') - 1 && ord.indexOf('รายละเอียดเหตุการณ์วันนี้') > 0, ord.join(' | '));
+    const t = await txt(page, '.tdi');
+    ok('[MOCK ข้อมูล] วันนี้ 2 เหตุการณ์ + แยกประเภท + “เหตุการณ์ที่ 1 / 2” + ลิงก์ไปรายงานทั้งหมด', /วันนี้ 2 เหตุการณ์ — /.test(t) && /อุบัติเหตุจากยานพาหนะ 1/.test(t) && /รับส่งผู้ป่วย 1/.test(t) && /เหตุการณ์ที่ 1 \/ 2/.test(t) && await T(page, '.tdi a[href="#traffic"]').count() === 1, t.slice(0, 300));
+    ok('รายละเอียดแบบเดิม: วันที่ไทย + เวลา · รับแจ้งจาก · พาหนะ “…ของ…ชนกับ…” · “ไม่มีผู้ได้รับบาดเจ็บ” · KPI · ภาพ 2 ภาพ', /วันที่เกิดเหตุ\s*\d{1,2} [ก-๙.]+ 25\d\d เวลา 11:25 น\./.test(t) && /รับแจ้งจาก\s*รปภ\. · รับแจ้งทาง วิทยุสื่อสาร/.test(t) && /รถจักรยานยนต์ ของนักศึกษา ชนกับ รถยนต์ ของบุคลากร/.test(t) && /ไม่มีผู้ได้รับบาดเจ็บ/.test(t) && await T(page, '.tdi .incd-kpi li.ok').count() === 1 && await T(page, '.tdi .gal-pic').count() === 2, t.slice(0, 500));
+    const before = log.api.filter((x) => /dataset=incidents/.test(x)).length;
+    await page.click('.tdi button[aria-label="เหตุการณ์ถัดไป"]'); await page.waitForTimeout(150); const t2 = await txt(page, '.tdi');
+    ok('ถัดไป → เหตุการณ์ที่ 2 / 2 (รับส่งผู้ป่วย 1 คน · ประเภทผู้ป่วย ไม่มีชื่อ/เบอร์) และไม่โหลดข้อมูลใหม่', /เหตุการณ์ที่ 2 \/ 2/.test(t2) && /ผู้บาดเจ็บ\/ผู้ป่วย\s*1 คน — นักศึกษา/.test(t2) && !/ผู้บาดเจ็บสมมติ|000/.test(t2) && log.api.filter((x) => /dataset=incidents/.test(x)).length === before, t2.slice(0, 300));
+    await page.selectOption('.tdi select', 'รับส่งผู้ป่วย'); await page.waitForTimeout(150); ok('กรองประเภท → เหลือ 1 / 1', /เหตุการณ์ที่ 1 \/ 1/.test(await txt(page, '.tdi')));
+    await page.selectOption('.tdi select', 'all'); await page.click('.tdi .gal-pic >> nth=0'); await page.waitForSelector('.lightbox'); ok('ภาพในรายละเอียดวันนี้ขยายได้', /ภาพที่ 1 \/ 2/.test(await txt(page, '.lightbox'))); await page.keyboard.press('Escape');
+    await shot(page, '05c_dashboard_today', true); }
+  await page.request.get(BASE + '/__test/today/off'); await page.reload(); await page.waitForSelector('.tdi');
+  ok('อ่านสำเร็จแต่ไม่มีของวันนี้ → “ไม่พบรายการของวันนี้ ณ เวลาตรวจ …” + เหตุการณ์ล่าสุดแยกหัวข้อ (ไม่ใช่ของวันนี้)', /ไม่พบรายการของวันนี้ ณ เวลาตรวจ \d{2}:\d{2} น\./.test(await txt(page, '.tdi')) && /เหตุการณ์ล่าสุดในระบบ \(ไม่ใช่ของวันนี้\)/.test(await txt(page, '.tdi')));
+  await page.request.get(BASE + '/__test/source/down'); await page.request.get(BASE + '/__test/today/off'); await page.request.get(BASE + '/__test/source/down'); await page.reload(); await page.waitForSelector('section[aria-label="รายละเอียดเหตุการณ์วันนี้"] .dv-err');
+  { const t = await txt(page, 'section[aria-label="รายละเอียดเหตุการณ์วันนี้"]'); ok('อ่านต้นทางไม่ได้ → แสดงข้อผิดพลาด + ปุ่มลองใหม่ ไม่แสดง 0 หรือ “ไม่พบรายการ”', /ลองใหม่/.test(t) && !/ไม่พบรายการ|วันนี้ 0/.test(t), t); }
+  await page.request.get(BASE + '/__test/source/up'); await page.click('section[aria-label="รายละเอียดเหตุการณ์วันนี้"] .dv-err button'); await page.waitForSelector('.tdi');
+  ok('กด “ลองใหม่” หลังต้นทางกลับมา → แสดงผลได้', await T(page, '.tdi').count() === 1);
+  log.err = log.err.filter((e) => !/Failed to load|502|503/.test(e));
   // ---------- 7) ผู้ช่วย AI ----------
   await go(page, 'dashboard'); await page.waitForSelector('.now');
-  ok('ปุ่มผู้ช่วย: รูปหุ่นยนต์ + ชื่อสั้น “ถาม AI” + Tooltip “ถาม AI เรื่องสถิติ”', (await txt(page, '#chatFab')) === 'ถาม AI' && await page.getAttribute('#chatFab', 'title') === 'ถาม AI เรื่องสถิติ' && await T(page, '#chatFab svg rect').count() === 1);
+  ok('ปุ่มผู้ช่วย: รูปหุ่นยนต์ (ไฟล์ assets/images/ai-assistant.png โหลดได้) + ป้าย “ถาม AI”', (await txt(page, '#chatFab')) === 'ถาม AI' && await page.evaluate(() => { const i = document.querySelector('#chatFab .fab-bot'); return i.complete && i.naturalWidth === 256 && /assets\/images\/ai-assistant\.png$/.test(i.src); }));
+  { const r = await page.request.get(BASE + '/assets/images/ai-assistant.png'); ok('ไฟล์รูปหุ่นยนต์: 200 + image/png (ไม่ต้อง Login)', r.status() === 200 && /^image\/png/.test(r.headers()['content-type'] || '')); }
   await page.click('#chatFab'); await page.waitForTimeout(350);
   ok('เปิดผู้ช่วยบนจอกว้าง: เป็นแถบด้านขวา เนื้อหาถูกดันเข้า — ไม่ทับการ์ดตัวเลขและแผนที่ · ระบุช่วงตรงกับปุ่ม “วันนี้” ของหน้าแรก', await page.evaluate(() => { const p = document.getElementById('chatPanel').getBoundingClientRect(); const hit = [...document.querySelectorAll('.now, .trend, .dash-map')].some((e) => { const r = e.getBoundingClientRect(); return r.right > p.left + 1 && r.left < p.right && r.bottom > p.top && r.top < p.bottom; }); return !hit && /ช่วงที่กำลังดู: วันนี้ \d+ /.test(document.getElementById('chatPanel').textContent) && document.documentElement.scrollWidth <= window.innerWidth; }), await txt(page, '#chatPanel'));
   await page.fill('#chatPanel textarea, #chatPanel input[type=text]', 'เดือนนี้มีเหตุการณ์กี่ครั้ง'); await page.keyboard.press('Enter'); await page.waitForFunction(() => /คำตอบจากบริการ AI จำลอง/.test(document.getElementById('chatPanel').textContent), null, { timeout: 8000 }).catch(() => {});
@@ -142,7 +197,7 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   ok('มือถือ: หน้า Login ไม่ล้นจอ ปุ่มสูงพอแตะ', await page.evaluate(() => document.documentElement.scrollWidth <= 390 && document.querySelector('.lg-btn').getBoundingClientRect().height >= 44 && document.querySelector('.lg-card').getBoundingClientRect().width <= 390));
   await shot(page, '07_login_mobile');
   await login(page, '0123'); await page.waitForSelector('.now'); await go(page, 'traffic'); await page.waitForSelector('.kstrip');
-  ok('มือถือ: บล็อกเหตุการณ์ไม่ล้นจอ · ปุ่มผู้ช่วยเป็นไอคอน (ไม่มีข้อความทับเนื้อหา) และหลบเมื่อเลื่อนลง', await page.evaluate(async () => { const w = (ms) => new Promise((r) => setTimeout(r, ms)), f = document.getElementById('chatFab'); const fit = document.documentElement.scrollWidth <= 390 && f.getBoundingClientRect().width <= 50 && getComputedStyle(f.querySelector('.fab-t')).display === 'none'; window.scrollTo(0, 400); await w(120); window.scrollTo(0, 900); await w(350); return fit && f.classList.contains('fab-away'); }));
+  ok('มือถือ: บล็อกเหตุการณ์ไม่ล้นจอ · ปุ่มหุ่นยนต์ขนาดกะทัดรัดพร้อมป้าย “ถาม AI” และหลบเมื่อเลื่อนลง', await page.evaluate(async () => { const w = (ms) => new Promise((r) => setTimeout(r, ms)), f = document.getElementById('chatFab'); const fb = f.getBoundingClientRect(), fit = document.documentElement.scrollWidth <= 390 && fb.width <= 90 && fb.height <= 100 && fb.right <= 390 && getComputedStyle(f.querySelector('.fab-t')).display !== 'none'; window.scrollTo(0, 400); await w(120); window.scrollTo(0, 900); await w(350); return fit && f.classList.contains('fab-away'); }));
   await shot(page, '08_incident_block_mobile');
   await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(300); await page.tap('#chatFab'); await page.waitForTimeout(300);
   ok('มือถือ: หน้าต่างผู้ช่วยอยู่ในจอ มีปุ่มปิดที่แตะได้ และปิดแล้วปุ่มกลับมา', await page.evaluate(() => { const p = document.getElementById('chatPanel').getBoundingClientRect(), b = document.querySelector('#chatPanel .chat-x, #chatPanel button[aria-label*="ปิด"]'); return p.left >= 0 && p.right <= 391 && p.top >= 0 && !!b && b.getBoundingClientRect().width >= 36; }) && await (async () => { await page.tap('#chatPanel .chat-x, #chatPanel button[aria-label*="ปิด"]'); await page.waitForTimeout(200); return await page.locator('#chatPanel').isHidden() && await page.locator('#chatFab').isVisible(); })());

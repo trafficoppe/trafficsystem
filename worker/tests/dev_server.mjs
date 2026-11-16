@@ -2,7 +2,7 @@
 // ของจำลอง: D1 = SQLite ในหน่วยความจำ · Google Sheets/Drive = ชุดข้อมูลสมมติด้านล่าง · Workers AI = คำตอบตายตัว · IP ผู้เรียก = 203.0.113.50 (ภายนอก)
 // ใช้: node worker/tests/dev_server.mjs [port]   (ต้องรัน sh tools/build_site.sh ก่อน)
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url'; import { DatabaseSync } from 'node:sqlite';
-import { handle, SCHEMA } from '../src/index.js';
+import { handle, SCHEMA, _reset } from '../src/index.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..'), SITE = path.join(ROOT, 'site');
 const db = new DatabaseSync(':memory:'); SCHEMA.forEach((s) => db.exec(s));
 const st = (sql, a = []) => ({ bind: (...x) => st(sql, x), first: async () => db.prepare(sql).get(...a) || null, all: async () => ({ results: db.prepare(sql).all(...a) }), run: async () => { db.prepare(sql).run(...a); return {}; }, _x: () => (/^\s*select/i.test(sql) ? { results: db.prepare(sql).all(...a) } : (db.prepare(sql).run(...a), { results: [] })) });
@@ -24,8 +24,12 @@ const SHEETS = {
   '1811117659': [['วันที่บันทึก', 'ปี พ.ศ.', 'ประเภท', 'เลขอ้างอิง', 'สถานะ']].concat(LF.slice(1).map((r) => [r[0].slice(0, 10), 'พ.ศ. 2569', r[2], r[1], r[12]])),
   '1509680619': [['วันที่/เวลา', 'ชื่อไฟล์', 'ลิงก์ภาพ', 'หมวดหมู่'], ['15/11/2026 7:00:00', 'a.jpg', D(ID(201)), 'ตรวจพื้นที่'], ['15/11/2026 8:00:00', 'b.jpg', D(ID(202)), 'ตรวจพื้นที่'], ['14/11/2026 7:00:00', 'c.jpg', D(ID(203)), 'ตรวจพื้นที่'], ['14/11/2026 9:00:00', 'd.jpg', D(ID(204)), 'ช่วยเหลือ']],
   '1354124607': [['วันเวลาที่บันทึก', 'เจ้าหน้าที่ศูนย์วิทยุ', 'หน่วยงานที่แจ้ง', 'ชื่อ รปภ./ผู้แจ้ง', 'ประเภทเหตุการณ์', 'สถานที่เกิดเหตุ', 'รายละเอียด/ข้อความ', 'การดำเนินการของศูนย์', 'สถานะ'], ['15/11/2026 6:00:00', 'ศูนย์สมมติ', 'หน่วยสมมติ', 'ผู้แจ้งสมมติ', 'แจ้งเหตุทั่วไป', 'จุดสมมติ', 'ข้อความสมมติ', 'รับทราบ', 'รับแจ้ง']],
-  '0': [['ด', 'ชื่อ นามสกุล', 'ตำแหน่ง', 'หน่วยงาน', 'ประเภทเหตุการณ์', 'ระดับเหตุการณ์', 'สถานที่เกิดเหตุ', 'รายละเอียดเพิ่มเติม', 'รูปภาพ 1', 'รูปภาพ 2', 'รูปภาพ 3'], ['04/09/2026 10:00:00', 'ชื่อสมมติ', 'ตำแหน่งสมมติ', 'หน่วยสมมติ', 'เหตุสมมติ', 'ต่ำ', 'จุดสมมติ', 'รายละเอียด', '', '', '']],
-  '1074767452': [['Report_Type', 'Guard_Name', 'Guard_Company', 'Duty_Post', 'Duty', 'Event_Type', 'Report_Detail', 'Latitude', 'Longitude', 'GPS_Accuracy_M', 'Distance_From_Post_M', 'Geo_Status', 'Photo_File_ID', 'Record_Status', 'Report_Code', 'Report_Date', 'Report_Time', 'Guard_ID', 'Zone', 'Event_Severity', 'GPS_Status'], ['CHECKIN', 'รปภ.สมมติ', 'บริษัทสมมติ', 'จุด 1', 'เวรสมมติ', '', 'ปกติ', '13.79', '100.32', '12', '5', 'IN_RANGE', '', 'COMPLETE', 'R-1', '2026-10-05', '08:00', 'G-1', 'A', '', 'OK'], ['CHECKIN', 'รปภ.สมมติ', 'บริษัทสมมติ', 'จุด 2', 'เวรสมมติ', '', 'ปกติ', '13.79', '100.32', '30', '90', 'OUT_OF_RANGE', '', 'COMPLETE', 'R-2', '2026-10-05', '09:00', 'G-1', 'B', '', 'OK']]
+  // กิจกรรมพิเศษ: วันที่ต้นทางเป็น เดือน/วัน/ปี (เช่น 9/30/2026 = 30 ก.ย. 2569) · ประเภท/สถานที่ว่างได้ · ภาพได้ถึง 3 ภาพ
+  '0': [['ด', 'ชื่อ นามสกุล', 'ตำแหน่ง', 'หน่วยงาน', 'ประเภทเหตุการณ์', 'ระดับเหตุการณ์', 'สถานที่เกิดเหตุ', 'รายละเอียดเพิ่มเติม', 'รูปภาพ 1', 'รูปภาพ 2', 'รูปภาพ 3'],
+    ['9/4/2026 10:10:32', 'ชื่อสมมติ', 'ตำแหน่งสมมติ', 'หน่วยสมมติ ก', 'จราจรติดขัด', 'ต่ำ', 'ประตู 1 (สมมติ)', 'รายละเอียดสมมติ 1', D(ID(41)), D(ID(42)), D(ID(43))],
+    ['9/30/2026 14:05:00', 'ชื่อสมมติ', 'ตำแหน่งสมมติ', 'หน่วยสมมติ ข', '', 'กลาง', '', 'รายละเอียดสมมติ 2', '', '', ''],
+    ['10/6/2026 8:00:00', 'ชื่อสมมติ', 'ตำแหน่งสมมติ', 'หน่วยสมมติ ก', 'จราจรติดขัด', 'สูง', 'ลานจอด (สมมติ)', 'รายละเอียดสมมติ 3', D(ID(44)), '', '']],
+  '1074767452': [['Report_Type', 'Guard_Name', 'Guard_Company', 'Duty_Post', 'Duty', 'Event_Type', 'Report_Detail', 'Latitude', 'Longitude', 'GPS_Accuracy_M', 'Distance_From_Post_M', 'Geo_Status', 'Photo_File_ID', 'Record_Status', 'Report_Code', 'Report_Date', 'Report_Time', 'Guard_ID', 'Zone', 'Event_Severity', 'GPS_Status'], ['CHECKIN', 'รปภ.สมมติ', 'บริษัทสมมติ', 'จุด 1', 'เวรสมมติ', '', 'ปกติ', '13.79', '100.32', '12', '5', 'WITHIN_RADIUS', ID(51), 'COMPLETE', 'R-1', '2026-10-05', '08:00', 'G-1', 'A', '', 'OK'], ['CHECKIN', 'รปภ.สมมติ', 'บริษัทสมมติ', 'จุด 2', 'เวรสมมติ', '', 'ปกติ', '13.79', '100.32', '30', '90', 'OUTSIDE_RADIUS', '', 'COMPLETE', 'R-2', '2026-10-05', '09:00', 'G-1', 'B', '', 'OK']]
 };
 const csv = (rows) => rows.map((r) => r.map((c) => (/[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c)).join(',')).join('\n');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFklEQVR4XmOsmNbOgA0wYRVlYKCLBADuLwGhta8zygAAAABJRU5ErkJggg==', 'base64');
@@ -42,6 +46,11 @@ export function start(port, opt = {}) {
   const srv = http.createServer(async (rq, rs) => {
     const chunks = []; for await (const c of rq) chunks.push(c);
     if (rq.url === '/__test/expire') { db.exec('DELETE FROM sessions'); rs.end('ok'); return; }
+    if (rq.url.startsWith('/__test/today/')) {           // เพิ่ม/ถอดเหตุการณ์ “วันนี้” (เวลาไทย ณ ขณะทดสอบ) สำหรับทดสอบ “รายละเอียดเหตุการณ์วันนี้”
+      const t = new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10); INC.splice(11);
+      if (rq.url.endsWith('on')) { const a = inc(21, t, 'อุบัติเหตุจากยานพาหนะ', '13.7951, 100.3221', '0', '-'), b = inc(22, t, 'รับส่งผู้ป่วย', '-', '1', P1('นักศึกษา'));
+        a[10] = 'รถจักรยานยนต์'; a[11] = 'นักศึกษา'; a[12] = 'รถยนต์'; a[13] = 'บุคลากร'; a[4] = '11:25'; a[23] = D(ID(61)) + ', ' + D(ID(62)); b[4] = '8:10'; INC.push(a, b); }
+      _reset(); rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/source/')) { control.sourceDown = rq.url.endsWith('down'); rs.end('ok'); return; }
     const headers = new Headers(); for (const [k, v] of Object.entries(rq.headers)) if (typeof v === 'string') headers.set(k, v);
     headers.set('CF-Connecting-IP', opt.ip || '203.0.113.50');   // IP ภายนอกใดก็ได้ — ไม่มีด่านเครือข่ายเป็นค่าเริ่มต้น
