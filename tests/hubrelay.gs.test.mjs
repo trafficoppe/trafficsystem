@@ -70,4 +70,6 @@ err = ''; try { G.ctx.checkInstall(); } catch (e) { err = e.message; } ok('ร�
 G = load({ props: { RELAY_SECRET: SEC }, hub: { '/api/relay/confirm': () => ({ ok: false, code: 'check-failed', check: { ping: 'outdated', version: 'r10', tables: {} } }) } });
 err = ''; try { G.ctx.checkInstall(); } catch (e) { err = e.message; } ok('Deploy เป็นโค้ดรุ่นเก่า → บอกให้ New version', /New version/.test(err));
 G = load({ url: 'https://script.google.com/macros/s/X/dev' }); err = ''; try { G.ctx.setup(); } catch (e) { err = e.message; } ok('ยังไม่ได้ Deploy เป็น Web app → แจ้งให้ Deploy ก่อน', /Deploy/.test(err));
+G = load({ url: 'https://script.google.com/macros/s/X/dev', props: { RELAY_EXEC_URL: 'https://script.google.com/a/macros/mahidol.ac.th/s/MOCKDEPLOYMENTID0000000009/exec' }, hub: { '/api/relay/enroll': (b) => { G.enrolledUrl = b.url; return { ok: true, secret: SEC }; }, '/api/relay/confirm': () => okCheck } });
+ok('getUrl() เป็น /dev แต่ใส่ RELAY_EXEC_URL ไว้ → ใช้ URL /exec ที่ใส่', G.ctx.setup() === 'ok' && /0009\/exec$/.test(G.enrolledUrl));
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ตรรกะสคริปต์กับบริการ Google จำลอง)'); process.exit(fails ? 1 : 0);

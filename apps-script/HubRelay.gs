@@ -113,8 +113,9 @@ function checkInstall() {
   return 'ok';
 }
 function relayUrl_() {
-  var url = ScriptApp.getService().getUrl();
-  if (!url || !/\/exec$/.test(url)) throw new Error('ยังไม่ได้ Deploy เป็น Web app — กด Deploy > New deployment > Web app ก่อน แล้วรัน setup อีกครั้ง');
+  // บางบัญชี getUrl() คืนค่า /dev เมื่อรันจากหน้าแก้โค้ด → ใส่ Web app URL (ลงท้าย /exec) ใน Script Properties ชื่อ RELAY_EXEC_URL แทนได้ (ไม่ใช่ค่าลับ)
+  var own = PropertiesService.getScriptProperties().getProperty('RELAY_EXEC_URL'), url = own && /^https:\/\/script\.google\.com\/.+\/exec$/.test(own) ? own : ScriptApp.getService().getUrl();
+  if (!url || !/\/exec$/.test(url)) throw new Error('ยังไม่ได้ Deploy เป็น Web app หรือระบบอ่าน URL ได้เป็น /dev — กด Deploy > New deployment > Web app ก่อน ถ้า Deploy แล้วยังขึ้นข้อความนี้ ให้คัดลอก Web app URL (ลงท้าย /exec) ไปใส่ใน Project Settings > Script Properties ชื่อ RELAY_EXEC_URL แล้วรัน setup อีกครั้ง');
   return url;
 }
 function relayPost_(path, payload) {
