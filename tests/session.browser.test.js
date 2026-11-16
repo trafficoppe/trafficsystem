@@ -170,6 +170,7 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   { const im = await page.evaluate(() => { const i = document.querySelector('.tdi .gal-main img'), r = i.getBoundingClientRect(); return { fit: getComputedStyle(i).objectFit, src: i.getAttribute('src'), set: i.getAttribute('srcset'), w: r.width, cur: i.currentSrc }; });
     ok('ภาพหลักเหตุการณ์: ไม่ใช้รูปย่อ 400px ขยายเป็นภาพใหญ่ (ใช้ 800/1600 ตามจอ) · object-fit: contain ไม่ครอป', im.fit === 'contain' && /&w=800$/.test(im.src) && /&w=1600 1600w/.test(im.set) && !/&w=400$/.test(im.cur), JSON.stringify(im)); }
   await shot(page, '10a_dashboard_headings_today');
+  { await page.waitForTimeout(400); await page.reload(); await page.waitForSelector('.dash-chk', { state: 'attached' }); await page.waitForTimeout(1500); await page.evaluate(() => { location.hash = '#gate'; }); await page.waitForTimeout(300); await page.evaluate(() => { location.hash = '#dashboard'; }); await page.waitForSelector('.dash-chk', { state: 'attached' }); const c = await page.$eval('.dash-chk', (e) => e.textContent); ok('Dashboard หลัง Login: ป้ายเวลาแยก “ข้อมูลสดอ่านเมื่อ …” กับเวลาไฟล์สรุป (ไม่บอกเวลาไฟล์สรุปเป็นเวลาตรวจล่าสุด)', /^ข้อมูลสดอ่านเมื่อ .+ · หมวดอื่นจากไฟล์สรุป /.test(c), c); }
   await page.request.get(BASE + '/__test/today/off');
   // GPS: ปุ่มระบบต้นทาง + ภาพส่วนตัวเมื่อยังไม่มีตัวกลาง
   await go(page, 'grad-2568-gps'); await page.waitForSelector('.dv[data-ds="gps"] .it');
