@@ -252,7 +252,7 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
     q = await ask('แบบสำรวจเรือนไทยมีกี่ฉบับ รถกี่คัน');
     ok('[MOCK AI] (3) เรือนไทย: แบบสำรวจ ' + web.ruenthai.surveys + ' ฉบับ และรถ ' + web.ruenthai.carsDeclared + ' คัน แยกนิยาม', q.sys.includes('แบบสำรวจที่ส่ง ' + web.ruenthai.surveys + ' ฉบับ') && q.sys.includes('รวม ' + web.ruenthai.carsDeclared + ' คัน — เป็นคนละหน่วยกับจำนวนแบบสำรวจ') && !/ผู้ตอบสมมติ|ทบ1111|TOKEN-SECRET/.test(q.sys));
     q = await ask('แยกตามกลุ่มให้หน่อย', [{ role: 'User', text: 'แบบสำรวจเรือนไทยมีกี่ฉบับ' }, { role: 'AI', text: 'มี ' + web.ruenthai.surveys + ' ฉบับ' }]);
-    ok('[MOCK AI] (4) ถามต่อ “แยกตามกลุ่มให้หน่อย” → ส่งการแยกกลุ่มของเรือนไทยตามบทสนทนา', /กลุ่ม: กลุ่มที่ 2: บุคลากรส่วนงานอื่น 1, กลุ่มที่ 1: บุคลากรคณะ 1, กลุ่มที่ 3: อื่น ๆ 1/.test(q.sys) || /กลุ่ม: [^·]*กลุ่มที่ 1: บุคลากรคณะ 1/.test(q.sys), q.sys.split('\n').filter((l) => /เรือนไทย/.test(l)).join(' / ').slice(0, 300));
+    ok('[MOCK AI] (4) ถามต่อ “แยกตามกลุ่มให้หน่อย” → ส่งการแยกกลุ่มของเรือนไทยตามบทสนทนา', /กลุ่ม: [^·]*กลุ่มที่ 1: บุคลากรคณะ 1 ฉบับ/.test(q.sys) && /สถานะกล้อง LPR \(บันทึกต่อแบบสำรวจ จึงนับเป็นฉบับ ไม่ใช่คัน\)/.test(q.sys), q.sys.split('\n').filter((l) => /เรือนไทย/.test(l)).join(' / ').slice(0, 300));
     NOW += 61e3; ENV.aiReply = 'มีรถเรือนไทยที่ติดตั้งกล้องแล้ว 4,321 คัน'; const fx = await run('/api/chat', { method: 'POST', cookie: U10, body: { action: 'chat', userMessage: 'รถเรือนไทยติดกล้องแล้วกี่คัน', chatHistory: [] } }, E);
     ok('[MOCK AI] (5) คำตอบมีตัวเลขที่ไม่มีในข้อมูล → ไม่ส่งออก (ไม่แต่งตัวเลข)', fx.j.verified === false && !/4,321/.test(fx.j.reply));
     const keep2 = relaySecret; relaySecret = 'wrong'; _reset(); q = await ask('แบบสำรวจเรือนไทยมีกี่ฉบับ');
