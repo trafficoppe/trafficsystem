@@ -1,0 +1,28 @@
+# wrangler.toml — ค่าตั้งของ Cloudflare Pages โครงการ “mu-traffic-hub” (ระบบภายในรอบ 8 · โครงการใหม่ แยกจากเว็บไซต์เดิมและ GitHub Pages)
+# สร้างจาก branch hub-v2-preview ด้วยคำสั่ง: sh tools/build_site.sh  →  โฟลเดอร์ site/ (site/_worker.js = บริการกลาง worker/dist/worker.js)
+# ไฟล์นี้ไม่มีค่าลับ — ค่าที่ต้องตั้งเป็น “Secret” ในหน้า Settings ของโครงการ (ไม่อยู่ใน Repository):
+#   ALLOWED_CIDRS  ช่วง IP ของเครือข่ายมหาวิทยาลัย/VPN ที่ยืนยันแล้ว คั่นด้วยจุลภาค (ยังไม่ตั้ง = ปิด Login และข้อมูลภายในทั้งหมด)
+#   ADMIN_CODES    รหัสพนักงานของผู้ดูแล คั่นด้วยจุลภาค (ยังไม่ตั้ง = ไม่มีผู้ดูแล)
+#   HUB_GS_URL, HUB_SHARED_SECRET  ใช้เฉพาะเมื่อ Sheet ต้นทางไม่ได้แชร์แบบผู้มีลิงก์ดูได้ (apps-script/HubData.gs)
+name = "mu-traffic-hub"
+pages_build_output_dir = "site"
+compatibility_date = "2026-10-22"
+
+[vars]
+SHEET_MAIN = "1LD5AVbwLV2RplbUYNlzY529rkN41dgvvqcXzGjBFBW8"
+SHEET_LF = "14MJgb81aVEjT2qVp6n9zNKCCpJNVimX1q0hiYkH0f5I"
+SHEET_OPS = "1lYRhXtLgec6ISM6Ugt-YKLrh47NRt7ihcVLcD8mI_Yg"
+SHEET_EVENTS = "10Wsa6OY4N2Yzxc2SsSpuHU_LXT7Tl9E1I7_ohb0UCGE"
+SHEET_GPS = "1dKbEjoIBxq16fnA3CELf0CHpOjS2I9gDWoz2OfvqHwg"
+AI_MODEL = "@cf/aisingapore/gemma-sea-lion-v4-27b-it"
+SESSION_HOURS = "12"
+CHAT_RATE_PER_MIN = "6"
+CHAT_RATE_PER_DAY = "40"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mu-traffic-hub"
+database_id = "a4422729-f2fd-4b8b-b5e1-40850469a89e"
+
+[ai]
+binding = "AI"
