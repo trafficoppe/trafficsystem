@@ -22,6 +22,7 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   ok('หน้า Login: ข้อความ 3 บรรทัดตามลำดับ + ตรา + ช่องรหัสพนักงาน + ปุ่ม', (await page.locator('.lg-title > span').allInnerTexts()).map((s) => s.replace(/\s+/g, ' ')).join('|') === 'ระบบฐานข้อมูล|งานจราจรและความปลอดภัย กองกายภาพและสิ่งแวดล้อม|มหาวิทยาลัยมหิดล' && await T(page, '.lg-logo').count() === 1 && (await txt(page, '.lg-form label')) === 'รหัสพนักงาน' && (await txt(page, '.lg-btn')) === 'เข้าสู่ระบบ');
   ok('ช่องรหัส: type=text + inputmode=numeric (ไม่ใช่ type=number)', await page.getAttribute('#loginCode', 'type') === 'text' && await page.getAttribute('#loginCode', 'inputmode') === 'numeric');
   await page.fill('#loginCode', ''); await page.type('#loginCode', '01a2-3'); ok('พิมพ์ตัวอักษรปน → เหลือเฉพาะตัวเลข และเลขศูนย์นำหน้ายังอยู่', await page.inputValue('#loginCode') === '0123');
+  ok('ไม่มีด่านเครือข่าย (IP ภายนอก): หน้า Login ไม่มีคำเตือนเรื่องเครือข่าย/ผู้ดูแล', (await page.evaluate(() => document.getElementById('loginMsg').textContent)) === '' && !/เครือข่าย|IP/.test(await txt(page, '#loginView')));
   await shot(page, '01_login_desktop');
   await login(page, '9999'); await page.waitForFunction(() => /ไม่ถูกต้อง/.test(document.getElementById('loginMsg').textContent));
   ok('รหัสผิด → ข้อความทั่วไป ไม่บอกว่ามีใครในระบบ และยังไม่เข้า', (await txt(page, '#loginMsg')) === 'รหัสพนักงานไม่ถูกต้องหรือไม่มีสิทธิ์เข้าใช้งาน' && await T(page, '#app').isHidden());
@@ -85,6 +86,15 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   await go(page, 'grad-guard'); await page.waitForSelector('.dv[data-ds="gps"] .it');
   ok('กิจกรรมพิเศษและ GPS (แท็บ Reports): session เดียวกันเปิดได้ · GPS แสดง Record_Status / Geo_Status และไม่มีชื่อ รปภ.', evOk && /COMPLETE 2/.test(await txt(page, '.dv[data-ds="gps"]')) && /IN_RANGE 1/.test(await txt(page, '.dv[data-ds="gps"]')) && !/รปภ\.สมมติ/.test(await txt(page, '.dv[data-ds="gps"]')));
   await go(page, 'report-radio'); await page.waitForSelector('.dv[data-ds="radio"]'); await page.waitForTimeout(400); ok('รายงานวิทยุ: เปิดได้โดยไม่ถาม Login ซ้ำ', !/ต้องเข้าสู่ระบบ|ยังไม่ได้เข้าสู่ระบบ/.test(await txt(page, '#view')) && await T(page, '#loginView').count() === 0);
+
+  // ---------- 5.1) ทุกเมนูหลัง Login: ไม่มี undefined / null / NaN หลุดออกหน้า และไม่มีหน้าใดถาม Login ซ้ำ ----------
+  { const routes = await page.evaluate(() => [...new Set([...document.querySelectorAll('.sb a[href^="#"], nav a[href^="#"]')].map((a) => a.getAttribute('href').slice(1).split('/')[0]).filter(Boolean))]);
+    const bad = [];
+    for (const r of routes) { await go(page, r); await page.waitForTimeout(450); const tx = await page.evaluate(() => document.getElementById('view').innerText);
+      if (/\bundefined\b|\bNaN\b|\bnull\b|ต้องเข้าสู่ระบบภายใน/.test(tx) || await page.locator('#loginView').count()) bad.push(r + ': ' + (tx.match(/.{0,40}(undefined|NaN|null|ต้องเข้าสู่ระบบภายใน).{0,20}/) || [''])[0]); }
+    ok('ทุกเมนู (' + routes.length + ' หน้า) หลัง Login: ไม่มี undefined/null/NaN และไม่ถาม Login ซ้ำ', routes.length >= 20 && !bad.length, bad.join(' | ')); }
+  await go(page, 'lostfound'); await page.waitForSelector('.kpis');
+  ok('[MOCK ข้อมูล] Lost & Found: สถานะที่ไม่มีรายการในชุดที่อ่านครบแสดง 0 (ไม่ใช่ undefined)', /ช่วยหาแล้วยังไม่พบ 0/.test(await txt(page, '.kpis')), await txt(page, '.kpis'));
 
   // ---------- 6) ตารางเวร / ตั้งค่า (ผู้ใช้ทั่วไป) ----------
   await go(page, 'roster'); await page.waitForFunction(() => /ชื่อสมมติ หนึ่ง/.test(document.getElementById('view').textContent));

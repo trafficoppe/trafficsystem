@@ -92,6 +92,8 @@
     (kids || []).forEach(function (c) { if (c) n.appendChild(c); });
     return n;
   }
+  /* จำนวนตามสถานะ: ชุดสถานะอ่านครบแล้วแต่ไม่มีสถานะนั้น = 0 · ไม่มีชุดสถานะเลย (อ่านไม่ได้/รูปแบบผิด) = “ยังยืนยันไม่ได้” — ไม่ปล่อย undefined ออกหน้า */
+  function stCount(map, k) { return map && typeof map === 'object' ? num(map[k] || 0) : 'ยังยืนยันไม่ได้'; }
   function num(x, d) { if (x == null || isNaN(x)) return '–'; return Number(x).toLocaleString('th-TH', d != null ? { minimumFractionDigits: d, maximumFractionDigits: d } : undefined); }
   function mLabel(m) { var p = m.split('-'); return TH_M[+p[1] - 1] + ' ' + String(+p[0] + 543).slice(2); }
   function mFull(m) { var p = m.split('-'); return TH_MF[+p[1] - 1] + ' ' + (+p[0] + 543); }
@@ -934,7 +936,7 @@
         { icon: 'search', label: 'แจ้งของหาย', value: num(lt('สิ่งของสูญหาย')), unit: 'รายการ', scope: rangeText(), updated: lf.updated, color: C.c4 },
         { icon: 'box', label: 'เก็บของได้', value: num(lt('พบสิ่งของ')), unit: 'รายการ', scope: rangeText(), color: C.c3 },
         { icon: 'file', label: 'แบบฟอร์มรับของคืน', value: num(lt('รับของคืน')), unit: 'รายการ', scope: rangeText(), color: C.c1 },
-        { icon: 'shield', label: 'สถานะ “รับของคืนแล้ว”', value: num(lf.returned), unit: 'รายการ', sub: 'รอเจ้าของมารับ ' + lf.byStatus['เจ้าของยังไม่มารับคืน'] + ' · ช่วยหาแล้วยังไม่พบ ' + lf.byStatus['ช่วยหาแล้วยังไม่พบ'], scope: 'ทั้งปี 2569', color: C.c5 }]));
+        { icon: 'shield', label: 'สถานะ “รับของคืนแล้ว”', value: num(lf.returned), unit: 'รายการ', sub: 'รอเจ้าของมารับ ' + stCount(lf.byStatus, 'เจ้าของยังไม่มารับคืน') + ' · ช่วยหาแล้วยังไม่พบ ' + stCount(lf.byStatus, 'ช่วยหาแล้วยังไม่พบ'), scope: 'ทั้งปี 2569', color: C.c5 }]));
       var g = el('div', { class: 'grid2' });
       g.appendChild(figure('รายเดือนแยกประเภท', 'ที่มา: แจ้งของหาย · อัปเดต ' + dLabel(lf.updated), lfChart()));
       g.appendChild(figure('สถานะการดำเนินการ (ทั้งปี 2569)', lf.total + ' รายการ', hbars(Object.keys(lf.byStatus).map(function (s) { return { label: s, value: lf.byStatus[s], color: s === 'รับของคืนแล้ว' ? C.c3 : C.c5 }; }), Math.max.apply(null, Object.keys(lf.byStatus).map(function (s) { return lf.byStatus[s]; })), { labelW: 190 })));
@@ -1740,7 +1742,7 @@
     'source-private': ['บริการข้อมูลอ่านแหล่งต้นทางไม่ได้', 'Sheet ต้นทางไม่ได้เปิดให้บริการอ่าน — ผู้ดูแลต้องเชื่อม Apps Script ของบริการข้อมูล (ดูข้อมูลระบบเพิ่มเติม) · การเข้าสู่ระบบของคุณยังใช้ได้'],
     'source-schema': ['หัวคอลัมน์ของแหล่งต้นทางเปลี่ยนไป', 'บริการข้อมูลไม่พบคอลัมน์ที่ต้องใช้ — แจ้งผู้ดูแลระบบ'], 'source-unreachable': ['บริการข้อมูลติดต่อแหล่งต้นทางไม่ได้', 'ลองใหม่อีกครั้งในอีกสักครู่'],
     'source-error': ['แหล่งต้นทางตอบกลับผิดพลาด', 'ลองใหม่อีกครั้ง ถ้ายังไม่ได้ให้แจ้งผู้ดูแลระบบ'], 'source-not-configured': ['ยังไม่ได้ตั้งค่าแหล่งข้อมูลของส่วนนี้ในบริการ', 'แจ้งผู้ดูแลระบบ'],
-    'network-not-configured': ['ผู้ดูแลยังไม่ได้กำหนดเครือข่ายที่อนุญาต', 'ข้อมูลภายในจะเปิดเมื่อกำหนดช่วง IP ของเครือข่ายหน่วยงานแล้ว'], 'network-denied': ['เข้าใช้งานไม่ได้จากเครือข่ายนี้', ''],
+    'bad-network-config': ['ระบบตั้งค่าเครือข่ายไม่ถูกต้อง', 'แจ้งผู้ดูแลระบบ'], 'network-denied': ['เข้าใช้งานไม่ได้จากเครือข่ายนี้', ''],
     http: ['บริการข้อมูลตอบกลับผิดพลาด', 'ลองใหม่อีกครั้ง ถ้ายังไม่ได้ให้แจ้งผู้ดูแลระบบ'], off: ['ผู้ดูแลปิดการแสดงข้อมูลส่วนนี้ไว้', '']
   };
   /* dataView: แสดง กำลังโหลด → เนื้อหา / ข้อความผิดพลาดตามสาเหตุ + ปุ่มลองใหม่ */
@@ -1806,7 +1808,7 @@
   function liveNote(d, key) { return el('p', { class: 'src', text: 'อ่านจากแท็บ “' + DS[key].tab + '” เมื่อ ' + pad2(d.at.getHours()) + ':' + pad2(d.at.getMinutes()) + ' น. (เวลาเครื่อง)' }); }
   function normKey(s) { return String(s == null ? '' : s).replace(/\s+/g, '').toLowerCase(); }
   function histTable(rows) {
-    return table(['วันเวลา', 'สรุปสถานะ', 'หมายเหตุ'], rows.slice().sort(function (a, b) { return a.at < b.at ? 1 : -1; }).slice(0, 12).map(function (r) { return [dLabel(String(r.at)), r.status || '–', r.remark || '–']; }), {});
+    return table(['วันเวลา', 'สรุปสถานะ', 'หมายเหตุ'], rows.slice().sort(function (a, b) { return a.at < b.at ? 1 : -1; }).slice(0, 12).map(function (r) { return [fdate(r.at), r.status || '–', r.remark || '–']; }), {});
   }
   function historyBlock(match) {
     return el('div', { class: 'dlg-more' }, [el('h4', { text: 'ประวัติการตรวจสภาพ' }), dataView('inspections', function (rows) { var hit = rows.filter(match); return hit.length ? el('div', {}, [el('p', { class: 'src', text: num(hit.length) + ' ครั้ง · แสดง 12 ครั้งล่าสุด' }), histTable(hit)]) : el('p', { class: 'src', text: 'ยังไม่มีประวัติการตรวจในต้นทาง' }); })]);
@@ -1889,9 +1891,9 @@
         { icon: 'check', label: 'สามารถใช้งานได้', value: num(rows.filter(ok).length), unit: 'ครั้ง', color: C.c1 }, { icon: 'alert', label: 'ต้องส่งซ่อม/แก้ไข', value: num(rows.length - rows.filter(ok).length), unit: 'ครั้ง', color: C.fine }]),
         el('div', { style: 'margin-top:14px' }, [listUI({ rows: rows, unit: 'ครั้ง', per: 20, placeholder: 'ค้นหารุ่น ทะเบียน เลขครุภัณฑ์…', text: function (r) { return [r.type, r.model, r.plate, r.assetNo, r.status].join(' '); },
           filters: [{ id: 'all', label: 'ทั้งหมด', test: function () { return true; } }, { id: 'bad', label: 'ต้องส่งซ่อม', test: function (r) { return !ok(r); } }].concat(Object.keys(types).sort().map(function (t) { return { id: t, label: t, test: function (r) { return r.type === t; } }; })),
-          render: function (page) { var tb = table(['วันเวลา', 'ประเภท', 'ยี่ห้อ/รุ่น', 'ทะเบียน/เลขที่', 'สรุปสถานะ'], page.map(function (r) { return [dLabel(String(r.at)), r.type, r.model || '–', r.plate || '–', r.status || '–']; }), {});
-            Array.prototype.forEach.call(tb.querySelectorAll('tbody tr'), function (tr, i) { var r = page[i]; tr.tabIndex = 0; tr.classList.add('rowlink'); tr.setAttribute('aria-label', 'ดูผลตรวจ ' + (r.model || '') + ' ' + dLabel(String(r.at)));
-              var open = function () { detailDlg((r.model || r.type) + ' · ' + dLabel(String(r.at)), [['ประเภท', r.type], ['ยี่ห้อ/รุ่น', r.model], ['สี/สถานที่', r.color], ['ทะเบียน/เลขที่', r.plate], ['หมายเลขครุภัณฑ์', r.assetNo]].concat(CHECK_LABELS.map(function (l, j) { return [l, r['c' + (j + 1)]]; })).concat([['หมายเหตุเพิ่มเติม', r.remark], ['สรุปสถานะการใช้งาน', r.status]]), []); };
+          render: function (page) { var tb = table(['วันเวลา', 'ประเภท', 'ยี่ห้อ/รุ่น', 'ทะเบียน/เลขที่', 'สรุปสถานะ'], page.map(function (r) { return [fdate(r.at), r.type, r.model || '–', r.plate || '–', r.status || '–']; }), {});
+            Array.prototype.forEach.call(tb.querySelectorAll('tbody tr'), function (tr, i) { var r = page[i]; tr.tabIndex = 0; tr.classList.add('rowlink'); tr.setAttribute('aria-label', 'ดูผลตรวจ ' + (r.model || '') + ' ' + fdate(r.at));
+              var open = function () { detailDlg((r.model || r.type) + ' · ' + fdate(r.at), [['ประเภท', r.type], ['ยี่ห้อ/รุ่น', r.model], ['สี/สถานที่', r.color], ['ทะเบียน/เลขที่', r.plate], ['หมายเลขครุภัณฑ์', r.assetNo]].concat(CHECK_LABELS.map(function (l, j) { return [l, r['c' + (j + 1)]]; })).concat([['หมายเหตุเพิ่มเติม', r.remark], ['สรุปสถานะการใช้งาน', r.status]]), []); };
               tr.onclick = open; tr.onkeydown = function (e) { if (e.key === 'Enter') open(); }; });
             return tb; } })]), liveNote(d, 'inspections')]);
     })]));
@@ -1933,9 +1935,9 @@
       rows = rows.slice().sort(function (a, b) { return a.at < b.at ? 1 : -1; }); var types = {}; rows.forEach(function (r) { if (r.type) types[r.type] = 1; });
       return listUI({ rows: rows, unit: 'รายการ', per: 20, placeholder: 'ค้นหาสถานที่ ประเภท รายละเอียด…', text: function (r) { return [r.type, r.place, r.detail, r.unit, r.status].join(' '); },
         filters: [{ id: 'all', label: 'ทั้งหมด', test: function () { return true; } }].concat(Object.keys(types).sort().slice(0, 8).map(function (t) { return { id: t, label: t, test: function (r) { return r.type === t; } }; })),
-        render: function (page) { var tb = table(['วันเวลา', 'ประเภทเหตุการณ์', 'สถานที่', 'สถานะ'], page.map(function (r) { return [dLabel(String(r.at)), r.type || '–', r.place || '–', r.status || '–']; }), {});
+        render: function (page) { var tb = table(['วันเวลา', 'ประเภทเหตุการณ์', 'สถานที่', 'สถานะ'], page.map(function (r) { return [fdate(r.at), r.type || '–', r.place || '–', r.status || '–']; }), {});
           Array.prototype.forEach.call(tb.querySelectorAll('tbody tr'), function (tr, i) { var r = page[i]; tr.tabIndex = 0; tr.classList.add('rowlink');
-            var open = function () { detailDlg((r.type || 'บันทึกวิทยุ') + ' · ' + dLabel(String(r.at)), [['หน่วยงานที่แจ้ง', r.unit], ['ผู้แจ้ง', r.reporter], ['เจ้าหน้าที่ศูนย์วิทยุ', r.operator], ['สถานที่เกิดเหตุ', r.place], ['รายละเอียด', r.detail], ['การดำเนินการของศูนย์', r.action], ['สถานะ', r.status]], []); };
+            var open = function () { detailDlg((r.type || 'บันทึกวิทยุ') + ' · ' + fdate(r.at), [['หน่วยงานที่แจ้ง', r.unit], ['ผู้แจ้ง', r.reporter], ['เจ้าหน้าที่ศูนย์วิทยุ', r.operator], ['สถานที่เกิดเหตุ', r.place], ['รายละเอียด', r.detail], ['การดำเนินการของศูนย์', r.action], ['สถานะ', r.status]], []); };
             tr.onclick = open; tr.onkeydown = function (e) { if (e.key === 'Enter') open(); }; });
           return tb; } });
     })]));
@@ -2112,7 +2114,7 @@
       .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return { s: r.status, j: j || {} }; }); }, function () { return { s: 0, j: {} }; });
   }
   var LOGIN_MSG = { invalid: 'รหัสพนักงานไม่ถูกต้องหรือไม่มีสิทธิ์เข้าใช้งาน', 'rate-limited': 'ลองหลายครั้งเกินกำหนด กรุณารอสักครู่แล้วลองใหม่', 'verify-unavailable': 'ไม่สามารถตรวจสอบการเข้าสู่ระบบได้ในขณะนี้ กรุณาลองใหม่',
-    'network-not-configured': 'ระบบยังไม่เปิดให้เข้าสู่ระบบ — ผู้ดูแลยังไม่ได้กำหนดเครือข่ายที่อนุญาต', 'network-denied': 'เข้าใช้งานไม่ได้จากเครือข่ายนี้', net: 'เชื่อมต่อบริการไม่ได้ กรุณาลองใหม่' };
+    'bad-network-config': 'ระบบตั้งค่าเครือข่ายไม่ถูกต้อง — แจ้งผู้ดูแลระบบ', 'network-denied': 'เข้าใช้งานไม่ได้จากเครือข่ายนี้', net: 'เชื่อมต่อบริการไม่ได้ กรุณาลองใหม่' };
   function showLogin(info) {
     var old = $('loginView'); if (old) old.remove();
     document.body.classList.add('locked');
@@ -2181,7 +2183,7 @@
 
   /* ---------- ชุดข้อมูลภายในเพิ่มเติม (อ่านผ่านบริการหลัง Login) ---------- */
   DS.incidents = { mode: 'api', tab: 'รายงานเหตุการณ์' }; DS.lostfound = { mode: 'api', tab: 'LF_New' }; DS.events = { mode: 'api', tab: 'กิจกรรมพิเศษ › Sheet1' }; DS.gps = { mode: 'api', tab: 'GPS งานปริญญา › Reports' };
-  function fdate(d) { return d ? dLabel(String(d).slice(0, 10)) + (String(d).length > 10 ? ' ' + String(d).slice(11, 16) + ' น.' : '') : ''; }
+  function fdate(d) { if (d && !/^\d{4}-\d{2}-\d{2}/.test(String(d))) return String(d); return d ? dLabel(String(d).slice(0, 10)) + (String(d).length > 10 ? ' ' + String(d).slice(11, 16) + ' น.' : '') : ''; }
   function selectOf(label, opts, cur, fn) { var s = el('select', { 'aria-label': label }, opts.map(function (o) { return el('option', { value: o[0], text: o[1] }); })); s.value = cur; s.onchange = function () { fn(s.value); }; return s; }
   function dateIn(label, val, min, max, fn) { var i = el('input', { type: 'date', 'aria-label': label, value: val, min: min, max: max }); i.onchange = function () { fn(i.value); }; return el('label', { class: 'di' }, [el('span', { text: label }), i]); }
   function pager(st, pages, redraw, anchor) {

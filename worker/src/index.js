@@ -34,10 +34,15 @@ export function parseCidrs(s) {
     const shift = BigInt(a.bits - l); return { bits: a.bits, net: a.n >> shift, shift };
   });
 }
+// ด่านเครือข่ายเป็น “ตัวเลือก” ปิดไว้เป็นค่าเริ่มต้น (คำสั่งผู้ใช้ 16 พ.ย. 2569: เข้าได้จากทุกเครือข่ายด้วยรหัสพนักงาน)
+// เปิดใช้เฉพาะเมื่อตั้ง NETWORK_GATE = "on" พร้อม ALLOWED_CIDRS · ค่า ALLOWED_CIDRS อย่างเดียว (หรือค่าว่าง) ไม่ปิด Login อีก
+// การป้องกันข้อมูลภายในอยู่ที่ session ฝั่งบริการทุกคำขอ ไม่ได้ขึ้นกับเครือข่าย
+export function clientIp(request) { return str(request.headers.get('CF-Connecting-IP')) || 'unknown'; }
 export function network(request, env) {
-  const ip = request.headers.get('CF-Connecting-IP') || '';
+  const ip = clientIp(request);
+  if (str(env.NETWORK_GATE).toLowerCase() !== 'on') return { mode: 'open', ip };
   let list; try { list = parseCidrs(env.ALLOWED_CIDRS); } catch (e) { return { mode: 'badconfig', ip }; }
-  if (!list.length) return { mode: 'unset', ip };
+  if (!list.length) return { mode: 'badconfig', ip };               // เปิดด่านแล้วแต่ไม่มีช่วง IP = ตั้งค่าผิด → ปิด (ผู้ดูแลเลือกเปิดเอง)
   const a = ipNum(ip);
   return { mode: a && list.some((c) => c.bits === a.bits && (a.n >> c.shift) === c.net) ? 'ok' : 'denied', ip };
 }
@@ -127,7 +132,7 @@ const BUILD = {
     await remember(env, out.flatMap((r) => r.images)); return out;
   },
   async radio(env, deps) {
-    return pick(await table(env, 'radio', deps), { at: 'วันเวลาที่บันทึก', operator: 'เจ้าหน้าที่ศูนย์วิทยุ', unit: 'หน่วยงานที่แจ้ง', reporter: 'ชื่อ รปภ./ผู้แจ้ง', type: 'ประเภทเหตุการณ์', place: 'สถานที่เกิดเหตุ', detail: 'รายละเอียด/ข้อความ', action: 'การดำเนินการของศูนย์', status: 'สถานะ' }, ['at', 'type']).filter((r) => r.at);
+    return pick(await table(env, 'radio', deps), { at: 'วันเวลาที่บันทึก', operator: 'เจ้าหน้าที่ศูนย์วิทยุ', unit: 'หน่วยงานที่แจ้ง', reporter: 'ชื่อ รปภ./ผู้แจ้ง', type: 'ประเภทเหตุการณ์', place: 'สถานที่เกิดเหตุ', detail: 'รายละเอียด/ข้อความ', action: 'การดำเนินการของศูนย์', status: 'สถานะ' }, ['at', 'type']).filter((r) => r.at).map((r) => ({ ...r, at: normDT(r.at) || r.at }));
   },
   async events(env, deps) {                     // กิจกรรมพิเศษ: หัวคอลัมน์ A ของต้นทางไม่สื่อความ จึงอ่านตามตำแหน่ง A–K ที่ตรวจแล้ว และไม่ส่งชื่อ/ตำแหน่งผู้รายงาน
     const t = await table(env, 'events', deps); if (t.head[4] !== 'ประเภทเหตุการณ์' || t.head[6] !== 'สถานที่เกิดเหตุ') throw new Err(502, 'source-schema');
@@ -151,8 +156,11 @@ async function session(request, env, deps) {
   const row = await env.DB.prepare('SELECT staff, name, unit, role, exp FROM sessions WHERE id = ?').bind(await sha(tok)).first();
   return row && row.exp > deps.now() ? row : null;
 }
+// สิทธิ์ผู้ดูแลตรวจกับ ADMIN_CODES “ณ ตอนที่เรียก” ทุกครั้ง (ถอดรหัสออกจากรายการแล้วสิทธิ์หายทันที ไม่ต้องรอ session หมดอายุ)
+async function roleOf(env, staffHash) { for (const c of str(env.ADMIN_CODES).split(/[\s,]+/).filter(Boolean)) if ((await sha('staff:' + c)).slice(0, 32) === staffHash) return 'admin'; return 'user'; }
 async function need(request, env, deps, admin) {
   const s = await session(request, env, deps); if (!s) throw new Err(401, 'no-session');
+  s.role = await roleOf(env, s.staff);
   if (admin && s.role !== 'admin') throw new Err(403, 'forbidden'); return s;
 }
 function sameOrigin(request) { const o = request.headers.get('Origin'); if (o && o !== new URL(request.url).origin) throw new Err(403, 'bad-origin'); }
@@ -323,13 +331,15 @@ export async function handle(request, env, deps) {
     if (net.mode === 'badconfig') throw new Err(503, 'bad-network-config');
     if (net.mode === 'denied') return api ? json({ ok: false, code: 'network-denied' }, 403) : page('เข้าใช้งานไม่ได้จากเครือข่ายนี้', 'ระบบนี้เปิดให้ใช้เฉพาะเครือข่ายภายในที่กำหนด', net.ip);
     if (!api) { if (request.method !== 'GET' && request.method !== 'HEAD') throw new Err(405, 'method'); return await asset(env, path === '/' ? 'index.html' : path.slice(1), deps, url.origin); }
-    if (path === '/api/health') {                 // สถานะบริการ (ไม่มีข้อมูล): ?probe=1 บอกเพียงว่าแต่ละแหล่งอ่านได้หรือไม่ เพื่อให้ผู้ดูแลแยกสาเหตุได้
-      const out = { ok: true, ref: str(env.ASSET_REF) || (env.ASSETS ? 'pages' : ''), network: net.mode, now: bkk(deps.now()), ai: env.LLM_API_URL ? 'external' : env.AI && env.AI_MODEL ? 'workers-ai' : 'none', admins: str(env.ADMIN_CODES) ? 'set' : 'unset' };
-      if (url.searchParams.get('probe') === '1') { out.sources = {}; for (const k of Object.keys(SOURCES(env))) { try { await table(env, k, deps); out.sources[k] = 'ok'; } catch (e) { out.sources[k] = e instanceof Err ? e.code : 'internal'; } } try { await env.DB.prepare('SELECT 1 AS x').first(); out.db = 'ok'; } catch (e) { out.db = 'error'; } }
+    if (path === '/api/health') {                 // สาธารณะ: สถานะขั้นต่ำเท่านั้น · รายละเอียด/ตรวจแหล่งข้อมูล (?probe=1) เฉพาะผู้ดูแลที่ Login แล้ว
+      if (url.searchParams.get('probe') !== '1') return json({ ok: true, now: bkk(deps.now()) });
+      await need(request, env, deps, true);
+      const out = { ok: true, ref: str(env.ASSET_REF) || (env.ASSETS ? 'pages' : ''), network: net.mode, now: bkk(deps.now()), ai: env.LLM_API_URL ? 'external' : env.AI && env.AI_MODEL ? 'workers-ai' : 'none', admins: str(env.ADMIN_CODES) ? 'set' : 'unset', sources: {} };
+      for (const k of Object.keys(SOURCES(env))) { try { await table(env, k, deps); out.sources[k] = 'ok'; } catch (e) { out.sources[k] = e instanceof Err ? e.code : 'internal'; } }
+      try { await env.DB.prepare('SELECT 1 AS x').first(); out.db = 'ok'; } catch (e) { out.db = 'error'; }
       return json(out);
     }
-    if (path === '/api/me') { const s = net.mode === 'ok' ? await session(request, env, deps) : null; return s ? json({ ok: true, user: { name: s.name, unit: s.unit, role: s.role }, exp: s.exp }) : json({ ok: false, code: net.mode === 'ok' ? 'no-session' : 'network-not-configured', ip: net.mode === 'ok' ? undefined : net.ip }, 401); }
-    if (net.mode !== 'ok') throw new Err(403, 'network-not-configured');        // ยังไม่ได้กำหนดเครือข่ายที่อนุญาต → ปิด Login และข้อมูลภายในทั้งหมด
+    if (path === '/api/me') { const s = await session(request, env, deps); if (s) s.role = await roleOf(env, s.staff); return s ? json({ ok: true, user: { name: s.name, unit: s.unit, role: s.role }, exp: s.exp }) : json({ ok: false, code: 'no-session' }, 401); }
     const m = request.method;
     if (path === '/api/login' && m === 'POST') return await login(request, env, deps, net);
     if (path === '/api/logout' && m === 'POST') { sameOrigin(request); const tok = cookieOf(request); if (tok) await env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(await sha(tok)).run(); return json({ ok: true }, 200, { 'set-cookie': setCookie('x', 0) }); }

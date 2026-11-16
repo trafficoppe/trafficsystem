@@ -1,5 +1,5 @@
 // worker/tests/dev_server.mjs — รันบริการกลางตัวจริง (worker/src/index.js) บนเครื่อง เพื่อทดสอบหน้าเว็บ + บริการร่วมกัน
-// ของจำลอง: D1 = SQLite ในหน่วยความจำ · Google Sheets/Drive = ชุดข้อมูลสมมติด้านล่าง · Workers AI = คำตอบตายตัว · IP ผู้เรียก = 10.20.0.5
+// ของจำลอง: D1 = SQLite ในหน่วยความจำ · Google Sheets/Drive = ชุดข้อมูลสมมติด้านล่าง · Workers AI = คำตอบตายตัว · IP ผู้เรียก = 203.0.113.50 (ภายนอก)
 // ใช้: node worker/tests/dev_server.mjs [port]   (ต้องรัน sh tools/build_site.sh ก่อน)
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url'; import { DatabaseSync } from 'node:sqlite';
 import { handle, SCHEMA } from '../src/index.js';
@@ -35,7 +35,7 @@ const fetchMock = async (u) => { u = String(u); let m = /export\?format=csv&gid=
   if (/drive\.google\.com\/thumbnail/.test(u)) return new Response(PNG, { headers: { 'content-type': 'image/png' } });
   return new Response('', { status: 404 }); };
 const TYPES = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json; charset=utf-8', png: 'image/png', svg: 'image/svg+xml' };
-const env = { DB, ALLOWED_CIDRS: '10.20.0.0/16', ADMIN_CODES: '4567', SHEET_MAIN: 'M', SHEET_LF: 'L', SHEET_OPS: 'O', SHEET_EVENTS: 'E', SHEET_GPS: 'G', AI_MODEL: '@cf/mock/model',
+const env = { DB, ADMIN_CODES: '4567', SHEET_MAIN: 'M', SHEET_LF: 'L', SHEET_OPS: 'O', SHEET_EVENTS: 'E', SHEET_GPS: 'G', AI_MODEL: '@cf/mock/model',
   AI: { run: async () => ({ response: '[คำตอบจากบริการ AI จำลอง] เดือน พ.ย. 2569 มีเหตุการณ์รวม 6 เหตุการณ์ (ข้อมูลตามช่วงที่ระบุ)' }) },
   ASSETS: { fetch: async (req) => { let p = new URL(req.url).pathname; if (p === '/') p = '/index.html'; const f = path.join(SITE, p); return f.startsWith(SITE) && fs.existsSync(f) && fs.statSync(f).isFile() ? new Response(fs.readFileSync(f), { headers: { 'content-type': TYPES[p.split('.').pop()] || 'application/octet-stream' } }) : new Response('Not found', { status: 404 }); } } };
 export function start(port, opt = {}) {
@@ -44,7 +44,7 @@ export function start(port, opt = {}) {
     if (rq.url === '/__test/expire') { db.exec('DELETE FROM sessions'); rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/source/')) { control.sourceDown = rq.url.endsWith('down'); rs.end('ok'); return; }
     const headers = new Headers(); for (const [k, v] of Object.entries(rq.headers)) if (typeof v === 'string') headers.set(k, v);
-    headers.set('CF-Connecting-IP', opt.ip || '10.20.0.5');
+    headers.set('CF-Connecting-IP', opt.ip || '203.0.113.50');   // IP ภายนอกใดก็ได้ — ไม่มีด่านเครือข่ายเป็นค่าเริ่มต้น
     const req = new Request('http://localhost:' + port + rq.url, { method: rq.method, headers, body: ['GET', 'HEAD'].includes(rq.method) ? undefined : Buffer.concat(chunks) });
     const res = await handle(req, Object.assign({}, env, opt.env || {}), { fetch: fetchMock, now: () => Date.now() });
     const h = {}; res.headers.forEach((v, k) => { h[k] = v; }); rs.writeHead(res.status, h); rs.end(Buffer.from(await res.arrayBuffer()));

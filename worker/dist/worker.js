@@ -149,15 +149,19 @@ function parseCidrs(s) {
     return { bits: a.bits, net: a.n >> shift, shift };
   });
 }
+function clientIp(request) {
+  return str(request.headers.get("CF-Connecting-IP")) || "unknown";
+}
 function network(request, env) {
-  const ip = request.headers.get("CF-Connecting-IP") || "";
+  const ip = clientIp(request);
+  if (str(env.NETWORK_GATE).toLowerCase() !== "on") return { mode: "open", ip };
   let list;
   try {
     list = parseCidrs(env.ALLOWED_CIDRS);
   } catch (e) {
     return { mode: "badconfig", ip };
   }
-  if (!list.length) return { mode: "unset", ip };
+  if (!list.length) return { mode: "badconfig", ip };
   const a = ipNum(ip);
   return { mode: a && list.some((c) => c.bits === a.bits && a.n >> c.shift === c.net) ? "ok" : "denied", ip };
 }
@@ -345,7 +349,7 @@ var BUILD = {
     return out;
   },
   async radio(env, deps) {
-    return pick(await table(env, "radio", deps), { at: "\u0E27\u0E31\u0E19\u0E40\u0E27\u0E25\u0E32\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", operator: "\u0E40\u0E08\u0E49\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E27\u0E34\u0E17\u0E22\u0E38", unit: "\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E41\u0E08\u0E49\u0E07", reporter: "\u0E0A\u0E37\u0E48\u0E2D \u0E23\u0E1B\u0E20./\u0E1C\u0E39\u0E49\u0E41\u0E08\u0E49\u0E07", type: "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C", place: "\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E40\u0E01\u0E34\u0E14\u0E40\u0E2B\u0E15\u0E38", detail: "\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14/\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21", action: "\u0E01\u0E32\u0E23\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23\u0E02\u0E2D\u0E07\u0E28\u0E39\u0E19\u0E22\u0E4C", status: "\u0E2A\u0E16\u0E32\u0E19\u0E30" }, ["at", "type"]).filter((r) => r.at);
+    return pick(await table(env, "radio", deps), { at: "\u0E27\u0E31\u0E19\u0E40\u0E27\u0E25\u0E32\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", operator: "\u0E40\u0E08\u0E49\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E27\u0E34\u0E17\u0E22\u0E38", unit: "\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E41\u0E08\u0E49\u0E07", reporter: "\u0E0A\u0E37\u0E48\u0E2D \u0E23\u0E1B\u0E20./\u0E1C\u0E39\u0E49\u0E41\u0E08\u0E49\u0E07", type: "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C", place: "\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E40\u0E01\u0E34\u0E14\u0E40\u0E2B\u0E15\u0E38", detail: "\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14/\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21", action: "\u0E01\u0E32\u0E23\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23\u0E02\u0E2D\u0E07\u0E28\u0E39\u0E19\u0E22\u0E4C", status: "\u0E2A\u0E16\u0E32\u0E19\u0E30" }, ["at", "type"]).filter((r) => r.at).map((r) => ({ ...r, at: normDT(r.at) || r.at }));
   },
   async events(env, deps) {
     const t = await table(env, "events", deps);
@@ -393,9 +397,14 @@ async function session(request, env, deps) {
   const row = await env.DB.prepare("SELECT staff, name, unit, role, exp FROM sessions WHERE id = ?").bind(await sha(tok)).first();
   return row && row.exp > deps.now() ? row : null;
 }
+async function roleOf(env, staffHash) {
+  for (const c of str(env.ADMIN_CODES).split(/[\s,]+/).filter(Boolean)) if ((await sha("staff:" + c)).slice(0, 32) === staffHash) return "admin";
+  return "user";
+}
 async function need(request, env, deps, admin) {
   const s = await session(request, env, deps);
   if (!s) throw new Err(401, "no-session");
+  s.role = await roleOf(env, s.staff);
   if (admin && s.role !== "admin") throw new Err(403, "forbidden");
   return s;
 }
@@ -701,31 +710,30 @@ async function handle(request, env, deps) {
       return await asset(env, path === "/" ? "index.html" : path.slice(1), deps, url.origin);
     }
     if (path === "/api/health") {
-      const out = { ok: true, ref: str(env.ASSET_REF) || (env.ASSETS ? "pages" : ""), network: net.mode, now: bkk(deps.now()), ai: env.LLM_API_URL ? "external" : env.AI && env.AI_MODEL ? "workers-ai" : "none", admins: str(env.ADMIN_CODES) ? "set" : "unset" };
-      if (url.searchParams.get("probe") === "1") {
-        out.sources = {};
-        for (const k of Object.keys(SOURCES(env))) {
-          try {
-            await table(env, k, deps);
-            out.sources[k] = "ok";
-          } catch (e) {
-            out.sources[k] = e instanceof Err ? e.code : "internal";
-          }
-        }
+      if (url.searchParams.get("probe") !== "1") return json({ ok: true, now: bkk(deps.now()) });
+      await need(request, env, deps, true);
+      const out = { ok: true, ref: str(env.ASSET_REF) || (env.ASSETS ? "pages" : ""), network: net.mode, now: bkk(deps.now()), ai: env.LLM_API_URL ? "external" : env.AI && env.AI_MODEL ? "workers-ai" : "none", admins: str(env.ADMIN_CODES) ? "set" : "unset", sources: {} };
+      for (const k of Object.keys(SOURCES(env))) {
         try {
-          await env.DB.prepare("SELECT 1 AS x").first();
-          out.db = "ok";
+          await table(env, k, deps);
+          out.sources[k] = "ok";
         } catch (e) {
-          out.db = "error";
+          out.sources[k] = e instanceof Err ? e.code : "internal";
         }
+      }
+      try {
+        await env.DB.prepare("SELECT 1 AS x").first();
+        out.db = "ok";
+      } catch (e) {
+        out.db = "error";
       }
       return json(out);
     }
     if (path === "/api/me") {
-      const s = net.mode === "ok" ? await session(request, env, deps) : null;
-      return s ? json({ ok: true, user: { name: s.name, unit: s.unit, role: s.role }, exp: s.exp }) : json({ ok: false, code: net.mode === "ok" ? "no-session" : "network-not-configured", ip: net.mode === "ok" ? void 0 : net.ip }, 401);
+      const s = await session(request, env, deps);
+      if (s) s.role = await roleOf(env, s.staff);
+      return s ? json({ ok: true, user: { name: s.name, unit: s.unit, role: s.role }, exp: s.exp }) : json({ ok: false, code: "no-session" }, 401);
     }
-    if (net.mode !== "ok") throw new Err(403, "network-not-configured");
     const m = request.method;
     if (path === "/api/login" && m === "POST") return await login(request, env, deps, net);
     if (path === "/api/logout" && m === "POST") {
@@ -779,6 +787,7 @@ export {
   Err,
   SCHEMA,
   _reset,
+  clientIp,
   index_default as default,
   handle,
   ipNum,

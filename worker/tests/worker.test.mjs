@@ -39,7 +39,7 @@ const fetchMock = async (u, o) => { u = String(u);
   return new Response('', { status: 404 }); };
 let NOW = Date.parse('2026-11-15T19:00:00+07:00');
 const deps = { fetch: fetchMock, now: () => NOW };
-const ENV = (o = {}) => Object.assign({ DB: db, ASSET_REF: '7c183a7', ALLOWED_CIDRS: '10.20.0.0/16, 2001:db8:abcd::/48', ADMIN_CODES: '4567', SHEET_MAIN: 'MOCKMAIN', SHEET_LF: 'MOCKLF', SHEET_OPS: 'MOCKOPS', SHEET_EVENTS: 'MOCKEV', SHEET_GPS: 'MOCKGPS', AI_MODEL: '@cf/mock/model',
+const ENV = (o = {}) => Object.assign({ DB: db, ASSET_REF: '7c183a7', ADMIN_CODES: '4567', SHEET_MAIN: 'MOCKMAIN', SHEET_LF: 'MOCKLF', SHEET_OPS: 'MOCKOPS', SHEET_EVENTS: 'MOCKEV', SHEET_GPS: 'MOCKGPS', AI_MODEL: '@cf/mock/model',
   AI: { run: async (model, input) => { aiCalls.push({ model, input }); return { response: ENV.aiReply || 'เดือน พ.ย. 2569 มีเหตุการณ์รวม 3 เหตุการณ์ (ข้อมูล ณ 15 พ.ย. 2569 19:00 น.)' }; } } }, o);
 let db = d1();
 const req = (p, o = {}) => new Request('https://hub.example.test' + p, { method: o.method || 'GET', headers: Object.assign({ 'CF-Connecting-IP': o.ip || '10.20.5.9' }, o.cookie ? { Cookie: o.cookie } : {}, o.origin ? { Origin: o.origin } : {}, o.body ? { 'content-type': 'application/json' } : {}), body: o.body ? JSON.stringify(o.body) : undefined });
@@ -53,14 +53,23 @@ ok('CIDR: IPv4/IPv6 และไม่รับช่วงกว้างเก
 ok('บุคคลในเหตุการณ์: แยกประเภท/ชื่อ/อาการ ไม่มีเบอร์โทรและรหัสนักศึกษา', (() => { const p = persons('[คนที่ 1] ประเภท: นักศึกษา | ชื่อ: ก | โทร: 081 | อาการ: ถลอก | รหัส: 6915524 [คนที่ 2] ประเภท: บุคลากร | ชื่อ: - | อาการ: เสียชีวิต'); return p.length === 2 && p[0].type === 'นักศึกษา' && !/081|6915524/.test(JSON.stringify(p)) && p[1].dead === true && p[1].name === ''; })());
 
 // ---------- เครือข่าย ----------
-let r = await run('/api/login', { method: 'POST', body: { code: '0123' } }, ENV({ ALLOWED_CIDRS: '' })); ok('ยังไม่กำหนดเครือข่าย → ปิด Login (403 network-not-configured)', r.s === 403 && r.j.code === 'network-not-configured');
-r = await run('/api/data?dataset=staff', {}, ENV({ ALLOWED_CIDRS: '' })); ok('ยังไม่กำหนดเครือข่าย → ข้อมูลภายในปิดทั้งหมด', r.s === 403);
-r = await run('/', {}, ENV({ ALLOWED_CIDRS: '' })); ok('ยังไม่กำหนดเครือข่าย → ยังเปิดหน้าเว็บ (ไม่มีข้อมูลบุคคล) ได้', r.s === 200 && /<html/i.test(r.t));
-r = await run('/', { ip: '203.0.113.7' }); ok('IP นอกรายการ → 403 ทั้งหน้าเว็บ พร้อมแสดง IP ที่ระบบเห็น', r.s === 403 && /203\.0\.113\.7/.test(r.t));
-r = await run('/api/login', { method: 'POST', body: { code: '0123' }, ip: '203.0.113.7' }); ok('IP นอกรายการ → Login ไม่ได้แม้รหัสถูก', r.s === 403 && r.j.code === 'network-denied');
-r = await run('/api/img?id=' + IMG1, { ip: '203.0.113.7' }); ok('IP นอกรายการ → บริการภาพปิด', r.s === 403);
-r = await run('/api/me', { ip: '2001:db8:abcd:1::5' }); ok('IPv6 ในช่วงที่อนุญาต → ผ่านด่านเครือข่าย (ยังไม่มี session = 401)', r.s === 401 && r.j.code === 'no-session');
-r = await run('/api/health', {}, ENV({ ALLOWED_CIDRS: 'not-an-ip' })); ok('ค่าเครือข่ายผิดรูปแบบ → ปิดทั้งหมด (503) ไม่เปิดกว้าง', r.s === 503);
+// ข้อกำหนด 16 พ.ย. 2569: ไม่บังคับเครือข่าย — เข้าได้จากทุกเครือข่ายด้วยรหัสพนักงาน · ด่านเครือข่ายเป็นตัวเลือก (NETWORK_GATE=on) ปิดไว้เป็นค่าเริ่มต้น
+const GATE = { NETWORK_GATE: 'on', ALLOWED_CIDRS: '10.20.0.0/16, 2001:db8:abcd::/48' };
+let r = await run('/', { ip: '203.0.113.7' }); ok('ไม่มี ALLOWED_CIDRS (ค่าเริ่มต้น) → หน้าเว็บเปิดได้จากทุกเครือข่าย', r.s === 200 && /<html/i.test(r.t));
+{ db = d1(); _reset(); const x = await run('/api/login', { method: 'POST', body: { code: '0123' }, ip: '203.0.113.7' }); ok('ไม่มี ALLOWED_CIDRS → รหัสที่ถูกต้อง Login ได้จาก IP ใดก็ได้ (ไม่มี OTP/อีเมล/SSO)', x.s === 200 && x.j.ok === true && /HttpOnly/.test(x.h.get('set-cookie') || '')); }
+r = await run('/api/login', { method: 'POST', body: { code: '0123' }, ip: '203.0.113.8' }, ENV({ ALLOWED_CIDRS: '10.20.0.0/16' })); ok('มีค่า ALLOWED_CIDRS ค้างอยู่แต่ไม่ได้เปิด NETWORK_GATE → ไม่ปิด Login', r.s === 200);
+r = await run('/api/data?dataset=staff', { ip: '203.0.113.7' }); ok('ไม่มีด่านเครือข่าย แต่ไม่มี session → ข้อมูลภายในยังปิด (401)', r.s === 401 && r.j.code === 'no-session');
+r = await run('/api/img?id=' + IMG1, { ip: '203.0.113.7' }); ok('ไม่มีด่านเครือข่าย แต่ไม่มี session → ภาพภายในยังปิด (401)', r.s === 401);
+r = await run('/api/login', { method: 'POST', body: { code: '0123' } }, ENV({ ALLOWED_CIDRS: '' , CF: 1 })); { const q = new Request('https://hub.example.test/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: '9999' }) }); const x = await handle(q, ENV(), deps); ok('ไม่มี header CF-Connecting-IP → Login ไม่ล่ม (ใช้คีย์ unknown สำหรับจำกัดความถี่)', x.status === 401); }
+r = await run('/api/health'); ok('/api/health สาธารณะ: สถานะขั้นต่ำเท่านั้น (ไม่บอกแหล่งข้อมูล/ผู้ดูแล/เครือข่าย)', r.s === 200 && JSON.stringify(Object.keys(r.j)) === '["ok","now"]');
+r = await run('/api/health?probe=1'); ok('/api/health?probe=1 ไม่มี session → 401 (ไม่อ่านต้นทางซ้ำให้ใครก็ได้)', r.s === 401);
+// ด่านเครือข่ายแบบเลือกเปิด (ยังทำงานเมื่อผู้ดูแลเปิดเอง)
+r = await run('/', { ip: '203.0.113.7' }, ENV(GATE)); ok('[ตัวเลือก] เปิด NETWORK_GATE → IP นอกรายการ 403 ทั้งหน้าเว็บ', r.s === 403 && /203\.0\.113\.7/.test(r.t));
+r = await run('/api/login', { method: 'POST', body: { code: '0123' }, ip: '203.0.113.7' }, ENV(GATE)); ok('[ตัวเลือก] เปิด NETWORK_GATE → IP นอกรายการ Login ไม่ได้', r.s === 403 && r.j.code === 'network-denied');
+r = await run('/api/me', { ip: '2001:db8:abcd:1::5' }, ENV(GATE)); ok('[ตัวเลือก] IPv6 ในช่วงที่อนุญาต → ผ่านด่าน (ยังไม่มี session = 401)', r.s === 401 && r.j.code === 'no-session');
+r = await run('/api/health', {}, ENV({ NETWORK_GATE: 'on', ALLOWED_CIDRS: 'not-an-ip' })); const r6 = await run('/api/health', {}, ENV({ NETWORK_GATE: 'on' }));
+ok('[ตัวเลือก] เปิดด่านแต่ค่าเครือข่ายผิด/ว่าง → ปิดทั้งหมด (503) ไม่เปิดกว้าง', r.s === 503 && r6.s === 503);
+db = d1(); _reset();
 
 // ---------- Login / session ----------
 r = await run('/api/data?dataset=staff'); ok('ไม่มี session → /api/data 401', r.s === 401 && r.j.code === 'no-session');
@@ -75,6 +84,9 @@ ok('cookie: __Host- · HttpOnly · Secure · SameSite=Lax · ไม่มีร�
 ok('ฐานข้อมูล session ไม่เก็บรหัสพนักงานหรือ token ตรง ๆ', (() => { const row = db._db.prepare('SELECT * FROM sessions').get(); return row.id !== U.split('=')[1] && !Object.values(row).includes('0123'); })());
 r = await run('/api/me', { cookie: U }); ok('/api/me → ผู้ใช้ปัจจุบัน', r.s === 200 && r.j.user.unit === 'หน่วยสมมติ 1');
 const A = (await loginAs('4567')).cookie; r = await run('/api/me', { cookie: A }); ok('รหัสในรายการผู้ดูแล → role admin (คนอื่นไม่เป็นผู้ดูแลอัตโนมัติ)', r.j.user.role === 'admin');
+r = await run('/api/health?probe=1', { cookie: U }); const rp = await run('/api/health?probe=1', { cookie: A }); ok('/api/health?probe=1: ผู้ใช้ทั่วไป 403 · ผู้ดูแลเห็นสถานะแหล่งข้อมูล', r.s === 403 && rp.s === 200 && rp.j.sources.staff === 'ok' && rp.j.network === 'open');
+{ const n0 = await loginAs('8899', {}); const no = await run('/api/me', { cookie: n0.cookie }, ENV({ ADMIN_CODES: '' })); const w = await run('/api/roster', { method: 'POST', cookie: (await loginAs('4567', {})).cookie, body: { version: 0, op: 'add', team: '1', role: 'x', name: 'x' } }, ENV({ ADMIN_CODES: '' }));
+  ok('ไม่ตั้ง ADMIN_CODES → ผู้ใช้ Login ได้ตามปกติ แต่ไม่มีใครเป็นผู้ดูแล (แก้รายชื่อไม่ได้)', no.s === 200 && no.j.user.role === 'user' && w.s === 403); }
 r = await run('/api/login', { method: 'POST', body: { code: '0123' }, origin: 'https://evil.example' }); ok('Login จากเว็บอื่น (Origin ไม่ตรง) → 403', r.s === 403);
 
 // ---------- ชุดข้อมูลหลัง Login ครั้งเดียว ----------
@@ -132,7 +144,7 @@ r = await run('/api/logout', { method: 'POST', cookie: U }); const after = await
 ok('Logout → session ถูกลบฝั่งบริการ: ข้อมูลและภาพเข้าไม่ได้ด้วย cookie เดิม', r.s === 200 && /Max-Age=0/.test(r.h.get('set-cookie')) && after.s === 401 && afterImg.s === 401);
 NOW += 13 * 3600e3; r = await run('/api/data?dataset=staff', { cookie: A }); ok('session หมดอายุ (12 ชม.) → 401', r.s === 401); NOW -= 13 * 3600e3;
 db = d1(); _reset(); for (let i = 0; i < 8; i++) await loginAs('9' + i + '00'); a = await loginAs('0123'); ok('ลองรหัสผิด 8 ครั้งจาก IP เดียว → ล็อกชั่วคราว (429) แม้รหัสถูก', a.r.s === 429 && a.r.j.code === 'rate-limited');
-a = await loginAs('0123', { ip: '10.20.9.9' }); ok('IP อื่นในเครือข่ายยัง Login ได้', a.r.s === 200);
+a = await loginAs('0123', { ip: '10.20.9.9' }); ok('IP อื่นยัง Login ได้ (ล็อกเฉพาะ IP ที่ลองผิด)', a.r.s === 200);
 NOW += 11 * 60e3; a = await loginAs('0123'); ok('ครบเวลาล็อก → Login ได้อีก', a.r.s === 200); NOW -= 11 * 60e3;
 
 // ---------- ไฟล์หน้าเว็บ ----------
