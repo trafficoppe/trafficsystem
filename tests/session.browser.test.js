@@ -59,7 +59,7 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   await page.click('.incb-list .it .it-b'); await page.waitForSelector('.dlg');
   ok('เปิดรายละเอียด: บุคคล (ไม่มีเบอร์โทร) + ภาพผ่านบริการภาพของระบบ', /รายละเอียดบุคคล|ผู้บาดเจ็บ\/ผู้ป่วย/.test(await txt(page, '.dlg')) && !/โทร|000/.test(await txt(page, '.dlg')) && /\/api\/img\?id=MOCKDRIVEFILEID/.test(await page.getAttribute('.dlg img', 'src')) && await page.evaluate(() => { const i = document.querySelector('.dlg img'); return i.complete && i.naturalWidth > 0; }));
   await page.click('.dlg .btn.sec');
-  ok('สถิติสดจากบริการ: ยอดเหตุการณ์ของหน้าเปลี่ยนเป็นชุดที่อ่านสด (10 เหตุ) และมีเวลาอ่านล่าสุด', /เหตุการณ์ทั้งหมด\s*10/.test(await txt(page, '.kpis')) && /ตรวจข้อมูลล่าสุด/.test(await txt(page, '#stamp')), await txt(page, '.kpis'));
+  ok('สถิติสดจากบริการ: ยอดเหตุการณ์ของหน้าเปลี่ยนเป็นชุดที่อ่านสด (10 เหตุ) และมีเวลาอ่านล่าสุด', /เหตุการณ์ทั้งหมด\s*10/.test(await txt(page, '.kpis')) && /ข้อมูลสดอ่านเมื่อ \d{1,2} [ก-๙.]+ 25\d\d \d{2}:\d{2} น\./.test(await txt(page, '#stamp')) && /หมวดอื่นจากไฟล์สรุป/.test(await txt(page, '#stamp')), await txt(page, '.kpis') + ' | ' + await txt(page, '#stamp'));
   await go(page, 'guard-central'); await page.waitForSelector('details.fold');
   const dt = await page.locator('details.fold').first();
   ok('“นิยามและที่มา” (หมวดควบคุมงาน รปภ.) เป็นแถบพับ ปิดเป็นค่าเริ่มต้น กดแล้วเปิด ใช้คีย์บอร์ดได้', await dt.getAttribute('open') === null && await (async () => { await dt.locator('summary').focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(150); return (await dt.getAttribute('open')) !== null; })());
@@ -92,9 +92,9 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   await page.selectOption('.dv[data-ds="events"] select[aria-label="ระดับเหตุการณ์"]', 'all'); await page.fill('.dv[data-ds="events"] input[aria-label="ตั้งแต่"]', '2026-09-15'); await page.dispatchEvent('.dv[data-ds="events"] input[aria-label="ตั้งแต่"]', 'change'); await page.waitForTimeout(200);
   ok('กิจกรรมพิเศษ: กรองช่วงวันที่ → 2 รายการ', /^2 เหตุการณ์/.test(await txt(page, '.dv[data-ds="events"] .lu-count')));
   await page.click('.dv[data-ds="events"] button:has-text("ทั้งช่วงข้อมูล")'); await page.waitForTimeout(200);
-  await page.click('.dv[data-ds="events"] .it:has-text("ประตู 1") .it-b'); await page.waitForSelector('.dlg .gal-pic img');
-  ok('กิจกรรมพิเศษ: รายละเอียด + ภาพ 3 ภาพผ่านบริการภาพของระบบ', await T(page, '.dlg .gal-pic').count() === 3 && await page.evaluate(() => [...document.querySelectorAll('.dlg .gal-pic img')].every((i) => /^\/api\/img\?id=/.test(i.getAttribute('src')))));
-  await page.click('.dlg .gal-pic >> nth=0'); await page.waitForSelector('.lightbox'); await page.keyboard.press('ArrowRight'); await page.waitForTimeout(150);
+  await page.click('.dv[data-ds="events"] .it:has-text("ประตู 1") .it-b'); await page.waitForSelector('.dlg .gal-main img');
+  ok('กิจกรรมพิเศษ: รายละเอียด + ภาพหลัก (800/1600 ตามจอ) + รูปย่อ 3 ภาพผ่านบริการภาพของระบบ', await T(page, '.dlg .gal-th').count() === 3 && await page.evaluate(() => { const m = document.querySelector('.dlg .gal-main img'); return /^\/api\/img\?id=.+&w=800$/.test(m.getAttribute('src')) && /&w=1600 1600w/.test(m.getAttribute('srcset')) && [...document.querySelectorAll('.dlg .gal-th img')].every((i) => /&w=400$/.test(i.getAttribute('src'))); }));
+  await page.click('.dlg .gal-main'); await page.waitForSelector('.lightbox'); await page.keyboard.press('ArrowRight'); await page.waitForTimeout(150);
   ok('ภาพขยาย: เลื่อนดูภาพถัดไปได้ (ภาพที่ 2 / 3)', /ภาพที่ 2 \/ 3/.test(await txt(page, '.lightbox'))); await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await page.waitForTimeout(100);
   await shot(page, '04b_events', true);
   await go(page, 'grad-guard'); await page.waitForSelector('.dv[data-ds="gps"] .it');
@@ -105,7 +105,9 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   await page.selectOption('.dv[data-ds="gps"] select[aria-label="โซน"]', 'B'); await page.waitForTimeout(200);
   ok('GPS: กรองโซน → 1 รายงาน (จุด 2)', /^1 รายงาน/.test(await txt(page, '.dv[data-ds="gps"] .lu-count')) && /จุด 2/.test(await txt(page, '.dv[data-ds="gps"] .it-grid')));
   await page.selectOption('.dv[data-ds="gps"] select[aria-label="โซน"]', 'all'); await page.waitForTimeout(150); await page.click('.dv[data-ds="gps"] .it:has-text("จุด 1") .it-b'); await page.waitForSelector('.dlg');
-  ok('GPS: รายละเอียดมีความแม่นยำ ระยะจากจุด สถานะพิกัด พิกัด ณ เวลาที่ส่ง และภาพ', /ความแม่นยำ GPS\s*12 เมตร/.test(await txt(page, '.dlg')) && /ระยะจากจุดประจำ\s*5 เมตร/.test(await txt(page, '.dlg')) && /ณ เวลาที่ส่ง/.test(await txt(page, '.dlg')) && await T(page, '.dlg .gal-pic').count() === 1);
+  ok('GPS: รายละเอียดมีความแม่นยำ ระยะจากจุด สถานะพิกัด พิกัด ณ เวลาที่ส่ง และภาพ', /ความแม่นยำ GPS\s*12 เมตร/.test(await txt(page, '.dlg')) && /ระยะจากจุดประจำ\s*5 เมตร/.test(await txt(page, '.dlg')) && /ณ เวลาที่ส่ง/.test(await txt(page, '.dlg')) && await T(page, '.dlg .gal-main').count() === 1);
+  await page.waitForFunction(() => { const i = document.querySelector('.dlg .gal-main img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 8000 }).catch(() => {});
+  ok('[MOCK ตัวกลาง] ภาพ GPS ที่เป็นไฟล์ส่วนตัว: โหลดได้จริงผ่านตัวกลาง (ไม่ใช่กรอบเสีย)', await page.evaluate(() => { const i = document.querySelector('.dlg .gal-main img'); return !!i && i.naturalWidth > 0; }));
   await page.keyboard.press('Escape'); await shot(page, '04c_gps', true);
   await go(page, 'graduation'); ok('หน้า ปีการศึกษา 2568: การ์ด/ลิงก์ GPS ใช้ชื่อเดียวกันและพาไปหน้าใหม่', await T(page, 'section[aria-label="รายงาน รปภ.ปริญญา (GPS) ปีการศึกษา 2568"] a.more[href="#grad-2568-gps"]').count() === 1 && await T(page, '.tabs a[href="#grad-2568-gps"]').count() === 1);
   await go(page, 'report-radio'); await page.waitForSelector('.dv[data-ds="radio"]'); await page.waitForTimeout(400); ok('รายงานวิทยุ: เปิดได้โดยไม่ถาม Login ซ้ำ', !/ต้องเข้าสู่ระบบ|ยังไม่ได้เข้าสู่ระบบ/.test(await txt(page, '#view')) && await T(page, '#loginView').count() === 0);
@@ -144,12 +146,12 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
     ok('วันนี้: ส่วน “รายละเอียดเหตุการณ์วันนี้” อยู่หลังการ์ดข้อมูลวันนี้ และก่อนแนวโน้มรายเดือน', ord.indexOf('รายละเอียดเหตุการณ์วันนี้') === ord.indexOf('แนวโน้มรายเดือน') - 1 && ord.indexOf('รายละเอียดเหตุการณ์วันนี้') > 0, ord.join(' | '));
     const t = await txt(page, '.tdi');
     ok('[MOCK ข้อมูล] วันนี้ 2 เหตุการณ์ + แยกประเภท + “เหตุการณ์ที่ 1 / 2” + ลิงก์ไปรายงานทั้งหมด', /วันนี้ 2 เหตุการณ์ — /.test(t) && /อุบัติเหตุจากยานพาหนะ 1/.test(t) && /รับส่งผู้ป่วย 1/.test(t) && /เหตุการณ์ที่ 1 \/ 2/.test(t) && await T(page, '.tdi a[href="#traffic"]').count() === 1, t.slice(0, 300));
-    ok('รายละเอียดแบบเดิม: วันที่ไทย + เวลา · รับแจ้งจาก · พาหนะ “…ของ…ชนกับ…” · “ไม่มีผู้ได้รับบาดเจ็บ” · KPI · ภาพ 2 ภาพ', /วันที่เกิดเหตุ\s*\d{1,2} [ก-๙.]+ 25\d\d เวลา 11:25 น\./.test(t) && /รับแจ้งจาก\s*รปภ\. · รับแจ้งทาง วิทยุสื่อสาร/.test(t) && /รถจักรยานยนต์ ของนักศึกษา ชนกับ รถยนต์ ของบุคลากร/.test(t) && /ไม่มีผู้ได้รับบาดเจ็บ/.test(t) && await T(page, '.tdi .incd-kpi li.ok').count() === 1 && await T(page, '.tdi .gal-pic').count() === 2, t.slice(0, 500));
+    ok('รายละเอียดแบบเดิม: วันที่ไทย + เวลา · รับแจ้งจาก · พาหนะ “…ของ…ชนกับ…” · “ไม่มีผู้ได้รับบาดเจ็บ” · KPI · ภาพ 2 ภาพ', /วันที่เกิดเหตุ\s*\d{1,2} [ก-๙.]+ 25\d\d เวลา 11:25 น\./.test(t) && /รับแจ้งจาก\s*รปภ\. · รับแจ้งทาง วิทยุสื่อสาร/.test(t) && /รถจักรยานยนต์ ของนักศึกษา ชนกับ รถยนต์ ของบุคลากร/.test(t) && /ไม่มีผู้ได้รับบาดเจ็บ/.test(t) && await T(page, '.tdi .incd-kpi li.ok').count() === 1 && await T(page, '.tdi .gal-th').count() === 2 && await T(page, '.tdi .gal-main img').count() === 1, t.slice(0, 500));
     const before = log.api.filter((x) => /dataset=incidents/.test(x)).length;
     await page.click('.tdi button[aria-label="เหตุการณ์ถัดไป"]'); await page.waitForTimeout(150); const t2 = await txt(page, '.tdi');
     ok('ถัดไป → เหตุการณ์ที่ 2 / 2 (รับส่งผู้ป่วย 1 คน · ประเภทผู้ป่วย ไม่มีชื่อ/เบอร์) และไม่โหลดข้อมูลใหม่', /เหตุการณ์ที่ 2 \/ 2/.test(t2) && /ผู้บาดเจ็บ\/ผู้ป่วย\s*1 คน — นักศึกษา/.test(t2) && !/ผู้บาดเจ็บสมมติ|000/.test(t2) && log.api.filter((x) => /dataset=incidents/.test(x)).length === before, t2.slice(0, 300));
     await page.selectOption('.tdi select', 'รับส่งผู้ป่วย'); await page.waitForTimeout(150); ok('กรองประเภท → เหลือ 1 / 1', /เหตุการณ์ที่ 1 \/ 1/.test(await txt(page, '.tdi')));
-    await page.selectOption('.tdi select', 'all'); await page.click('.tdi .gal-pic >> nth=0'); await page.waitForSelector('.lightbox'); ok('ภาพในรายละเอียดวันนี้ขยายได้', /ภาพที่ 1 \/ 2/.test(await txt(page, '.lightbox'))); await page.keyboard.press('Escape');
+    await page.selectOption('.tdi select', 'all'); await page.click('.tdi .gal-main'); await page.waitForSelector('.lightbox'); ok('ภาพในรายละเอียดวันนี้ขยายได้', /ภาพที่ 1 \/ 2/.test(await txt(page, '.lightbox'))); await page.keyboard.press('Escape');
     await shot(page, '05c_dashboard_today', true); }
   await page.request.get(BASE + '/__test/today/off'); await page.reload(); await page.waitForSelector('.tdi');
   ok('อ่านสำเร็จแต่ไม่มีของวันนี้ → “ไม่พบรายการของวันนี้ ณ เวลาตรวจ …” + เหตุการณ์ล่าสุดแยกหัวข้อ (ไม่ใช่ของวันนี้)', /ไม่พบรายการของวันนี้ ณ เวลาตรวจ \d{2}:\d{2} น\./.test(await txt(page, '.tdi')) && /เหตุการณ์ล่าสุดในระบบ \(ไม่ใช่ของวันนี้\)/.test(await txt(page, '.tdi')));
@@ -158,6 +160,56 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   await page.request.get(BASE + '/__test/source/up'); await page.click('section[aria-label="รายละเอียดเหตุการณ์วันนี้"] .dv-err button'); await page.waitForSelector('.tdi');
   ok('กด “ลองใหม่” หลังต้นทางกลับมา → แสดงผลได้', await T(page, '.tdi').count() === 1);
   log.err = log.err.filter((e) => !/Failed to load|502|503/.test(e));
+  // ---------- 6.6) รอบ 10 ----------
+  await page.request.get(BASE + '/__test/today/on'); await page.goto(BASE + '/#dashboard'); await page.reload(); await page.waitForSelector('.tdi .incd');
+  { const h = await page.evaluate(() => { const a = [...document.querySelectorAll('#view h2')], d = a.find((x) => /ข้อมูลวันนี้/.test(x.textContent)), t = a.find((x) => /รายละเอียดเหตุการณ์วันนี้/.test(x.textContent)), base = a.find((x) => /แนวโน้มรายเดือน/.test(x.textContent));
+      const fs2 = (e) => parseFloat(getComputedStyle(e).fontSize); return { d: d.textContent.trim(), t: t.textContent.trim(), fd: fs2(d), ft: fs2(t), fb: fs2(base), note: t.closest('section').querySelector('.note').textContent,
+        ty: fs2(document.querySelector('.tdi .incd-type')), pl: fs2(document.querySelector('.tdi .incd-place')), tyT: document.querySelector('.tdi .incd-type').textContent, plT: document.querySelector('.tdi .incd-place').textContent, ow: document.documentElement.scrollWidth <= innerWidth }; });
+    ok('หัวข้อ “📊 ข้อมูลวันนี้” และ “🚨 รายละเอียดเหตุการณ์วันนี้” ใหญ่กว่าหัวข้อทั่วไป (21–28px) · ข้อความ “เวลาประเทศไทย”', h.d === '📊 ข้อมูลวันนี้' && h.t === '🚨 รายละเอียดเหตุการณ์วันนี้' && h.fd >= 21 && h.fd <= 28 && h.ft >= 21 && h.fd > h.fb && /ตามวันที่เกิดเหตุ \(เวลาประเทศไทย\)/.test(h.note), JSON.stringify(h));
+    ok('ประเภทเหตุการณ์มีไอคอน+ข้อความ (≈20–24px) และสถานที่ “📍 …” (≈18–22px) แยกบรรทัด · ไม่ล้นแนวนอน', /^🚗 อุบัติเหตุจากยานพาหนะ$/.test(h.tyT.trim()) && /^📍 จุดสมมติ 21/.test(h.plT.trim()) && h.ty >= 19 && h.ty <= 25 && h.pl >= 17 && h.pl <= 23 && h.ow, JSON.stringify(h)); }
+  { const im = await page.evaluate(() => { const i = document.querySelector('.tdi .gal-main img'), r = i.getBoundingClientRect(); return { fit: getComputedStyle(i).objectFit, src: i.getAttribute('src'), set: i.getAttribute('srcset'), w: r.width, cur: i.currentSrc }; });
+    ok('ภาพหลักเหตุการณ์: ไม่ใช้รูปย่อ 400px ขยายเป็นภาพใหญ่ (ใช้ 800/1600 ตามจอ) · object-fit: contain ไม่ครอป', im.fit === 'contain' && /&w=800$/.test(im.src) && /&w=1600 1600w/.test(im.set) && !/&w=400$/.test(im.cur), JSON.stringify(im)); }
+  await shot(page, '10a_dashboard_headings_today');
+  await page.request.get(BASE + '/__test/today/off');
+  // GPS: ปุ่มระบบต้นทาง + ภาพส่วนตัวเมื่อยังไม่มีตัวกลาง
+  await go(page, 'grad-2568-gps'); await page.waitForSelector('.dv[data-ds="gps"] .it');
+  { const L = await page.$$eval('section[aria-label="ระบบต้นทาง (เปิดเมื่อต้องส่งรายงาน)"] a', (a) => a.map((x) => ({ t: x.textContent.trim(), h: x.href, b: x.target })));
+    const adm = L.find((x) => /^รายงานผลการปฏิบัติงาน/.test(x.t)), srch = L.find((x) => /^ค้นหาข้อมูลเจ้าหน้าที่ปฏิบัติงาน/.test(x.t));
+    ok('GPS: ปุ่ม “รายงานผลการปฏิบัติงาน” → ?page=admin (แท็บใหม่) · ปุ่มค้นหาเปลี่ยนชื่อเป็น “ค้นหาข้อมูลเจ้าหน้าที่ปฏิบัติงาน” URL เดิม', !!adm && /AKfycbzn86oqYMYzjb5YmdjeKZueLVb8UWR5eMDMQWTTIzDhwWko7gQhgf6bov_XljvyIwIR\/exec\?page=admin$/.test(adm.h) && adm.b === '_blank' && !!srch && /AKfycbyAX7zwgdHsXgn/.test(srch.h) && !/page=admin/.test(srch.h) && !L.some((x) => /^ค้นหาข้อมูลเจ้าหน้าที่$/.test(x.t)), JSON.stringify(L)); }
+  ok('GPS: รายงานที่ไม่มี File ID → “ไม่มีรูปภาพ”', /ไม่มีรูปภาพ/.test(await txt(page, '.dv[data-ds="gps"] .it:has-text("จุด 2")')));
+  await page.request.get(BASE + '/__test/relay/off'); await page.reload(); await page.waitForSelector('.dv[data-ds="gps"] .it');
+  await page.click('.dv[data-ds="gps"] .it:has-text("จุด 1") .it-b'); await page.waitForSelector('.dlg .gal-main.noimg .img-why'); await page.waitForFunction(() => !/กำลังตรวจ/.test(document.querySelector('.dlg .img-why').textContent));
+  { const t = await txt(page, '.dlg .gal-stage'); ok('[MOCK] ภาพ GPS ส่วนตัว + ยังไม่ได้เปิดตัวกลาง → บอกสาเหตุ + ปุ่มลองใหม่ (ไม่ใช่ “ไม่มีรูปภาพ”)', /ไฟล์ส่วนตัว — ยังไม่ได้เปิดตัวกลางอ่านภาพ/.test(t) && !/ไม่มีรูปภาพ/.test(t) && await T(page, '.dlg .img-retry').count() === 1, t); }
+  await page.request.get(BASE + '/__test/relay/on'); await page.click('.dlg .img-retry'); await page.waitForFunction(() => { const i = document.querySelector('.dlg .gal-main img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 8000 }).catch(() => {});
+  ok('[MOCK] เปิดตัวกลางแล้วกด “ลองใหม่” → ภาพจริงแสดง', await page.evaluate(() => { const i = document.querySelector('.dlg .gal-main img'); return !!i && i.naturalWidth > 0; }));
+  await page.keyboard.press('Escape');
+  // ให้ความช่วยเหลือ: คลิกภาพ → รายละเอียด + ภาพ (ข้อมูลเท่าที่ต้นทางมี)
+  await go(page, 'area-assist'); await page.waitForSelector('.it:has-text("ให้ความช่วยเหลือ")'); await page.click('.it:has-text("ให้ความช่วยเหลือ") .it-b'); await page.waitForSelector('.dlg .gal-main img');
+  { const t = await txt(page, '.dlg'); ok('ให้ความช่วยเหลือ: เปิดรายละเอียดพร้อมภาพ · วันที่ เวลาจากชื่อไฟล์ หมวดหมู่ · “ต้นทางยังไม่ได้บันทึกรายละเอียดการช่วยเหลือ” · ขยายภาพต่อได้', /14 พ\.ย\. 2569/.test(t) && /09:05 น\./.test(t) && /ช่วยเหลือ/.test(t) && /ต้นทางยังไม่ได้บันทึกรายละเอียดการช่วยเหลือ/.test(t) && !/ผู้ส่งสมมติ/.test(t), t.slice(0, 300)); }
+  await page.click('.dlg .gal-main'); await page.waitForSelector('.lightbox'); await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  // หน้ารถเข้า: ระบบที่เกี่ยวข้องเริ่มแบบยุบ เปิดด้วยคีย์บอร์ด
+  await go(page, 'gate'); await page.waitForSelector('.sys-fold .fold-btn');
+  { const b0 = await page.evaluate(() => { const b = document.querySelector('.sys-fold .fold-btn'); return { e: b.getAttribute('aria-expanded'), hid: document.getElementById(b.getAttribute('aria-controls')).hidden, t: b.textContent }; });
+    await page.focus('.sys-fold .fold-btn'); await page.keyboard.press('Enter'); await page.waitForTimeout(100);
+    const b1 = await page.evaluate(() => { const b = document.querySelector('.sys-fold .fold-btn'); return { e: b.getAttribute('aria-expanded'), cards: document.querySelectorAll('#' + b.getAttribute('aria-controls') + ' .sys-card, #' + b.getAttribute('aria-controls') + ' .card').length }; });
+    ok('หน้ารถเข้า: “ระบบและแบบฟอร์มที่เกี่ยวข้อง 2 ระบบ” เริ่มแบบยุบ → Enter เปิดการ์ดลงมา (aria-expanded ถูกต้อง) · หน้าอื่นไม่ยุบตาม', b0.e === 'false' && b0.hid && /ระบบและแบบฟอร์มที่เกี่ยวข้อง\s*2 ระบบ/.test(b0.t) && b1.e === 'true' && b1.cards >= 2, JSON.stringify([b0, b1])); }
+  await shot(page, '10b_gate_fold_open');
+  await go(page, 'grad-2568-gps'); ok('หน้า GPS ยังแสดงการ์ดระบบตามปกติ (ไม่ยุบตาม)', await T(page, '.sys-fold').count() === 0 && await T(page, 'section[aria-label="ระบบต้นทาง (เปิดเมื่อต้องส่งรายงาน)"] .sys-grid').count() === 1);
+  // ทะเบียนนักศึกษา–จยย. / เรือนไทย / สถานะแหล่งข้อมูล (ข้อมูลสดผ่านตัวกลาง MOCK)
+  await page.reload(); await page.waitForTimeout(800); await go(page, 'vehicle'); await page.waitForSelector('section[aria-label="นักศึกษา – รถจักรยานยนต์"]');
+  { const t = await txt(page, 'section[aria-label="นักศึกษา – รถจักรยานยนต์"]'); ok('[MOCK ตัวกลาง] นักศึกษา–จยย.: รายการลงทะเบียน 3 · จำนวนรถตามที่กรอก 4 คัน แยกกัน · ไม่มีชื่อ/ทะเบียน', /รายการลงทะเบียน\s*3/.test(t) && /จำนวนรถตามที่กรอก\s*4/.test(t) && !/ชื่อนักศึกษาสมมติ|กข1/.test(t), t.slice(0, 300)); }
+  ok('หน้าทะเบียนยานพาหนะ: การ์ด “นักศึกษา – รถจักรยานยนต์” มีตัวเลขสด (ไม่ใช่ “ไม่มีข้อมูลยืนยัน”)', /นักศึกษา – รถจักรยานยนต์\s*3/.test(await txt(page, '.kpis')), await txt(page, '.kpis'));
+  await go(page, 'parking'); await page.waitForSelector('.dv[data-ds="ruenthai"] table');
+  { const t = await txt(page, '.dv[data-ds="ruenthai"]'); ok('[MOCK ตัวกลาง] เรือนไทย: 3 ชุด · รถ 4 คัน · กลุ่ม/ประเภทรถ/LPR (รวมไม่ระบุ) · ไม่มีชื่อ/ทะเบียน', /แบบสำรวจตามตัวกรอง\s*3/.test(t) && /จำนวนรถ \(Car_Count\)\s*4/.test(t) && /รถกระบะ/.test(t) && /\(ไม่ระบุ\)/.test(t) && !/ชื่อผู้ตอบสมมติ|ทบ1/.test(t), t.slice(0, 300)); }
+  await page.selectOption('.dv[data-ds="ruenthai"] select[aria-label="สถานะ LPR"]', 'อัปเดตแล้ว'); await page.waitForTimeout(150); ok('เรือนไทย: กรองสถานะ LPR → 1 ชุด', /^1 ชุด/.test(await txt(page, '.dv[data-ds="ruenthai"] .lu-count')));
+  await shot(page, '10c_ruenthai_live', true);
+  await go(page, 'settings'); await page.waitForSelector('section[aria-label="อ่านข้อมูลสดจากต้นทาง"] table');
+  { const t = await txt(page, 'section[aria-label="อ่านข้อมูลสดจากต้นทาง"]'); ok('ตั้งค่า: สถานะอ่านข้อมูลสดทีละแหล่ง (อ่านสำเร็จ + เวลา · ช่องทาง) แยกจากไฟล์สรุป', /รายงานเหตุการณ์\s*อ่านสำเร็จ/.test(t) && /ทะเบียนนักศึกษา–รถจักรยานยนต์[^\n]*\s*อ่านสำเร็จ/.test(t) && /ตัวกลางของเจ้าของไฟล์/.test(t) && /ไฟล์สรุป \(snapshot\) สร้างเมื่อ/.test(await txt(page, 'section[aria-label="สถานะข้อมูลและเวลาอัปเดต"]')), t.slice(0, 400)); }
+  await page.request.get(BASE + '/__test/relay/off'); await page.reload(); await page.waitForSelector('section[aria-label="อ่านข้อมูลสดจากต้นทาง"] table');
+  ok('ตั้งค่า: ยังไม่ได้เปิดตัวกลาง → ไฟล์ส่วนตัวขึ้น “อ่านไม่สำเร็จ” พร้อมสาเหตุเฉพาะ (ชุดอื่นยังอ่านสำเร็จ)', /อ่านไม่สำเร็จ\s*ลิงก์แชร์ของ Sheet|ตัวกลางของเจ้าของไฟล์\s*ไฟล์ต้นทางเป็นส่วนตัว — ยังไม่ได้เปิดตัวกลาง/.test(await txt(page, 'section[aria-label="อ่านข้อมูลสดจากต้นทาง"]')) && /รายงานเหตุการณ์\s*อ่านสำเร็จ/.test(await txt(page, 'section[aria-label="อ่านข้อมูลสดจากต้นทาง"]')));
+  await go(page, 'vehicle'); await page.waitForTimeout(400);
+  ok('ยังไม่ได้เปิดตัวกลาง: การ์ดนักศึกษา–จยย. บอกสาเหตุ (ไม่ใช่ “ยังเชื่อมต่อไม่ได้” กว้าง ๆ)', /ไฟล์ต้นทางเป็นส่วนตัว — ยังไม่ได้เปิดตัวกลาง/.test(await txt(page, '#view')), (await txt(page, '#view')).slice(0, 300));
+  await page.request.get(BASE + '/__test/relay/on'); await page.reload(); await page.waitForTimeout(600);
   // ---------- 7) ผู้ช่วย AI ----------
   await go(page, 'dashboard'); await page.waitForSelector('.now');
   ok('ปุ่มผู้ช่วย: รูปหุ่นยนต์ (ไฟล์ assets/images/ai-assistant.png โหลดได้) + ป้าย “ถาม AI”', (await txt(page, '#chatFab')) === 'ถาม AI' && await page.evaluate(() => { const i = document.querySelector('#chatFab .fab-bot'); return i.complete && i.naturalWidth === 256 && /assets\/images\/ai-assistant\.png$/.test(i.src); }));

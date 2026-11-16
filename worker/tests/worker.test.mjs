@@ -29,11 +29,34 @@ const SHEETS = {
   '1074767452': [['Report_ID', 'Report_Type', 'Guard_Name', 'Guard_Company', 'Duty_Post', 'Duty', 'Event_Type', 'Report_Detail', 'Latitude', 'Longitude', 'GPS_Accuracy_M', 'Distance_From_Post_M', 'Geo_Status', 'Photo_File_ID', 'Record_Status', 'Report_Code', 'Report_Date', 'Report_Time', 'Guard_ID', 'Zone', 'Event_Severity', 'GPS_Status'], ['1', 'CHECKIN', 'รปภ.สมมติ', 'บริษัทสมมติ', 'จุด 1', 'เวรสมมติ', '', 'ปกติ', '13.79', '100.32', '12', '5', 'IN_RANGE', IMG2, 'COMPLETE', 'R-1', '2026-10-05', '08:00', 'G-1', 'A', '', 'OK']]
 };
 let sourceDown = false, aiCalls = [];
+// รอบ 10: Sheet ส่วนตัว (ข้อมูลสมมติ) ที่อ่านได้เฉพาะผ่านตัวกลาง · ชื่อ/เบอร์/ทะเบียนเป็นค่าสมมติ และต้องไม่หลุดออกจากบริการ
+const RELAY_URL = 'https://script.google.com/macros/s/MOCKRELAYDEPLOYMENT000000000001/exec', PRIV = 'MOCKPRIVATEGPSPHOTO00000000009';
+let relaySecret = null, relayHtml = false; const relayCalls = [];
+const RELAY_TABLES = {
+  studentMoto: [['Timestamp', 'RefCode', 'วิทยาเขต', 'คณะ/สถาบัน/ส่วนงาน', 'ชื่อ-นามสกุล', 'ประเภทนักศึกษา', 'ระดับการศึกษา', 'เบอร์มือถือ', 'ประเภทเครื่องยนต์', 'จำนวนรถ', 'รถ1_ทะเบียน', 'รถ2_ทะเบียน', 'รถ3_ทะเบียน', 'รหัสนักศึกษา'],
+    ['6/7/2026, 15:07:04', 'MR-1', 'วิทยาเขตศาลายา', 'คณะสมมติ ก', 'นักศึกษาสมมติ', 'ปริญญาตรี', 'ปริญญาตรี', '0800000000', 'สันดาป', '1', 'กข1234', '', '', '6500000'],
+    ['7/7/2026, 10:00:00', 'MR-2', 'วิทยาเขตพญาไท', 'คณะสมมติ ข', 'นักศึกษาสมมติ', '', '', '0800000001', 'ไฟฟ้า', '2', 'กข5678', '', '', '6500001'],
+    ['7/7/2026, 10:05:00', 'MR-1', 'วิทยาเขตศาลายา', 'คณะสมมติ ก', 'นักศึกษาสมมติ', '', '', '', 'สันดาป', '1', 'กข1234', '', '', ''],
+    ['', '', 'วิทยาเขตศาลายา', '', '', '', '', '', '', '', '', '', '', ''],
+    ['1/8/2026, 09:00:00', 'MR-3', 'วิทยาเขตศาลายา', 'คณะสมมติ ก', 'นักศึกษาสมมติ', '', '', '', 'สันดาป', '', 'กข9999', 'กข8888', '', '']],
+  ruenthai: [['Timestamp', 'Ref_Code', 'Token_Code', 'Group_Type', 'Group_Label', 'User_SubType', 'Faculty_Dept', 'Sub_Unit_Project', 'Full_Name', 'Phone', 'Email', 'Car_Count', 'Car1_Type', 'Car1_Plate', 'Car2_Type', 'Car2_Plate', 'LPR_Status', 'Payload_Hash'],
+    ['2026-11-02 7:01:02', 'RT-1', 'TOKEN-SECRET-1', 'B', 'กลุ่มที่ 2: บุคลากรส่วนงานอื่น', 'จอดประจำ', 'ส่วนงานสมมติ', 'หน่วยสมมติ', 'ผู้ตอบสมมติ', '0811111111', 'a@example.test', '1', 'รถยนต์ทั่วไป', 'ทบ1111', '', '', 'รออัปเดตเข้ากล้อง', 'HASH1'],
+    ['2026-11-03 8:00:00', 'RT-2', 'TOKEN-SECRET-2', 'A', 'กลุ่มที่ 1: บุคลากรคณะ', 'จอดประจำ', 'คณะสมมติ', '', 'ผู้ตอบสมมติ', '0822222222', 'b@example.test', '2', 'รถยนต์ทั่วไป', 'ทบ2222', 'รถกระบะ', 'ทบ3333', '', 'HASH2'],
+    ['2026-11-03 9:00:00', 'RT-1', 'TOKEN-SECRET-1', 'B', 'กลุ่มที่ 2: บุคลากรส่วนงานอื่น', 'จอดประจำ', 'ส่วนงานสมมติ', 'หน่วยสมมติ', '', '', '', '1', 'รถยนต์ทั่วไป', 'ทบ1111', '', '', 'รออัปเดตเข้ากล้อง', 'HASH1'],
+    ['2026-11-04 9:00:00', 'RT-3', 'TOKEN-SECRET-3', 'C', 'กลุ่มที่ 3: อื่น ๆ', 'อื่น ๆ', '', '', '', '', '', '2', 'รถยนต์ทั่วไป', 'ทบ4444', '', '', 'อัปเดตแล้ว', 'HASH3']]
+};
 const fetchMock = async (u, o) => { u = String(u);
   let m = /docs\.google\.com\/spreadsheets\/d\/[\w-]+\/export\?format=csv&gid=(\d+)/.exec(u);
   if (m) { if (sourceDown) return new Response('<html>Sign in</html>', { status: 200, headers: { 'content-type': 'text/html' } }); return SHEETS[m[1]] ? new Response(csv(SHEETS[m[1]]), { headers: { 'content-type': 'text/csv; charset=utf-8' } }) : new Response('', { status: 404 }); }
   m = /raw\.githubusercontent\.com\/trafficoppe\/trafficsystem\/[0-9a-f]+\/(.+)$/.exec(u);
   if (m) { const f = path.join(ROOT, m[1]); return fs.existsSync(f) ? new Response(fs.readFileSync(f)) : new Response('', { status: 404 }); }
+  if (u === RELAY_URL) { const b = JSON.parse(o.body); relayCalls.push(b.action + ':' + (b.source || b.id || ''));       // MOCK ตัวกลาง Apps Script ของเจ้าของไฟล์
+    if (relayHtml) return new Response('<html>Sign in</html>', { headers: { 'content-type': 'text/html' } });
+    if (b.secret !== relaySecret) return Response.json({ ok: false, code: 'forbidden' });
+    if (b.action === 'table') { const T = RELAY_TABLES[b.source]; if (!T) return Response.json({ ok: false, code: 'unknown-source' }); const want = b.cols.concat(b.present), ix = want.map((c) => T[0].indexOf(c));
+      return Response.json({ ok: true, rows: [want].concat(T.slice(1).map((r) => ix.map((i, k) => (k < b.cols.length ? r[i] : (r[i] ? '1' : ''))))) }); }
+    if (b.action === 'img') return b.id === PRIV ? Response.json({ ok: true, mime: 'image/jpeg', b64: 'AAEC' }) : Response.json({ ok: false, code: 'not-allowed' });
+    return Response.json({ ok: false, code: 'unknown-action' }); }
   m = /drive\.google\.com\/thumbnail\?id=([\w-]+)&sz=w(\d+)/.exec(u);
   if (m) return m[1] === IMG1 || m[1] === IMG2 ? new Response(new Uint8Array([137, 80, 78, 71]), { headers: { 'content-type': 'image/png' } }) : new Response('<html>', { headers: { 'content-type': 'text/html' } });
   return new Response('', { status: 404 }); };
@@ -161,4 +184,38 @@ NOW += 11 * 60e3; a = await loginAs('0123'); ok('ครบเวลาล็อ�
 r = await run('/config.js'); ok('config.js ของระบบภายใน: เปิดโหมด session และชี้ API ภายในโดเมนเดียวกัน', r.s === 200 && /auth:"session"/.test(r.t) && /dataApiUrl:"\/api\/data"/.test(r.t));
 r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล์นอกรายการที่อนุญาต → 404', r.s === 404 && r5.s === 404);
 { const src = fs.readFileSync(path.join(ROOT, 'worker/src/index.js'), 'utf8'); ok('ซอร์สบริการไม่มีรหัสพนักงาน คีย์ หรือ URL ของ Apps Script', !/1062|AKfyc[\w-]{20,}|AIza[\w-]{20,}|sk-[A-Za-z0-9]{20,}/.test(src)); }
+// ---------- รอบ 10: ตัวกลางอ่านไฟล์ส่วนตัว (Sheet + ภาพ) ----------
+{ _reset(); const E = ENV({ SHEET_VEH_STUDENT: 'MOCKVEH', SHEET_RUENTHAI: 'MOCKRT' }); const U10 = (await loginAs('0123')).cookie;
+  r = await run('/api/stats', { cookie: U10 }, E);
+  ok('[MOCK] ไฟล์ส่วนตัวยังไม่มีตัวกลาง → แยกสาเหตุ relay-not-configured (ชุดอื่นยังอ่านได้ ไม่ใส่ตัวเลขแทน)', r.s === 200 && r.j.errors.studentMoto === 'relay-not-configured' && r.j.errors.ruenthai === 'relay-not-configured' && !r.j.studentMoto && !!r.j.incidents, JSON.stringify(r.j.errors));
+  r = await run('/api/sources', { cookie: U10 }, E);
+  ok('/api/sources: บอกผลทีละแหล่ง (อ่านสำเร็จ + เวลา / อ่านไม่สำเร็จ + สาเหตุ) และสถานะตัวกลาง', r.s === 200 && r.j.sources.incidents.state === 'ok' && !!r.j.sources.incidents.readAt && r.j.sources.studentMoto.state === 'error' && r.j.sources.studentMoto.code === 'relay-not-configured' && r.j.relay.configured === false && !r.j.sources.staff, JSON.stringify(r.j).slice(0, 200));
+  r = await run('/api/sources', {}, E); ok('/api/sources ต้อง Login', r.s === 401);
+  db._db.prepare('INSERT OR IGNORE INTO imgids(id, at) VALUES(?, ?)').run(PRIV, 1);
+  r = await run('/api/img?id=' + PRIV + '&w=1600', { cookie: U10 }, E); ok('[MOCK] ภาพส่วนตัว + ยังไม่มีตัวกลาง → 502 image-private (ไม่ใช่ “ไม่มีรูปภาพ”)', r.s === 502 && r.j.code === 'image-private', JSON.stringify(r.j));
+  r = await run('/api/relay/enroll', { method: 'POST', body: { token: 'ab'.repeat(16), url: RELAY_URL } }, E); ok('ลงทะเบียนตัวกลาง: ยังไม่เปิด → 403 enroll-closed', r.s === 403 && r.j.code === 'enroll-closed');
+  const TOK = 'c0ffee'.repeat(8), h = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(TOK)))).map((b) => b.toString(16).padStart(2, '0')).join('');
+  db._db.prepare("INSERT OR REPLACE INTO meta(k, v) VALUES('relay_enroll', ?)").run(JSON.stringify({ h, exp: NOW + 7 * 864e5 }));
+  r = await run('/api/relay/enroll', { method: 'POST', body: { token: 'ab'.repeat(24), url: RELAY_URL } }, E); ok('ลงทะเบียนตัวกลาง: token ผิด → 403', r.s === 403 && r.j.code === 'enroll-bad-token');
+  r = await run('/api/relay/enroll', { method: 'POST', body: { token: TOK, url: 'https://evil.example/exec' } }, E); ok('ลงทะเบียนตัวกลาง: URL ที่ไม่ใช่ script.google.com → 400', r.s === 400 && r.j.code === 'enroll-bad-url');
+  r = await run('/api/relay/enroll', { method: 'POST', body: { token: TOK, url: RELAY_URL } }, E); relaySecret = r.j && r.j.secret;
+  ok('ลงทะเบียนตัวกลาง: token ถูก → ได้ค่าลับ 64 ตัว เก็บใน D1 และ token ใช้ซ้ำไม่ได้', r.s === 200 && /^[0-9a-f]{64}$/.test(relaySecret || '') && !db._db.prepare("SELECT 1 FROM meta WHERE k = 'relay_enroll'").get() && db._db.prepare("SELECT v FROM meta WHERE k = 'relay_url'").get().v === RELAY_URL);
+  r = await run('/api/relay/enroll', { method: 'POST', body: { token: TOK, url: RELAY_URL } }, E); ok('ลงทะเบียนซ้ำด้วย token เดิม → 403', r.s === 403);
+  _reset(); r = await run('/api/stats', { cookie: U10 }, E); const sm = r.j.studentMoto, rt = r.j.ruenthai;
+  ok('[MOCK] นักศึกษา–จยย.: 1 RefCode = 1 รายการ (ซ้ำนับครั้งเดียว · แถวไม่มี RefCode ไม่นับ)', !!sm && sm.registrations === 3 && sm.duplicateRefs === 1 && sm.rowsWithoutRef === 1, JSON.stringify(sm && { a: sm.registrations, d: sm.duplicateRefs, n: sm.rowsWithoutRef }));
+  ok('[MOCK] นักศึกษา–จยย.: จำนวนรถตามที่กรอก แยกจากช่องทะเบียน และรายงานแถวไม่ตรง/ไม่กรอก', sm.vehiclesDeclared === 3 && sm.platesFilled === 4 && sm.rowsCountMismatch === 1 && sm.rowsNoCount === 1 && sm.byCampus['วิทยาเขตศาลายา'] === 2 && sm.byEngine['ไฟฟ้า'] === 1 && sm.range.from === '2026-07-06');
+  ok('[MOCK] นักศึกษา–จยย.: ไม่ส่งชื่อ เบอร์ ทะเบียน หรือรหัสนักศึกษา', !/นักศึกษาสมมติ|0800000000|กข1234|6500000/.test(JSON.stringify(r.j)));
+  ok('[MOCK] ตัวกลางถูกขอเฉพาะคอลัมน์ที่ใช้ + ทะเบียนเป็น “มี/ไม่มี” เท่านั้น', relayCalls.includes('table:studentMoto') && relayCalls.includes('table:ruenthai'));
+  ok('[MOCK] เรือนไทย: 1 Ref_Code = 1 แบบสำรวจ · รถแยกจากแบบสำรวจ · กลุ่ม/ประเภทรถ/LPR (รวมไม่ระบุ)', !!rt && rt.surveys === 3 && rt.duplicateRefs === 1 && rt.carsDeclared === 5 && rt.byGroup['กลุ่มที่ 1: บุคลากรคณะ'] === 1 && rt.byCarType['รถกระบะ'] === 1 && rt.byLpr['(ไม่ระบุ)'] === 1 && rt.rowsCarMismatch === 1 && rt.daily.length === 3, JSON.stringify(rt && rt.byLpr));
+  r = await run('/api/data?dataset=ruenthai', { cookie: U10 }, E);
+  ok('[MOCK] เรือนไทย: รายการหลัง Login ไม่มีชื่อ เบอร์ อีเมล ทะเบียน Token หรือ Hash', r.s === 200 && r.j.rows.length === 4 && !/ผู้ตอบสมมติ|081111|example\.test|ทบ1111|TOKEN-SECRET|HASH1/.test(JSON.stringify(r.j)) && r.j.rows[1].carTypes.length === 2 && r.j.rows[1].plates === 2, JSON.stringify(r.j.rows[0]));
+  r = await run('/api/data?dataset=ruenthai', {}, E); ok('เรือนไทย: รายการต้อง Login', r.s === 401);
+  r = await run('/api/img?id=' + PRIV + '&w=800', { cookie: U10 }, E); ok('[MOCK] ภาพส่วนตัว + มีตัวกลาง → ได้ภาพจริง (image/jpeg) ผ่านตัวกลาง · รองรับขนาด 800', r.s === 200 && r.h.get('content-type') === 'image/jpeg' && r.h.get('x-img-via') === 'relay' && relayCalls.includes('img:' + PRIV));
+  r = await run('/api/img?id=' + IMG1 + '&w=1600', { cookie: U10 }, E); ok('ภาพที่แชร์ลิงก์ยังอ่านทางเดิม (ไม่ผ่านตัวกลาง)', r.s === 200 && r.h.get('x-img-via') === 'public');
+  r = await run('/api/img?id=' + PRIV + '&w=800', {}, E); ok('ภาพผ่านตัวกลางยังต้อง Login', r.s === 401);
+  relayHtml = true; _reset(); r = await run('/api/sources', { cookie: U10 }, E); relayHtml = false;
+  ok('[MOCK] ตัวกลางตอบหน้า Login ของ Google (ไม่ได้ Deploy แบบ Anyone) → relay-login-required', r.j.sources.ruenthai.code === 'relay-login-required', JSON.stringify(r.j.sources.ruenthai));
+  const keep = relaySecret; relaySecret = 'x'; _reset(); r = await run('/api/sources', { cookie: U10 }, E); relaySecret = keep;
+  ok('[MOCK] ค่าลับไม่ตรง → relay-forbidden (ไม่เดาข้อมูล)', r.j.sources.studentMoto.code === 'relay-forbidden');
+  _reset(); }
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ทั้งหมดเป็นการทดสอบ local ด้วยของจำลอง)'); process.exit(fails ? 1 : 0);

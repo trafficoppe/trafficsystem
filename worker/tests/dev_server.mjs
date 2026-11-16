@@ -22,7 +22,7 @@ const SHEETS = {
   '480256005': INC, '2074352966': LF,
   '659712341': [['วันที่ของข้อมูล', 'เวลาที่บันทึกเข้าระบบ', 'รถยนต์ ประตู 1', 'มอไซค์ ประตู 1', 'ไม่สวมหมวก ประตู 1'], ['2026-11-14', '15/11/2026 8:00:00', '1,000', '300', '5'], ['2026-11-15', '15/11/2026 17:00:00', '900', '200', '4']],
   '1811117659': [['วันที่บันทึก', 'ปี พ.ศ.', 'ประเภท', 'เลขอ้างอิง', 'สถานะ']].concat(LF.slice(1).map((r) => [r[0].slice(0, 10), 'พ.ศ. 2569', r[2], r[1], r[12]])),
-  '1509680619': [['วันที่/เวลา', 'ชื่อไฟล์', 'ลิงก์ภาพ', 'หมวดหมู่'], ['15/11/2026 7:00:00', 'a.jpg', D(ID(201)), 'ตรวจพื้นที่'], ['15/11/2026 8:00:00', 'b.jpg', D(ID(202)), 'ตรวจพื้นที่'], ['14/11/2026 7:00:00', 'c.jpg', D(ID(203)), 'ตรวจพื้นที่'], ['14/11/2026 9:00:00', 'd.jpg', D(ID(204)), 'ช่วยเหลือ']],
+  '1509680619': [['วันที่/เวลา', 'ชื่อไฟล์', 'ลิงก์ภาพ', 'หมวดหมู่'], ['15/11/2026 7:00:00', 'a.jpg', D(ID(201)), 'ตรวจพื้นที่'], ['15/11/2026 8:00:00', 'b.jpg', D(ID(202)), 'ตรวจพื้นที่'], ['14/11/2026 7:00:00', 'c.jpg', D(ID(203)), 'ตรวจพื้นที่'], ['14/11/2026 9:00:00', '20261114_090512 - ผู้ส่งสมมติ.jpg', D(ID(204)), 'ช่วยเหลือ']],
   '1354124607': [['วันเวลาที่บันทึก', 'เจ้าหน้าที่ศูนย์วิทยุ', 'หน่วยงานที่แจ้ง', 'ชื่อ รปภ./ผู้แจ้ง', 'ประเภทเหตุการณ์', 'สถานที่เกิดเหตุ', 'รายละเอียด/ข้อความ', 'การดำเนินการของศูนย์', 'สถานะ'], ['15/11/2026 6:00:00', 'ศูนย์สมมติ', 'หน่วยสมมติ', 'ผู้แจ้งสมมติ', 'แจ้งเหตุทั่วไป', 'จุดสมมติ', 'ข้อความสมมติ', 'รับทราบ', 'รับแจ้ง']],
   // กิจกรรมพิเศษ: วันที่ต้นทางเป็น เดือน/วัน/ปี (เช่น 9/30/2026 = 30 ก.ย. 2569) · ประเภท/สถานที่ว่างได้ · ภาพได้ถึง 3 ภาพ
   '0': [['ด', 'ชื่อ นามสกุล', 'ตำแหน่ง', 'หน่วยงาน', 'ประเภทเหตุการณ์', 'ระดับเหตุการณ์', 'สถานที่เกิดเหตุ', 'รายละเอียดเพิ่มเติม', 'รูปภาพ 1', 'รูปภาพ 2', 'รูปภาพ 3'],
@@ -34,12 +34,29 @@ const SHEETS = {
 const csv = (rows) => rows.map((r) => r.map((c) => (/[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c)).join(',')).join('\n');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFklEQVR4XmOsmNbOgA0wYRVlYKCLBADuLwGhta8zygAAAABJRU5ErkJggg==', 'base64');
 export const control = { sourceDown: false };
-const fetchMock = async (u) => { u = String(u); let m = /export\?format=csv&gid=(\d+)/.exec(u);
+// รอบ 10: ตัวกลางอ่านไฟล์ส่วนตัว (MOCK) — เปิดไว้เป็นค่าเริ่มต้น (/__test/relay/off = ยังไม่ได้ติดตั้ง) · ภาพ GPS เป็นไฟล์ส่วนตัว อ่านได้เฉพาะผ่านตัวกลาง
+const REL = 'https://script.google.com/macros/s/MOCKRELAYDEVSERVER0000000000001/exec', RSEC = 'f'.repeat(64), PRIVATE_IMG = new Set([ID(51)]);
+const RT = {
+  studentMoto: [['Timestamp', 'RefCode', 'วิทยาเขต', 'คณะ/สถาบัน/ส่วนงาน', 'ชื่อ-นามสกุล', 'ประเภทนักศึกษา', 'ระดับการศึกษา', 'ประเภทเครื่องยนต์', 'จำนวนรถ', 'รถ1_ทะเบียน', 'รถ2_ทะเบียน', 'รถ3_ทะเบียน'],
+    ['6/7/2026, 15:07:04', 'MR-1', 'วิทยาเขตศาลายา', 'คณะสมมติ ก', 'ชื่อนักศึกษาสมมติ', '', '', 'สันดาป', '1', 'กข1', '', ''], ['7/7/2026, 10:00:00', 'MR-2', 'วิทยาเขตพญาไท', 'คณะสมมติ ข', 'ชื่อนักศึกษาสมมติ', '', '', 'ไฟฟ้า', '2', 'กข2', '', ''],
+    ['8/7/2026, 10:00:00', 'MR-3', 'วิทยาเขตศาลายา', 'คณะสมมติ ก', 'ชื่อนักศึกษาสมมติ', '', '', 'สันดาป', '1', 'กข3', '', '']],
+  ruenthai: [['Timestamp', 'Ref_Code', 'Group_Type', 'Group_Label', 'User_SubType', 'Faculty_Dept', 'Sub_Unit_Project', 'Full_Name', 'Car_Count', 'Car1_Type', 'Car1_Plate', 'Car2_Type', 'Car2_Plate', 'LPR_Status'],
+    ['2026-11-02 7:01:02', 'RT-1', 'B', 'กลุ่มที่ 2: บุคลากรส่วนงานอื่น', 'จอดประจำ', 'ส่วนงานสมมติ', 'หน่วยสมมติ', 'ชื่อผู้ตอบสมมติ', '1', 'รถยนต์ทั่วไป', 'ทบ1', '', '', 'รออัปเดตเข้ากล้อง'],
+    ['2026-11-03 8:00:00', 'RT-2', 'A', 'กลุ่มที่ 1: บุคลากรคณะ', 'จอดประจำ', 'คณะสมมติ', '', 'ชื่อผู้ตอบสมมติ', '2', 'รถยนต์ทั่วไป', 'ทบ2', 'รถกระบะ', 'ทบ3', ''],
+    ['2026-11-04 9:00:00', 'RT-3', 'C', 'กลุ่มที่ 3: อื่น ๆ', 'อื่น ๆ', '', '', '', '1', 'รถยนต์ทั่วไป', 'ทบ4', '', '', 'อัปเดตแล้ว']]
+};
+const relayOn = (on) => { db.exec("DELETE FROM meta WHERE k IN ('relay_url', 'relay_secret')"); if (on) { db.prepare("INSERT INTO meta(k, v) VALUES('relay_url', ?)").run(REL); db.prepare("INSERT INTO meta(k, v) VALUES('relay_secret', ?)").run(RSEC); } };
+relayOn(true);
+const fetchMock = async (u, o) => { u = String(u); let m = /export\?format=csv&gid=(\d+)/.exec(u);
+  if (u === REL) { const b = JSON.parse(o.body); if (b.secret !== RSEC) return Response.json({ ok: false, code: 'forbidden' });
+    if (b.action === 'table') { const T = RT[b.source], want = b.cols.concat(b.present), ix = want.map((c) => T[0].indexOf(c)); return Response.json({ ok: true, rows: [want].concat(T.slice(1).map((r) => ix.map((i, k) => (k < b.cols.length ? r[i] : (r[i] ? '1' : ''))))) }); }
+    if (b.action === 'img') return PRIVATE_IMG.has(b.id) ? Response.json({ ok: true, mime: 'image/png', b64: PNG.toString('base64') }) : Response.json({ ok: false, code: 'not-allowed' });
+    return Response.json({ ok: false, code: 'unknown-action' }); }
   if (m) return control.sourceDown ? new Response('<html>', { headers: { 'content-type': 'text/html' } }) : SHEETS[m[1]] ? new Response(csv(SHEETS[m[1]]), { headers: { 'content-type': 'text/csv' } }) : new Response('', { status: 404 });
-  if (/drive\.google\.com\/thumbnail/.test(u)) return new Response(PNG, { headers: { 'content-type': 'image/png' } });
+  m = /drive\.google\.com\/thumbnail\?id=([-\w]+)/.exec(u); if (m) return PRIVATE_IMG.has(m[1]) ? new Response('<html>Sign in</html>', { headers: { 'content-type': 'text/html' } }) : new Response(PNG, { headers: { 'content-type': 'image/png' } });
   return new Response('', { status: 404 }); };
 const TYPES = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json; charset=utf-8', png: 'image/png', svg: 'image/svg+xml' };
-const env = { DB, ADMIN_CODES: '4567', SHEET_MAIN: 'M', SHEET_LF: 'L', SHEET_OPS: 'O', SHEET_EVENTS: 'E', SHEET_GPS: 'G', AI_MODEL: '@cf/mock/model',
+const env = { DB, ADMIN_CODES: '4567', SHEET_MAIN: 'M', SHEET_LF: 'L', SHEET_OPS: 'O', SHEET_EVENTS: 'E', SHEET_GPS: 'G', SHEET_VEH_STUDENT: 'V', SHEET_RUENTHAI: 'R', AI_MODEL: '@cf/mock/model',
   AI: { run: async () => ({ response: '[คำตอบจากบริการ AI จำลอง] เดือน พ.ย. 2569 มีเหตุการณ์รวม 6 เหตุการณ์ (ข้อมูลตามช่วงที่ระบุ)' }) },
   ASSETS: { fetch: async (req) => { let p = new URL(req.url).pathname; if (p === '/') p = '/index.html'; const f = path.join(SITE, p); return f.startsWith(SITE) && fs.existsSync(f) && fs.statSync(f).isFile() ? new Response(fs.readFileSync(f), { headers: { 'content-type': TYPES[p.split('.').pop()] || 'application/octet-stream' } }) : new Response('Not found', { status: 404 }); } } };
 export function start(port, opt = {}) {
@@ -51,6 +68,7 @@ export function start(port, opt = {}) {
       if (rq.url.endsWith('on')) { const a = inc(21, t, 'อุบัติเหตุจากยานพาหนะ', '13.7951, 100.3221', '0', '-'), b = inc(22, t, 'รับส่งผู้ป่วย', '-', '1', P1('นักศึกษา'));
         a[10] = 'รถจักรยานยนต์'; a[11] = 'นักศึกษา'; a[12] = 'รถยนต์'; a[13] = 'บุคลากร'; a[4] = '11:25'; a[23] = D(ID(61)) + ', ' + D(ID(62)); b[4] = '8:10'; INC.push(a, b); }
       _reset(); rs.end('ok'); return; }
+    if (rq.url.startsWith('/__test/relay/')) { relayOn(rq.url.endsWith('on')); _reset(); rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/source/')) { control.sourceDown = rq.url.endsWith('down'); rs.end('ok'); return; }
     const headers = new Headers(); for (const [k, v] of Object.entries(rq.headers)) if (typeof v === 'string') headers.set(k, v);
     headers.set('CF-Connecting-IP', opt.ip || '203.0.113.50');   // IP ภายนอกใดก็ได้ — ไม่มีด่านเครือข่ายเป็นค่าเริ่มต้น

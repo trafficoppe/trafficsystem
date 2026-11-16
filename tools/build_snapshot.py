@@ -216,12 +216,12 @@ stats = {
   "vehicleRegistration": {"status": "partial", "source": "Sheet “MU ฐานข้อมูลลงทะเบียนยานพาหนะบุคลากร…” และ “…นักศึกษา…” แท็บ Registrations / Registrations_Motorcycle", "updated": "2026-11-10",
      "rows": {"บุคลากร – รถยนต์": 5471, "บุคลากร – รถจักรยานยนต์": 975, "นักศึกษา – รถยนต์": 1275, "นักศึกษา – รถจักรยานยนต์": None},
      "notes": ["นับจากเลขแถวสุดท้ายที่มีข้อมูล (1 แถว = 1 รายการลงทะเบียน) ยังไม่ได้ตัดรายการซ้ำ/ยกเลิก",
-               "นักศึกษา–รถจักรยานยนต์: ยังไม่มีข้อมูลยืนยัน", "Sheet เป็นแบบ Private — ต้องกด Allow access ใน Sheet STAGING ก่อนจึงจะคำนวณสถิติแยกวิทยาเขต/สถานะอนุมัติได้"]},
-  "ruenthai": {"status": "blocked", "source": "Sheet “ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย (RuenThai Parking)” แท็บ “RuenThai_Survey”",
-     "notes": ["Sheet เป็นแบบ Private — สูตรรวมสถิติยังเชื่อมต่อไม่ได้จนกว่าเจ้าของจะกด Allow access ใน Sheet STAGING"]},
-  "graduationGuardGps": {"status": "blocked", "source": "Sheet “ระบบรายงานผลการปฏิบัติงาน รปภ.เอกชน ปริญญา 2569 (2568) GPS” แท็บ “Reports”",
-     "notes": ["Sheet แชร์เฉพาะโดเมน — สูตรรวมสถิติยังเชื่อมต่อไม่ได้จนกว่าเจ้าของจะกด Allow access ใน Sheet STAGING"]},
-  "eventIncident": {"status": "unverified", "source": "Apps Script ของ Event-incident-report (ไม่พบ Sheet ปลายทางในสิทธิ์ที่มี)", "notes": ["ยังระบุ Sheet ที่บันทึกไม่ได้"]},
+               "นักศึกษา–รถจักรยานยนต์: ไฟล์นี้ (snapshot) ไม่มีตัวเลข — ระบบภายในอ่านสดจากแท็บ Registrations_Motorcycle (gid 1304328494) ผ่านตัวกลางของเจ้าของไฟล์หลังเข้าสู่ระบบ นับ 1 RefCode = 1 รายการลงทะเบียน และแยกจำนวนรถ"]},
+  "ruenthai": {"status": "partial", "source": "Sheet “ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย (RuenThai Parking)” แท็บ “RuenThai_Survey” (gid 873571277)",
+     "notes": ["ไฟล์นี้ (snapshot) มีเฉพาะจำนวนแบบสำรวจรายวัน (data/extra.json → ruenthaiSurvey) · กลุ่มผู้ใช้/จำนวนรถ/สถานะ LPR อ่านสดผ่านตัวกลางของเจ้าของไฟล์หลังเข้าสู่ระบบ"]},
+  "graduationGuardGps": {"status": "connected", "source": "Sheet “ระบบรายงานผลการปฏิบัติงาน รปภ.เอกชน ปริญญา 2569 (2568) GPS” แท็บ “Reports” (gid 1074767452)",
+     "notes": ["ระบบภายในอ่านแท็บ Reports สดหลังเข้าสู่ระบบ · ภาพประกอบเป็นไฟล์ส่วนตัว อ่านผ่านตัวกลางของเจ้าของไฟล์"]},
+  "eventIncident": {"status": "connected", "source": "Sheet “แบบฟอร์มรายงานเหตุการณ์ กิจกรรมพิเศษ” แท็บ Sheet1 (gid 0)", "notes": ["ระบบภายในอ่าน Sheet1 สดหลังเข้าสู่ระบบ (วันที่ต้นทางแบบ เดือน/วัน/ปี)"]},
   "helmetQuiz": {"status": "unverified", "source": "Apps Script ที่ฝังใน -helmet/script.js (ไม่พบ Sheet ปลายทางในสิทธิ์ที่มี)", "notes": ["ยังระบุ Sheet ที่บันทึกไม่ได้"]}
  }}
 

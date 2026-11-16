@@ -189,7 +189,7 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   ({ ctx, page, log } = await newPage(browser));
   tx = await open(page, 'vehicle-fleet'); await page.waitForSelector('.it');
   ok('[MOCK gviz] ยานพาหนะ: 14 คัน · ตัวกรองประเภท 6/5/3', /14 คัน/.test(await text(page, '.lu-count')) && /รถจักรยานยนต์ 6/.test(await text(page, '.lu-bar')) && /รถกอล์ฟ 3/.test(await text(page, '.lu-bar')) && await T(page, '.it').count() === 14);
-  ok('[MOCK รูป] ไม่มีภาพ / ภาพเสีย มีข้อความสถานะ', /ไม่มีภาพ/.test(await T(page, '.it-grid').innerText()) && /โหลดภาพไม่ได้/.test(await T(page, '.it-grid').innerText()));
+  ok('[MOCK รูป] ไม่มีรูปภาพ / ภาพเสีย มีข้อความสถานะ', /ไม่มีรูปภาพ/.test(await T(page, '.it-grid').innerText()) && /โหลดภาพไม่ได้/.test(await T(page, '.it-grid').innerText()));
   await page.fill('.lu-bar input[type=search]', 'MOCK-12'); await page.waitForTimeout(450); ok('ค้นหา', await T(page, '.it').count() === 1);
   await page.click('.it .it-b'); await page.waitForSelector('.dlg'); await page.waitForTimeout(500);
   ok('[MOCK gviz] รายละเอียด: ข้อมูลรายคัน + ประวัติตรวจสภาพ + ลิงก์แบบฟอร์มเติมค่าอัตโนมัติ', /ทะเบียน MOCK-12/.test((await text(page, '.dlg-dl'))) && /ประวัติการตรวจสภาพ/.test(await T(page, '.dlg').innerText()) && (await T(page, '.dlg a[href*="#form-clean?"]').getAttribute('href')).includes('plate=MOCK-12'));
@@ -213,6 +213,7 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   { const t = await text(page, '#view'), hrefs = await page.$$eval('.list.forms a', (a) => a.map((x) => x.getAttribute('href')));
     const once = (n) => t.split(n).length - 1 === 1;
     ok('แบบฟอร์ม: ชื่อใหม่ครบและไม่ซ้ำ (แจ้งเหตุ AI · รถเข้า+หมวก · ตรวจสภาพยานพาหนะ · ขอดูกล้อง · ตรวจและเติมสารดับเพลิง)', once('ระบบรายงานเหตุการณ์/แจ้งเหตุ (AI)') && once('แบบฟอร์มบันทึกจำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัย') && once('แบบฟอร์มตรวจสภาพยานพาหนะ') && once('แบบฟอร์มขอดูกล้องวงจรปิด') && once('แบบฟอร์มตรวจและเติมสารอุปกรณ์ดับเพลิง'));
+    ok('แบบฟอร์มของระบบอื่น: ชื่อแบบประเมิน “… 6 สัญญาจ้าง” ทั้งส่วนกลางและส่วนงาน (URL เดิม)', once('แบบประเมินความพึงพอใจ รปภ.เอกชนส่วนกลาง 6 สัญญาจ้าง') && once('แบบประเมินความพึงพอใจ รปภ.เอกชนส่วนงาน 6 สัญญาจ้าง') && hrefs.includes('https://trafficoppe.github.io/NPcentral-guard-feedback/') && hrefs.includes('https://trafficoppe.github.io/NPsecurity-feedback/'));
     ok('แบบฟอร์ม: ไม่มีชื่อเดิม/รายการซ้ำ/แบบบันทึกขยะ', !/แบบฟอร์มรายงานเหตุการณ์ไม่ปกติ|แบบฟอร์มบันทึกรถเข้ามหาวิทยาลัย|ระบบขอดูกล้องวงจรปิด \(CCTV\)|ระบบตรวจถังดับเพลิง|การจัดการขยะ/.test(t));
     ok('แบบฟอร์ม: ลิงก์ตามที่กำหนด', ['https://trafficoppe.github.io/report-incident-AI-v1/', 'https://trafficoppe.github.io/Form-Gate-Tracker-AI-v1/', 'https://trafficoppe.github.io/trafficsystem/form.html', 'https://trafficoppe.github.io/trafficoppe/', 'https://trafficoppe.github.io/-v1/'].every((u) => hrefs.filter((h) => h === u).length === 1), JSON.stringify(hrefs));
     ok('แบบฟอร์ม: แบบบันทึกย่อย (ทำความสะอาด · เติมสารถังดับเพลิง) อยู่ใต้แบบฟอร์มหลักพร้อมข้อความเติมอัตโนมัติ', await T(page, '.list.forms li.f-sub').count() === 2 && /เลือกยานพาหนะจากหน้า ‘ยานพาหนะทั้งหมด’ เพื่อเติมรุ่นและทะเบียนให้อัตโนมัติ/.test(t) && /เลือกถังจากหน้า ‘อุปกรณ์ดับเพลิง’ เพื่อเติมชนิดและเลขที่ถังให้อัตโนมัติ/.test(t));
@@ -242,7 +243,8 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   tx = await open(page, 'staff-strategy'); await page.waitForSelector('.it'); ok('[MOCK API] หน่วยยุทธศาสตร์ฯ: 4 คน', await T(page, '.it').count() === 4);
   tx = await open(page, 'area-inspect'); await page.waitForSelector('.ph-tile'); ok('[MOCK API] ตรวจพื้นที่: ภาพ 30/หน้า กรองเดือน ภาพขยาย', await T(page, '.ph-tile').count() === 30 && /พ\.ย\. 69/.test(await text(page, '.lu-bar')));
   await page.click('.ph-tile .it-pic >> nth=0'); await page.waitForSelector('.lightbox'); await page.keyboard.press('Escape'); await page.screenshot({ path: OUT + '/12_area_inspect_MOCKDATA.png' });
-  tx = await open(page, 'area-assist'); await page.waitForSelector('.ph-tile'); ok('[MOCK API] ให้ความช่วยเหลือ: เฉพาะหมวด “ช่วยเหลือ” (11 ภาพ)', /11 ภาพ/.test(await text(page, '.lu-count')));
+  tx = await open(page, 'area-assist'); await page.waitForSelector('.it-grid .it'); ok('[MOCK API] ให้ความช่วยเหลือ: เฉพาะหมวด “ช่วยเหลือ” (11 ภาพ)', /11 ภาพ/.test(await text(page, '.lu-count')));
+  await page.click('.it-grid .it >> nth=0 >> .it-b'); await page.waitForSelector('.dlg'); ok('ให้ความช่วยเหลือ: คลิกภาพ → รายละเอียด + ภาพ + “ต้นทางยังไม่ได้บันทึกรายละเอียดการช่วยเหลือ”', /ต้นทางยังไม่ได้บันทึกรายละเอียดการช่วยเหลือ/.test(await text(page, '.dlg')) && await T(page, '.dlg .gal2').count() === 1); await page.keyboard.press('Escape');
   tx = await open(page, 'report-radio'); await page.waitForSelector('.tbl'); ok('[MOCK API] รายงานวิทยุ: 33 รายการ ตาราง + รายละเอียด', /33 รายการ/.test(await text(page, '.lu-count')) && await T(page, '.tbl tbody tr').count() === 20);
   tx = await open(page, 'report-daily'); await page.waitForTimeout(400);
   ok('รายงานประจำวัน (15 พ.ย.): เหตุการณ์ 0 · รถเข้า “ไม่มีข้อมูลของวันนี้” · L&F 0', /เหตุการณ์ทั้งหมด 0/.test(tx.replace(/\s+/g, ' ')) && /ไม่มีข้อมูลของวันนี้/.test(tx) && /แจ้งของหาย 0/.test(tx.replace(/\s+/g, ' ')), '');

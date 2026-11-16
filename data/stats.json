@@ -1030,29 +1030,28 @@
    },
    "notes": [
     "นับจากเลขแถวสุดท้ายที่มีข้อมูล (1 แถว = 1 รายการลงทะเบียน) ยังไม่ได้ตัดรายการซ้ำ/ยกเลิก",
-    "นักศึกษา–รถจักรยานยนต์: ยังไม่มีข้อมูลยืนยัน",
-    "Sheet เป็นแบบ Private — ต้องกด Allow access ใน Sheet STAGING ก่อนจึงจะคำนวณสถิติแยกวิทยาเขต/สถานะอนุมัติได้"
+    "นักศึกษา–รถจักรยานยนต์: ไฟล์นี้ (snapshot) ไม่มีตัวเลข — ระบบภายในอ่านสดจากแท็บ Registrations_Motorcycle (gid 1304328494) ผ่านตัวกลางของเจ้าของไฟล์หลังเข้าสู่ระบบ นับ 1 RefCode = 1 รายการลงทะเบียน และแยกจำนวนรถ"
    ]
   },
   "ruenthai": {
-   "status": "blocked",
-   "source": "Sheet “ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย (RuenThai Parking)” แท็บ “RuenThai_Survey”",
+   "status": "partial",
+   "source": "Sheet “ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย (RuenThai Parking)” แท็บ “RuenThai_Survey” (gid 873571277)",
    "notes": [
-    "Sheet เป็นแบบ Private — สูตรรวมสถิติยังเชื่อมต่อไม่ได้จนกว่าเจ้าของจะกด Allow access ใน Sheet STAGING"
+    "ไฟล์นี้ (snapshot) มีเฉพาะจำนวนแบบสำรวจรายวัน (data/extra.json → ruenthaiSurvey) · กลุ่มผู้ใช้/จำนวนรถ/สถานะ LPR อ่านสดผ่านตัวกลางของเจ้าของไฟล์หลังเข้าสู่ระบบ"
    ]
   },
   "graduationGuardGps": {
-   "status": "blocked",
-   "source": "Sheet “ระบบรายงานผลการปฏิบัติงาน รปภ.เอกชน ปริญญา 2569 (2568) GPS” แท็บ “Reports”",
+   "status": "connected",
+   "source": "Sheet “ระบบรายงานผลการปฏิบัติงาน รปภ.เอกชน ปริญญา 2569 (2568) GPS” แท็บ “Reports” (gid 1074767452)",
    "notes": [
-    "Sheet แชร์เฉพาะโดเมน — สูตรรวมสถิติยังเชื่อมต่อไม่ได้จนกว่าเจ้าของจะกด Allow access ใน Sheet STAGING"
+    "ระบบภายในอ่านแท็บ Reports สดหลังเข้าสู่ระบบ · ภาพประกอบเป็นไฟล์ส่วนตัว อ่านผ่านตัวกลางของเจ้าของไฟล์"
    ]
   },
   "eventIncident": {
-   "status": "unverified",
-   "source": "Apps Script ของ Event-incident-report (ไม่พบ Sheet ปลายทางในสิทธิ์ที่มี)",
+   "status": "connected",
+   "source": "Sheet “แบบฟอร์มรายงานเหตุการณ์ กิจกรรมพิเศษ” แท็บ Sheet1 (gid 0)",
    "notes": [
-    "ยังระบุ Sheet ที่บันทึกไม่ได้"
+    "ระบบภายในอ่าน Sheet1 สดหลังเข้าสู่ระบบ (วันที่ต้นทางแบบ เดือน/วัน/ปี)"
    ]
   },
   "helmetQuiz": {

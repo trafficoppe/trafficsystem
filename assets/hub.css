@@ -684,3 +684,43 @@ body.tab-hidden .chat-fab .fab-bot,body.chat-open .chat-fab .fab-bot,body.tab-hi
 }
 .view{padding-bottom:116px}
 @media (max-width:640px){.ros-names{padding:6px 0 8px}.ros-names .sec-h{flex-wrap:nowrap;align-items:center;gap:8px;margin-bottom:4px}.ros-names .sec-h h2{font-size:1rem}.ros-names .sec-h .note{display:none}.ros-tog{min-height:38px;padding:6px 10px}.ros-team{padding:6px 8px}}
+
+/* ===== รอบ 10 ===== */
+/* หัวข้อหลักบนหน้าแรก: ใหญ่ขึ้นเฉพาะหัวข้อที่กำหนด (ไม่ขยายทั้งเว็บ) — ประมาณ 21–27px ตามความกว้างจอ */
+.sec-h h2.h-xl{font-size:clamp(1.32rem,1.05rem + .75vw,1.7rem);font-weight:800;letter-spacing:-.01em;line-height:1.25}
+.h-emo{font-size:.95em}
+.sec-h:has(h2.h-xl){flex-wrap:wrap;row-gap:4px}
+/* ประเภทเหตุการณ์และสถานที่: เด่นกว่าป้ายเล็กเดิม (ประเภท ≈20–24px · สถานที่ ≈18–22px) */
+.incd-type{margin:0;font-size:clamp(1.22rem,1.05rem + .5vw,1.5rem);font-weight:800;color:var(--brand-d);line-height:1.3}
+.incd-emo{font-size:1em}
+.incd-top h3.incd-place{margin:0;font-size:clamp(1.12rem,1rem + .4vw,1.36rem);font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+/* ภาพประกอบ: ภาพหลักตามสัดส่วนจริง (ไม่ครอป) + แถบรูปย่อ */
+.gal2{display:flex;flex-direction:column;gap:8px;margin:0 0 12px}
+.gal-stage{display:block}
+.gal-main{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0d1a15;cursor:zoom-in;font:inherit;color:#e8f1ed}
+.gal-main img{display:block;width:100%;height:auto;max-height:min(72vh,680px);object-fit:contain;margin:0 auto}
+.gal-main:focus-visible,.gal-th:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.gal-main.noimg{cursor:default;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;text-align:center;background:var(--card2);color:var(--muted)}
+.gal-thumbs{display:flex;gap:6px;flex-wrap:wrap}
+.gal-th{width:72px;height:56px;padding:0;border:2px solid transparent;border-radius:8px;overflow:hidden;background:var(--card2);cursor:pointer;font:inherit;color:var(--muted)}
+.gal-th img{width:100%;height:100%;object-fit:cover;display:block}
+.gal-th[aria-pressed="true"]{border-color:var(--brand)}
+.gal-none{margin:0 0 10px}
+.img-why{display:block;font-size:.82rem;line-height:1.35;padding:0 8px}
+.img-retry{min-height:36px}
+.it-pic.noimg .img-why{color:var(--muted)}
+/* ระบบที่เกี่ยวข้องแบบยุบได้ (หน้ารถเข้า) */
+.sys-fold .fold-h{margin:0;font-size:inherit}
+.fold-btn{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:inherit;font:inherit;cursor:pointer;text-align:left;min-height:48px}
+.fold-btn .fold-t{font-size:1.1rem;font-weight:700}
+.fold-btn .note{color:var(--muted);font-size:.88rem}
+.fold-btn .fold-ch{margin-left:auto;width:10px;height:10px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .2s ease}
+.fold-btn[aria-expanded="true"] .fold-ch{transform:rotate(-135deg)}
+.fold-btn:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.fold-body{margin-top:10px;animation:foldIn .2s ease}
+@keyframes foldIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.fold-body{animation:none}.fold-btn .fold-ch{transition:none}}
+@media (max-width:640px){.sec-h h2.h-xl{font-size:clamp(1.3rem,1.15rem + .8vw,1.5rem)}.gal-th{width:60px;height:48px}}
+/* ปุ่ม ‹ › ของเหตุการณ์วันนี้อยู่ชิดซ้ายถัดจากตัวกรอง — ไม่ไปอยู่ใต้ปุ่มหุ่นยนต์มุมขวาล่าง */
+.tdi-bar{justify-content:flex-start}
+.chat-fab.mode-robot .fab-bot{width:66px;height:66px}
