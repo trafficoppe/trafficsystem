@@ -102,9 +102,18 @@ export function parseCsv(text) {
   return rows;
 }
 const memo = new Map();                       // แคชในหน่วยความจำของเครื่องที่รับคำขอ (ไม่ส่งไปเบราว์เซอร์ทั้งชุด)
-async function table(env, key, deps, maxAge = 120e3) {
-  const now = deps.now(), hit = memo.get(key); if (hit && now - hit.at < maxAge) return hit;
+const inflight = new Map();                   // รอบ 12: คำขอที่กำลังอ่านแหล่งเดียวกันอยู่ใช้ Promise เดียวกัน (ล้างทั้งเมื่อสำเร็จและผิดพลาด)
+export const _stat = { reads: {} };           // นับจำนวนครั้งที่อ่านต้นทางจริงต่อแหล่ง (ใช้ในชุดทดสอบ)
+const SRC_TIMEOUT = 25e3;
+function table(env, key, deps, maxAge = 120e3) {
+  const now = deps.now(), hit = memo.get(key); if (hit && now - hit.at < maxAge) return Promise.resolve(hit);
+  const cur = inflight.get(key); if (cur) return cur;
+  const p = readTable(env, key, deps, now).finally(() => { if (inflight.get(key) === p) inflight.delete(key); });
+  inflight.set(key, p); return p;
+}
+async function readTable(env, key, deps, now) {
   const src = SOURCES(env)[key]; if (!src || !src[0]) throw new Err(503, 'source-not-configured');
+  _stat.reads[key] = (_stat.reads[key] || 0) + 1;
   let rows;
   if (PRIVATE_SRC.has(key)) {                              // Sheet ส่วนตัว → HubRelay เท่านั้น
     const j = await relayCall(env, deps, { action: 'table', source: key, ...RELAY_COLS[key] });
@@ -112,12 +121,12 @@ async function table(env, key, deps, maxAge = 120e3) {
   } else if (env.HUB_GS_URL && env.HUB_SHARED_SECRET) {     // บริการเดิม HubData (ถ้าผู้ดูแลตั้งไว้) สำหรับแหล่งเดิมเท่านั้น
     rows = (await hubDataCall(env, deps, key)).rows.map((x) => x.map(str));
   } else {
-    let r; try { r = await deps.fetch('https://docs.google.com/spreadsheets/d/' + src[0] + '/export?format=csv&gid=' + src[1], { redirect: 'follow' }); } catch (e) { throw new Err(502, 'source-unreachable'); }
+    let r; try { r = await deps.fetch('https://docs.google.com/spreadsheets/d/' + src[0] + '/export?format=csv&gid=' + src[1], { redirect: 'follow', signal: AbortSignal.timeout(SRC_TIMEOUT) }); } catch (e) { throw new Err(502, e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'source-timeout' : 'source-unreachable'); }
     if (!r.ok || !/text\/csv/.test(r.headers.get('content-type') || '')) throw new Err(502, r.status === 401 || r.status === 403 || r.ok ? 'source-private' : 'source-error');
     rows = parseCsv(await r.text());
   }
   if (!rows.length) throw new Err(502, 'source-schema');
-  const t = { head: rows[0].map(str), rows: rows.slice(1).filter((x) => x.some((c) => str(c) !== '')), at: now }; memo.set(key, t); return t;
+  const t = { head: rows[0].map(str), rows: rows.slice(1).filter((x) => x.some((c) => str(c) !== '')), at: deps.now() }; memo.set(key, t); return t;     // at = เวลาที่อ่านต้นทางเสร็จจริง
 }
 const pick = (t, map, required) => {
   const idx = {}; for (const k in map) { idx[k] = typeof map[k] === 'number' ? map[k] : t.head.indexOf(map[k]); if (idx[k] < 0 && required.includes(k)) throw new Err(502, 'source-schema', { missing: map[k] }); }
@@ -134,7 +143,7 @@ export function normDT(s, mdy) {
 }
 const driveId = (u) => { const m = /(?:\/d\/|[?&]id=)([-\w]{20,})/.exec(str(u)); return m ? m[1] : /^[-\w]{25,60}$/.test(str(u)) ? str(u) : ''; };
 const images = (v) => str(v).split(/[\s,]+/).map((u) => driveId(u) || (/^https:\/\/(github\.com\/user-attachments\/assets\/|op\.mahidol\.ac\.th\/)[^\s"'<>]+$/.test(u) ? u : '')).filter(Boolean);
-const knownImg = new Set();
+const knownImg = new Set(), privImg = new Set();
 async function remember(env, ids) {
   const fresh = [...new Set(ids)].filter((i) => /^[-\w]{20,60}$/.test(i) && !knownImg.has(i)); if (!fresh.length) return;
   fresh.forEach((i) => knownImg.add(i));
@@ -237,32 +246,39 @@ async function login(request, env, deps, net) {
 
 // ---------- 4) สถิติสด (อ่านต้นทาง ณ เวลาที่เรียก ไม่เขียนกลับ) ----------
 const mapSt = { 'รับของคืนแล้ว': 'returned', 'ช่วยหาแล้วยังไม่พบ': 'searching', 'เจ้าของยังไม่มารับคืน': 'unclaimed', 'รอดำเนินการ': 'waiting' };
-async function liveStats(env, deps) {
-  const out = { ok: true, checkedAt: bkk(deps.now()), errors: {} }, part = async (k, fn) => { try { await fn(); } catch (e) { out.errors[k] = e instanceof Err ? e.code : 'internal'; } };
-  await part('incidents', async () => {
+// รอบ 12: อ่านแต่ละชุดพร้อมกัน (ชุดช้าไม่หน่วงชุดอื่น) · เลือกชุดได้ด้วย scope (allowlist) · ผลรวมของแต่ละชุด (ไม่มีข้อมูลบุคคล) แคชข้ามเครื่องรับคำขอได้ไม่เกิน 2 นาที
+//   checkedAt = เวลาที่ตอบคำขอนี้ · sourceReadAt[ชุด] = เวลาที่อ่านต้นทางของชุดนั้นจริง (ไม่ใช้เวลาตอบแคชแทนเวลาอ่านต้นทาง)
+export const STATS_SCOPES = { all: ['incidents', 'lostfound', 'lostfoundYear', 'gate', 'studentMoto', 'ruenthai'], core: ['incidents', 'lostfound', 'lostfoundYear', 'gate'], private: ['studentMoto', 'ruenthai'] };
+const STATS_TTL = 120e3, STATS_SCHEMA = 's12', PART_SRC = { incidents: 'incidents', lostfound: 'lostfound', lostfoundYear: 'lfYear', gate: 'gate', studentMoto: 'studentMoto', ruenthai: 'ruenthai' };
+let cacheEpoch = 0;
+const hashStr = (t) => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) >>> 0; return h.toString(36); };
+async function liveStats(env, deps, scope) {
+  const names = STATS_SCOPES[scope || 'all']; if (!names) throw new Err(400, 'bad-scope');
+  const now = deps.now(), stamp = bkk(now), res = { ok: true, checkedAt: stamp, scope: scope || 'all', errors: {}, sourceReadAt: {} }, P = {};
+  P.incidents = async (out) => {
     const rows = await BUILD.incidents(env, deps), by = {}, mon = {}, daily = {}; let inj = 0, last = '', lastRec = '';
     rows.forEach((r) => { const m = r.date.slice(0, 7), n = r.injured || 0; (by[r.type] = by[r.type] || { type: r.type, count: 0, injuredOrIll: 0 }).count++; by[r.type].injuredOrIll += n; inj += n;
       (mon[m] = mon[m] || {})[r.type] = (mon[m][r.type] || 0) + 1; const k = r.date + '|' + r.type; (daily[k] = daily[k] || { date: r.date, type: r.type, count: 0, injured: 0 }).count++; daily[k].injured += n;
       if (r.date > last) last = r.date; if (r.rec > lastRec) lastRec = r.rec; });
     const months = Object.keys(mon).sort();
     out.incidents = { total: rows.length, injuredTotal: inj, byType: Object.values(by), monthly: months.map((m) => ({ month: m, byType: mon[m] })), range: { from: rows.reduce((a, r) => (r.date < a ? r.date : a), '9999'), to: last }, updated: lastRec || last };
-    out.incidentsDaily = { rows: Object.values(daily).sort((a, b) => (a.date + a.type < b.date + b.type ? -1 : 1)), checkedAt: out.checkedAt, lastEntry: last, lastRecordedAt: lastRec, complete: true, source: 'ฐานข้อมูลงานจราจร → รายงานเหตุการณ์ (อ่านสดผ่านบริการข้อมูล)' };
-  });
-  await part('lostfound', async () => {
+    out.incidentsDaily = { rows: Object.values(daily).sort((a, b) => (a.date + a.type < b.date + b.type ? -1 : 1)), checkedAt: stamp, lastEntry: last, lastRecordedAt: lastRec, complete: true, source: 'ฐานข้อมูลงานจราจร → รายงานเหตุการณ์ (อ่านสดผ่านบริการข้อมูล)' };
+  };
+  P.lostfound = async (out) => {
     const t = await table(env, 'lostfound', deps), rows = pick(t, { at: 'Timestamp', type: 'ประเภท' }, ['at', 'type']).map((r) => ({ d: normDT(r.at), type: r.type })).filter((r) => r.d), day = {}; let last = '';
     rows.forEach((r) => { const d = r.d.slice(0, 10), o = (day[d] = day[d] || { date: d, lost: 0, found: 0, returnForms: 0 }); if (r.type === 'สิ่งของสูญหาย') o.lost++; else if (r.type === 'พบสิ่งของ') o.found++; else if (r.type === 'รับของคืน') o.returnForms++; if (r.d > last) last = r.d; });
-    const ds = Object.keys(day).sort(); out.lostfoundDaily = { from: ds[0] || '', rows: ds.map((d) => day[d]), checkedAt: out.checkedAt, lastEntry: last.slice(0, 10), lastRecordedAt: last, complete: true, source: 'Sheet แจ้งของหาย → LF_New (อ่านสดผ่านบริการข้อมูล)' };
-  });
-  await part('lostfoundYear', async () => {
+    const ds = Object.keys(day).sort(); out.lostfoundDaily = { from: ds[0] || '', rows: ds.map((d) => day[d]), checkedAt: stamp, lastEntry: last.slice(0, 10), lastRecordedAt: last, complete: true, source: 'Sheet แจ้งของหาย → LF_New (อ่านสดผ่านบริการข้อมูล)' };
+  };
+  P.lostfoundYear = async (out) => {
     const rows = pick(await table(env, 'lfYear', deps), { date: 'วันที่บันทึก', type: 'ประเภท', status: 'สถานะ' }, ['date', 'type', 'status']).map((r) => ({ m: normDT(r.date).slice(0, 7), type: r.type || '(ไม่ระบุประเภท)', status: r.status })).filter((r) => r.m);
     const byType = {}, byStatus = {}, mon = {}, st = {}; let last = '';
     rows.forEach((r) => { byType[r.type] = (byType[r.type] || 0) + 1; const s = r.status || '(ว่าง)'; byStatus[s] = (byStatus[s] || 0) + 1; (mon[r.m] = mon[r.m] || {})[r.type] = (mon[r.m][r.type] || 0) + 1;
       const o = (st[r.m] = st[r.m] || { month: r.m, returned: 0, searching: 0, unclaimed: 0, waiting: 0, blank: 0 }); o[mapSt[r.status] || 'blank']++; if (r.m > last) last = r.m; });
     const months = Object.keys(mon).sort();
-    out.lostfound = { total: rows.length, byType, byStatus, returned: byStatus['รับของคืนแล้ว'] || 0, monthly: months.map((m) => ({ month: m, byType: mon[m] })), range: { from: months[0] || '', to: last }, updated: out.checkedAt };
+    out.lostfound = { total: rows.length, byType, byStatus, returned: byStatus['รับของคืนแล้ว'] || 0, monthly: months.map((m) => ({ month: m, byType: mon[m] })), range: { from: months[0] || '', to: last }, updated: stamp };
     out.lostfoundStatus = { monthly: months.map((m) => st[m]), total: rows.length };
-  });
-  await part('gate', async () => {
+  };
+  P.gate = async (out) => {
     const t = await table(env, 'gate', deps), di = t.head.indexOf('วันที่ของข้อมูล'), ri = t.head.indexOf('เวลาที่บันทึกเข้าระบบ'); if (di < 0) throw new Err(502, 'source-schema');
     const cols = (p) => t.head.map((h, i) => (h.startsWith(p) ? i : -1)).filter((i) => i >= 0), C = cols('รถยนต์ ประตู'), M = cols('มอไซค์ ประตู'), N = cols('ไม่สวมหมวก ประตู'); if (!C.length || !M.length || !N.length) throw new Err(502, 'source-schema');
     const sum = (r, ix) => ix.reduce((a, i) => a + (+str(r[i]).replace(/,/g, '') || 0), 0), day = {}; let rec = '';
@@ -272,11 +288,25 @@ async function liveStats(env, deps) {
     daily.forEach((d) => { const o = (mon[d.date.slice(0, 7)] = mon[d.date.slice(0, 7)] || { month: d.date.slice(0, 7), days: 0, cars: 0, motorcycles: 0, noHelmet: 0 }); o.days++; o.cars += d.cars; o.motorcycles += d.motorcycles; o.noHelmet += d.noHelmet; });
     if (!daily.length) throw new Err(502, 'source-schema');
     out.gate = { daily, monthly: Object.values(mon), days: daily.length, totals: daily.reduce((a, d) => ({ cars: a.cars + d.cars, motorcycles: a.motorcycles + d.motorcycles, noHelmet: a.noHelmet + d.noHelmet }), { cars: 0, motorcycles: 0, noHelmet: 0 }), range: { from: daily[0].date, to: daily[daily.length - 1].date }, updated: rec || daily[daily.length - 1].date };
-  });
+  };
   // รอบ 10: นักศึกษา–รถจักรยานยนต์ (Registrations_Motorcycle) — ยอดรวมคิดฝั่งบริการเท่านั้น ไม่ส่งรายการรายคนลงหน้าเว็บ
-  await part('studentMoto', async () => { out.studentMoto = studentMotoSummary(await table(env, 'studentMoto', deps), bkk(deps.now())); });
-  await part('ruenthai', async () => { out.ruenthai = ruenthaiSummary(await table(env, 'ruenthai', deps), bkk(deps.now())); });
-  return out;
+  P.studentMoto = async (out) => { const t = await table(env, 'studentMoto', deps); out.studentMoto = studentMotoSummary(t, bkk(t.at)); };
+  P.ruenthai = async (out) => { const t = await table(env, 'ruenthai', deps); out.ruenthai = ruenthaiSummary(t, bkk(t.at)); };
+  const rc = names.some((k) => PRIVATE_SRC.has(PART_SRC[k])) ? await relayCfg(env) : null;
+  const cfgKey = STATS_SCHEMA + '-' + RELAY_VERSION + '-' + cacheEpoch + '-' + hashStr(JSON.stringify(SOURCES(env)) + '|' + (rc ? rc.url : '') + '|' + str(env.HUB_GS_URL));       // ผูกกับแหล่ง/รุ่นโค้ด/ตัวกลาง (ไม่มีค่าลับในคีย์)
+  await Promise.all(names.map(async (k) => {
+    const ck = deps.cache ? new Request('https://stats-cache.mu-traffic-hub.internal/' + cfgKey + '/' + k) : null, src = PART_SRC[k], mem = memo.get(src);
+    try {
+      if (ck && !(mem && now - mem.at < STATS_TTL)) {          // เครื่องนี้ยังไม่มีตารางสด → ใช้ผลรวมที่เครื่องอื่นเพิ่งอ่าน (อายุไม่เกิน 2 นาทีนับจากเวลาอ่านต้นทาง)
+        const h = await deps.cache.match(ck).catch(() => null), j = h ? await h.json().catch(() => null) : null;
+        if (j && j.frag && now - j.at >= 0 && now - j.at < STATS_TTL) { Object.assign(res, j.frag); res.sourceReadAt[k] = bkk(j.at); return; }
+      }
+      const frag = {}; await P[k](frag); const at = (memo.get(src) || { at: deps.now() }).at;
+      Object.assign(res, frag); res.sourceReadAt[k] = bkk(at);
+      if (ck) { try { await deps.cache.put(ck, new Response(JSON.stringify({ at, frag }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=' + Math.max(1, Math.round((STATS_TTL - (deps.now() - at)) / 1000)) } })); } catch (e) { /* แคชเป็นส่วนเสริม */ } }
+    } catch (e) { res.errors[k] = e instanceof Err ? e.code : 'internal'; }
+  }));
+  return res;
 }
 const cnt = (o, k) => { k = str(k) || '(ไม่ระบุ)'; o[k] = (o[k] || 0) + 1; };
 const topN = (o, n) => { const ks = Object.keys(o).sort((a, b) => o[b] - o[a]); const r = {}; ks.slice(0, n).forEach((k) => { r[k] = o[k]; }); if (ks.length > n) r['อื่น ๆ (' + (ks.length - n) + ' รายการ)'] = ks.slice(n).reduce((a, k) => a + o[k], 0); return r; };
@@ -417,16 +447,26 @@ async function img(request, env, deps) {
   const ck = new Request('https://img-cache.mu-traffic-hub.internal/v' + ver + '/' + id + '/' + w), cache = deps.cache;
   if (cache) { const hitC = await cache.match(ck); if (hitC) return new Response(hitC.body, { status: 200, headers: H(hitC.headers.get('content-type') || 'image/jpeg', 'cache') }); }
   let body = null, ct = '', via = 'public', status = 0;
-  try { const r = await deps.fetch('https://drive.google.com/thumbnail?id=' + id + '&sz=w' + w, { redirect: 'follow' }); status = r.status; ct = r.headers.get('content-type') || ''; if (r.ok && /^image\//.test(ct)) body = await r.arrayBuffer(); }
-  catch (e) { status = -1; }
-  if (!body) {
-    if (!rc) throw new Err(status === 404 ? 404 : 502, status === 404 ? 'image-not-found' : status === -1 ? 'image-unreachable' : 'image-private');
-    let j; try { j = await relayCall(env, deps, { action: 'img', id, w }, rc); }
-    catch (e) { const c = e instanceof Err ? e.code : 'relay-error'; throw new Err(c === 'relay-not-found' ? 404 : 502, c === 'relay-not-found' ? 'image-not-found' : c === 'relay-not-allowed' ? 'image-not-allowed' : c); }
+  const viaPublic = async () => { try { const r = await deps.fetch('https://drive.google.com/thumbnail?id=' + id + '&sz=w' + w, { redirect: 'follow', signal: AbortSignal.timeout(15e3) }); status = r.status; ct = r.headers.get('content-type') || ''; if (r.ok && /^image\//.test(ct)) { body = await r.arrayBuffer(); via = 'public'; } } catch (e) { status = -1; } };
+  const viaRelay = async () => {
+    const j = await relayCall(env, deps, { action: 'img', id, w }, rc);
     if (!/^image\/(jpeg|png|webp|gif)$/.test(str(j.mime)) || !j.b64 || j.b64.length > 6e6) throw new Err(502, 'image-unavailable');
     let bin; try { bin = atob(j.b64); } catch (e) { throw new Err(502, 'image-unavailable'); }
     const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    body = arr.buffer; ct = j.mime; via = 'relay';
+    body = arr.buffer; ct = j.mime; via = 'relay'; privImg.add(id);
+  };
+  const relayErr = (e) => { const c = e instanceof Err ? e.code : 'relay-error'; return new Err(c === 'relay-not-found' ? 404 : 502, c === 'relay-not-found' ? 'image-not-found' : c === 'relay-not-allowed' ? 'image-not-allowed' : c); };
+  // รอบ 12: ภาพที่รู้ว่าเป็นไฟล์ส่วนตัว (เคยอ่านผ่านตัวกลางสำเร็จ หรือหน้าเว็บแจ้งว่าเป็นชุดภาพ GPS ด้วย p=1) → ไปตัวกลางก่อน ไม่เสียรอบลองลิงก์สาธารณะ
+  //   p=1 เป็นเพียงลำดับการลอง: ยังต้องเป็นภาพที่ระบบรู้จัก และตัวกลางยังตรวจโฟลเดอร์ที่อนุญาตเองทุกครั้ง · ตัวกลางไม่อนุญาต → ลองลิงก์สาธารณะตามเดิม
+  if (rc && (privImg.has(id) || u.searchParams.get('p') === '1')) {
+    let re = null; try { await viaRelay(); } catch (e) { re = e; }
+    if (!body) { await viaPublic(); if (!body) throw relayErr(re); }
+  } else {
+    await viaPublic();
+    if (!body) {
+      if (!rc) throw new Err(status === 404 ? 404 : 502, status === 404 ? 'image-not-found' : status === -1 ? 'image-unreachable' : 'image-private');
+      try { await viaRelay(); } catch (e) { throw relayErr(e); }
+    }
   }
   if (cache) { try { await cache.put(ck, new Response(body.slice(0), { headers: { 'content-type': ct, 'cache-control': 'public, max-age=604800' } })); } catch (e) { /* แคชเป็นส่วนเสริม */ } }
   return new Response(body, { status: 200, headers: H(ct, via) });
@@ -479,24 +519,33 @@ async function relayConfirm(request, env, deps) {
   throw new Err(404, 'relay-unknown-url');          // URL นี้ไม่ได้ลงทะเบียน (หรือ token ถูกใช้ไปแล้วแต่สคริปต์ไม่ได้รับค่าลับ → ขอ token ใหม่)
 }
 // สถานะแหล่งข้อมูลทีละชุด (หลัง Login) — แยก อ่านสำเร็จ / อ่านสำเร็จแต่ไม่มีรายการ / อ่านไม่สำเร็จ พร้อมรหัสสาเหตุ และเวลาที่อ่านสำเร็จจริง
-async function sourcesStatus(env, deps) {
+// รอบ 12: อ่านสถานะแต่ละแหล่งพร้อมกัน (ครั้งละไม่เกิน 4) จากผลอ่านล่าสุดที่ยังไม่หมดอายุ · การตรวจตัวกลางแบบลึก (ping + 2 ตาราง + ภาพจริง) ทำเฉพาะเมื่อสั่ง deep=1
+let lastDeep = null;
+async function pool(items, n, fn) { let i = 0; await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const k = items[i++]; await fn(k); } })); }
+async function sourcesStatus(env, deps, deep) {
   const out = {}, rc = await relayCfg(env), pend = await metaGet(env, ['relay_pending_url', 'relay_enroll']);
-  for (const k of Object.keys(SOURCES(env))) {
-    if (k === 'staff') continue;
+  await pool(Object.keys(SOURCES(env)).filter((k) => k !== 'staff'), 4, async (k) => {
     try { const t = await table(env, k, deps); out[k] = { state: t.rows.length ? 'ok' : 'empty', rows: t.rows.length, readAt: bkk(t.at), via: PRIVATE_SRC.has(k) ? 'relay' : env.HUB_GS_URL && env.HUB_SHARED_SECRET ? 'hubdata' : 'csv' }; }
     catch (e) { out[k] = { state: 'error', code: e instanceof Err ? e.code : 'internal', via: PRIVATE_SRC.has(k) ? 'relay' : 'csv' }; }
+  });
+  const sources = {}; Object.keys(SOURCES(env)).forEach((k) => { if (out[k]) sources[k] = out[k]; });
+  let check = null;
+  if (rc && deep) { try { check = await relayCheck(env, deps, rc); } catch (e) { check = { ok: false }; } check.at = bkk(deps.now()); lastDeep = { url: rc.url, check }; }
+  else if (rc) {                                   // ปกติ: สรุปจากผลอ่านตารางส่วนตัวล่าสุด (พิสูจน์ว่าตัวกลางตอบและค่าลับตรง) — ไม่อ่านซ้ำ ไม่ดึงภาพ
+    const tb = {}; let any = false, bad = '';
+    for (const k of PRIVATE_SRC) { const o = out[k]; if (!o) continue; tb[k] = o.state === 'error' ? o.code : 'ok:' + o.rows; if (o.state !== 'error') any = true; else bad = o.code; }
+    check = { shallow: true, ping: any ? 'ok' : (bad || 'fail'), version: '', tables: tb, image: 'not-checked', ok: any && !bad, lastDeep: lastDeep && lastDeep.url === rc.url ? lastDeep.check : null };
   }
-  let check = null; if (rc) { try { check = await relayCheck(env, deps, rc); } catch (e) { check = { ok: false }; } }
-  return { ok: true, checkedAt: bkk(deps.now()), relay: rc ? { configured: true, via: rc.via, check } : { configured: false, pending: !!pend.relay_pending_url, enrollOpen: !!pend.relay_enroll }, sources: out };
+  return { ok: true, checkedAt: bkk(deps.now()), relay: rc ? { configured: true, via: rc.via, check } : { configured: false, pending: !!pend.relay_pending_url, enrollOpen: !!pend.relay_enroll }, sources };
 }
 
 // ---------- 8) ไฟล์หน้าเว็บ (สาธารณะ ไม่มีข้อมูลบุคคล) จาก Repository ที่ commit ที่กำหนด ----------
 const TYPES = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json; charset=utf-8', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', ico: 'image/x-icon', woff2: 'font/woff2' };
-async function asset(env, path, deps, origin) {
+async function asset(env, path, deps, origin, versioned) {
   if (!/^(index\.html|config\.js|assets\/[\w.\-/]+|data\/[\w.\-]+\.json)$/.test(path) || path.includes('..')) return new Response('Not found', { status: 404, headers: SEC });
   if (env.ASSETS) {                                // Cloudflare Pages: ไฟล์หน้าเว็บมาจากโครงการเดียวกัน (สร้างจาก branch ด้วย tools/build_site.sh)
     const r = await env.ASSETS.fetch(new Request(origin + '/' + (path === 'index.html' ? '' : path))), h = new Headers(r.headers);
-    for (const k in SEC) h.set(k, SEC[k]); h.set('cache-control', /^(index\.html|config\.js|data\/)/.test(path) ? 'no-cache' : 'public, max-age=300');
+    for (const k in SEC) h.set(k, SEC[k]); h.set('cache-control', /^(index\.html|config\.js|data\/)/.test(path) ? 'no-cache' : versioned && /^assets\/hub\.(js|css)$/.test(path) ? 'public, max-age=2592000, immutable' : 'public, max-age=300');     // ไฟล์ที่มี ?v=รุ่น แคชยาวได้ (รุ่นเปลี่ยนเมื่อเนื้อไฟล์เปลี่ยน)
     return new Response(r.body, { status: r.status, headers: h });
   }
   if (!/^[0-9a-f]{7,40}$/.test(str(env.ASSET_REF))) return new Response('Not found', { status: 404, headers: SEC });
@@ -516,7 +565,7 @@ export async function handle(request, env, deps) {
   try {
     if (net.mode === 'badconfig') throw new Err(503, 'bad-network-config');
     if (net.mode === 'denied') return api ? json({ ok: false, code: 'network-denied' }, 403) : page('เข้าใช้งานไม่ได้จากเครือข่ายนี้', 'ระบบนี้เปิดให้ใช้เฉพาะเครือข่ายภายในที่กำหนด', net.ip);
-    if (!api) { if (request.method !== 'GET' && request.method !== 'HEAD') throw new Err(405, 'method'); return await asset(env, path === '/' ? 'index.html' : path.slice(1), deps, url.origin); }
+    if (!api) { if (request.method !== 'GET' && request.method !== 'HEAD') throw new Err(405, 'method'); return await asset(env, path === '/' ? 'index.html' : path.slice(1), deps, url.origin, /^\d{4,12}$/.test(url.searchParams.get('v') || '')); }
     if (path === '/api/health') {                 // สาธารณะ: สถานะขั้นต่ำเท่านั้น · รายละเอียด/ตรวจแหล่งข้อมูล (?probe=1) เฉพาะผู้ดูแลที่ Login แล้ว
       if (url.searchParams.get('probe') !== '1') return json({ ok: true, now: bkk(deps.now()) });
       await need(request, env, deps, true);
@@ -533,8 +582,8 @@ export async function handle(request, env, deps) {
     if (path === '/api/logout' && m === 'POST') { sameOrigin(request); const tok = cookieOf(request); if (tok) await env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(await sha(tok)).run(); return json({ ok: true }, 200, { 'set-cookie': setCookie('x', 0) }); }
     if (path === '/api/data' && m === 'GET') { const s = await need(request, env, deps), k = url.searchParams.get('dataset') || ''; if (!Object.prototype.hasOwnProperty.call(BUILD, k)) throw new Err(400, 'unknown-dataset');
       let rows = await BUILD[k](env, deps); if (k === 'staff') rows = rows.map(PUBLIC_STAFF(env)); return json({ ok: true, dataset: k, rows, asOf: bkk((memo.get(k === 'staff' ? 'staff' : k) || { at: deps.now() }).at), role: s.role }); }
-    if (path === '/api/sources' && m === 'GET') { await need(request, env, deps); return json(await sourcesStatus(env, deps)); }
-    if (path === '/api/stats' && m === 'GET') { await need(request, env, deps); return json(await liveStats(env, deps)); }
+    if (path === '/api/sources' && m === 'GET') { await need(request, env, deps); return json(await sourcesStatus(env, deps, url.searchParams.get('deep') === '1')); }
+    if (path === '/api/stats' && m === 'GET') { await need(request, env, deps); return json(await liveStats(env, deps, url.searchParams.get('scope') || 'all')); }
     if (path === '/api/img' && m === 'GET') { await need(request, env, deps); return await img(request, env, deps); }
     if (path === '/api/roster' && m === 'GET') return await rosterGet(env, await need(request, env, deps));
     if (path === '/api/roster' && m === 'POST') return await rosterWrite(request, env, deps, await need(request, env, deps, true));
@@ -546,7 +595,8 @@ export async function handle(request, env, deps) {
     return api ? json(path === '/api/chat' ? { status: 'error', code } : { ok: false, code, ...(e instanceof Err && e.extra ? e.extra : {}) }, status) : new Response('Error', { status, headers: SEC });
   }
 }
-export const _reset = () => { memo.clear(); knownImg.clear(); relayMemo = null; };
+export const _coldIsolate = () => { memo.clear(); inflight.clear(); };      // จำลองเครื่องรับคำขอใหม่ (ชุดทดสอบ)
+export const _reset = () => { memo.clear(); inflight.clear(); knownImg.clear(); privImg.clear(); relayMemo = null; lastDeep = null; cacheEpoch++; _stat.reads = {}; };
 export const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, staff TEXT NOT NULL, name TEXT, unit TEXT, role TEXT NOT NULL, created INTEGER NOT NULL, exp INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS attempts(k TEXT PRIMARY KEY, n INTEGER NOT NULL, exp INTEGER NOT NULL)',
@@ -555,4 +605,4 @@ export const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)',
   'CREATE TABLE IF NOT EXISTS imgids(id TEXT PRIMARY KEY, at INTEGER NOT NULL)'
 ];
-export default { fetch: (request, env) => handle(request, env, { fetch: (u, o) => fetch(u, o), now: () => Date.now(), cache: caches.default }) };
+export default { fetch: (request, env, ctx) => handle(request, env, { fetch: (u, o) => fetch(u, o), now: () => Date.now(), cache: caches.default, waitUntil: ctx && ctx.waitUntil ? (p) => ctx.waitUntil(p) : null }) };

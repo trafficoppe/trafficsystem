@@ -725,3 +725,35 @@ body.tab-hidden .chat-fab .fab-bot,body.chat-open .chat-fab .fab-bot,body.tab-hi
 .tdi-bar{justify-content:flex-start}
 .chat-fab.mode-robot .fab-bot{width:66px;height:66px}
 .h-sub{font-size:15px;font-weight:700;margin:18px 0 6px}
+
+/* ===== รอบ 12: ส่วนยุบได้ทุกหน้า · รูปแบบกราฟ · การจัดวางกราฟ ===== */
+.fold-btn{min-height:48px;flex-wrap:wrap}
+.fold-btn:hover{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 5%,var(--card))}
+.fold-btn .pill{font-size:.78rem}
+.sys-fold+.sys-fold{margin-top:10px}
+@media print{.fold-body[hidden]{display:block!important}.fold-btn .fold-ch,.chart-tb,.layout-ctl,.legend-btn button[aria-pressed="false"]{display:none!important}.fold-btn{border:0;padding:0}}
+.chartw{min-width:0}
+.chart-tb{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin:0 0 8px;justify-content:flex-end}
+.chart-tb button{font:inherit;font-size:.78rem;line-height:1;padding:6px 10px;min-height:30px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--muted);cursor:pointer;transition:background .14s ease,color .14s ease,border-color .14s ease}
+.chart-tb button:hover{border-color:var(--brand);color:var(--ink)}
+.chart-tb button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+.chart-tb button:focus-visible,.legend-btn button:focus-visible,.layout-ctl button:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.chart-tb .cm-reset{border-style:dashed}
+.chart-body{animation:chartIn .16s ease}
+@keyframes chartIn{from{opacity:.35}to{opacity:1}}
+.chart-box.scroll-x{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.chart-box.scroll-x svg{max-width:none}
+.chart-tbl{max-height:340px}
+.chart-tbl .tbl{font-variant-numeric:tabular-nums}
+.chart-tbl .tbl tbody tr:last-child td{font-weight:700;border-top:2px solid var(--line)}
+.chart-tbl[data-nosum] .tbl tbody tr:last-child td{font-weight:400;border-top:0}
+.legend-btn button{font:inherit;font-size:.8rem;color:var(--muted);background:none;border:1px solid transparent;border-radius:999px;padding:3px 8px;cursor:pointer;min-height:28px}
+.legend-btn button:hover{border-color:var(--line);color:var(--ink)}
+.legend-btn button[aria-pressed="false"]{opacity:.5;text-decoration:line-through}
+.chart-hid{font-size:.8rem;color:var(--muted);margin:6px 0 0}
+.layout-ctl{display:flex;gap:6px;align-items:center;justify-content:flex-end;margin:0 0 10px;font-size:.82rem;color:var(--muted)}
+.layout-ctl button{font:inherit;font-size:.8rem;padding:6px 12px;min-height:32px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--muted);cursor:pointer}
+.layout-ctl button[aria-pressed="true"]{background:color-mix(in srgb,var(--brand) 12%,var(--card));border-color:var(--brand);color:var(--ink);font-weight:700}
+body.charts-stack .grid2,body.charts-stack .trends{grid-template-columns:1fr}
+@media (max-width:640px){.layout-ctl{display:none}.chart-tb{justify-content:flex-start}.chart-tb button{min-height:36px;padding:8px 12px}.legend-btn button{min-height:36px}}
+@media (prefers-reduced-motion:reduce){.chart-body{animation:none}.chart-tb button{transition:none}}

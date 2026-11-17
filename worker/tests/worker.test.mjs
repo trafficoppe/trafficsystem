@@ -3,7 +3,7 @@
 // ผลที่ผ่านพิสูจน์ตรรกะของโค้ดเท่านั้น ไม่ได้พิสูจน์ว่าบริการที่ Deploy แล้วทำงานกับแหล่งจริง
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
-import { handle, SCHEMA, _reset, parseCsv, parseCidrs, ipNum, normDT, persons, SOURCES } from '../src/index.js';
+import { handle, SCHEMA, _reset, parseCsv, parseCidrs, ipNum, normDT, persons, SOURCES, _stat, _coldIsolate } from '../src/index.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 let fails = 0, n = 0; const ok = (name, cond, info) => { n++; if (!cond) fails++; console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond || info === undefined ? '' : ' — ' + info)); };
 
@@ -47,9 +47,10 @@ const RELAY_TABLES = {
     ['2026-11-03 9:00:00', 'RT-1', 'TOKEN-SECRET-1', 'B', 'กลุ่มที่ 2: บุคลากรส่วนงานอื่น', 'จอดประจำ', 'ส่วนงานสมมติ', 'หน่วยสมมติ', '', '', '', '1', 'รถยนต์ทั่วไป', 'ทบ1111', '', '', 'รออัปเดตเข้ากล้อง', 'HASH1'],
     ['2026-11-04 9:00:00', 'RT-3', 'TOKEN-SECRET-3', 'C', 'กลุ่มที่ 3: อื่น ๆ', 'อื่น ๆ', '', '', '', '', '', '2', 'รถยนต์ทั่วไป', 'ทบ4444', '', '', 'อัปเดตแล้ว', 'HASH3']]
 };
+let csvDelay = 0, downGid = ''; const csvCalls = [], thumbCalls = [];
 const fetchMock = async (u, o) => { u = String(u);
   let m = /docs\.google\.com\/spreadsheets\/d\/[\w-]+\/export\?format=csv&gid=(\d+)/.exec(u);
-  if (m) { if (sourceDown) return new Response('<html>Sign in</html>', { status: 200, headers: { 'content-type': 'text/html' } }); return SHEETS[m[1]] ? new Response(csv(SHEETS[m[1]]), { headers: { 'content-type': 'text/csv; charset=utf-8' } }) : new Response('', { status: 404 }); }
+  if (m) { csvCalls.push(m[1]); if (csvDelay) await new Promise((r) => setTimeout(r, csvDelay)); if (sourceDown || downGid === m[1]) return new Response('<html>Sign in</html>', { status: 200, headers: { 'content-type': 'text/html' } }); return SHEETS[m[1]] ? new Response(csv(SHEETS[m[1]]), { headers: { 'content-type': 'text/csv; charset=utf-8' } }) : new Response('', { status: 404 }); }
   m = /raw\.githubusercontent\.com\/trafficoppe\/trafficsystem\/[0-9a-f]+\/(.+)$/.exec(u);
   if (m) { const f = path.join(ROOT, m[1]); return fs.existsSync(f) ? new Response(fs.readFileSync(f)) : new Response('', { status: 404 }); }
   if (u === HUBDATA_URL) { const b = JSON.parse(o.body), gid = (SOURCES({})[b.source] || [])[1]; hubDataCalls.push(b.source);      // MOCK บริการเดิม HubData
@@ -63,6 +64,7 @@ const fetchMock = async (u, o) => { u = String(u);
     if (b.action === 'img') return b.id === PRIV || b.id === IMG2 ? Response.json({ ok: true, mime: 'image/jpeg', b64: 'AAEC' }) : Response.json({ ok: false, code: 'not-allowed' });
     return Response.json({ ok: false, code: 'unknown-action' }); }
   m = /drive\.google\.com\/thumbnail\?id=([\w-]+)&sz=w(\d+)/.exec(u);
+  if (m) thumbCalls.push(m[1]);
   if (m) return m[1] === IMG1 || m[1] === IMG2 ? new Response(new Uint8Array([137, 80, 78, 71]), { headers: { 'content-type': 'image/png' } }) : new Response('<html>', { headers: { 'content-type': 'text/html' } });
   return new Response('', { status: 404 }); };
 let NOW = Date.parse('2026-11-15T19:00:00+07:00');
@@ -268,7 +270,7 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
   ok('[MOCK] ตัวกลางตอบหน้า Login ของ Google (ไม่ได้ Deploy แบบ Anyone) → relay-login-required', r.j.sources.ruenthai.code === 'relay-login-required', JSON.stringify(r.j.sources.ruenthai));
   const keep = relaySecret; relaySecret = 'x'; _reset(); r = await run('/api/sources', { cookie: U10 }, E); relaySecret = keep;
   ok('[MOCK] ค่าลับไม่ตรง → relay-forbidden (ไม่เดาข้อมูล)', r.j.sources.studentMoto.code === 'relay-forbidden');
-  _reset(); r = await run('/api/sources', { cookie: U10 }, E);
+  _reset(); r = await run('/api/sources?deep=1', { cookie: U10 }, E);
   ok('[MOCK] /api/sources แยกสถานะ: ตั้งค่าแล้ว · ตอบได้ · อ่านแต่ละตาราง · อ่านภาพที่อนุญาต', r.j.relay.configured === true && r.j.relay.check.ping === 'ok' && r.j.relay.check.tables.ruenthai === 'ok:4' && r.j.relay.check.image === 'ok' && !JSON.stringify(r.j).includes(relaySecret), JSON.stringify(r.j.relay));
   // แคชภาพ: ETag/304 ต้องผ่าน session ก่อน · รุ่นแคชเปลี่ยนเมื่อเปลี่ยนตัวกลาง
   r = await run('/api/img?id=' + PRIV + '&w=400', { cookie: U10 }, E); const et = r.h.get('etag');
@@ -288,5 +290,36 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
   }
   relaySecret = null; _reset(); r = await run('/api/stats', { cookie: U10 }, E); relaySecret = keep;
   ok('[MOCK] ไม่มีค่าลับ (สคริปต์ยังไม่ได้ค่าลับ) → relay-forbidden ไม่มีตัวเลข', r.j.errors.studentMoto === 'relay-forbidden' && !r.j.studentMoto);
+  // ================= รอบ 12: ความเร็ว (อ่านพร้อมกัน · รวมคำขอ · scope · แคชผลรวม · ภาพส่วนตัวไปตัวกลางก่อน) =================
+  { _reset(); const cache = new Map(), depsC = { fetch: fetchMock, now: () => NOW, cache: { match: async (k) => { const v = cache.get(k.url || String(k)); return v ? v.clone() : undefined; }, put: async (k, v) => { cache.set(k.url || String(k), v.clone()); } } };
+    const runC = async (p, o = {}, env = E) => { const x = await handle(req(p, o), env, depsC); const ct = x.headers.get('content-type') || ''; return { s: x.status, j: /json/.test(ct) ? await x.json() : null, h: x.headers }; };
+    const gidOf = (k) => SOURCES(E)[k][1], c0 = csvCalls.length, nCsv = (k) => csvCalls.slice(c0).filter((g) => g === gidOf(k)).length;
+    csvDelay = 40; const t0 = Date.now(); const [a, b2, c2] = await Promise.all([runC('/api/stats', { cookie: U10 }), runC('/api/stats', { cookie: U10 }), runC('/api/stats?scope=core', { cookie: U10 })]); const dt = Date.now() - t0; csvDelay = 0;
+    ok('[รอบ 12] 3 คำขอพร้อมกัน → อ่านต้นทางแต่ละแหล่งครั้งเดียว (รวมคำขอที่กำลังอ่านอยู่)', ['incidents', 'lostfound', 'lfYear', 'gate'].every((k) => nCsv(k) === 1) && _stat.reads.studentMoto === 1 && _stat.reads.ruenthai === 1 && a.j.incidents.total === b2.j.incidents.total && !!c2.j.gate, JSON.stringify(_stat.reads));
+    ok('[รอบ 12] อ่าน 4 แหล่ง (แหล่งละ 40 ms) พร้อมกัน ไม่ต่อคิว (< 3 เท่าของแหล่งเดียว)', dt < 120, dt + ' ms');
+    ok('[รอบ 12] scope=core ไม่มีชุดส่วนตัว · scope=private มีเฉพาะชุดส่วนตัว · scope ไม่อยู่ในรายการ → 400 · ไม่มี session → 401', !c2.j.studentMoto && !c2.j.ruenthai && c2.j.scope === 'core' && (await runC('/api/stats?scope=private', { cookie: U10 })).j.ruenthai.surveys === a.j.ruenthai.surveys && !(await runC('/api/stats?scope=private', { cookie: U10 })).j.incidents && (await runC('/api/stats?scope=../x', { cookie: U10 })).s === 400 && (await runC('/api/stats?scope=core')).s === 401);
+    ok('[รอบ 12] sourceReadAt แยกจาก checkedAt: มีเวลาอ่านต้นทางทุกชุด', ['incidents', 'lostfound', 'lostfoundYear', 'gate', 'studentMoto', 'ruenthai'].every((k) => /^\d{4}-\d\d-\d\d \d\d:\d\d$/.test(a.j.sourceReadAt[k])), JSON.stringify(a.j.sourceReadAt));
+    // เครื่องรับคำขอใหม่ (ไม่มีตารางในหน่วยความจำ) ภายใน 2 นาที → ใช้ผลรวมที่แคชไว้ ไม่อ่านต้นทางซ้ำ และเวลาอ่านต้นทางยังเป็นเวลาเดิม
+    const readAt0 = a.j.sourceReadAt.gate; NOW += 90e3; _coldIsolate(); const c1 = csvCalls.length, rel1 = relayCalls.length; let h = await runC('/api/stats', { cookie: U10 });
+    ok('[รอบ 12] แคชผลรวม: เครื่องใหม่ภายใน 2 นาที ไม่อ่านต้นทางซ้ำ · sourceReadAt คงเป็นเวลาอ่านจริง (ไม่ใช่เวลาตอบ) · checkedAt เป็นเวลาตอบ', csvCalls.length === c1 && relayCalls.length === rel1 && h.j.sourceReadAt.gate === readAt0 && h.j.checkedAt !== a.j.checkedAt && h.j.incidents.total === a.j.incidents.total && h.j.studentMoto.registrations === a.j.studentMoto.registrations, h.j.sourceReadAt.gate + ' / ' + h.j.checkedAt);
+    ok('[รอบ 12] แคชผลรวม: ไม่มี session → 401 แม้มีแคช', (await runC('/api/stats')).s === 401);
+    NOW += 40e3; _coldIsolate(); const c3 = csvCalls.length; h = await runC('/api/stats?scope=core', { cookie: U10 });
+    ok('[รอบ 12] แคชผลรวมหมดอายุ (เกิน 2 นาทีจากเวลาอ่านต้นทาง) → อ่านต้นทางใหม่ และ sourceReadAt เปลี่ยน', csvCalls.length === c3 + 4 && h.j.sourceReadAt.gate !== readAt0, (csvCalls.length - c3) + ' ' + h.j.sourceReadAt.gate);
+    _coldIsolate(); const c4 = csvCalls.length; h = await handle(req('/api/stats?scope=core', { cookie: U10 }), Object.assign({}, E, { SHEET_LF: 'MOCKLF2' }), depsC).then((x) => x.json());
+    ok('[รอบ 12] เปลี่ยนการตั้งค่าแหล่งข้อมูล → ไม่ใช้แคชของชุดเดิม (คีย์ผูกกับแหล่ง/รุ่น/ตัวกลาง)', csvCalls.length === c4 + 4, String(csvCalls.length - c4));
+    // แหล่งหนึ่งล้ม: ชุดอื่นยังมา ไม่กลายเป็น 0 · แก้แล้วอ่านได้ (ไม่มี Promise ค้าง)
+    _reset(); downGid = gidOf('gate'); h = await runC('/api/stats', { cookie: U10 });
+    ok('[รอบ 12] แหล่งรถเข้าอ่านไม่ได้ → errors.gate มีสาเหตุ ไม่มีค่า gate (ไม่ใช่ 0) · เหตุการณ์/L&F/ชุดส่วนตัวยังมา', h.j.errors.gate === 'source-private' && h.j.gate === undefined && !!h.j.incidents && !!h.j.lostfoundDaily && !!h.j.studentMoto && !h.j.sourceReadAt.gate, JSON.stringify(h.j.errors));
+    downGid = ''; h = await runC('/api/stats?scope=core', { cookie: U10 }); ok('[รอบ 12] แหล่งกลับมา → คำขอถัดไปอ่านได้ทันที (ความล้มเหลวไม่ถูกแคช และไม่ค้าง)', !!h.j.gate && !h.j.errors.gate);
+    // สถานะแหล่งข้อมูล: ปกติไม่ตรวจลึก
+    _reset(); const rl0 = relayCalls.length; h = await runC('/api/sources', { cookie: U10 }); const calls = relayCalls.slice(rl0);
+    ok('[รอบ 12] /api/sources ปกติ: ไม่ ping/ไม่ดึงภาพ/ไม่อ่านตารางส่วนตัวซ้ำ (อ่านตารางละครั้ง) · บอกว่ายังไม่ได้ตรวจภาพ', calls.length === 2 && calls.every((x) => /^table:/.test(x)) && h.j.relay.check.shallow === true && h.j.relay.check.image === 'not-checked' && h.j.relay.check.tables.ruenthai === 'ok:4', calls.join(','));
+    const rl1 = relayCalls.length; h = await runC('/api/sources?deep=1', { cookie: U10 }); ok('[รอบ 12] /api/sources?deep=1: ตรวจลึก (ping + ตาราง + ภาพ) และจำผลพร้อมเวลา', relayCalls.slice(rl1).some((x) => x === 'ping:') && h.j.relay.check.image === 'ok' && !!h.j.relay.check.at && (await runC('/api/sources', { cookie: U10 })).j.relay.check.lastDeep.image === 'ok');
+    // ภาพ: p=1 ไปตัวกลางก่อน
+    _reset(); await runC('/api/data?dataset=gps', { cookie: U10 }); const th0 = thumbCalls.length; h = await runC('/api/img?id=' + PRIV + '&w=400&p=1', { cookie: U10 });
+    ok('[รอบ 12] ภาพ GPS (p=1): ไปตัวกลางก่อน ไม่ลองลิงก์สาธารณะ', h.s === 200 && h.h.get('x-img-via') === 'relay' && thumbCalls.length === th0, h.s + ' ' + h.h.get('x-img-via'));
+    const rl2 = relayCalls.length; h = await runC('/api/img?id=' + PRIV + '&w=400&p=1', { cookie: U10 }); ok('[รอบ 12] เรียกซ้ำ → จากแคช ไม่เรียกตัวกลาง · ไม่มี session → 401 แม้มีแคช · รหัสภาพที่ไม่รู้จัก + p=1 → 404', h.h.get('x-img-via') === 'cache' && relayCalls.length === rl2 && (await runC('/api/img?id=' + PRIV + '&w=400&p=1')).s === 401 && (await runC('/api/img?id=ZZZZZZZZZZZZZZZZZZZZZZZZZZ&w=400&p=1', { cookie: U10 })).s === 404);
+    h = await runC('/api/img?id=' + IMG1 + '&w=400&p=1', { cookie: U10 }); ok('[รอบ 12] p=1 กับภาพที่ตัวกลางไม่อนุญาตแต่เป็นภาพสาธารณะ → ใช้ลิงก์สาธารณะตามเดิม (p=1 ไม่เปิดสิทธิ์เพิ่ม)', h.s === 200 && h.h.get('x-img-via') === 'public');
+  }
   _reset(); }
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ทั้งหมดเป็นการทดสอบ local ด้วยของจำลอง)'); process.exit(fails ? 1 : 0);

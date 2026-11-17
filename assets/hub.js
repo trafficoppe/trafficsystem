@@ -246,21 +246,38 @@
     if (grp) crumb.appendChild(el('span', { class: 'crumb-g', text: grp.label + ' › ' + (PAGE_PARENT[page] ? PAGE_PARENT[page].label.replace(/\s*\(ล่าสุด\)$/, '') + ' › ' : '') }));
     crumb.appendChild(document.createTextNode(PAGE_TITLE[page] || ''));
     document.title = (page === 'dashboard' ? '' : (PAGE_TITLE[page] + ' · ')) + SYS_NAME;
-    var view = $('view'); view.textContent = '';
+    var view = $('view'), keepY = state.rerender && first === true ? window.pageYOffset : null; dropObs(); if (!state.rerender) { state.folds = {}; state.pageSeq = (state.pageSeq || 0) + 1; }
+    view.textContent = '';
     try { PAGES[page](view, page); var tb = grp && !view.querySelector('.tabs') ? tabsOf(grp.group, page) : null, ph = view.querySelector('.ph'); if (tb && ph) ph.parentNode.insertBefore(tb, ph.nextSibling); } catch (e) { view.appendChild(el('div', { class: 'card box' }, [el('strong', { text: 'แสดงหน้านี้ไม่สำเร็จ' }), el('p', { text: String(e && e.message || e) })])); if (window.console) console.error(e); }
+    try { layoutCtl(view); } catch (e2) {}
     var anc = hashParts()[1], target = anc ? $('sec-' + anc) : null;
     if (target) setTimeout(function () { target.scrollIntoView(); }, 80);
     else if (!first) { window.scrollTo(0, 0); view.focus({ preventScroll: true }); }
+    else if (keepY != null && keepY > 0) { window.scrollTo(0, keepY); setTimeout(function () { if (Math.abs(window.pageYOffset - keepY) > 4) window.scrollTo(0, keepY); }, 60); }   /* วาดซ้ำหน้าเดิม (ข้อมูลสดมาใหม่/เปลี่ยนตัวเลือก): คงตำแหน่งเลื่อน */
+  }
+
+  /* รอบ 12 — การจัดวางกราฟบนหน้า (คนละเรื่องกับรูปแบบกราฟ): ตารางการ์ด / เรียงลงแนวตั้งเต็มความกว้าง · จำค่าในเครื่อง · จอแคบเรียงลงอยู่แล้วจึงไม่แสดงตัวเลือก */
+  function chartLayout() { return store('hub.chartLayout') === 'stack' ? 'stack' : 'grid'; }
+  function applyChartLayout() { document.body.classList.toggle('charts-stack', chartLayout() === 'stack'); }
+  function layoutCtl(view) {
+    applyChartLayout();
+    if (view.querySelectorAll('.grid2 > .chart, .trends > .trend').length < 2) return;
+    var host = view.querySelector('.ph, .dash-head'); if (!host) return;
+    var cur = chartLayout(), mk = function (v, t) { return el('button', { type: 'button', 'aria-pressed': String(cur === v), text: t, onclick: function () { store('hub.chartLayout', v); route(true); } }); };
+    host.parentNode.insertBefore(el('div', { class: 'layout-ctl', role: 'group', 'aria-label': 'การจัดวางกราฟ' }, [el('span', { text: 'จัดวางกราฟ' }), mk('grid', 'ตารางการ์ด'), mk('stack', 'เรียงลงแนวตั้ง')]), host.nextSibling);
   }
 
   /* ---------- ชิ้นส่วนหน้า ---------- */
   function pageHead(title, desc, ctrls) {
     return el('div', { class: 'ph' }, [el('div', {}, [el('h1', { text: title }), desc ? el('p', { text: desc }) : null]), ctrls || null]);
   }
+  var FOLD_TITLE = /ข้อสังเกต|ข้อจำกัดที่ควรทราบ|ที่มาของข้อมูลและการคุ้มครอง|แบบฟอร์มของระบบอื่นที่เกี่ยวข้อง/;      /* หัวข้อรายละเอียดประกอบที่เริ่มแบบยุบทุกหน้า */
   function section(title, opts, kids) {
     opts = opts || {};
     kids = (kids || []).filter(function (k) { return k && !(k.classList && k.classList.contains('grid2') && !k.childNodes.length); });
     if (!kids.length) return document.createDocumentFragment();
+    if (opts.fold || FOLD_TITLE.test(title)) { var nLi = 0; kids.forEach(function (k) { if (k.querySelectorAll) nLi += k.querySelectorAll('li').length; });
+      return foldSection(title, { count: opts.count || (nLi ? nLi + ' ข้อ' : opts.note || null), status: opts.status }, kids.concat(opts.more ? [el('p', {}, [el('a', { class: 'more', href: '#' + opts.more, text: 'ดูรายละเอียด →' })])] : [])); }
     if (title === 'นิยามและที่มา') return el('details', { class: 'sec fold', 'aria-label': title }, [el('summary', {}, [el('span', { class: 'fold-t', text: title }), el('span', { class: 'fold-s', 'aria-hidden': 'true' })])].concat(kids, opts.more ? [el('p', {}, [el('a', { class: 'more', href: '#' + opts.more, text: 'ดูรายละเอียด →' })])] : []));
     return el('section', { class: 'sec' + (opts.cls ? ' ' + opts.cls : ''), 'aria-label': title }, [el('div', { class: 'sec-h' }, [opts.icon ? el('h2', { class: 'h-xl' }, [el('span', { class: 'h-emo', 'aria-hidden': 'true', text: opts.icon }), ' ' + title]) : el('h2', { text: title }), opts.note ? el('span', { class: 'note', text: opts.note }) : null,
       opts.more ? el('a', { class: 'more', href: '#' + opts.more, text: 'ดูรายละเอียด →' }) : null])].concat(kids));
@@ -343,10 +360,13 @@
     });
     if (onPick) { node.classList.add('pick'); node.addEventListener('click', function () { if (touchFirst) { touchFirst = false; return; } onPick(); }); }
   }
+  /* รอบ 12: ตัวสังเกตขนาดของกราฟผูกกับหน้าปัจจุบัน — เปลี่ยนหน้า/วาดใหม่แล้วปลดออกทั้งหมด (ไม่สะสม) */
+  var liveObs = [];
+  function dropObs() { liveObs.forEach(function (o) { try { o.disconnect(); } catch (e) {} }); liveObs = []; }
   function responsive(draw) {
     var box = el('div', { class: 'chart-box' }), last = 0;
     function run() { var w = Math.round(box.clientWidth); if (!w || w === last) return; last = w; box.textContent = ''; draw(box, w); }
-    if (window.ResizeObserver) new ResizeObserver(run).observe(box); else window.addEventListener('resize', run);
+    if (window.ResizeObserver) { var ro = new ResizeObserver(run); ro.observe(box); liveObs.push(ro); } else { window.addEventListener('resize', run); liveObs.push({ disconnect: function () { window.removeEventListener('resize', run); } }); }
     (window.requestAnimationFrame || setTimeout)(run);
     return box;
   }
@@ -363,48 +383,97 @@
     }
   }
   /** แท่งรายคอลัมน์ (ซ้อนกันเมื่อมีหลายชุดที่หน่วยเดียวกัน) — opt: {h, int, unit, onPick(i), sel, pickHint, aria} */
+  /* รอบ 12 — รูปแบบกราฟเลือกได้ (ใช้ข้อมูลชุดเดียวกัน ไม่เรียก API ใหม่ ไม่เปลี่ยนตัวกรอง/วิธีนับ):
+       stack = แท่งซ้อน (ค่าเดิม ดูผลรวม+สัดส่วน) · group = แท่งตั้งแยกชุด (แต่ละชุดตั้งข้างกัน) · line = เส้นแนวโน้ม (เฉพาะแกนเวลา เว้นช่วงเมื่อไม่มีข้อมูล) · table = ตารางตัวเลข
+     ค่า null/undefined = ไม่มีข้อมูล (ไม่ใช่ 0) · จำรูปแบบที่เลือกต่อกราฟใน localStorage (ไม่ใช่ข้อมูลอ่อนไหว) · opt.cat = แกนหมวดหมู่ (ไม่มีโหมดเส้น) · opt.modes === false = ไม่แสดงแถบเลือก */
+  var CHART_MODE = { stack: 'แท่งซ้อน', bar: 'แท่ง', group: 'แท่งแยกชุด', line: 'เส้น', table: 'ตาราง' };
+  function chartPrefs() { try { return JSON.parse(store('hub.chart') || '{}') || {}; } catch (e) { return {}; } }
+  function chartPrefSet(k, v) { var p = chartPrefs(); if (v == null) delete p[k]; else p[k] = v; store('hub.chart', JSON.stringify(p)); }
   function bars(cols, series, opt) {
     opt = opt || {};
     if (!cols.length) return el('div', { class: 'empty', text: 'ไม่มีข้อมูลในช่วงที่เลือก' });
-    var wrap = el('div');
-    wrap.appendChild(responsive(function (box, W) {
-      var H = opt.h || 250, L = 46, R = 8, T = 22, B = 28, pw = W - L - R, ph = H - T - B, unit = opt.unit ? ' ' + opt.unit : '';
+    var multi = series.length > 1, key = opt.key || opt.aria || 'chart', modes = multi ? ['stack', 'group'] : ['bar'], def = modes[0];
+    if (!opt.cat) modes.push('line'); modes.push('table');
+    var saved = opt.modes === false ? null : chartPrefs()[key], mode = modes.indexOf(saved) >= 0 ? saved : def, hidden = {}, unit = opt.unit ? ' ' + opt.unit : '';
+    var wrap = el('div', { class: 'chartw' }), body = el('div', { class: 'chart-body' }), tb = null, note = el('p', { class: 'chart-hid', role: 'status', hidden: '' });
+    function vis() { return series.filter(function (s, i) { return !hidden[i]; }); }
+    function draw() {
+      var S = vis(); body.textContent = ''; wrap.setAttribute('data-mode', mode);
+      if (!S.length) body.appendChild(el('div', { class: 'empty', text: 'ซ่อนทุกชุดข้อมูลอยู่ — กดชื่อชุดด้านล่างเพื่อแสดง' }));
+      else if (mode === 'table') body.appendChild(chartTable(cols, S, opt));
+      else if (mode === 'line') { var mx = 1; S.forEach(function (s) { s.values.forEach(function (v) { if (v != null && v > mx) mx = v; }); }); var sc = niceTop(mx, opt.int);
+        body.appendChild(lineChart(cols, S, { min: 0, max: sc.top, step: sc.step, dec: 0, fmt: compact, fv: function (v) { return num(v); }, unit: opt.unit, h: opt.h, aria: (opt.aria || 'แผนภูมิ') + ' (เส้นแนวโน้ม)', onPick: opt.onPick, pickHint: opt.pickHint, sel: opt.sel, noLegend: true })); }
+      else body.appendChild(barsSvg(cols, S, opt, mode === 'group'));
+      var hn = series.filter(function (s, i) { return hidden[i]; }).map(function (s) { return s.name; });
+      note.hidden = !hn.length; note.textContent = hn.length ? 'กำลังซ่อน: ' + hn.join(', ') + ' — ผลรวมในกราฟนี้ไม่รวมชุดที่ซ่อน (ตัวเลขสรุปด้านบนของหน้าไม่เปลี่ยน)' : '';
+      if (tb) Array.prototype.forEach.call(tb.querySelectorAll('button[data-m]'), function (bn) { bn.setAttribute('aria-pressed', String(bn.getAttribute('data-m') === mode)); });
+      if (tb) { var rs = tb.querySelector('.cm-reset'); if (rs) rs.hidden = mode === def; }
+    }
+    if (opt.modes !== false) {
+      tb = el('div', { class: 'chart-tb', role: 'group', 'aria-label': 'รูปแบบกราฟ' }, modes.map(function (m) {
+        return el('button', { type: 'button', 'data-m': m, 'aria-pressed': 'false', title: m === 'group' ? 'แท่งตั้งแยกชุด: แต่ละชุดข้อมูลตั้งข้างกันในช่วงเวลาเดียวกัน' : m === 'stack' ? 'แท่งซ้อน: เห็นผลรวมและสัดส่วนย่อย' : null, text: CHART_MODE[m], onclick: function () { mode = m; chartPrefSet(key, m === def ? null : m); draw(); } }); })
+        .concat([el('button', { type: 'button', class: 'cm-reset', hidden: '', text: 'ค่าเริ่มต้น', title: 'กลับไปรูปแบบเริ่มต้นของกราฟนี้', onclick: function () { mode = def; chartPrefSet(key, null); draw(); } })]));
+      wrap.appendChild(tb);
+    }
+    wrap.appendChild(body);
+    if (multi) {       /* ชื่อชุดข้อมูลกดเพื่อซ่อน/แสดงได้ (ไม่จำข้ามหน้า) */
+      wrap.appendChild(el('div', { class: 'legend legend-btn', role: 'group', 'aria-label': 'ชุดข้อมูล (กดเพื่อซ่อน/แสดง)' }, series.map(function (s, i) {
+        var bn = el('button', { type: 'button', 'aria-pressed': 'true', title: 'กดเพื่อซ่อน/แสดงชุดนี้ในกราฟ' }, [el('i', { style: 'background:' + s.color }), s.name]);
+        bn.onclick = function () { hidden[i] = !hidden[i]; bn.setAttribute('aria-pressed', String(!hidden[i])); draw(); }; return bn; })));
+      wrap.appendChild(note);
+    }
+    draw();
+    return wrap;
+  }
+  function chartTable(cols, series, opt) {
+    var multi = series.length > 1, head = [opt.cat ? 'หมวด' : 'ช่วงเวลา'].concat(series.map(function (s) { return s.name; }), multi ? ['รวม'] : []), nums = head.map(function (_, i) { return i; }).slice(1);
+    var rows = cols.map(function (c, i) { var t = 0, any = false, r = [c.full || c.label]; series.forEach(function (s) { var v = s.values[i]; if (v != null) { any = true; t += v; } r.push(v == null ? 'ไม่มีข้อมูล' : num(v)); }); if (multi) r.push(any ? num(t) : 'ไม่มีข้อมูล'); return r; });
+    var tot = ['รวมทั้งช่วง']; var grand = 0; series.forEach(function (s) { var t = s.values.reduce(function (a, v) { return a + (v || 0); }, 0); grand += t; tot.push(num(t)); }); if (multi) tot.push(num(grand));
+    if (!opt.noSum) rows.push(tot);
+    return el('div', { class: 'tbl-wrap chart-tbl', tabindex: '0', role: 'region', 'aria-label': (opt.aria || 'ตารางตัวเลข') + (opt.unit ? ' (หน่วย: ' + opt.unit + ')' : '') }, [table(head, rows, { num: nums })]);
+  }
+  function barsSvg(cols, series, opt, grouped) {
+    var n = series.length, unit = opt.unit ? ' ' + opt.unit : '', V = function (s, i) { var v = s.values[i]; return v == null ? null : v; }, TV = function (s, i) { var v = V(s, i); return v == null ? 'ไม่มีข้อมูล' : num(v) + unit; };
+    return responsive(function (box, W0) {
+      var H = opt.h || 250, L = 46, R = 8, T = 22, B = 28, minBw = grouped ? n * 7 + 8 : 0, W = Math.max(W0, grouped ? L + R + cols.length * minBw : 0), pw = W - L - R, ph = H - T - B;
       var totals = cols.map(function (_, i) { return series.reduce(function (a, s) { return a + (s.values[i] || 0); }, 0); });
-      var sc = niceTop(Math.max.apply(null, totals), opt.int), top = sc.top;
-      var root = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'group', 'aria-label': opt.aria || 'แผนภูมิแท่ง' });
+      var peak = grouped ? Math.max.apply(null, series.map(function (s) { return Math.max.apply(null, s.values.map(function (v) { return v || 0; }).concat([0])); }).concat([0])) : Math.max.apply(null, totals);
+      var sc = niceTop(peak, opt.int), top = sc.top;
+      var root = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'group', 'aria-label': (opt.aria || 'แผนภูมิแท่ง') + (grouped ? ' (แท่งตั้งแยกชุด)' : '') });
+      if (W > W0) { root.style.width = W + 'px'; box.classList.add('scroll-x'); box.setAttribute('tabindex', '0'); } else { box.classList.remove('scroll-x'); box.removeAttribute('tabindex'); }
       yAxis(root, W, L, R, T, ph, 0, top, sc.step);
-      var bw = pw / cols.length, w = Math.max(3, Math.min(48, bw * 0.68)), every = everyN(cols, bw), showTotals = bw >= 34;
+      var bw = pw / cols.length, w = grouped ? Math.max(n * 5, Math.min(n * 22, bw * 0.8)) : Math.max(3, Math.min(48, bw * 0.68)), every = everyN(cols, bw), showTotals = !grouped && bw >= 34, gw = w / n;
       cols.forEach(function (c, i) {
         var x = L + bw * i + (bw - w) / 2, acc = 0;
         var g = svg('g', { class: 'col' + (opt.sel === i ? ' sel' : ''), tabindex: i === 0 ? '0' : '-1', role: 'img',
-          'aria-label': c.full + ': ' + series.map(function (s) { return s.name + ' ' + num(s.values[i] || 0); }).join(', ') + (series.length > 1 ? ', รวม ' + num(totals[i]) : '') + unit });
+          'aria-label': c.full + ': ' + series.map(function (s) { var v = V(s, i); return s.name + ' ' + (v == null ? 'ไม่มีข้อมูล' : num(v)); }).join(', ') + (n > 1 ? ', รวม ' + num(totals[i]) : '') + unit });
         g.appendChild(svg('rect', { class: 'hit', x: L + bw * i, y: T - 16, width: bw, height: ph + 16 + B, rx: 6 }));
-        series.forEach(function (s) {
+        series.forEach(function (s, k) {
           var val = s.values[i] || 0; if (!val) return;
-          g.appendChild(svg('rect', { x: x, y: T + ph - ph * (acc + val) / top, width: w, height: Math.max(ph * val / top - (series.length > 1 ? 1 : 0), 1), rx: 2.5, fill: s.color })); acc += val;
+          if (grouped) { g.appendChild(svg('rect', { x: x + gw * k + (gw > 6 ? 0.75 : 0), y: T + ph - ph * val / top, width: Math.max(gw - (gw > 6 ? 1.5 : 0), 2), height: Math.max(ph * val / top, 1), rx: Math.min(2.5, gw / 3), fill: s.color }));
+            if (gw >= 26) g.appendChild(svg('text', { class: 'vl', x: x + gw * k + gw / 2, y: T + ph - ph * val / top - 5, 'text-anchor': 'middle', text: compact(val) })); }
+          else { g.appendChild(svg('rect', { x: x, y: T + ph - ph * (acc + val) / top, width: w, height: Math.max(ph * val / top - (n > 1 ? 1 : 0), 1), rx: 2.5, fill: s.color })); acc += val; }
         });
         if (showTotals && totals[i]) g.appendChild(svg('text', { class: 'vl', x: x + w / 2, y: T + ph - ph * totals[i] / top - 5, 'text-anchor': 'middle', text: compact(totals[i]) }));
         if (i % every === 0) g.appendChild(svg('text', { class: 'ax', x: x + w / 2, y: H - 9, 'text-anchor': 'middle', text: c.label }));
         bindTip(g, function () {
-          return tipNodes(c.full, series.map(function (s) { return { name: s.name, color: s.color, value: num(s.values[i] || 0) + unit }; }),
-            { total: series.length > 1 ? num(totals[i]) + unit : null, hint: opt.onPick ? (opt.pickHint || 'คลิกเพื่อดูรายละเอียดของเดือนนี้') : null });
+          return tipNodes(c.full, series.map(function (s) { return { name: s.name, color: s.color, value: TV(s, i) }; }),
+            { total: n > 1 ? num(totals[i]) + unit : null, hint: opt.onPick ? (opt.pickHint || 'คลิกเพื่อดูรายละเอียดของเดือนนี้') : null });
         }, opt.onPick ? function () { opt.onPick(i, c); } : null);
         root.appendChild(g);
       });
       box.appendChild(root);
-    }));
-    if (series.length > 1) wrap.appendChild(legendOf(series));
-    return wrap;
+    });
   }
   /** เส้นแนวโน้ม (ใช้กับคะแนนหรือค่าที่ไม่ควรบวกกัน) — series: [{name,color,values(null=ไม่มีข้อมูล)}] ; opt: {min,max,step,dec,unit,h,onPick,sel,labels} */
   function lineChart(cols, series, opt) {
     opt = opt || {};
     if (!cols.length) return el('div', { class: 'empty', text: 'ไม่มีข้อมูลในช่วงที่เลือก' });
-    var wrap = el('div'), dec = opt.dec == null ? 2 : opt.dec, unit = opt.unit ? ' ' + opt.unit : '';
+    var wrap = el('div'), dec = opt.dec == null ? 2 : opt.dec, unit = opt.unit ? ' ' + opt.unit : '', fv = opt.fv || function (v) { return v.toFixed(dec); };
     wrap.appendChild(responsive(function (box, W) {
       var H = opt.h || 230, L = 34, R = 12, T = 22, B = 28, pw = W - L - R, ph = H - T - B, lo = opt.min || 0, top = opt.max, step = opt.step || 1;
       var root = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'group', 'aria-label': opt.aria || 'แผนภูมิเส้น' });
-      yAxis(root, W, L, R, T, ph, lo, top, step, function (v) { return String(v); });
+      yAxis(root, W, L, R, T, ph, lo, top, step, opt.fmt || function (v) { return String(v); });
       var bw = pw / cols.length, every = everyN(cols, bw), X = function (i) { return L + bw * i + bw / 2; }, Y = function (v) { return T + ph - ph * (v - lo) / (top - lo); };
       series.forEach(function (s) {
         var seg = [];
@@ -415,23 +484,23 @@
       });
       cols.forEach(function (c, i) {
         var g = svg('g', { class: 'col' + (opt.sel === i ? ' sel' : ''), tabindex: i === 0 ? '0' : '-1', role: 'img',
-          'aria-label': c.full + ': ' + series.map(function (s) { return s.name + ' ' + (s.values[i] == null ? 'ไม่มีข้อมูล' : s.values[i].toFixed(dec)); }).join(', ') + unit });
+          'aria-label': c.full + ': ' + series.map(function (s) { return s.name + ' ' + (s.values[i] == null ? 'ไม่มีข้อมูล' : fv(s.values[i])); }).join(', ') + unit });
         g.appendChild(svg('rect', { class: 'hit', x: L + bw * i, y: T - 16, width: bw, height: ph + 16 + B, rx: 6 }));
         series.forEach(function (s) {
           var v = s.values[i]; if (v == null) return;
           g.appendChild(svg('circle', { cx: X(i), cy: Y(v), r: 4.5, fill: s.color, stroke: 'var(--card)', 'stroke-width': 2 }));
-          if (series.length === 1 && bw >= 40) g.appendChild(svg('text', { class: 'vl', x: X(i), y: Y(v) - 10, 'text-anchor': 'middle', text: v.toFixed(dec) }));
+          if (series.length === 1 && bw >= 40) g.appendChild(svg('text', { class: 'vl', x: X(i), y: Y(v) - 10, 'text-anchor': 'middle', text: fv(v) }));
         });
         if (i % every === 0) g.appendChild(svg('text', { class: 'ax', x: X(i), y: H - 9, 'text-anchor': 'middle', text: c.label }));
         bindTip(g, function () {
-          return tipNodes(c.full, series.map(function (s) { return { name: s.name, color: s.color, value: s.values[i] == null ? 'ไม่มีข้อมูล' : s.values[i].toFixed(dec) + unit + (s.notes && s.notes[i] ? ' · ' + s.notes[i] : '') }; }),
+          return tipNodes(c.full, series.map(function (s) { return { name: s.name, color: s.color, value: s.values[i] == null ? 'ไม่มีข้อมูล' : fv(s.values[i]) + unit + (s.notes && s.notes[i] ? ' · ' + s.notes[i] : '') }; }),
             { hint: opt.onPick ? (opt.pickHint || 'คลิกเพื่อดูรายละเอียดของเดือนนี้') : null });
         }, opt.onPick ? function () { opt.onPick(i, c); } : null);
         root.appendChild(g);
       });
       box.appendChild(root);
     }));
-    if (series.length > 1) wrap.appendChild(legendOf(series));
+    if (series.length > 1 && !opt.noLegend) wrap.appendChild(legendOf(series));
     return wrap;
   }
   /** แท่งแนวนอน — items: [{label, value(null=ไม่มีคำถาม), note, color, onPick}] ; max = ค่าสูงสุดของแกน ; opt: {labelW, ticks, dec, unit, aria} */
@@ -497,16 +566,25 @@
   }
   /* แบบยุบได้ (ใช้เฉพาะหน้าที่ต้องการ): เริ่มแบบยุบ เห็นหัวข้อ + จำนวนระบบ · ปุ่มมี aria-expanded/aria-controls ใช้คีย์บอร์ดได้ */
   var foldSeq = 0;
-  function systemsFold(ids, title) {
-    var list = ids.map(function (id) { return SYS[id]; }).filter(Boolean); if (!list.length) return null;
-    var id = 'sysfold' + (++foldSeq), body = el('div', { class: 'fold-body', id: id, hidden: '' }, [el('div', { class: 'sys-grid' }, list.map(sysCard))]);
-    var btn = el('button', { type: 'button', class: 'fold-btn', 'aria-expanded': 'false', 'aria-controls': id }, [el('span', { class: 'fold-t', text: title || 'ระบบและแบบฟอร์มที่เกี่ยวข้อง' }), el('span', { class: 'note', text: list.length + ' ระบบ' }), el('span', { class: 'fold-ch', 'aria-hidden': 'true' })]);
-    btn.onclick = function () { var open = btn.getAttribute('aria-expanded') !== 'true'; btn.setAttribute('aria-expanded', String(open)); body.hidden = !open; };
-    return el('section', { class: 'sec sys-fold', 'aria-label': title || 'ระบบและแบบฟอร์มที่เกี่ยวข้อง' }, [el('h2', { class: 'fold-h' }, [btn]), body]);
+  /* รอบ 12 — ส่วนยุบได้ (ชิ้นส่วนร่วมทุกหน้า): เริ่มแบบยุบ เห็นหัวข้อ + จำนวน + สถานะสำคัญ · ปุ่มจริง (Enter/Space) มี aria-expanded/aria-controls
+     · จำสถานะเปิดไว้ตลอดที่อยู่หน้าเดิม (ข้อมูลสดมาใหม่ไม่ปิดส่วนที่เปิดอยู่) · กราฟข้างในวาดเมื่อเปิด (ResizeObserver) · พิมพ์รายงาน: แสดงเนื้อหาแม้ยุบอยู่ */
+  function foldSection(title, opts, kids) {
+    opts = opts || {}; kids = (kids || []).filter(Boolean); if (!kids.length) return null;
+    var key = opts.key || title, open = !!(state.folds || {})[key], id = 'fold' + (++foldSeq);
+    var body = el('div', { class: 'fold-body', id: id }, kids); if (!open) body.hidden = true;
+    var btn = el('button', { type: 'button', class: 'fold-btn', 'aria-expanded': String(open), 'aria-controls': id }, [el('span', { class: 'fold-t', text: title }), opts.count ? el('span', { class: 'note', text: opts.count }) : null,
+      opts.status ? el('span', { class: 'pill ' + (opts.status.tone || 's-warn'), text: opts.status.text }) : null, el('span', { class: 'fold-ch', 'aria-hidden': 'true' })]);
+    btn.onclick = function () { var o = btn.getAttribute('aria-expanded') !== 'true'; btn.setAttribute('aria-expanded', String(o)); body.hidden = !o; (state.folds = state.folds || {})[key] = o; };
+    return el('section', { class: 'sec sys-fold' + (opts.cls ? ' ' + opts.cls : ''), 'aria-label': title }, [el('h2', { class: 'fold-h' }, [btn]), body]);
   }
+  function sysFoldStatus(list) {            /* สถานะสำคัญคงไว้ที่หัวข้อ — ไม่ซ่อนว่ามีระบบที่ยังเชื่อมต่อไม่ได้/ข้อมูลไม่ครบ */
+    var bad = list.filter(function (x) { return x.status === 'blocked' || x.status === 'unverified'; }).length, part = list.filter(function (x) { return x.status === 'partial' || x.status === 'warn'; }).length;
+    return bad ? { text: bad + ' ระบบยังเชื่อมต่อไม่ได้', tone: 's-off' } : part ? { text: part + ' ระบบมีข้อสังเกต', tone: 's-warn' } : null;
+  }
+  function systemsFold(ids, title) { return systemsSection(ids, title); }
   function systemsSection(ids, title) {
     var list = ids.map(function (id) { return SYS[id]; }).filter(Boolean);
-    return list.length ? section(title || 'ระบบและแบบฟอร์มที่เกี่ยวข้อง', { note: list.length + ' ระบบ' }, [el('div', { class: 'sys-grid' }, list.map(sysCard))]) : null;
+    return list.length ? foldSection(title || 'ระบบและแบบฟอร์มที่เกี่ยวข้อง', { count: list.length + ' ระบบ', status: sysFoldStatus(list) }, [el('div', { class: 'sys-grid' }, list.map(sysCard))]) : null;
   }
 
   /* ======================================================================
@@ -1244,7 +1322,8 @@
         other.appendChild(el('li', {}, [el('div', {}, [el('b', {}, [el('span', { class: 'f-ico', 'aria-hidden': 'true', text: formIcon(x.name) }), ' ' + x.name]), el('span', { text: x.desc })]), extBtn(x.links[0].label, x.links[0].url, true)])); });
       box.appendChild(el('p', { class: 'lu-count', role: 'status', text: num(n) + ' แบบฟอร์ม' }));
       if (main.childNodes.length) box.appendChild(section('แบบฟอร์มหลัก', { note: 'แบบบันทึกย่อยแสดงใต้แบบฟอร์มหลัก' }, [main]));
-      if (other.childNodes.length) box.appendChild(section('แบบฟอร์มของระบบอื่นที่เกี่ยวข้อง', { note: 'เปิดในแท็บใหม่' }, [other]));
+      if ((state.formQ || '').trim() && other.childNodes.length) (state.folds = state.folds || {})['แบบฟอร์มของระบบอื่นที่เกี่ยวข้อง'] = true;      /* กำลังค้นหาและพบในส่วนนี้ → เปิดให้เห็นผล */
+      if (other.childNodes.length) box.appendChild(section('แบบฟอร์มของระบบอื่นที่เกี่ยวข้อง', { count: other.childNodes.length + ' แบบฟอร์ม · เปิดในแท็บใหม่' }, [other]));
       if (!n) box.appendChild(el('div', { class: 'empty', text: 'ไม่พบแบบฟอร์มที่ตรงกับคำค้นหา' }));
     }
     q.oninput = function () { clearTimeout(tm); tm = setTimeout(function () { state.formQ = q.value; draw(); }, 200); };
@@ -1363,7 +1442,7 @@
       el('div', { class: 'card set' }, [el('div', {}, [el('h3', { text: 'ภาษาของระบบ' }), el('p', { text: 'รุ่นทดลองนี้มีเฉพาะภาษาไทย · ระบบเดิมสลับ TH/EN ได้ — ยังไม่ได้แปลหน้ารวมรุ่นใหม่เป็นภาษาอังกฤษ' })]), el('span', { class: 'pill s-link', text: 'ไทย (TH)' })]),
       el('div', { class: 'card set' }, [el('div', { style: 'flex-basis:100%' }, [el('h3', { text: 'หมวดที่แสดงในเมนู' }), el('p', { text: 'เอาเครื่องหมายออกเพื่อซ่อนหมวดที่ไม่ได้ใช้ (หน้าหลักและตั้งค่าระบบซ่อนไม่ได้ · หน้าที่ซ่อนยังเปิดจากลิงก์ตรงได้)' })]), checks]),
       el('div', { class: 'card set' }, [el('div', {}, [el('h3', { text: 'ล้างค่าที่บันทึกในเครื่องนี้' }), el('p', { text: 'คืนค่า Sidebar โหมดหน้าจอ และหมวดที่ซ่อน กลับเป็นค่าเริ่มต้น' })]),
-        el('button', { type: 'button', class: 'btn sec', text: 'คืนค่าเริ่มต้น', onclick: function () { ['hub.sb', 'hub.hide', 'hub.theme', 'hub.mini', 'hub.aiFab'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} }); hiddenCats = {}; setTheme('light', true); setSbMode('auto'); route(true); } })])]));
+        el('button', { type: 'button', class: 'btn sec', text: 'คืนค่าเริ่มต้น', onclick: function () { ['hub.sb', 'hub.hide', 'hub.theme', 'hub.mini', 'hub.aiFab', 'hub.chart', 'hub.chartLayout'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} }); hiddenCats = {}; setTheme('light', true); setSbMode('auto'); route(true); } })])]));
     var g = DATA.stats.generatedAt || '', mods = DATA.stats.modules || {};
     v.appendChild(section('สถานะข้อมูลและเวลาอัปเดต', { note: 'ไฟล์สรุป (snapshot) สร้างเมื่อ ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) + ' (เวลาไทย) — ไม่ใช่เวลาที่อ่านข้อมูลสด', more: 'systems' }, [table(['ชุดข้อมูล', 'สถานะ', 'แหล่งข้อมูล', 'อัปเดตล่าสุดของต้นทาง'],
       Object.keys(MOD_NAME).filter(function (k2) { return mods[k2]; }).map(function (k2) { var m = mods[k2], st = m.status || 'connected', up = m.updated || m.computedAt || (m.central && m.central.updated);
@@ -1501,7 +1580,7 @@
     else { var lv = e.levels.map(function (_, i) { return e.byType.reduce(function (a, t) { return a + t.counts[i]; }, 0); }), col = [C.fine, C.c2, C.c1];
       v.appendChild(el('div', { class: 'sec' }, [kpiGrid([{ icon: 'alert', label: 'รายงานทั้งหมด', value: num(e.total), unit: 'รายการ', sub: dLabel(e.from) + ' – ' + dLabel(e.to), color: C.c3 }].concat(e.levels.map(function (n, i) { return { icon: i === 2 ? 'check' : 'alert', label: n, value: num(lv[i]), unit: 'รายการ', color: col[i] }; })))]));
       v.appendChild(el('div', { class: 'sec grid2' }, [figure('จำนวนรายงานแยกประเภทเหตุการณ์', 'หน่วย: รายการ · แยกสีตามระดับเหตุการณ์ · ตรวจ ' + dLabel(e.checkedAt),
-        bars(e.byType.map(function (t) { return { label: t.type, full: t.type }; }), e.levels.map(function (n, i) { return { name: n, color: col[i], values: e.byType.map(function (t) { return t.counts[i]; }) }; }), { unit: 'รายการ', int: true, h: 260, aria: 'รายงานกิจกรรมพิเศษแยกประเภท' }))])); }
+        bars(e.byType.map(function (t) { return { label: t.type, full: t.type }; }), e.levels.map(function (n, i) { return { name: n, color: col[i], values: e.byType.map(function (t) { return t.counts[i]; }) }; }), { cat: true, unit: 'รายการ', int: true, h: 260, aria: 'รายงานกิจกรรมพิเศษแยกประเภท' }))])); }
     v.appendChild(systemsSection(['event-incident'], 'ระบบต้นทาง (เปิดเมื่อต้องรายงานเหตุการณ์จริง)'));
   };
   PAGES['helmet-quiz'] = function (v) {
@@ -1756,7 +1835,7 @@
     refills: { mode: 'legacy', tab: 'ประวัติการเติมสารถังดับเพลิง', gid: 680269898, q: 'select C,D,E,F,G,H,I,K', keys: ['plate', 'assetNo', 'date', 'before', 'after', 'agent', 'vendor', 'remark'] },
     staff: { mode: 'api', tab: 'พนักงานจราจร' }, ruenthai: { mode: 'api', tab: 'RuenThai_Survey' }, areaPhotos: { mode: 'api', tab: 'ภาพการตรวจพื้นที่' }, radio: { mode: 'api', tab: 'บันทึกรายงานวิทยุสื่อสาร' }
   };
-  var HCFG = window.HUB_CONFIG || {}, dsCache = {}, gvSeq = 0;
+  var HCFG = window.HUB_CONFIG || {}, dsCache = {}, gvSeq = 0, DS_TTL = 5 * 60000;
   function gvCell(c) {
     if (!c || c.v == null) return '';
     var m = typeof c.v === 'string' && /^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+))?/.exec(c.v);
@@ -1784,15 +1863,15 @@
         if (r.status === 403) throw { code: j && j.code === 'forbidden' ? 'forbidden' : j && DS_ERR[j.code] ? j.code : 'auth', status: 403 };
         if (!r.ok) throw { code: j && DS_ERR[j.code] ? j.code : 'http', status: r.status };
         if (!j || j.ok !== true || !Array.isArray(j.rows)) throw { code: 'schema' };
-        j.rows.forEach(function (row) { if (Array.isArray(row.images)) { row.images = row.images.map(function (x) { return /^https:/.test(x) ? x : 'hubimg:' + x; }); if (!row.url && row.images.length) row.url = row.images[0]; } });
+        j.rows.forEach(function (row) { if (Array.isArray(row.images)) { row.images = row.images.map(function (x) { return /^https:/.test(x) ? x : 'hubimg:' + x + (key === 'gps' ? ':p' : ''); }); if (!row.url && row.images.length) row.url = row.images[0]; } });
         return j.rows;
       });
     }, function () { throw { code: 'network' }; });
   }
   function dsMode(key) { return (HCFG.dataAccess || {})[key] || DS[key].mode; }
   function loadDS(key, force) {
-    if (force) delete dsCache[key];
-    if (!dsCache[key]) { var m = dsMode(key); dsCache[key] = (m === 'off' ? Promise.reject({ code: 'off' }) : m === 'api' ? apiGet(key) : gviz(DS[key])).then(function (rows) { return { rows: rows, at: new Date() }; }); dsCache[key].catch(function () { delete dsCache[key]; }); }
+    if (force || (dsCache[key] && dsCache[key].t0 && Date.now() - dsCache[key].t0 > DS_TTL)) delete dsCache[key];        /* รอบ 12: รายการมีอายุ 5 นาที (เท่ารอบอัปเดตสถิติสด) — ไม่ค้างทั้ง session */
+    if (!dsCache[key]) { var m = dsMode(key); dsCache[key] = (m === 'off' ? Promise.reject({ code: 'off' }) : m === 'api' ? apiGet(key) : gviz(DS[key])).then(function (rows) { return { rows: rows, at: new Date() }; }); dsCache[key].catch(function () { delete dsCache[key]; }); dsCache[key].t0 = Date.now(); }
     return dsCache[key];
   }
   var DS_ERR = {
@@ -1825,7 +1904,7 @@
   /* รูปที่แสดงได้: Drive (แปลงเป็น thumbnail จาก ID) หรือ URL https บนโดเมนที่ต้นทางใช้จริงเท่านั้น (GitHub user-attachments ของ Vehicle_List, googleusercontent) — URL อื่นถือว่า “ไม่มีภาพ” */
   var IMG_HOSTS = /^https:\/\/(github\.com\/user-attachments\/assets\/|(?:user-images|private-user-images|raw)\.githubusercontent\.com\/|lh[3-6]\.googleusercontent\.com\/|trafficoppe\.github\.io\/|op\.mahidol\.ac\.th\/)[^\s"'<>]*$/;
   function driveId(u) { var s = String(u || ''), m = /(?:\/d\/|[?&]id=)([-\w]{20,})/.exec(s); return m ? m[1] : /^[-\w]{25,}$/.test(s) ? s : ''; }
-  function imgSrc(u, sz) { var hm = /^hubimg:([-\w]{20,60})$/.exec(String(u || '')); if (hm) return HCFG.imgApiUrl ? HCFG.imgApiUrl + '?id=' + hm[1] + '&w=' + (sz === 'w1600' ? '1600' : sz === 'w800' ? '800' : '400') : ''; var id = driveId(u); if (id) return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=' + (sz || 'w400'); return IMG_HOSTS.test(String(u || '')) ? String(u) : ''; }
+  function imgSrc(u, sz) { var hm = /^hubimg:([-\w]{20,60})(:p)?$/.exec(String(u || '')); if (hm) return HCFG.imgApiUrl ? HCFG.imgApiUrl + '?id=' + hm[1] + '&w=' + (sz === 'w1600' ? '1600' : sz === 'w800' ? '800' : '400') + (hm[2] ? '&p=1' : '') : '';   /* :p = ชุดภาพส่วนตัว (GPS) → บริการไปตัวกลางก่อน */ var id = driveId(u); if (id) return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=' + (sz || 'w400'); return IMG_HOSTS.test(String(u || '')) ? String(u) : ''; }
   function imgsOf(r) { if (Array.isArray(r.images)) return r.images.filter(function (u) { return imgSrc(u); }); return ['img1', 'img2', 'img3', 'img4', 'photo', 'url'].map(function (k) { return r[k]; }).filter(function (u) { return imgSrc(u); }); }
   function pic(u, alt, cls) {
     var src = imgSrc(u, 'w400');
@@ -2249,35 +2328,61 @@
     apiCall('/me').then(function (x) { if (x.s === 200 && x.j.ok) { AUTH.user = x.j.user; authReady(); } else showLogin(x.s === 0 ? { code: 'net' } : x.j); });
   }
   function authReady() {                      /* ผ่าน Login แล้ว: เริ่มหน้าเว็บครั้งแรก หรือกลับมาหน้าที่เปิดค้างไว้ (อยู่ใน #hash ของหน้าเดียวกัน จึงไม่มีการพาไปเว็บอื่น) */
-    userBox(); for (var k in dsCache) delete dsCache[k]; rosterNamesState = 'none'; rosterNames = null;
+    authGen++; live.sig = {}; live.busy = 0; userBox(); for (var k in dsCache) delete dsCache[k]; rosterNamesState = 'none'; rosterNames = null;
     if (!AUTH.started) { AUTH.started = true; AUTH.cb(); } else route(true);
     liveRefresh();
   }
-  function authLost() { if (!AUTH.on || !AUTH.user) return; AUTH.user = null; userBox(); showLogin({ expired: true }); }
-  function logout() { apiCall('/logout', { method: 'POST', body: {} }).then(function () { AUTH.user = null; for (var k in dsCache) delete dsCache[k]; userBox(); $('view').textContent = ''; showLogin(null); }); }
+  function authLost() { if (!AUTH.on || !AUTH.user) return; AUTH.user = null; authGen++; for (var k in dsCache) delete dsCache[k]; userBox(); $('view').textContent = ''; dropObs(); showLogin({ expired: true }); }
+  function logout() { authGen++; clearTimeout(live.timer); apiCall('/logout', { method: 'POST', body: {} }).then(function () { AUTH.user = null; for (var k in dsCache) delete dsCache[k]; userBox(); $('view').textContent = ''; dropObs();
+    try { location.reload(); } catch (e) { showLogin(null); } }); }      /* รอบ 12: โหลดหน้าใหม่หลังออกจากระบบ — ล้างข้อมูลสด/รายการทั้งหมดออกจากหน่วยความจำของแท็บ */
   function userBox() {
     var old = $('userBox'); if (old) old.remove(); if (!AUTH.on || !AUTH.user) return;
     var box = el('div', { class: 'user-box', id: 'userBox' }, [el('span', { class: 'ub-name', text: AUTH.user.name + (AUTH.user.role === 'admin' ? ' · ผู้ดูแล' : '') }), el('button', { type: 'button', class: 'btn-ghost ub-out', text: 'ออกจากระบบ', onclick: logout })]);
     var st = $('stamp'); st.parentNode.insertBefore(box, st);
   }
   /* สถิติสด: อ่านต้นทางผ่านบริการ ณ เวลาที่เรียก — ส่วนที่อ่านไม่สำเร็จคงข้อมูลล่าสุดในไฟล์ไว้และบอกสถานะ (ไม่เติม 0 ไม่เปลี่ยนเวลาให้ดูสด) */
-  var live = { at: null, errors: null, timer: null };
+  var live = { at: null, errors: null, timer: null, sig: {}, busy: 0 }, authGen = 0;
+  function liveApply(j) {
+    var M = DATA.stats.modules, X = DATA.extra;
+    ['incidents', 'lostfound', 'gate'].forEach(function (k) { if (j[k] && M[k]) { for (var f in j[k]) M[k][f] = j[k][f]; } });
+    ['incidentsDaily', 'lostfoundDaily'].forEach(function (k) { if (j[k]) X[k] = j[k]; });
+    if (j.lostfoundStatus && X.lostfoundStatus) { for (var f2 in j.lostfoundStatus) X.lostfoundStatus[f2] = j.lostfoundStatus[f2]; }
+    applyLive10(j);
+  }
+  /* รอบ 12: ขอ 2 ชุดแยกกัน — ชุดหลัก (เหตุการณ์/L&F/รถเข้า) แสดงทันทีที่มา ไม่รอชุดไฟล์ส่วนตัว (นักศึกษา–จยย./เรือนไทย) ซึ่งผ่านตัวกลางและช้ากว่า
+     · วาดหน้าใหม่เฉพาะเมื่อข้อมูลเปลี่ยนจริง และคงตำแหน่งเลื่อน/ส่วนที่เปิดอยู่ · คำตอบที่มาหลังออกจากระบบ/เปลี่ยนผู้ใช้ถูกทิ้ง (authGen) · แท็บซ่อนอยู่ไม่ยิงคำขอ */
   function liveRefresh() {
     if (!AUTH.on || !AUTH.user || !HCFG.liveStatsUrl) return;
-    apiCall('/stats').then(function (x) {
+    clearTimeout(live.timer); live.timer = setTimeout(liveRefresh, 5 * 60000);
+    if (document.hidden) { live.due = true; return; }
+    if (live.busy) return; live.busy = 2; live.due = false; live.last = Date.now();
+    var gen = authGen, draw = function (sig, scope) {
+      if (live.sig[scope] === sig) return; var firstTime = live.sig[scope] == null; live.sig[scope] = sig;
+      collectMonths(); renderStamp(); liveNoteDraw();
+      if (document.querySelector('.dlg-ov, .lightbox, .chat-panel.open') || isTyping()) { live.pending = true; return; }
+      if (scope === 'private' && !firstTime && !LIVE_PRIVATE_PAGES[state.curPage]) return;        /* ชุดส่วนตัวเปลี่ยน: วาดใหม่เฉพาะหน้าที่ใช้ */
+      route(true);
+    };
+    var done = function () { live.busy = Math.max(0, live.busy - 1); };
+    apiCall('/stats?scope=core').then(function (x) {
+      done(); if (gen !== authGen) return;
       if (x.s === 401) { authLost(); return; }
       if (x.s !== 200 || !x.j.ok) { live.errors = { all: x.j.code || 'http ' + x.s }; liveNoteDraw(); return; }
-      var j = x.j, M = DATA.stats.modules, X = DATA.extra;
-      ['incidents', 'lostfound', 'gate'].forEach(function (k) { if (j[k] && M[k]) { for (var f in j[k]) M[k][f] = j[k][f]; } });
-      ['incidentsDaily', 'lostfoundDaily'].forEach(function (k) { if (j[k]) X[k] = j[k]; });
-      if (j.lostfoundStatus && X.lostfoundStatus) { for (var f2 in j.lostfoundStatus) X.lostfoundStatus[f2] = j.lostfoundStatus[f2]; }
-      applyLive10(j);
-      var core = {}; Object.keys(j.errors || {}).forEach(function (k) { if (['incidents', 'lostfound', 'lostfoundYear', 'gate'].indexOf(k) >= 0) core[k] = j.errors[k]; });   /* แหล่งส่วนตัวแสดงสาเหตุในส่วนของตัวเอง ไม่ขึ้นแถบเตือนทุกหน้า */
-      live.at = j.checkedAt; live.errors = Object.keys(core).length ? core : null; live.ok = ['incidents', 'lostfound', 'gate'].filter(function (k) { return j[k]; });
-      collectMonths(); renderStamp(); liveNoteDraw(); if (!document.querySelector('.dlg-ov, .lightbox, .chat-panel.open') && !isTyping()) route(true);
+      var j = x.j; liveApply(j);
+      var core = {}; Object.keys(j.errors || {}).forEach(function (k) { core[k] = j.errors[k]; });
+      live.at = j.checkedAt; live.readAt = j.sourceReadAt || {}; live.errors = Object.keys(core).length ? core : null; live.ok = ['incidents', 'lostfound', 'gate'].filter(function (k) { return j[k]; });
+      draw(JSON.stringify([j.incidents, j.lostfound, j.gate, j.incidentsDaily && j.incidentsDaily.rows, j.lostfoundDaily && j.lostfoundDaily.rows, j.errors]), 'core');
     });
-    clearTimeout(live.timer); live.timer = setTimeout(liveRefresh, 5 * 60000);
+    apiCall('/stats?scope=private').then(function (x) {
+      done(); if (gen !== authGen || x.s === 401) return;
+      if (x.s !== 200 || !x.j.ok) { applyLive10({ errors: { studentMoto: x.j.code || 'http ' + x.s, ruenthai: x.j.code || 'http ' + x.s } }); draw('err' + x.s, 'private'); return; }
+      applyLive10(x.j); var a = x.j.studentMoto, r = x.j.ruenthai;
+      draw(JSON.stringify([a && [a.registrations, a.vehiclesDeclared, a.platesFilled, a.range], r && [r.surveys, r.carsDeclared, r.lastEntry, r.byLpr], x.j.errors]), 'private');
+    });
   }
+  var LIVE_PRIVATE_PAGES = { dashboard: 1, vehicle: 1, parking: 1, settings: 1, 'vehicle-all': 1 };
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && AUTH.user && (live.due || (live.last && Date.now() - live.last > 5 * 60000))) liveRefresh(); });
+  document.addEventListener('focusout', function () { setTimeout(function () { if (live.pending && AUTH.user && !isTyping() && !document.querySelector('.dlg-ov, .lightbox, .chat-panel.open')) { live.pending = false; route(true); } }, 400); });
   function isTyping() { var a = document.activeElement; return !!a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName); }
   function liveNoteDraw() {
     var b = $('banner'); if (!b || !AUTH.on) return;
@@ -2675,8 +2780,10 @@
     'relay-unknown-source': 'ตัวกลางรุ่นนี้ไม่รู้จักตารางนี้', 'relay-source-forbidden': 'บัญชีที่ติดตั้งตัวกลางเปิด Sheet นี้ไม่ได้', 'relay-source-error': 'ตัวกลางอ่าน Sheet ไม่สำเร็จ', 'relay-not-found': 'ตัวกลางไม่พบไฟล์/แท็บ', 'skipped': 'ไม่มีภาพตัวอย่างให้ตรวจ' };
   function srcWhy(code) { return SRC_WHY[code] || ('อ่านไม่สำเร็จ (' + code + ')'); }
   function liveSourcesSection() {
-    var host = el('div', {}, [el('p', { class: 'src', text: 'กำลังตรวจการอ่านแต่ละแหล่ง…' })]);
-    apiCall('/sources').then(function (x) {
+    var host = el('div', {}, []);
+    function load(deep) {
+    host.textContent = ''; host.appendChild(el('p', { class: 'src', role: 'status', text: deep ? 'กำลังตรวจตัวกลางแบบลึก (เรียก /exec · อ่าน 2 ตาราง · อ่านภาพตัวอย่าง) — ใช้เวลาประมาณ 10 วินาที…' : 'กำลังตรวจการอ่านแต่ละแหล่ง…' }));
+    apiCall('/sources' + (deep ? '?deep=1' : '')).then(function (x) {
       host.textContent = '';
       if (x.s === 401) { authLost(); return; }
       if (x.s !== 200 || !x.j || !x.j.ok) { host.appendChild(el('div', { class: 'empty', role: 'alert' }, ['ตรวจสถานะไม่สำเร็จ (' + ((x.j && x.j.code) || 'HTTP ' + x.s) + ') ', el('button', { type: 'button', class: 'btn-ghost', text: 'ลองใหม่', onclick: function () { route(true); } })])); return; }
@@ -2686,14 +2793,17 @@
           o.state === 'error' ? srcWhy(o.code) : fdate(o.readAt) + ' (เวลาไทย)']; }), {}));
       var R = x.j.relay || {}, ck = R.check || {}, okp = function (c) { return c === 'ok' || /^ok:/.test(String(c)); }, cell = function (c, okText) { return el('span', { class: 'pill ' + (okp(c) ? 's-connected' : c === 'skipped' ? 's-warn' : 's-off'), text: okp(c) ? okText : srcWhy(c) }); };
       var rows = [['ตั้งค่าในระบบ', el('span', { class: 'pill ' + (R.configured ? 's-connected' : 's-off'), text: R.configured ? 'ตั้งค่าแล้ว' : R.pending ? 'ลงทะเบียนแล้ว รอตรวจ /exec ผ่าน' : R.enrollOpen ? 'ยังไม่ติดตั้ง (เปิดรับลงทะเบียน)' : 'ยังไม่ติดตั้ง' })]];
-      if (R.configured) { rows.push(['ตัวกลางตอบ (รุ่นโค้ด)', cell(ck.ping, 'ตอบได้ · รุ่น ' + (ck.version || '-'))]);
+      var ld = ck.shallow ? ck.lastDeep : null;
+      if (R.configured) { rows.push(['ตัวกลางตอบ' + (ck.shallow ? '' : ' (รุ่นโค้ด)'), cell(ck.ping, ck.shallow ? 'ตอบได้ (จากการอ่านตารางล่าสุด)' : 'ตอบได้ · รุ่น ' + (ck.version || '-'))]);
         Object.keys(ck.tables || {}).forEach(function (k) { var t = ck.tables[k]; rows.push(['อ่านตาราง ' + (SRC_NAME[k] || k), cell(t, 'อ่านได้ · ' + num(+String(t).slice(3)) + ' แถว')]); });
-        rows.push(['อ่านภาพ GPS ที่อนุญาต (ตัวอย่าง 1 ภาพ)', cell(ck.image, 'อ่านได้')]); }
+        rows.push(['อ่านภาพ GPS ที่อนุญาต (ตัวอย่าง 1 ภาพ)', ck.shallow ? el('span', { class: 'pill ' + (ld ? (ld.image === 'ok' ? 's-connected' : 's-off') : 's-warn'), text: ld ? (ld.image === 'ok' ? 'อ่านได้' : srcWhy(ld.image)) + ' · ตรวจลึกล่าสุด ' + fdate(ld.at) + (ld.version ? ' · รุ่น ' + ld.version : '') : 'ยังไม่ได้ตรวจในรอบนี้ — กด “ตรวจตัวกลางแบบลึก”' }) : cell(ck.image, 'อ่านได้')]); }
       host.appendChild(el('h3', { class: 'h-sub', text: 'ตัวกลางอ่านไฟล์ส่วนตัว (HubRelay)' }));
       host.appendChild(table(['ขั้นตรวจ', 'ผล'], rows, {}));
-      host.appendChild(el('p', { class: 'src', text: 'ตรวจเมื่อ ' + fdate(x.j.checkedAt) + ' (บริการเรียก /exec จริงด้วยค่าลับฝั่งบริการ ไม่ได้ดูเพียงว่ามีค่าตั้ง) · ผลอ่านตารางแคชไว้ไม่เกิน 2 นาที' }));
-      host.appendChild(el('div', { class: 'btns' }, [el('button', { type: 'button', class: 'btn sec', text: 'ตรวจอีกครั้ง', onclick: function () { route(true); } })]));
+      host.appendChild(el('p', { class: 'src', text: 'ตรวจเมื่อ ' + fdate(x.j.checkedAt) + (ck.shallow ? ' · สรุปจากผลอ่านล่าสุดของแต่ละแหล่ง (แคชไม่เกิน 2 นาที) — ไม่ได้เรียกตรวจตัวกลางซ้ำทุกครั้งที่เปิดหน้า' : ' · ตรวจลึก: บริการเรียก /exec จริงด้วยค่าลับฝั่งบริการ อ่าน 2 ตารางและภาพตัวอย่าง') }));
+      host.appendChild(el('div', { class: 'btns' }, [el('button', { type: 'button', class: 'btn sec', text: 'ตรวจอีกครั้ง', onclick: function () { load(false); } }), R.configured ? el('button', { type: 'button', class: 'btn sec', text: 'ตรวจตัวกลางแบบลึก', onclick: function () { load(true); } }) : null]));
     });
+    }
+    load(false);
     return section('อ่านข้อมูลสดจากต้นทาง', { note: 'ผลจริงของบริการภายใน ณ เวลาที่เปิดหน้านี้ (แยกจากไฟล์สรุปด้านล่าง)' }, [host]);
   }
   wrapPage('settings', function (v) { var old = v.querySelector('section[aria-label="สถานะข้อมูลและเวลาอัปเดต"]'); v.insertBefore(liveSourcesSection(), old || null); });
@@ -2792,6 +2902,7 @@
     DATA = d; DATA.systems.categories.forEach(function (c) { c.systems.forEach(function (s) { SYS[s.id] = s; }); });
     collectMonths(); renderStamp(); authStart(function () { setupChat(); route(true); });
     window.addEventListener('hashchange', function () { route(false); });
+    window.__hub = { rerender: function () { route(true); }, obs: function () { return liveObs.length; } };      /* ใช้ตรวจการทำงาน (วาดซ้ำ/จำนวนตัวสังเกตที่ยังผูกอยู่) — ไม่มีข้อมูล */
   }).catch(function (e) {
     $('stamp').textContent = 'โหลดข้อมูลไม่สำเร็จ';
     showBanner('ยังเชื่อมต่อไฟล์สถิติรวมไม่ได้: ' + e.message + ' — หน้านี้จะไม่แสดงตัวเลขใด ๆ จนกว่าจะโหลดข้อมูลจริงได้');

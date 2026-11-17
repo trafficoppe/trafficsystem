@@ -432,11 +432,24 @@ function parseCsv(text) {
   return rows;
 }
 var memo = /* @__PURE__ */ new Map();
-async function table(env, key, deps, maxAge = 12e4) {
+var inflight = /* @__PURE__ */ new Map();
+var _stat = { reads: {} };
+var SRC_TIMEOUT = 25e3;
+function table(env, key, deps, maxAge = 12e4) {
   const now = deps.now(), hit2 = memo.get(key);
-  if (hit2 && now - hit2.at < maxAge) return hit2;
+  if (hit2 && now - hit2.at < maxAge) return Promise.resolve(hit2);
+  const cur = inflight.get(key);
+  if (cur) return cur;
+  const p = readTable(env, key, deps, now).finally(() => {
+    if (inflight.get(key) === p) inflight.delete(key);
+  });
+  inflight.set(key, p);
+  return p;
+}
+async function readTable(env, key, deps, now) {
   const src = SOURCES(env)[key];
   if (!src || !src[0]) throw new Err(503, "source-not-configured");
+  _stat.reads[key] = (_stat.reads[key] || 0) + 1;
   let rows;
   if (PRIVATE_SRC.has(key)) {
     const j = await relayCall(env, deps, { action: "table", source: key, ...RELAY_COLS[key] });
@@ -447,15 +460,15 @@ async function table(env, key, deps, maxAge = 12e4) {
   } else {
     let r;
     try {
-      r = await deps.fetch("https://docs.google.com/spreadsheets/d/" + src[0] + "/export?format=csv&gid=" + src[1], { redirect: "follow" });
+      r = await deps.fetch("https://docs.google.com/spreadsheets/d/" + src[0] + "/export?format=csv&gid=" + src[1], { redirect: "follow", signal: AbortSignal.timeout(SRC_TIMEOUT) });
     } catch (e) {
-      throw new Err(502, "source-unreachable");
+      throw new Err(502, e && (e.name === "TimeoutError" || e.name === "AbortError") ? "source-timeout" : "source-unreachable");
     }
     if (!r.ok || !/text\/csv/.test(r.headers.get("content-type") || "")) throw new Err(502, r.status === 401 || r.status === 403 || r.ok ? "source-private" : "source-error");
     rows = parseCsv(await r.text());
   }
   if (!rows.length) throw new Err(502, "source-schema");
-  const t = { head: rows[0].map(str), rows: rows.slice(1).filter((x) => x.some((c) => str(c) !== "")), at: now };
+  const t = { head: rows[0].map(str), rows: rows.slice(1).filter((x) => x.some((c) => str(c) !== "")), at: deps.now() };
   memo.set(key, t);
   return t;
 }
@@ -490,6 +503,7 @@ var driveId = (u) => {
 };
 var images = (v) => str(v).split(/[\s,]+/).map((u) => driveId(u) || (/^https:\/\/(github\.com\/user-attachments\/assets\/|op\.mahidol\.ac\.th\/)[^\s"'<>]+$/.test(u) ? u : "")).filter(Boolean);
 var knownImg = /* @__PURE__ */ new Set();
+var privImg = /* @__PURE__ */ new Set();
 async function remember(env, ids) {
   const fresh = [...new Set(ids)].filter((i) => /^[-\w]{20,60}$/.test(i) && !knownImg.has(i));
   if (!fresh.length) return;
@@ -709,15 +723,21 @@ async function login(request, env, deps, net) {
   return json({ ok: true, user: { name: me.name, unit: me.unit, role } }, 200, { "set-cookie": setCookie(tok, hours * 3600) });
 }
 var mapSt = { "\u0E23\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E37\u0E19\u0E41\u0E25\u0E49\u0E27": "returned", "\u0E0A\u0E48\u0E27\u0E22\u0E2B\u0E32\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1E\u0E1A": "searching", "\u0E40\u0E08\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E32\u0E23\u0E31\u0E1A\u0E04\u0E37\u0E19": "unclaimed", "\u0E23\u0E2D\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23": "waiting" };
-async function liveStats(env, deps) {
-  const out = { ok: true, checkedAt: bkk(deps.now()), errors: {} }, part = async (k, fn) => {
-    try {
-      await fn();
-    } catch (e) {
-      out.errors[k] = e instanceof Err ? e.code : "internal";
-    }
-  };
-  await part("incidents", async () => {
+var STATS_SCOPES = { all: ["incidents", "lostfound", "lostfoundYear", "gate", "studentMoto", "ruenthai"], core: ["incidents", "lostfound", "lostfoundYear", "gate"], private: ["studentMoto", "ruenthai"] };
+var STATS_TTL = 12e4;
+var STATS_SCHEMA = "s12";
+var PART_SRC = { incidents: "incidents", lostfound: "lostfound", lostfoundYear: "lfYear", gate: "gate", studentMoto: "studentMoto", ruenthai: "ruenthai" };
+var cacheEpoch = 0;
+var hashStr = (t) => {
+  let h = 5381;
+  for (let i = 0; i < t.length; i++) h = (h << 5) + h + t.charCodeAt(i) >>> 0;
+  return h.toString(36);
+};
+async function liveStats(env, deps, scope) {
+  const names = STATS_SCOPES[scope || "all"];
+  if (!names) throw new Err(400, "bad-scope");
+  const now = deps.now(), stamp = bkk(now), res = { ok: true, checkedAt: stamp, scope: scope || "all", errors: {}, sourceReadAt: {} }, P = {};
+  P.incidents = async (out) => {
     const rows = await BUILD.incidents(env, deps), by = {}, mon = {}, daily = {};
     let inj = 0, last = "", lastRec = "";
     rows.forEach((r) => {
@@ -734,9 +754,9 @@ async function liveStats(env, deps) {
     });
     const months = Object.keys(mon).sort();
     out.incidents = { total: rows.length, injuredTotal: inj, byType: Object.values(by), monthly: months.map((m) => ({ month: m, byType: mon[m] })), range: { from: rows.reduce((a, r) => r.date < a ? r.date : a, "9999"), to: last }, updated: lastRec || last };
-    out.incidentsDaily = { rows: Object.values(daily).sort((a, b) => a.date + a.type < b.date + b.type ? -1 : 1), checkedAt: out.checkedAt, lastEntry: last, lastRecordedAt: lastRec, complete: true, source: "\u0E10\u0E32\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E07\u0E32\u0E19\u0E08\u0E23\u0E32\u0E08\u0E23 \u2192 \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E1C\u0E48\u0E32\u0E19\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25)" };
-  });
-  await part("lostfound", async () => {
+    out.incidentsDaily = { rows: Object.values(daily).sort((a, b) => a.date + a.type < b.date + b.type ? -1 : 1), checkedAt: stamp, lastEntry: last, lastRecordedAt: lastRec, complete: true, source: "\u0E10\u0E32\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E07\u0E32\u0E19\u0E08\u0E23\u0E32\u0E08\u0E23 \u2192 \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E1C\u0E48\u0E32\u0E19\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25)" };
+  };
+  P.lostfound = async (out) => {
     const t = await table(env, "lostfound", deps), rows = pick(t, { at: "Timestamp", type: "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17" }, ["at", "type"]).map((r) => ({ d: normDT(r.at), type: r.type })).filter((r) => r.d), day = {};
     let last = "";
     rows.forEach((r) => {
@@ -747,9 +767,9 @@ async function liveStats(env, deps) {
       if (r.d > last) last = r.d;
     });
     const ds = Object.keys(day).sort();
-    out.lostfoundDaily = { from: ds[0] || "", rows: ds.map((d) => day[d]), checkedAt: out.checkedAt, lastEntry: last.slice(0, 10), lastRecordedAt: last, complete: true, source: "Sheet \u0E41\u0E08\u0E49\u0E07\u0E02\u0E2D\u0E07\u0E2B\u0E32\u0E22 \u2192 LF_New (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E1C\u0E48\u0E32\u0E19\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25)" };
-  });
-  await part("lostfoundYear", async () => {
+    out.lostfoundDaily = { from: ds[0] || "", rows: ds.map((d) => day[d]), checkedAt: stamp, lastEntry: last.slice(0, 10), lastRecordedAt: last, complete: true, source: "Sheet \u0E41\u0E08\u0E49\u0E07\u0E02\u0E2D\u0E07\u0E2B\u0E32\u0E22 \u2192 LF_New (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E1C\u0E48\u0E32\u0E19\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25)" };
+  };
+  P.lostfoundYear = async (out) => {
     const rows = pick(await table(env, "lfYear", deps), { date: "\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", type: "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17", status: "\u0E2A\u0E16\u0E32\u0E19\u0E30" }, ["date", "type", "status"]).map((r) => ({ m: normDT(r.date).slice(0, 7), type: r.type || "(\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17)", status: r.status })).filter((r) => r.m);
     const byType = {}, byStatus = {}, mon = {}, st = {};
     let last = "";
@@ -763,10 +783,10 @@ async function liveStats(env, deps) {
       if (r.m > last) last = r.m;
     });
     const months = Object.keys(mon).sort();
-    out.lostfound = { total: rows.length, byType, byStatus, returned: byStatus["\u0E23\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E37\u0E19\u0E41\u0E25\u0E49\u0E27"] || 0, monthly: months.map((m) => ({ month: m, byType: mon[m] })), range: { from: months[0] || "", to: last }, updated: out.checkedAt };
+    out.lostfound = { total: rows.length, byType, byStatus, returned: byStatus["\u0E23\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E37\u0E19\u0E41\u0E25\u0E49\u0E27"] || 0, monthly: months.map((m) => ({ month: m, byType: mon[m] })), range: { from: months[0] || "", to: last }, updated: stamp };
     out.lostfoundStatus = { monthly: months.map((m) => st[m]), total: rows.length };
-  });
-  await part("gate", async () => {
+  };
+  P.gate = async (out) => {
     const t = await table(env, "gate", deps), di = t.head.indexOf("\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25"), ri = t.head.indexOf("\u0E40\u0E27\u0E25\u0E32\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E02\u0E49\u0E32\u0E23\u0E30\u0E1A\u0E1A");
     if (di < 0) throw new Err(502, "source-schema");
     const cols = (p) => t.head.map((h, i) => h.startsWith(p) ? i : -1).filter((i) => i >= 0), C = cols("\u0E23\u0E16\u0E22\u0E19\u0E15\u0E4C \u0E1B\u0E23\u0E30\u0E15\u0E39"), M = cols("\u0E21\u0E2D\u0E44\u0E0B\u0E04\u0E4C \u0E1B\u0E23\u0E30\u0E15\u0E39"), N = cols("\u0E44\u0E21\u0E48\u0E2A\u0E27\u0E21\u0E2B\u0E21\u0E27\u0E01 \u0E1B\u0E23\u0E30\u0E15\u0E39");
@@ -790,14 +810,44 @@ async function liveStats(env, deps) {
     });
     if (!daily.length) throw new Err(502, "source-schema");
     out.gate = { daily, monthly: Object.values(mon), days: daily.length, totals: daily.reduce((a, d) => ({ cars: a.cars + d.cars, motorcycles: a.motorcycles + d.motorcycles, noHelmet: a.noHelmet + d.noHelmet }), { cars: 0, motorcycles: 0, noHelmet: 0 }), range: { from: daily[0].date, to: daily[daily.length - 1].date }, updated: rec || daily[daily.length - 1].date };
-  });
-  await part("studentMoto", async () => {
-    out.studentMoto = studentMotoSummary(await table(env, "studentMoto", deps), bkk(deps.now()));
-  });
-  await part("ruenthai", async () => {
-    out.ruenthai = ruenthaiSummary(await table(env, "ruenthai", deps), bkk(deps.now()));
-  });
-  return out;
+  };
+  P.studentMoto = async (out) => {
+    const t = await table(env, "studentMoto", deps);
+    out.studentMoto = studentMotoSummary(t, bkk(t.at));
+  };
+  P.ruenthai = async (out) => {
+    const t = await table(env, "ruenthai", deps);
+    out.ruenthai = ruenthaiSummary(t, bkk(t.at));
+  };
+  const rc = names.some((k) => PRIVATE_SRC.has(PART_SRC[k])) ? await relayCfg(env) : null;
+  const cfgKey = STATS_SCHEMA + "-" + RELAY_VERSION + "-" + cacheEpoch + "-" + hashStr(JSON.stringify(SOURCES(env)) + "|" + (rc ? rc.url : "") + "|" + str(env.HUB_GS_URL));
+  await Promise.all(names.map(async (k) => {
+    const ck = deps.cache ? new Request("https://stats-cache.mu-traffic-hub.internal/" + cfgKey + "/" + k) : null, src = PART_SRC[k], mem = memo.get(src);
+    try {
+      if (ck && !(mem && now - mem.at < STATS_TTL)) {
+        const h = await deps.cache.match(ck).catch(() => null), j = h ? await h.json().catch(() => null) : null;
+        if (j && j.frag && now - j.at >= 0 && now - j.at < STATS_TTL) {
+          Object.assign(res, j.frag);
+          res.sourceReadAt[k] = bkk(j.at);
+          return;
+        }
+      }
+      const frag = {};
+      await P[k](frag);
+      const at = (memo.get(src) || { at: deps.now() }).at;
+      Object.assign(res, frag);
+      res.sourceReadAt[k] = bkk(at);
+      if (ck) {
+        try {
+          await deps.cache.put(ck, new Response(JSON.stringify({ at, frag }), { headers: { "content-type": "application/json", "cache-control": "max-age=" + Math.max(1, Math.round((STATS_TTL - (deps.now() - at)) / 1e3)) } }));
+        } catch (e) {
+        }
+      }
+    } catch (e) {
+      res.errors[k] = e instanceof Err ? e.code : "internal";
+    }
+  }));
+  return res;
 }
 var cnt = (o, k) => {
   k = str(k) || "(\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38)";
@@ -1060,23 +1110,21 @@ async function img(request, env, deps) {
     if (hitC) return new Response(hitC.body, { status: 200, headers: H(hitC.headers.get("content-type") || "image/jpeg", "cache") });
   }
   let body = null, ct = "", via = "public", status = 0;
-  try {
-    const r = await deps.fetch("https://drive.google.com/thumbnail?id=" + id + "&sz=w" + w, { redirect: "follow" });
-    status = r.status;
-    ct = r.headers.get("content-type") || "";
-    if (r.ok && /^image\//.test(ct)) body = await r.arrayBuffer();
-  } catch (e) {
-    status = -1;
-  }
-  if (!body) {
-    if (!rc) throw new Err(status === 404 ? 404 : 502, status === 404 ? "image-not-found" : status === -1 ? "image-unreachable" : "image-private");
-    let j;
+  const viaPublic = async () => {
     try {
-      j = await relayCall(env, deps, { action: "img", id, w }, rc);
+      const r = await deps.fetch("https://drive.google.com/thumbnail?id=" + id + "&sz=w" + w, { redirect: "follow", signal: AbortSignal.timeout(15e3) });
+      status = r.status;
+      ct = r.headers.get("content-type") || "";
+      if (r.ok && /^image\//.test(ct)) {
+        body = await r.arrayBuffer();
+        via = "public";
+      }
     } catch (e) {
-      const c = e instanceof Err ? e.code : "relay-error";
-      throw new Err(c === "relay-not-found" ? 404 : 502, c === "relay-not-found" ? "image-not-found" : c === "relay-not-allowed" ? "image-not-allowed" : c);
+      status = -1;
     }
+  };
+  const viaRelay = async () => {
+    const j = await relayCall(env, deps, { action: "img", id, w }, rc);
     if (!/^image\/(jpeg|png|webp|gif)$/.test(str(j.mime)) || !j.b64 || j.b64.length > 6e6) throw new Err(502, "image-unavailable");
     let bin;
     try {
@@ -1089,6 +1137,33 @@ async function img(request, env, deps) {
     body = arr.buffer;
     ct = j.mime;
     via = "relay";
+    privImg.add(id);
+  };
+  const relayErr = (e) => {
+    const c = e instanceof Err ? e.code : "relay-error";
+    return new Err(c === "relay-not-found" ? 404 : 502, c === "relay-not-found" ? "image-not-found" : c === "relay-not-allowed" ? "image-not-allowed" : c);
+  };
+  if (rc && (privImg.has(id) || u.searchParams.get("p") === "1")) {
+    let re = null;
+    try {
+      await viaRelay();
+    } catch (e) {
+      re = e;
+    }
+    if (!body) {
+      await viaPublic();
+      if (!body) throw relayErr(re);
+    }
+  } else {
+    await viaPublic();
+    if (!body) {
+      if (!rc) throw new Err(status === 404 ? 404 : 502, status === 404 ? "image-not-found" : status === -1 ? "image-unreachable" : "image-private");
+      try {
+        await viaRelay();
+      } catch (e) {
+        throw relayErr(e);
+      }
+    }
   }
   if (cache) {
     try {
@@ -1179,34 +1254,60 @@ async function relayConfirm(request, env, deps) {
   }
   throw new Err(404, "relay-unknown-url");
 }
-async function sourcesStatus(env, deps) {
+var lastDeep = null;
+async function pool(items, n2, fn) {
+  let i = 0;
+  await Promise.all(Array.from({ length: Math.min(n2, items.length) }, async () => {
+    while (i < items.length) {
+      const k = items[i++];
+      await fn(k);
+    }
+  }));
+}
+async function sourcesStatus(env, deps, deep) {
   const out = {}, rc = await relayCfg(env), pend = await metaGet(env, ["relay_pending_url", "relay_enroll"]);
-  for (const k of Object.keys(SOURCES(env))) {
-    if (k === "staff") continue;
+  await pool(Object.keys(SOURCES(env)).filter((k) => k !== "staff"), 4, async (k) => {
     try {
       const t = await table(env, k, deps);
       out[k] = { state: t.rows.length ? "ok" : "empty", rows: t.rows.length, readAt: bkk(t.at), via: PRIVATE_SRC.has(k) ? "relay" : env.HUB_GS_URL && env.HUB_SHARED_SECRET ? "hubdata" : "csv" };
     } catch (e) {
       out[k] = { state: "error", code: e instanceof Err ? e.code : "internal", via: PRIVATE_SRC.has(k) ? "relay" : "csv" };
     }
-  }
+  });
+  const sources = {};
+  Object.keys(SOURCES(env)).forEach((k) => {
+    if (out[k]) sources[k] = out[k];
+  });
   let check = null;
-  if (rc) {
+  if (rc && deep) {
     try {
       check = await relayCheck(env, deps, rc);
     } catch (e) {
       check = { ok: false };
     }
+    check.at = bkk(deps.now());
+    lastDeep = { url: rc.url, check };
+  } else if (rc) {
+    const tb = {};
+    let any = false, bad = "";
+    for (const k of PRIVATE_SRC) {
+      const o = out[k];
+      if (!o) continue;
+      tb[k] = o.state === "error" ? o.code : "ok:" + o.rows;
+      if (o.state !== "error") any = true;
+      else bad = o.code;
+    }
+    check = { shallow: true, ping: any ? "ok" : bad || "fail", version: "", tables: tb, image: "not-checked", ok: any && !bad, lastDeep: lastDeep && lastDeep.url === rc.url ? lastDeep.check : null };
   }
-  return { ok: true, checkedAt: bkk(deps.now()), relay: rc ? { configured: true, via: rc.via, check } : { configured: false, pending: !!pend.relay_pending_url, enrollOpen: !!pend.relay_enroll }, sources: out };
+  return { ok: true, checkedAt: bkk(deps.now()), relay: rc ? { configured: true, via: rc.via, check } : { configured: false, pending: !!pend.relay_pending_url, enrollOpen: !!pend.relay_enroll }, sources };
 }
 var TYPES = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json; charset=utf-8", svg: "image/svg+xml", png: "image/png", jpg: "image/jpeg", webp: "image/webp", ico: "image/x-icon", woff2: "font/woff2" };
-async function asset(env, path, deps, origin) {
+async function asset(env, path, deps, origin, versioned) {
   if (!/^(index\.html|config\.js|assets\/[\w.\-/]+|data\/[\w.\-]+\.json)$/.test(path) || path.includes("..")) return new Response("Not found", { status: 404, headers: SEC });
   if (env.ASSETS) {
     const r2 = await env.ASSETS.fetch(new Request(origin + "/" + (path === "index.html" ? "" : path))), h = new Headers(r2.headers);
     for (const k in SEC) h.set(k, SEC[k]);
-    h.set("cache-control", /^(index\.html|config\.js|data\/)/.test(path) ? "no-cache" : "public, max-age=300");
+    h.set("cache-control", /^(index\.html|config\.js|data\/)/.test(path) ? "no-cache" : versioned && /^assets\/hub\.(js|css)$/.test(path) ? "public, max-age=2592000, immutable" : "public, max-age=300");
     return new Response(r2.body, { status: r2.status, headers: h });
   }
   if (!/^[0-9a-f]{7,40}$/.test(str(env.ASSET_REF))) return new Response("Not found", { status: 404, headers: SEC });
@@ -1233,7 +1334,7 @@ async function handle(request, env, deps) {
     if (net.mode === "denied") return api ? json({ ok: false, code: "network-denied" }, 403) : page("\u0E40\u0E02\u0E49\u0E32\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E08\u0E32\u0E01\u0E40\u0E04\u0E23\u0E37\u0E2D\u0E02\u0E48\u0E32\u0E22\u0E19\u0E35\u0E49", "\u0E23\u0E30\u0E1A\u0E1A\u0E19\u0E35\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E2B\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E40\u0E04\u0E23\u0E37\u0E2D\u0E02\u0E48\u0E32\u0E22\u0E20\u0E32\u0E22\u0E43\u0E19\u0E17\u0E35\u0E48\u0E01\u0E33\u0E2B\u0E19\u0E14", net.ip);
     if (!api) {
       if (request.method !== "GET" && request.method !== "HEAD") throw new Err(405, "method");
-      return await asset(env, path === "/" ? "index.html" : path.slice(1), deps, url.origin);
+      return await asset(env, path === "/" ? "index.html" : path.slice(1), deps, url.origin, /^\d{4,12}$/.test(url.searchParams.get("v") || ""));
     }
     if (path === "/api/health") {
       if (url.searchParams.get("probe") !== "1") return json({ ok: true, now: bkk(deps.now()) });
@@ -1279,11 +1380,11 @@ async function handle(request, env, deps) {
     }
     if (path === "/api/sources" && m === "GET") {
       await need(request, env, deps);
-      return json(await sourcesStatus(env, deps));
+      return json(await sourcesStatus(env, deps, url.searchParams.get("deep") === "1"));
     }
     if (path === "/api/stats" && m === "GET") {
       await need(request, env, deps);
-      return json(await liveStats(env, deps));
+      return json(await liveStats(env, deps, url.searchParams.get("scope") || "all"));
     }
     if (path === "/api/img" && m === "GET") {
       await need(request, env, deps);
@@ -1302,10 +1403,19 @@ async function handle(request, env, deps) {
     return api ? json(path === "/api/chat" ? { status: "error", code } : { ok: false, code, ...e instanceof Err && e.extra ? e.extra : {} }, status) : new Response("Error", { status, headers: SEC });
   }
 }
+var _coldIsolate = () => {
+  memo.clear();
+  inflight.clear();
+};
 var _reset = () => {
   memo.clear();
+  inflight.clear();
   knownImg.clear();
+  privImg.clear();
   relayMemo = null;
+  lastDeep = null;
+  cacheEpoch++;
+  _stat.reads = {};
 };
 var SCHEMA = [
   "CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, staff TEXT NOT NULL, name TEXT, unit TEXT, role TEXT NOT NULL, created INTEGER NOT NULL, exp INTEGER NOT NULL)",
@@ -1315,7 +1425,7 @@ var SCHEMA = [
   "CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS imgids(id TEXT PRIMARY KEY, at INTEGER NOT NULL)"
 ];
-var src_default = { fetch: (request, env) => handle(request, env, { fetch: (u, o) => fetch(u, o), now: () => Date.now(), cache: caches.default }) };
+var src_default = { fetch: (request, env, ctx) => handle(request, env, { fetch: (u, o) => fetch(u, o), now: () => Date.now(), cache: caches.default, waitUntil: ctx && ctx.waitUntil ? (p) => ctx.waitUntil(p) : null }) };
 export {
   Err,
   IMG_W,
@@ -1324,7 +1434,10 @@ export {
   RELAY_VERSION,
   SCHEMA,
   SOURCES,
+  STATS_SCOPES,
+  _coldIsolate,
   _reset,
+  _stat,
   clientIp,
   src_default as default,
   handle,

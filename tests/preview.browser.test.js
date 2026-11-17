@@ -210,6 +210,7 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   await page.click('.lu-pager button:has-text("ถัดไป")'); await page.waitForTimeout(250); ok('แบ่งหน้าทำงาน', /หน้า 2 \/ 3/.test(await text(page, '.lu-pager')));
   await page.screenshot({ path: OUT + '/08_parking_lots_MOCKDATA.png', fullPage: true });
   tx = await open(page, 'forms'); await page.waitForSelector('.list.forms li');
+  { const fb = page.locator('section[aria-label="แบบฟอร์มของระบบอื่นที่เกี่ยวข้อง"] .fold-btn'); ok('[รอบ 12] “แบบฟอร์มของระบบอื่นที่เกี่ยวข้อง” เริ่มแบบยุบ บอกจำนวนแบบฟอร์ม → กดเปิดได้', await fb.getAttribute('aria-expanded') === 'false' && /\d+ แบบฟอร์ม/.test(await fb.innerText())); await fb.click(); await page.waitForTimeout(150); }
   { const t = await text(page, '#view'), hrefs = await page.$$eval('.list.forms a', (a) => a.map((x) => x.getAttribute('href')));
     const once = (n) => t.split(n).length - 1 === 1;
     ok('แบบฟอร์ม: ชื่อใหม่ครบและไม่ซ้ำ (แจ้งเหตุ AI · รถเข้า+หมวก · ตรวจสภาพยานพาหนะ · ขอดูกล้อง · ตรวจและเติมสารดับเพลิง)', once('ระบบรายงานเหตุการณ์/แจ้งเหตุ (AI)') && once('แบบฟอร์มบันทึกจำนวนรถเข้าและผู้ไม่สวมหมวกนิรภัย') && once('แบบฟอร์มตรวจสภาพยานพาหนะ') && once('แบบฟอร์มขอดูกล้องวงจรปิด') && once('แบบฟอร์มตรวจและเติมสารอุปกรณ์ดับเพลิง'));
