@@ -13,7 +13,7 @@
  * วิธีติดตั้ง: ดู docs/ส่งมอบรอบ10.md หัวข้อ “เปิดตัวกลางอ่านข้อมูลส่วนตัว”
  */
 var RELAY_HUB = 'https://mu-traffic-hub.pages.dev';
-var RELAY_VERSION = 'r12';                            // ต้องตรงกับ RELAY_VERSION ใน worker/src/index.js
+var RELAY_VERSION = 'r13';                            // ต้องตรงกับ RELAY_VERSION ใน worker/src/index.js
 var RELAY_ENROLL_TOKEN = '__ENROLL_TOKEN__';          // token ใช้ครั้งเดียว (หมดอายุภายใน 7 วัน) · กู้คืน: ผู้ดูแลออก token ใหม่ แล้วใส่ใน Script Properties → ENROLL_TOKEN (ไม่ต้องแก้โค้ด)
 var RELAY_TABLES = {
   studentMoto: { id: '1v0LYqEkWIb3MaNKqp1T50tBlDmYn7UP8xl36cPlpllQ', tab: 'Registrations_Motorcycle', gid: '1304328494',
@@ -74,20 +74,28 @@ function relayMeta_(id, fields, tok) {
   var c = r.getResponseCode(); if (c === 404) return { code: 'not-found' }; if (c !== 200) return { code: 'meta-' + c };
   try { return { m: JSON.parse(r.getContentText()) }; } catch (e) { return { code: 'meta-parse' }; }
 }
+// r13: ผลตรวจโฟลเดอร์มี 3 ค่า — 'yes' (อยู่ใต้รากที่อนุญาต) · 'no' (อ่านข้อมูลโฟลเดอร์ครบทุกชั้นแล้ว ไม่พบรากที่อนุญาต) · 'unknown' (อ่านข้อมูลบางชั้นไม่สำเร็จชั่วคราว)
+//   จำเฉพาะ 'yes'/'no' ที่พิสูจน์แล้ว 10 นาที (เดิม 1 ชั่วโมง) — 'unknown' ไม่จำ (ไม่กลายเป็น “นอกโฟลเดอร์” ค้าง 1 ชั่วโมง)
+//   คีย์ผูกรุ่นสคริปต์ + รายการรากที่อนุญาต → เปลี่ยนราก/Deploy รุ่นใหม่ ผลเดิมไม่ถูกใช้
+function relayDirKey_(folderId) { return 'dir:' + RELAY_VERSION + ':' + RELAY_IMAGE_ROOTS.join(',') + ':' + folderId; }
 function relayFolderOk_(folderId, tok) {
-  if (RELAY_IMAGE_ROOTS.indexOf(folderId) >= 0) return true;
-  var cache = CacheService.getScriptCache(), k = 'dir:' + folderId, hit = cache.get(k); if (hit === '1') return true; if (hit === '0') return false;
-  var ok = false, queue = [folderId], depth = 0, seen = {};
+  if (RELAY_IMAGE_ROOTS.indexOf(folderId) >= 0) return 'yes';
+  var cache = CacheService.getScriptCache(), k = relayDirKey_(folderId), hit = cache.get(k); if (hit === '1') return 'yes'; if (hit === '0') return 'no';
+  var ok = false, unsure = false, queue = [folderId], depth = 0, seen = {};
   while (queue.length && depth < 8 && !ok) {
     var next = [];
     for (var i = 0; i < queue.length && !ok; i++) {
       if (seen[queue[i]]) continue; seen[queue[i]] = 1;
-      var x = relayMeta_(queue[i], 'parents', tok), ps = (x.m && x.m.parents) || [];
+      var x = relayMeta_(queue[i], 'parents', tok);
+      if (!x.m) { if (x.code !== 'not-found') unsure = true; continue; }          // อ่านไม่ได้ชั่วคราว (5xx/429/เครือข่าย/สิทธิ์) ≠ พิสูจน์ว่าอยู่นอกโฟลเดอร์
+      var ps = x.m.parents || [];
       for (var j = 0; j < ps.length; j++) { if (RELAY_IMAGE_ROOTS.indexOf(ps[j]) >= 0) { ok = true; break; } next.push(ps[j]); }
     }
     queue = next; depth++;
   }
-  cache.put(k, ok ? '1' : '0', 3600); return ok;
+  if (ok) { cache.put(k, '1', 600); return 'yes'; }
+  if (unsure || queue.length) return 'unknown';                                    // ยังไล่ไม่ครบ → ไม่สรุปว่าอยู่นอก
+  cache.put(k, '0', 600); return 'no';
 }
 var RELAY_MIME = /^image\/(jpeg|png|webp|gif)$/, RELAY_MAX_BYTES = 4 * 1024 * 1024;
 function relayAllowed_(file) {
@@ -100,9 +108,10 @@ function relayAllowed_(file) {
   }
   return false;
 }
-function relayImgLegacy_(id) {
-  var f; try { f = DriveApp.getFileById(id); } catch (e) { return { ok: false, code: 'not-found' }; }
-  if (!RELAY_MIME.test(f.getMimeType()) || !relayAllowed_(f)) return { ok: false, code: 'not-allowed' };
+function relayImgLegacy_(id, retryOnErr) {
+  var f; try { f = DriveApp.getFileById(id); } catch (e) { return { ok: false, code: retryOnErr ? 'retry' : 'not-found' }; }
+  var allowed; try { allowed = RELAY_MIME.test(f.getMimeType()) && relayAllowed_(f); } catch (e2) { return { ok: false, code: 'retry' }; }      // r13: ตรวจโฟลเดอร์ไม่สำเร็จ → ให้ลองใหม่ (ไม่ส่งภาพ ไม่บอกว่านอกโฟลเดอร์)
+  if (!allowed) return { ok: false, code: 'not-allowed' };
   if (f.getSize() > RELAY_MAX_BYTES) return { ok: false, code: 'too-large' };
   var blob = f.getBlob(); if (!RELAY_MIME.test(blob.getContentType())) return { ok: false, code: 'not-allowed' };
   return { ok: true, mime: String(blob.getContentType()).split(';')[0], b64: Utilities.base64Encode(blob.getBytes()) };
@@ -111,11 +120,12 @@ function relayImg_(id, w) {
   if (!/^[-\w]{20,60}$/.test(id)) return { ok: false, code: 'bad-id' };
   if (RELAY_WIDTHS.indexOf(w) < 0) w = 400;
   var tok = ScriptApp.getOAuthToken(), x = relayMeta_(id, 'mimeType,parents,thumbnailLink,size', tok);
-  if (!x.m) return x.code === 'not-found' ? { ok: false, code: 'not-found' } : relayImgLegacy_(id);      // Drive API ใช้ไม่ได้ชั่วคราว → ทางเดิม (DriveApp) ที่ตรวจโฟลเดอร์เองทุกชั้น
+  if (!x.m) return x.code === 'not-found' ? { ok: false, code: 'not-found' } : relayImgLegacy_(id, true);      // Drive API ใช้ไม่ได้ชั่วคราว → ทางเดิม (DriveApp) ที่ตรวจโฟลเดอร์เองทุกชั้น
   var m = x.m, ps = m.parents || [], allowed = false;
   if (!RELAY_MIME.test(String(m.mimeType))) return { ok: false, code: 'not-allowed' };
-  for (var i = 0; i < ps.length && !allowed; i++) allowed = relayFolderOk_(ps[i], tok);
-  if (!allowed) return { ok: false, code: 'not-allowed' };
+  var unsure = false;
+  for (var i = 0; i < ps.length && !allowed; i++) { var v = relayFolderOk_(ps[i], tok); if (v === 'yes') allowed = true; else if (v === 'unknown') unsure = true; }
+  if (!allowed) return unsure ? relayImgLegacy_(id, true) : { ok: false, code: 'not-allowed' };      // r13: ไม่แน่ใจ → ตรวจซ้ำด้วย DriveApp (ตรวจโฟลเดอร์เอง) · ตรวจไม่ได้ → retry (ไม่ส่งภาพ)
   var blob = null;
   try {                                                  // ทางหลัก: รูปย่อตามความกว้างที่ขอ — ล้มเหลวแล้วไปทางสำรอง ไม่ลองซ้ำ
     if (m.thumbnailLink) { var r = UrlFetchApp.fetch(String(m.thumbnailLink).replace(/=s\d+$/, '') + '=s' + w, { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true });

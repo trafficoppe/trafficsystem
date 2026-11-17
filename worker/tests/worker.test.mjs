@@ -31,7 +31,7 @@ const SHEETS = {
 let sourceDown = false, aiCalls = [];
 // รอบ 10: Sheet ส่วนตัว (ข้อมูลสมมติ) ที่อ่านได้เฉพาะผ่านตัวกลาง · ชื่อ/เบอร์/ทะเบียนเป็นค่าสมมติ และต้องไม่หลุดออกจากบริการ
 const RELAY_URL = 'https://script.google.com/macros/s/MOCKRELAYDEPLOYMENT000000000001/exec', PRIV = 'MOCKPRIVATEGPSPHOTO00000000009';
-let relaySecret = null, relayHtml = false, relayVer = 'r11', relaySecret2 = null, relay2Down = false; const relayCalls = [];
+let relaySecret = null, relayHtml = false, relayVer = 'r13', relaySecret2 = null, relay2Down = false; const relayCalls = [];
 const HUBDATA_URL = 'https://script.google.com/macros/s/MOCKHUBDATA00000000000000001/exec', hubDataCalls = [];
 const RELAY_URL2 = 'https://script.google.com/a/macros/mahidol.ac.th/s/MOCKRELAYDEPLOYMENT000000000002/exec';
 const RELAY_TABLES = {
@@ -49,8 +49,11 @@ const RELAY_TABLES = {
 };
 let csvDelay = 0, downGid = ''; const csvCalls = [], thumbCalls = [];
 const fetchMock = async (u, o) => { u = String(u);
-  let m = /docs\.google\.com\/spreadsheets\/d\/[\w-]+\/export\?format=csv&gid=(\d+)/.exec(u);
-  if (m) { csvCalls.push(m[1]); if (csvDelay) await new Promise((r) => setTimeout(r, csvDelay)); if (sourceDown || downGid === m[1]) return new Response('<html>Sign in</html>', { status: 200, headers: { 'content-type': 'text/html' } }); return SHEETS[m[1]] ? new Response(csv(SHEETS[m[1]]), { headers: { 'content-type': 'text/csv; charset=utf-8' } }) : new Response('', { status: 404 }); }
+  let m = /docs\.google\.com\/spreadsheets\/d\/([\w-]+)\/export\?format=csv&gid=(\d+)/.exec(u);
+  // รอบ 13: Sheet อีกชุด (MOCKLF2 = ตั้งค่าใหม่) มีข้อมูลต่างจากชุดเดิม 1 แถว
+  if (m) { const sid = m[1]; m = [m[0], m[2]]; csvCalls.push(m[1]);
+    if (sid === 'MOCKLF2' && m[1] === '1811117659') { if (csvDelay) await new Promise((r) => setTimeout(r, csvDelay)); return new Response(csv(SHEETS[m[1]].concat([['2026-11-15', 'พ.ศ. 2569', 'พบสิ่งของ', 'FND-MOCK-9', 'รอดำเนินการ']])), { headers: { 'content-type': 'text/csv; charset=utf-8' } }); }
+    if (csvDelay) await new Promise((r) => setTimeout(r, csvDelay)); if (sourceDown || downGid === m[1]) return new Response('<html>Sign in</html>', { status: 200, headers: { 'content-type': 'text/html' } }); return SHEETS[m[1]] ? new Response(csv(SHEETS[m[1]]), { headers: { 'content-type': 'text/csv; charset=utf-8' } }) : new Response('', { status: 404 }); }
   m = /raw\.githubusercontent\.com\/trafficoppe\/trafficsystem\/[0-9a-f]+\/(.+)$/.exec(u);
   if (m) { const f = path.join(ROOT, m[1]); return fs.existsSync(f) ? new Response(fs.readFileSync(f)) : new Response('', { status: 404 }); }
   if (u === HUBDATA_URL) { const b = JSON.parse(o.body), gid = (SOURCES({})[b.source] || [])[1]; hubDataCalls.push(b.source);      // MOCK บริการเดิม HubData
@@ -214,12 +217,13 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
   ok('token ถูก → ได้ค่าลับ 64 ตัว เก็บเป็น “รอตรวจ” (ยังไม่ใช้งานจนกว่าตรวจ /exec ผ่าน) และลบ token แล้ว', /^[0-9a-f]{64}$/.test(relaySecret || '') && M('relay_pending_secret') === relaySecret && M('relay_pending_url') === RELAY_URL && !M('relay_url') && !M('relay_enroll'));
   r = await ENR(TOK, RELAY_URL); ok('ใช้ token เดิมซ้ำหลังสำเร็จ → ปฏิเสธ และค่าลับที่รอตรวจไม่ถูกเขียนทับ', r.s === 403 && M('relay_pending_secret') === relaySecret);
   _reset(); r = await run('/api/stats', { cookie: U10 }, E); ok('ระหว่างรอตรวจ: ไฟล์ส่วนตัวยังเป็น relay-not-configured (ไม่ใช้ตัวกลางที่ยังไม่ผ่านการตรวจ)', r.j.errors.studentMoto === 'relay-not-configured');
-  relayVer = 'r10'; r = await CONF(RELAY_URL); relayVer = 'r11';
+  relayVer = 'r10'; r = await CONF(RELAY_URL); relayVer = 'r13';
+  { relayVer = 'r12'; const o = await CONF(RELAY_URL); relayVer = 'r13'; ok('[รอบ 13·F] ตัวกลางยังเป็นรุ่น r12 (มีปัญหาจำผลตรวจผิด) → outdated ไม่รับทุกรุ่น', o.j.ok === false && o.j.check.ping === 'outdated', JSON.stringify(o.j.check)); }
   ok('[MOCK] ยืนยัน: Deploy เป็นโค้ดรุ่นเก่า → check-failed (ping outdated) ยังไม่ใช้งาน', r.s === 200 && r.j.ok === false && r.j.check.ping === 'outdated' && !M('relay_url'), JSON.stringify(r.j));
   relayHtml = true; r = await CONF(RELAY_URL); relayHtml = false;
   ok('[MOCK] ยืนยัน: /exec ตอบหน้า Login (ไม่ได้ตั้ง Anyone) → relay-login-required ยังไม่ใช้งาน', r.j.ok === false && r.j.check.ping === 'relay-login-required' && !M('relay_url'));
   r = await CONF('https://script.google.com/macros/s/MOCKNOTREGISTERED00000000001/exec'); ok('ยืนยัน URL ที่ไม่ได้ลงทะเบียน → 404 relay-unknown-url', r.s === 404 && r.j.code === 'relay-unknown-url');
-  r = await CONF(RELAY_URL); ok('[MOCK] ยืนยันผ่านครบ (ตอบรุ่น r11 · อ่าน 2 ตาราง · อ่านภาพ GPS ตัวอย่าง) → เปิดใช้งาน', r.j.ok === true && r.j.promoted === true && r.j.check.tables.studentMoto === 'ok:5' && r.j.check.tables.ruenthai === 'ok:4' && r.j.check.image === 'ok' && M('relay_url') === RELAY_URL && M('relay_secret') === relaySecret && !M('relay_pending_secret'), JSON.stringify(r.j));
+  r = await CONF(RELAY_URL); ok('[MOCK] ยืนยันผ่านครบ (ตอบรุ่น r13 · อ่าน 2 ตาราง · อ่านภาพ GPS ตัวอย่าง) → เปิดใช้งาน', r.j.ok === true && r.j.promoted === true && r.j.check.tables.studentMoto === 'ok:5' && r.j.check.tables.ruenthai === 'ok:4' && r.j.check.image === 'ok' && M('relay_url') === RELAY_URL && M('relay_secret') === relaySecret && !M('relay_pending_secret'), JSON.stringify(r.j));
   ok('ผลยืนยันไม่มีข้อมูลจากแหล่ง (มีแต่สถานะ/จำนวน)', !/MR-1|RT-1|นักศึกษาสมมติ|ผู้ตอบสมมติ|TOKEN-SECRET/.test(JSON.stringify(r.j)));
   r = await CONF(RELAY_URL); ok('setup ซ้ำหลังติดตั้งสำเร็จ → ตรวจซ้ำ ไม่เปลี่ยนค่าลับ', r.j.ok === true && r.j.state === 'active' && !r.j.promoted && M('relay_secret') === relaySecret);
   // ลงทะเบียนตัวใหม่ (เช่น ย้ายบัญชี/Deploy ใหม่): ตัวเดิมต้องทำงานต่อจนกว่าตัวใหม่ผ่านการตรวจ
@@ -324,6 +328,39 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
       const b1 = new Uint8Array(await x1.arrayBuffer()), b2 = new Uint8Array(await x2.arrayBuffer());
       ok('[รอบ 12] ภาพเดียวกัน 2 คำขอพร้อมกัน → เรียกตัวกลางครั้งเดียว ได้ภาพครบทั้งสอง · งานโหลดผูก waitUntil', x1.status === 200 && x2.status === 200 && relayCalls.slice(rl3).filter((c) => /^img:/.test(c)).length === 1 && b1.length > 0 && b1.length === b2.length && wu.length === 1, relayCalls.slice(rl3).join(',') + ' wu=' + wu.length); }
     h = await runC('/api/img?id=' + IMG1 + '&w=400&p=1', { cookie: U10 }); ok('[รอบ 12] p=1 กับภาพที่ตัวกลางไม่อนุญาตแต่เป็นภาพสาธารณะ → ใช้ลิงก์สาธารณะตามเดิม (p=1 ไม่เปิดสิทธิ์เพิ่ม)', h.s === 200 && h.h.get('x-img-via') === 'public');
+  }
+  // ================= รอบ 13 =================
+  { _reset(); const cache = new Map(), depsC = { fetch: fetchMock, now: () => NOW, cache: { match: async (k) => { const v = cache.get(k.url || String(k)); return v ? v.clone() : undefined; }, put: async (k, v) => { cache.set(k.url || String(k), v.clone()); } } };
+    const runC = async (p, o = {}, env = E) => { const x = await handle(req(p, o), env, depsC); const ct = x.headers.get('content-type') || ''; return { s: x.status, j: /json/.test(ct) ? await x.json() : null, h: x.headers }; };
+    // A: เวลาอ่านต้นทางจริงต้องเหมือนกันในทุก field (ไม่ใช่เวลาตอบคำขอ) ทั้งเมื่อใช้ตารางในหน่วยความจำ (เครื่องเดิม) และแคชผลรวม
+    const a1 = await runC('/api/stats', { cookie: U10 }); NOW += 70e3; const a2 = await runC('/api/stats', { cookie: U10 });
+    const rd = a1.j.sourceReadAt;
+    ok('[รอบ 13·A] เครื่องเดิม ภายใน TTL: checkedAt (เวลาตอบ) เปลี่ยน แต่ sourceReadAt คงเดิม', a2.j.checkedAt !== a1.j.checkedAt && Object.keys(rd).length === 6 && Object.keys(rd).every((k) => a2.j.sourceReadAt[k] === rd[k]), a1.j.checkedAt + ' → ' + a2.j.checkedAt + ' ' + JSON.stringify(a2.j.sourceReadAt));
+    ok('[รอบ 13·A] เวลาในชุดข้อมูลแต่ละส่วน = เวลาอ่านต้นทางของส่วนนั้น (ไม่ใช่เวลาตอบ) แม้คำขอที่ 2 มาจากหน่วยความจำ', a2.j.incidentsDaily.checkedAt === rd.incidents && a2.j.lostfoundDaily.checkedAt === rd.lostfound && a2.j.lostfound.readAt === rd.lostfoundYear && a2.j.gate.readAt === rd.gate && a2.j.studentMoto.checkedAt === rd.studentMoto && a2.j.ruenthai.checkedAt === rd.ruenthai, JSON.stringify([a2.j.incidentsDaily.checkedAt, a2.j.lostfoundDaily.checkedAt, a2.j.lostfound.readAt, a2.j.gate.readAt, a2.j.checkedAt]));
+    { const dT = (d) => +d.slice(8, 10) + ' พ.ย. ' + (+d.slice(0, 4) + 543) + ' ' + d.slice(11, 16) + ' น.'; const n0 = aiCalls.length; await runC('/api/chat', { method: 'POST', cookie: U10, body: Q }); const sys = (aiCalls[n0] || { input: { messages: [{ content: '' }] } }).input.messages[0].content;
+      ok('[รอบ 13·A] ข้อเท็จจริงที่ส่ง AI: “ข้อมูล ณ” = เวลาอ่านต้นทางจริง ไม่ใช่เวลาตอบคำขอ (คำขอนี้ตอบ ' + a2.j.checkedAt.slice(11) + ' แต่อ่านต้นทาง ' + rd.incidents.slice(11) + ')', a2.j.checkedAt !== rd.incidents && sys.includes(dT(rd.incidents)) && !sys.includes(dT(a2.j.checkedAt)), sys.split('\n').filter((l) => /เหตุการณ์/.test(l)).join(' / ').slice(0, 300)); }
+    NOW += 60e3; const a3 = await runC('/api/stats', { cookie: U10 });
+    ok('[รอบ 13·A] หลัง TTL → อ่านต้นทางใหม่ เวลาอ่านจริงเปลี่ยน และ field ในชุดข้อมูลเปลี่ยนตาม', a3.j.sourceReadAt.gate !== rd.gate && a3.j.gate.readAt === a3.j.sourceReadAt.gate && a3.j.incidentsDaily.checkedAt === a3.j.sourceReadAt.incidents, JSON.stringify(a3.j.sourceReadAt));
+    // E: เปลี่ยนการตั้งค่าแหล่ง (env) บนเครื่องเดิม (ไม่ล้างหน่วยความจำ) → ต้องไม่ได้ข้อมูลของการตั้งค่าเดิม
+    const E2 = Object.assign({}, E, { SHEET_LF: 'MOCKLF2' }), base = a3.j.lostfound.total;
+    const d1 = await runC('/api/data?dataset=lostfound', { cookie: U10 }); const e1 = await runC('/api/stats?scope=core', { cookie: U10 }, E2);
+    ok('[รอบ 13·E] เปลี่ยน env ของแหล่ง (เครื่องเดิม ไม่ล้าง memo) → อ่านแหล่งตามค่าตั้งใหม่ทันที', e1.j.lostfound.total === base + 1, base + ' → ' + e1.j.lostfound.total);
+    const e2 = await runC('/api/stats?scope=core', { cookie: U10 }); ok('[รอบ 13·E] กลับไปค่าตั้งเดิม → ได้ข้อมูลของค่าตั้งเดิม (ไม่ปนกัน)', e2.j.lostfound.total === base && d1.s === 200, String(e2.j.lostfound.total));
+    // E: งานอ่านของค่าตั้งเดิมที่ยังค้าง จบหลังเปลี่ยนค่าตั้ง → ห้ามทับข้อมูลของค่าตั้งใหม่
+    NOW += 200e3; csvDelay = 60; const old = runC('/api/stats?scope=core', { cookie: U10 }); await new Promise((r) => setTimeout(r, 5)); csvDelay = 0;
+    const nw = await runC('/api/stats?scope=core', { cookie: U10 }, E2); const oldR = await old; const c0 = csvCalls.length; const nw2 = await runC('/api/stats?scope=core', { cookie: U10 }, E2);
+    ok('[รอบ 13·E] งานอ่านเดิมที่จบทีหลัง ไม่ทับผลของค่าตั้งใหม่ · ค่าตั้งใหม่ใช้ memo ของตัวเอง (ไม่อ่านซ้ำ)', oldR.j.lostfound.total === base && nw.j.lostfound.total === base + 1 && nw2.j.lostfound.total === base + 1 && csvCalls.length === c0, [oldR.j.lostfound.total, nw.j.lostfound.total, nw2.j.lostfound.total, csvCalls.length - c0].join(','));
+    // E: ตัวกลางใน D1 เปลี่ยน (เครื่องเดิม) → ตารางส่วนตัวต้องอ่านผ่านตัวกลางใหม่ ไม่ใช้ตารางจากตัวกลางเดิม
+    const M = (k) => (db._db.prepare('SELECT v FROM meta WHERE k = ?').get(k) || {}).v, url0 = M('relay_url');
+    NOW += 1e3; await runC('/api/stats?scope=private', { cookie: U10 }); const rl0 = relayCalls.length;
+    const otherUrl = url0 === RELAY_URL2 ? RELAY_URL : RELAY_URL2, sec0 = M('relay_secret');
+    db._db.prepare("UPDATE meta SET v = ? WHERE k = 'relay_url'").run(otherUrl); if (otherUrl === RELAY_URL2) relaySecret2 = sec0; else relaySecret = sec0;
+    NOW += 61e3; const p2 = await runC('/api/stats?scope=private', { cookie: U10 });
+    ok('[รอบ 13·E] ตัวกลางใน D1 เปลี่ยน (เครื่องเดิม ภายใน TTL ของตาราง) → อ่านตารางส่วนตัวใหม่ผ่านตัวกลางที่ตั้งล่าสุด', relayCalls.slice(rl0).filter((x) => /^table:/.test(x)).length === 2 && !!p2.j.ruenthai, relayCalls.slice(rl0).join(','));
+    db._db.prepare("UPDATE meta SET v = ? WHERE k = 'relay_url'").run(url0);
+    // race: scope ต้องเป็นค่าในรายการจริง (ไม่ใช่ property ที่สืบทอด)
+    const sc = await Promise.all(['constructor', '__proto__', 'toString', 'hasOwnProperty'].map((x) => runC('/api/stats?scope=' + x, { cookie: U10 })));
+    ok('[รอบ 13·race] scope=constructor/__proto__/toString/hasOwnProperty → 400 bad-scope (ไม่ใช่ 500)', sc.every((x) => x.s === 400 && x.j.code === 'bad-scope'), sc.map((x) => x.s + ':' + (x.j && x.j.code)).join(','));
   }
   _reset(); }
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ทั้งหมดเป็นการทดสอบ local ด้วยของจำลอง)'); process.exit(fails ? 1 : 0);

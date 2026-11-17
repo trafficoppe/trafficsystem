@@ -5,7 +5,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let n = 0, fails = 0; const ok = (name, c, info) => { n++; if (!c) fails++; console.log((c ? 'PASS ' : 'FAIL ') + name + (c || info === undefined ? '' : ' — ' + info)); };
 
 function load(over = {}) {
-  const props = Object.assign({}, over.props || {}), calls = [], logs = [], metaCalls = [], cacheStore = new Map();
+  const props = Object.assign({}, over.props || {}), calls = [], logs = [], metaCalls = [], cacheStore = new Map(); const ctl = { metaDown: {}, driveDown: false };
   const SHEET = { 'Registrations_Motorcycle': [['Timestamp', 'RefCode', 'วิทยาเขต', 'คณะ/สถาบัน/ส่วนงาน', 'ชื่อ-นามสกุล', 'ประเภทนักศึกษา', 'ระดับการศึกษา', 'ประเภทเครื่องยนต์', 'จำนวนรถ', 'รถ1_ทะเบียน', 'รถ2_ทะเบียน', 'รถ3_ทะเบียน', 'อีเมล'],
     ['6/7/2026', 'MR-1', 'ศาลายา', 'คณะ ก', 'ชื่อสมมติ', '', '', 'สันดาป', '1', 'กข1', '', '', 'x@example.test'], ['', '', '', '', '', '', '', '', '', '', '', '', '']],
     'RuenThai_Survey': [['Timestamp', 'Ref_Code', 'Token_Code', 'Group_Type', 'Group_Label', 'User_SubType', 'Faculty_Dept', 'Sub_Unit_Project', 'Full_Name', 'Car_Count', 'Car1_Type', 'Car1_Plate', 'Car2_Type', 'Car2_Plate', 'LPR_Status'],
@@ -21,9 +21,10 @@ function load(over = {}) {
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (t) => ({ setMimeType: () => ({ text: t }) }) },
     Utilities: { DigestAlgorithm: { SHA_256: 1 }, computeDigest: (a, s) => Array.from(Buffer.from(require_crypto().createHash('sha256').update(s).digest())).map((b) => (b > 127 ? b - 256 : b)), base64Encode: (b) => Buffer.from(b).toString('base64'), formatDate: () => '2026-11-16 22:00', parseCsv: (t) => t.split('\n').filter((l) => l.length).map((l) => l.split(',')) },
     // ไม่มี SpreadsheetApp ในของจำลอง: ยืนยันว่าสคริปต์ไม่ใช้บริการที่ต้องขอสิทธิ์แก้ไขสเปรดชีต
-    DriveApp: { getFileById: (id) => { const f = FILES[id]; if (!f) throw new Error('nf'); return { getMimeType: () => f.mime, getSize: () => f.size, getParents: () => iter([folder(f.parent)]), getBlob: () => blob(f.mime) }; }, getFolderById: (id) => ({ getName: () => 'SecurityGuardReports' }) },
+    DriveApp: { getFileById: (id) => { const f = FILES[id]; if (!f) throw new Error('nf'); return { getMimeType: () => f.mime, getSize: () => f.size, getParents: () => { if (ctl.driveDown) throw new Error('drive busy'); return iter([folder(f.parent)]); }, getBlob: () => blob(f.mime) }; }, getFolderById: (id) => ({ getName: () => 'SecurityGuardReports' }) },
     ScriptApp: { getOAuthToken: () => 'OAUTH-TOKEN-MOCK', getService: () => ({ getUrl: () => over.url === undefined ? 'https://script.google.com/a/macros/mahidol.ac.th/s/MOCKDEPLOYMENTID0000000001/exec' : over.url }) },
     UrlFetchApp: { fetch: (u, o) => { let m; calls.push(u); if (/googleapis\.com\/drive/.test(u)) { if (over.thumbFail) throw new Error('drive api down'); const fid = /files\/([\w-]+)\?/.exec(u)[1], F = FILES[fid], D = Object.keys(FOLDERS).find((k) => FOLDERS[k].id === fid); metaCalls.push(fid);
+        if (ctl.metaDown[fid]) return { getResponseCode: () => ctl.metaDown[fid], getContentText: () => '{}' };      // รอบ 13: อ่านข้อมูลโฟลเดอร์ไม่ได้ชั่วคราว (5xx/429)
         if (F) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ mimeType: F.mime, parents: [FOLDERS[F.parent].id], thumbnailLink: 'https://lh3.googleusercontent.com/thumb=s220', size: String(F.size) }) };
         if (D) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ parents: FOLDERS[D].parents.map((k) => FOLDERS[k].id) }) };
         return { getResponseCode: () => 404, getContentText: () => '{}' }; }
@@ -38,7 +39,7 @@ function load(over = {}) {
   };
   vm.createContext(ctx); vm.runInContext(fs.readFileSync(path.join(ROOT, 'apps-script/HubRelay.gs'), 'utf8').replace("'__ENROLL_TOKEN__'", "'" + (over.token || 'aa'.repeat(24)) + "'"), ctx);
   const post = (b) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(b) } }).text);
-  return { ctx, props, calls, logs, post, metaCalls };
+  return { ctx, props, calls, logs, post, metaCalls, ctl, cacheStore };
 }
 import crypto from 'node:crypto'; function require_crypto() { return crypto; }
 const SEC = 'f'.repeat(64);
@@ -48,7 +49,7 @@ let G = load({ props: { RELAY_SECRET: SEC } });
 ok('ไม่มีค่าลับ → forbidden', G.post({ action: 'ping' }).code === 'forbidden');
 ok('ค่าลับผิด → forbidden (ไม่มีข้อมูล)', G.post({ action: 'table', source: 'ruenthai', secret: 'e'.repeat(64) }).code === 'forbidden');
 ok('ยังไม่มีค่าลับในสคริปต์ → ทุกคำขอ forbidden', load().post({ action: 'ping', secret: '' }).code === 'forbidden');
-let r = G.post({ action: 'ping', secret: SEC }); ok('ping ตอบรุ่นโค้ด r12', r.ok && r.v === 'r12');
+let r = G.post({ action: 'ping', secret: SEC }); ok('ping ตอบรุ่นโค้ด r13', r.ok && r.v === 'r13');
 r = G.post({ action: 'table', source: 'staff', secret: SEC }); ok('ตารางนอกรายการ → unknown-source', r.code === 'unknown-source');
 r = G.post({ action: 'table', source: 'studentMoto', secret: SEC, cols: ['RefCode', 'ชื่อ-นามสกุล', 'อีเมล', 'จำนวนรถ'], present: ['รถ1_ทะเบียน', 'อีเมล'] });
 ok('ขอคอลัมน์นอกรายการ (ชื่อ/อีเมล) → ถูกตัดออก · ทะเบียนส่งเป็น 1/ว่าง · ข้ามแถวว่าง', r.ok && JSON.stringify(r.rows[0]) === JSON.stringify(['RefCode', 'จำนวนรถ', 'รถ1_ทะเบียน']) && JSON.stringify(r.rows[1]) === JSON.stringify(['MR-1', '1', '1']) && r.rows.length === 2 && !/ชื่อสมมติ|example\.test|กข1/.test(JSON.stringify(r)), JSON.stringify(r));
@@ -86,4 +87,23 @@ ok('บัญชีนี้ไม่มีสิทธิ์อ่าน Sheet 
 G = load({ props: { RELAY_SECRET: SEC } }); G.post({ action: 'img', id: 'GPSPHOTO000000000000000001', w: 400, secret: SEC }); const mc1 = G.metaCalls.length; r = G.post({ action: 'img', id: 'GPSPHOTO000000000000000001', w: 1600, secret: SEC });
 ok('[r12] ภาพแรก: ข้อมูลไฟล์ 1 ครั้ง + ไล่โฟลเดอร์ถึงรากที่อนุญาต · ภาพถัดไปในโฟลเดอร์เดียวกัน: ข้อมูลไฟล์ครั้งเดียว (ผลตรวจโฟลเดอร์จำไว้)', mc1 === 3 && G.metaCalls.length === mc1 + 1 && r.ok, mc1 + ' → ' + G.metaCalls.length);
 ok('[r12] ผลตรวจโฟลเดอร์ที่จำไว้ไม่เปิดสิทธิ์ให้ไฟล์นอกโฟลเดอร์: ยัง not-allowed', G.post({ action: 'img', id: 'OUTSIDEPHOTO00000000000001', w: 400, secret: SEC }).code === 'not-allowed' && G.post({ action: 'img', id: 'OUTSIDEPHOTO00000000000001', w: 400, secret: SEC }).code === 'not-allowed');
+// ---------- รอบ 13 (F): ข้อผิดพลาดชั่วคราวตอนตรวจโฟลเดอร์ ≠ “อยู่นอกโฟลเดอร์” ----------
+{ const P = 'GPSPHOTO000000000000000001', img = (G, id) => G.post({ action: 'img', id: id || P, w: 400, secret: SEC }), zeros = (G) => [...G.cacheStore.entries()].filter(([k, v]) => v === '0').map(([k]) => k);
+  let G2 = load({ props: { RELAY_SECRET: SEC } }); G2.ctl.metaDown.D09 = 503; G2.ctl.driveDown = true; const a = img(G2);
+  ok('[r13·F] อ่านข้อมูลโฟลเดอร์ชั้นบนไม่ได้ (503) และทางสำรองตรวจไม่ได้ → retry (ไม่ส่งภาพ ไม่ตอบว่านอกโฟลเดอร์) และไม่จำผล “0”', a.ok === false && a.code === 'retry' && !a.b64 && zeros(G2).length === 0, JSON.stringify(a) + ' ' + zeros(G2).join(','));
+  G2.ctl.metaDown = {}; G2.ctl.driveDown = false; const b = img(G2);
+  ok('[r13·F] ต้นทางกลับมาปกติ → คำขอถัดไปได้ภาพทันที (ไม่ติดผลปฏิเสธค้าง 1 ชั่วโมง)', b.ok === true && !!b.b64, JSON.stringify(b).slice(0, 120));
+  G2 = load({ props: { RELAY_SECRET: SEC } }); G2.ctl.metaDown.D09 = 429; const c = img(G2);
+  ok('[r13·F] Drive API ตอบ 429 ระหว่างไล่โฟลเดอร์ แต่ DriveApp ตรวจได้ → ตรวจซ้ำแล้วส่งภาพ (ตรวจโฟลเดอร์จริง ไม่ข้ามการตรวจ)', c.ok === true && zeros(G2).length === 0, JSON.stringify(c).slice(0, 120));
+  G2.ctl.metaDown.D09 = 429; const o1 = img(G2, 'OUTSIDEPHOTO00000000000001');
+  ok('[r13·F] ไฟล์นอกโฟลเดอร์จริง (อ่านครบทุกชั้น) → not-allowed และจำผลได้ · ระหว่างนั้นทางสำรองก็ยังไม่ส่งภาพนอกโฟลเดอร์', o1.code === 'not-allowed' && zeros(G2).some((k) => /OTHERFOLDER$/.test(k)), JSON.stringify(o1) + ' ' + zeros(G2).join(','));
+  G2.ctl.metaDown = {}; const m0 = G2.metaCalls.length; const o2 = img(G2, 'OUTSIDEPHOTO00000000000001');
+  ok('[r13·F] ครั้งถัดไปใช้ผล “นอกโฟลเดอร์” ที่พิสูจน์แล้วจากแคช (อ่านข้อมูลไฟล์ครั้งเดียว)', o2.code === 'not-allowed' && G2.metaCalls.length === m0 + 1, (G2.metaCalls.length - m0) + '');
+  G2.ctx.RELAY_IMAGE_ROOTS = G2.ctx.RELAY_IMAGE_ROOTS.concat(['OTHERFOLDER']); const o3 = img(G2, 'OUTSIDEPHOTO00000000000001');
+  ok('[r13·F] เปลี่ยนรายการรากที่อนุญาต → ผลที่จำไว้ของรากเดิมไม่ถูกใช้', o3.ok === true, JSON.stringify(o3).slice(0, 100));
+  G2.ctx.RELAY_IMAGE_ROOTS = G2.ctx.RELAY_IMAGE_ROOTS.slice(0, 1); img(G2); const m1 = G2.metaCalls.length; G2.ctx.RELAY_VERSION = 'r99'; img(G2);
+  ok('[r13·F] Deploy รุ่นใหม่ (RELAY_VERSION เปลี่ยน) → ไม่ใช้ผลตรวจโฟลเดอร์ที่จำจากรุ่นก่อน (ไล่โฟลเดอร์ใหม่)', G2.metaCalls.length > m1 + 1, (G2.metaCalls.length - m1) + '');
+  const src = fs.readFileSync(path.join(ROOT, 'apps-script/HubRelay.gs'), 'utf8');
+  ok('[r13] ping ตอบรุ่น r13 ตรงกับบริการ', /var RELAY_VERSION = 'r13'/.test(src) && /RELAY_VERSION = 'r13', RELAY_OK = \['r13'\]/.test(fs.readFileSync(path.join(ROOT, 'worker/src/index.js'), 'utf8')));
+}
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ตรรกะสคริปต์กับบริการ Google จำลอง)'); process.exit(fails ? 1 : 0);

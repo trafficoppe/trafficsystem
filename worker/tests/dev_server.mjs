@@ -33,7 +33,7 @@ const SHEETS = {
 };
 const csv = (rows) => rows.map((r) => r.map((c) => (/[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c)).join(',')).join('\n');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFklEQVR4XmOsmNbOgA0wYRVlYKCLBADuLwGhta8zygAAAABJRU5ErkJggg==', 'base64');
-export const control = { sourceDown: false };
+export const control = { sourceDown: false, clock: 0 };      // clock = เลื่อนนาฬิกาของบริการ (ms) เพื่อทดสอบ TTL โดยไม่ต้องรอจริง
 // รอบ 10: ตัวกลางอ่านไฟล์ส่วนตัว (MOCK) — เปิดไว้เป็นค่าเริ่มต้น (/__test/relay/off = ยังไม่ได้ติดตั้ง) · ภาพ GPS เป็นไฟล์ส่วนตัว อ่านได้เฉพาะผ่านตัวกลาง
 const REL = 'https://script.google.com/macros/s/MOCKRELAYDEVSERVER0000000000001/exec', RSEC = 'f'.repeat(64), PRIVATE_IMG = new Set([ID(51)]);
 const RT = {
@@ -49,7 +49,7 @@ const relayOn = (on) => { db.exec("DELETE FROM meta WHERE k IN ('relay_url', 're
 relayOn(true);
 const fetchMock = async (u, o) => { u = String(u); let m = /export\?format=csv&gid=(\d+)/.exec(u);
   if (u === REL) { const b = JSON.parse(o.body); if (b.secret !== RSEC) return Response.json({ ok: false, code: 'forbidden' });
-    if (b.action === 'ping') return Response.json({ ok: true, v: 'r11' });
+    if (b.action === 'ping') return Response.json({ ok: true, v: 'r13' });
     if (b.action === 'table') { const T = RT[b.source], want = b.cols.concat(b.present), ix = want.map((c) => T[0].indexOf(c)); return Response.json({ ok: true, rows: [want].concat(T.slice(1).map((r) => ix.map((i, k) => (k < b.cols.length ? r[i] : (r[i] ? '1' : ''))))) }); }
     if (b.action === 'img') return PRIVATE_IMG.has(b.id) ? Response.json({ ok: true, mime: 'image/png', b64: PNG.toString('base64') }) : Response.json({ ok: false, code: 'not-allowed' });
     return Response.json({ ok: false, code: 'unknown-action' }); }
@@ -70,11 +70,13 @@ export function start(port, opt = {}) {
         a[10] = 'รถจักรยานยนต์'; a[11] = 'นักศึกษา'; a[12] = 'รถยนต์'; a[13] = 'บุคลากร'; a[4] = '11:25'; a[23] = D(ID(61)) + ', ' + D(ID(62)); b[4] = '8:10'; INC.push(a, b); }
       _reset(); rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/relay/')) { relayOn(rq.url.endsWith('on')); _reset(); rs.end('ok'); return; }
+    if (rq.url.startsWith('/__test/clock/')) { control.clock += +rq.url.slice(14) * 1000 || 0; rs.end('ok'); return; }      // รอบ 13
+    if (rq.url.startsWith('/__test/moto/')) { RT.studentMoto[3][2] = rq.url.endsWith('shift') ? 'วิทยาเขตพญาไท' : 'วิทยาเขตศาลายา'; rs.end('ok'); return; }   // รอบ 13: ยอดรวมเท่าเดิม แต่การแยกตามวิทยาเขตเปลี่ยน
     if (rq.url.startsWith('/__test/source/')) { control.sourceDown = rq.url.endsWith('down'); rs.end('ok'); return; }
     const headers = new Headers(); for (const [k, v] of Object.entries(rq.headers)) if (typeof v === 'string') headers.set(k, v);
     headers.set('CF-Connecting-IP', opt.ip || '203.0.113.50');   // IP ภายนอกใดก็ได้ — ไม่มีด่านเครือข่ายเป็นค่าเริ่มต้น
     const req = new Request('http://localhost:' + port + rq.url, { method: rq.method, headers, body: ['GET', 'HEAD'].includes(rq.method) ? undefined : Buffer.concat(chunks) });
-    const res = await handle(req, Object.assign({}, env, opt.env || {}), { fetch: fetchMock, now: () => Date.now() });
+    const res = await handle(req, Object.assign({}, env, opt.env || {}), { fetch: fetchMock, now: () => Date.now() + control.clock });
     const h = {}; res.headers.forEach((v, k) => { h[k] = v; }); rs.writeHead(res.status, h); rs.end(Buffer.from(await res.arrayBuffer()));
   });
   return new Promise((ok) => srv.listen(port, '127.0.0.1', () => ok(srv)));

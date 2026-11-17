@@ -60,7 +60,7 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   await page.click('.incb-list .it .it-b'); await page.waitForSelector('.dlg');
   ok('เปิดรายละเอียด: บุคคล (ไม่มีเบอร์โทร) + ภาพผ่านบริการภาพของระบบ', /รายละเอียดบุคคล|ผู้บาดเจ็บ\/ผู้ป่วย/.test(await txt(page, '.dlg')) && !/โทร|000/.test(await txt(page, '.dlg')) && /\/api\/img\?id=MOCKDRIVEFILEID/.test(await page.getAttribute('.dlg img', 'src')) && await page.evaluate(() => { const i = document.querySelector('.dlg img'); return i.complete && i.naturalWidth > 0; }));
   await page.click('.dlg .btn.sec');
-  ok('สถิติสดจากบริการ: ยอดเหตุการณ์ของหน้าเปลี่ยนเป็นชุดที่อ่านสด (10 เหตุ) และมีเวลาอ่านล่าสุด', /เหตุการณ์ทั้งหมด\s*10/.test(await txt(page, '.kpis')) && /ข้อมูลสดอ่านเมื่อ \d{1,2} [ก-๙.]+ 25\d\d \d{2}:\d{2} น\./.test(await txt(page, '#stamp')) && /หมวดอื่นจากไฟล์สรุป/.test(await txt(page, '#stamp')), await txt(page, '.kpis') + ' | ' + await txt(page, '#stamp'));
+  ok('สถิติสดจากบริการ: ยอดเหตุการณ์ของหน้าเปลี่ยนเป็นชุดที่อ่านสด (10 เหตุ) และมีเวลาอ่านล่าสุด', /เหตุการณ์ทั้งหมด\s*10/.test(await txt(page, '.kpis')) && /ข้อมูลสดอ่านจากต้นทางเมื่อ \d{1,2} [ก-๙.]+ 25\d\d \d{2}:\d{2} น\./.test(await txt(page, '#stamp')) && /หมวดอื่นจากไฟล์สรุป/.test(await txt(page, '#stamp')), await txt(page, '.kpis') + ' | ' + await txt(page, '#stamp'));
   await go(page, 'guard-central'); await page.waitForSelector('details.fold');
   const dt = await page.locator('details.fold').first();
   ok('“นิยามและที่มา” (หมวดควบคุมงาน รปภ.) เป็นแถบพับ ปิดเป็นค่าเริ่มต้น กดแล้วเปิด ใช้คีย์บอร์ดได้', await dt.getAttribute('open') === null && await (async () => { await dt.locator('summary').focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(150); return (await dt.getAttribute('open')) !== null; })());
@@ -171,7 +171,7 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   { const im = await page.evaluate(() => { const i = document.querySelector('.tdi .gal-main img'), r = i.getBoundingClientRect(); return { fit: getComputedStyle(i).objectFit, src: i.getAttribute('src'), set: i.getAttribute('srcset'), w: r.width, cur: i.currentSrc }; });
     ok('ภาพหลักเหตุการณ์: ไม่ใช้รูปย่อ 400px ขยายเป็นภาพใหญ่ (ใช้ 800/1600 ตามจอ) · object-fit: contain ไม่ครอป', im.fit === 'contain' && /&w=800$/.test(im.src) && /&w=1600 1600w/.test(im.set) && !/&w=400$/.test(im.cur), JSON.stringify(im)); }
   await shot(page, '10a_dashboard_headings_today');
-  { await page.waitForTimeout(400); await page.reload(); await page.waitForSelector('.dash-chk', { state: 'attached' }); await page.waitForTimeout(1500); await page.evaluate(() => { location.hash = '#gate'; }); await page.waitForTimeout(300); await page.evaluate(() => { location.hash = '#dashboard'; }); await page.waitForSelector('.dash-chk', { state: 'attached' }); const c = await page.$eval('.dash-chk', (e) => e.textContent); ok('Dashboard หลัง Login: ป้ายเวลาแยก “ข้อมูลสดอ่านเมื่อ …” กับเวลาไฟล์สรุป (ไม่บอกเวลาไฟล์สรุปเป็นเวลาตรวจล่าสุด)', /^ข้อมูลสดอ่านเมื่อ .+ · หมวดอื่นจากไฟล์สรุป /.test(c), c); }
+  { await page.waitForTimeout(400); await page.reload(); await page.waitForSelector('.dash-chk', { state: 'attached' }); await page.waitForTimeout(1500); await page.evaluate(() => { location.hash = '#gate'; }); await page.waitForTimeout(300); await page.evaluate(() => { location.hash = '#dashboard'; }); await page.waitForSelector('.dash-chk', { state: 'attached' }); const c = await page.$eval('.dash-chk', (e) => e.textContent); ok('Dashboard หลัง Login: ป้ายเวลาแยก “ข้อมูลสดอ่านจากต้นทางเมื่อ …” กับเวลาไฟล์สรุป (ไม่บอกเวลาไฟล์สรุปเป็นเวลาตรวจล่าสุด)', /^ข้อมูลสดอ่านจากต้นทางเมื่อ .+ · หมวดอื่นจากไฟล์สรุป /.test(c), c); }
   await page.request.get(BASE + '/__test/today/off');
   // GPS: ปุ่มระบบต้นทาง + ภาพส่วนตัวเมื่อยังไม่มีตัวกลาง
   await go(page, 'grad-2568-gps'); await page.waitForSelector('.dv[data-ds="gps"] .it');
@@ -234,6 +234,61 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
       const o = { overlap, pageOverflow: document.documentElement.scrollWidth > innerWidth + 1, layoutCtl: getComputedStyle(document.querySelector('.layout-ctl')).display }; w.querySelector('.cm-reset').click(); return o; });
     ok('[รอบ 12] มือถือ 390px: แท่งแยกชุดไม่ทับกัน · ทั้งหน้าไม่ล้นแนวนอน · ตัวเลือกจัดวางซ่อน (เรียงลงอยู่แล้ว)', !mob.overlap && !mob.pageOverflow && mob.layoutCtl === 'none', JSON.stringify(mob));
     await shot(page, '12b_mobile_grouped_MOCK'); await page.setViewportSize({ width: 1440, height: 900 }); await page.waitForTimeout(300); }
+  // ---------- รอบ 13 ----------
+  { // C: สลับรูปแบบ/ซ่อนชุด 28 ครั้ง → ตัวสังเกตไม่สะสม · กราฟอื่นยังปรับขนาดตามจอ
+    await go(page, 'dashboard'); await page.waitForSelector('.trends .chartw'); await page.waitForTimeout(400);
+    const C = await page.evaluate(async () => {
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms)), ws = [...document.querySelectorAll('.chartw')], w = ws.find((x) => x.querySelector('.chart-tb button[data-m="group"]'));
+      const o0 = window.__hub.obs(), modes = ['group', 'line', 'table', 'stack'];
+      for (let i = 0; i < 28; i++) { (i % 4 === 3 ? w.querySelector('.legend-btn button') : w.querySelector('.chart-tb button[data-m="' + modes[i % 4] + '"]')).click(); await sleep(15); }
+      w.querySelector('.legend-btn button').click(); w.querySelector('.cm-reset') && !w.querySelector('.cm-reset').hidden && w.querySelector('.cm-reset').click(); await sleep(250);
+      return { o0, o1: window.__hub.obs(), n: ws.length }; });
+    ok('[รอบ 13·C] สลับรูปแบบกราฟ/ซ่อนชุด 28 ครั้ง → จำนวนตัวสังเกตเท่าเดิม (ก่อนแก้: เพิ่มทีละ 1 ต่อครั้ง)', C.o1 === C.o0 && C.o0 > 0, C.o0 + ' → ' + C.o1);
+    const vb = () => page.evaluate(() => [...document.querySelectorAll('.chartw .chart-box svg')].map((x) => x.getAttribute('viewBox').split(' ')[2]));
+    const v0 = await vb(); await page.setViewportSize({ width: 1000, height: 900 }); await page.waitForTimeout(500); const v1 = await vb(); await page.setViewportSize({ width: 1440, height: 900 }); await page.waitForTimeout(400);
+    ok('[รอบ 13·C] หลังสลับหลายครั้ง กราฟทุกตัวในหน้ายังปรับขนาดตามจอ (ตัวสังเกตที่ต้องใช้ไม่ถูกปลด)', v0.length > 1 && v0.length === v1.length && v0.every((x, i) => x !== v1[i]), v0.join(',') + ' → ' + v1.join(','));
+    // C: กราฟในส่วนที่ซ่อนอยู่ (เช่นส่วนพับ) วาดเมื่อเปิด · ส่วนที่ถูกถอดออกจากหน้า (วาดรายการใหม่ตามตัวกรอง) ถูกปลดอัตโนมัติ
+    const F = await page.evaluate(async () => {
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms)), H = window.__hub, o0 = H.obs(), box = document.createElement('div'); box.hidden = true; document.querySelector('#view').appendChild(box);
+      box.appendChild(H.bars([{ label: 'ก', full: 'ก' }, { label: 'ข', full: 'ข' }], [{ name: 'ชุด 1', color: '#36c', values: [1, 2] }, { name: 'ชุด 2', color: '#c63', values: [3, 4] }], { modes: false, aria: 'ทดสอบพับ' }));
+      await sleep(150); const before = !!box.querySelector('svg'); box.hidden = false; await sleep(250); const after = !!box.querySelector('svg'), o1 = H.obs();
+      for (let i = 0; i < 25; i++) { box.textContent = ''; box.appendChild(H.bars([{ label: 'ก', full: 'ก' }, { label: 'ข', full: 'ข' }], [{ name: 'ชุด', color: '#36c', values: [i, 1] }], { modes: false, aria: 'ทดสอบตัวกรอง' })); await sleep(20); }
+      await sleep(250); const o2 = H.obs(); box.remove(); await sleep(250); return { before, after, o0, o1, o2, o3: H.obs() }; });
+    ok('[รอบ 13·C] กราฟในส่วนพับ: ยังไม่วาดตอนซ่อน → วาดเมื่อเปิด', F.before === false && F.after === true, JSON.stringify(F));
+    ok('[รอบ 13·C] วาดกราฟใหม่แทนที่ 25 ครั้ง (แบบตัวกรองวาดรายการใหม่) → ตัวสังเกตไม่สะสม · ถอดส่วนออกแล้วคืนเท่าก่อนเริ่ม', F.o2 === F.o1 && F.o3 === F.o0, JSON.stringify(F));
+    // C: ตัวกรองเรือนไทยจริง 24 ครั้ง
+    await go(page, 'parking'); await page.waitForSelector('.dv[data-ds="ruenthai"] table'); await page.waitForTimeout(400);
+    const r0 = await page.evaluate(() => window.__hub.obs()), sel = '.dv[data-ds="ruenthai"] select[aria-label="สถานะ LPR"]';
+    for (let i = 0; i < 24; i++) { await page.selectOption(sel, i % 2 ? 'all' : 'อัปเดตแล้ว'); await page.waitForTimeout(25); }
+    await page.waitForTimeout(300); const r1 = await page.evaluate(() => window.__hub.obs());
+    ok('[รอบ 13·C] หน้าเรือนไทย: เปลี่ยนตัวกรอง 24 ครั้ง → ตัวสังเกตไม่สะสม', r1 === r0, r0 + ' → ' + r1);
+  }
+  { // B: แยก “ไม่มีข้อมูลทั้งหมด” / “ศูนย์ยืนยัน” / “ไม่ครบบางช่วง” ในแถวรวม ตาราง tooltip และ aria
+    const B = await page.evaluate(async () => {
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms)), box = document.createElement('div'); document.querySelector('#view').appendChild(box);
+      const cols = [{ label: 'ม.ค.', full: 'ม.ค. 2569' }, { label: 'ก.พ.', full: 'ก.พ. 2569' }, { label: 'มี.ค.', full: 'มี.ค. 2569' }];
+      box.appendChild(window.__hub.bars(cols, [{ name: 'ว่างทั้งหมด', color: '#36c', values: [null, null, null] }, { name: 'ศูนย์', color: '#c63', values: [0, 0, 0] }, { name: 'บางช่วง', color: '#3a6', values: [2, null, 3] }], { unit: 'ครั้ง', aria: 'ทดสอบค่าว่าง', key: 'r13-null' }));
+      await sleep(150); const aria = [...box.querySelectorAll('g.col')].map((g) => g.getAttribute('aria-label'));
+      box.querySelector('.chart-tb button[data-m="table"]').click(); await sleep(100);
+      const rows = [...box.querySelectorAll('.chart-tbl tbody tr')].map((tr) => [...tr.children].map((td) => td.textContent)); box.querySelector('.cm-reset').click(); box.remove(); return { aria, rows }; });
+    const tot = B.rows[B.rows.length - 1];
+    ok('[รอบ 13·B] แถว “รวมทั้งช่วง”: ชุดไม่มีข้อมูลเลย = “ไม่มีข้อมูล” (ไม่ใช่ 0) · ชุดศูนย์ยืนยัน = 0 · ชุดขาดบางช่วง = ยอด + บอกจำนวนช่วงที่ขาด', tot[1] === 'ไม่มีข้อมูล' && tot[2] === '0' && /^5 \(ไม่ครบ: ขาด 1 ช่วง\)$/.test(tot[3]) && /^5 \(ไม่ครบ: ขาด 4 ค่า\)$/.test(tot[4]), JSON.stringify(tot));
+    ok('[รอบ 13·B] รวมรายช่วงในตาราง: ช่วงที่บางชุดไม่มีข้อมูลบอก “ไม่ครบ”', /^0 \(ไม่ครบ: ขาด 2 ชุด\)$/.test(B.rows[1][4]) && /^2 \(ไม่ครบ: ขาด 1 ชุด\)$/.test(B.rows[0][4]), JSON.stringify(B.rows.slice(0, 3)));
+    ok('[รอบ 13·B] aria ของแท่ง: บอกชุดที่ไม่มีข้อมูล และยอดรวมบอก “ไม่ครบ” พร้อมหน่วย', /ว่างทั้งหมด ไม่มีข้อมูล, ศูนย์ 0, บางช่วง ไม่มีข้อมูล, รวม 0 ครั้ง \(ไม่ครบ: ขาด 2 ชุด\)$/.test(B.aria[1]), B.aria[1]);
+  }
+  { // A + D: เวลาอ่านเปลี่ยนอย่างเดียว → อัปเดตป้ายเวลา ไม่วาดหน้าใหม่ · ยอดรวมเท่าเดิมแต่การแยกตามวิทยาเขตเปลี่ยน → วาดใหม่ (คงตำแหน่งเลื่อน)
+    await page.request.get(BASE + '/__test/moto/reset'); await go(page, 'vehicle'); await page.waitForSelector('section[aria-label="นักศึกษา – รถจักรยานยนต์"]'); await page.waitForTimeout(500);
+    const liveOnce = async () => { const n0 = log.api.filter((x) => /\/api\/stats/.test(x)).length; await page.evaluate(() => window.__hub.live()); for (let i = 0; i < 40 && log.api.filter((x) => /\/api\/stats/.test(x)).length < n0 + 2; i++) await page.waitForTimeout(100); await page.waitForTimeout(500); };
+    await liveOnce(); const s0 = await txt(page, '#stamp'), n0 = await page.evaluate(() => window.__hub.renders());
+    await page.request.get(BASE + '/__test/clock/180'); await liveOnce(); const s1 = await txt(page, '#stamp'), n1 = await page.evaluate(() => window.__hub.renders());
+    ok('[รอบ 13·A] อ่านต้นทางใหม่ (หลัง TTL) ข้อมูลไม่เปลี่ยน → ป้าย “อ่านจากต้นทางเมื่อ” เปลี่ยน โดยไม่วาดหน้าใหม่', s1 !== s0 && /อ่านจากต้นทาง/.test(s1) && n1 === n0, s0 + ' | ' + s1 + ' | renders ' + n0 + '→' + n1);
+    const camp = () => page.evaluate(() => (document.querySelector('section[aria-label="นักศึกษา – รถจักรยานยนต์"]') || {}).innerText || '');
+    const c0 = await camp(); await page.evaluate(() => window.scrollTo(0, 300)); const y0 = await page.evaluate(() => window.pageYOffset);
+    await page.request.get(BASE + '/__test/moto/shift'); await page.request.get(BASE + '/__test/clock/180'); await liveOnce();
+    const c1 = await camp(), n2 = await page.evaluate(() => window.__hub.renders()), y1 = await page.evaluate(() => window.pageYOffset);
+    ok('[รอบ 13·D] ยอดรวมเท่าเดิม (3 รายการ) แต่การแยกตามวิทยาเขตเปลี่ยน → หน้าแสดงตัวเลขใหม่ · ตำแหน่งเลื่อนคงเดิม', n2 === n1 + 1 && c1 !== c0 && /3/.test(c1) && Math.abs(y1 - y0) < 2, 'renders ' + n1 + '→' + n2 + ' y ' + y0 + '→' + y1);
+    await page.request.get(BASE + '/__test/moto/reset'); await page.request.get(BASE + '/__test/clock/180'); await liveOnce();
+  }
   // ทะเบียนนักศึกษา–จยย. / เรือนไทย / สถานะแหล่งข้อมูล (ข้อมูลสดผ่านตัวกลาง MOCK)
   await page.reload(); await page.waitForTimeout(800); await go(page, 'vehicle'); await page.waitForSelector('section[aria-label="นักศึกษา – รถจักรยานยนต์"]');
   { const t = await txt(page, 'section[aria-label="นักศึกษา – รถจักรยานยนต์"]'); ok('[MOCK ตัวกลาง] นักศึกษา–จยย.: รายการลงทะเบียน 3 · จำนวนรถตามที่กรอก 4 คัน แยกกัน · ไม่มีชื่อ/ทะเบียน', /รายการลงทะเบียน\s*3/.test(t) && /จำนวนรถตามที่กรอก\s*4/.test(t) && !/ชื่อนักศึกษาสมมติ|กข1/.test(t), t.slice(0, 300)); }
@@ -245,8 +300,8 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   await go(page, 'settings'); await page.waitForSelector('section[aria-label="อ่านข้อมูลสดจากต้นทาง"] table');
   { const t = await txt(page, 'section[aria-label="อ่านข้อมูลสดจากต้นทาง"]'); ok('ตั้งค่า: สถานะอ่านข้อมูลสดทีละแหล่ง (อ่านสำเร็จ + เวลา · ช่องทาง) แยกจากไฟล์สรุป', /รายงานเหตุการณ์\s*อ่านสำเร็จ/.test(t) && /ทะเบียนนักศึกษา–รถจักรยานยนต์[^\n]*\s*อ่านสำเร็จ/.test(t) && /ตัวกลางของเจ้าของไฟล์/.test(t) && /ไฟล์สรุป \(snapshot\) สร้างเมื่อ/.test(await txt(page, 'section[aria-label="สถานะข้อมูลและเวลาอัปเดต"]')), t.slice(0, 400)); }
   { const t0 = await txt(page, 'section[aria-label="อ่านข้อมูลสดจากต้นทาง"]'); ok('[รอบ 12] ตั้งค่า: เปิดหน้าปกติไม่ตรวจลึก — บอกว่ายังไม่ได้ตรวจภาพในรอบนี้ และมีปุ่ม “ตรวจตัวกลางแบบลึก”', /ตอบได้ \(จากการอ่านตารางล่าสุด\)/.test(t0) && /ยังไม่ได้ตรวจในรอบนี้/.test(t0) && /ตรวจตัวกลางแบบลึก/.test(t0), t0.slice(-300));
-    await page.click('section[aria-label="อ่านข้อมูลสดจากต้นทาง"] button:has-text("ตรวจตัวกลางแบบลึก")'); await page.waitForFunction(() => /รุ่น r11/.test(document.querySelector('section[aria-label="อ่านข้อมูลสดจากต้นทาง"]').innerText), null, { timeout: 15000 }); }
-  { const t = await txt(page, 'section[aria-label="อ่านข้อมูลสดจากต้นทาง"]'); ok('ตั้งค่า: ตัวกลางแยกขั้นตรวจ (ตั้งค่าแล้ว · ตอบได้รุ่น r11 · อ่านแต่ละตาราง · อ่านภาพที่อนุญาต)', /ตั้งค่าในระบบ\s*ตั้งค่าแล้ว/.test(t) && /ตอบได้ · รุ่น r11/.test(t) && /อ่านตาราง[^\n]*เรือนไทย[^\n]*\s*อ่านได้ · \d+ แถว/.test(t) && /อ่านภาพ GPS ที่อนุญาต[^\n]*\s*(อ่านได้|ไม่มีภาพตัวอย่างให้ตรวจ)/.test(t), t.slice(t.indexOf('HubRelay'), t.indexOf('HubRelay') + 400)); await shot(page, '11_settings_relay_check_MOCK', true); }
+    await page.click('section[aria-label="อ่านข้อมูลสดจากต้นทาง"] button:has-text("ตรวจตัวกลางแบบลึก")'); await page.waitForFunction(() => /รุ่น r13/.test(document.querySelector('section[aria-label="อ่านข้อมูลสดจากต้นทาง"]').innerText), null, { timeout: 15000 }); }
+  { const t = await txt(page, 'section[aria-label="อ่านข้อมูลสดจากต้นทาง"]'); ok('ตั้งค่า: ตัวกลางแยกขั้นตรวจ (ตั้งค่าแล้ว · ตอบได้รุ่น r13 · อ่านแต่ละตาราง · อ่านภาพที่อนุญาต)', /ตั้งค่าในระบบ\s*ตั้งค่าแล้ว/.test(t) && /ตอบได้ · รุ่น r13/.test(t) && /อ่านตาราง[^\n]*เรือนไทย[^\n]*\s*อ่านได้ · \d+ แถว/.test(t) && /อ่านภาพ GPS ที่อนุญาต[^\n]*\s*(อ่านได้|ไม่มีภาพตัวอย่างให้ตรวจ)/.test(t), t.slice(t.indexOf('HubRelay'), t.indexOf('HubRelay') + 400)); await shot(page, '11_settings_relay_check_MOCK', true); }
   await page.request.get(BASE + '/__test/relay/off'); await page.reload(); await page.waitForSelector('section[aria-label="อ่านข้อมูลสดจากต้นทาง"] table');
   ok('ตั้งค่า: ยังไม่ได้เปิดตัวกลาง → ไฟล์ส่วนตัวขึ้น “อ่านไม่สำเร็จ” พร้อมสาเหตุเฉพาะ (ชุดอื่นยังอ่านสำเร็จ)', /อ่านไม่สำเร็จ\s*ลิงก์แชร์ของ Sheet|ตัวกลางของเจ้าของไฟล์\s*ไฟล์ต้นทางเป็นส่วนตัว — ยังไม่ได้เปิดตัวกลาง/.test(await txt(page, 'section[aria-label="อ่านข้อมูลสดจากต้นทาง"]')) && /รายงานเหตุการณ์\s*อ่านสำเร็จ/.test(await txt(page, 'section[aria-label="อ่านข้อมูลสดจากต้นทาง"]')));
   await go(page, 'vehicle'); await page.waitForTimeout(400);
@@ -262,6 +317,26 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   ok('[MOCK AI] ถามผ่าน /api/chat ด้วย session เดียวกัน → ได้คำตอบพร้อมแหล่งข้อมูล', /คำตอบจากบริการ AI จำลอง/.test(await txt(page, '#chatPanel')) && log.api.some((a) => a === 'POST /api/chat'), (await txt(page, '#chatPanel')).slice(-200));
   await shot(page, '05_chat_MOCK_AI'); await page.keyboard.press('Escape');
 
+  // ---------- รอบ 13: race ของข้อมูลสดข้ามรุ่น Login ----------
+  { let statsC = 0; const onReq = (q) => { if (/\/api\/stats\?/.test(q.url())) statsC++; }; page.on('request', onReq); const statsN = () => statsC;
+    // (1) ชุดส่วนตัวตอบ 401 (หมดสิทธิ์ระหว่างทาง) → กลับหน้า Login (เดิมเงียบ หน้าค้างข้อมูลเดิม)
+    await go(page, 'dashboard'); await page.waitForTimeout(300);
+    await page.route('**/api/stats?scope=private', (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{"ok":false,"code":"no-session"}' }));
+    await page.evaluate(() => window.__hub.live()); await page.waitForTimeout(800);
+    ok('[รอบ 13·race] /stats?scope=private ตอบ 401 → กลับหน้า Login (ไม่ค้างข้อมูลภายใน)', await T(page, '#loginView').count() === 1 && !(await page.evaluate(() => document.getElementById('view').textContent.trim().length)));
+    await page.unroute('**/api/stats?scope=private'); await login(page, '0123'); await page.waitForSelector('#userBox'); await page.waitForTimeout(1500);
+    // (2) คำตอบของรุ่น Login ก่อนหน้าที่มาช้า ไม่ลดตัวนับงานของรุ่นใหม่ (ไม่ยิงคำขอซ้ำซ้อนระหว่างรุ่นใหม่ยังรอ) และไม่ทำให้ข้อมูลเดิมกลับมา
+    await page.route('**/api/stats?*', async (r) => { await new Promise((ok2) => setTimeout(ok2, 3000)); r.continue().catch(() => {}); });
+    const n0 = statsN(), t0 = Date.now(); await page.evaluate(() => window.__hub.live());                              // รุ่น 1: 2 คำขอ (ช้า 3 วินาที)
+    await page.request.get(BASE + '/__test/expire'); await go(page, 'staff'); await page.waitForSelector('#loginView');     // session หมดอายุ → กลับหน้า Login (รุ่น 2)
+    await login(page, '0123'); await page.waitForSelector('#userBox');                                                     // รุ่น 3: เริ่มอ่านสดใหม่ทันที (2 คำขอ)
+    const wait = 3000 + 250 - (Date.now() - t0); if (wait > 0) await page.waitForTimeout(wait);                           // คำตอบรุ่น 1 กลับมาแล้ว แต่รุ่น 3 ยังรอ
+    const mid = statsN(); await page.evaluate(() => window.__hub.live()); await page.waitForTimeout(200); const after = statsN();
+    await page.unroute('**/api/stats?*'); await page.waitForTimeout(3500);
+    ok('[รอบ 13·race] คำตอบรุ่น Login ก่อนมาช้า → ไม่ลดตัวนับงานของรุ่นใหม่ (เรียกซ้ำระหว่างรุ่นใหม่ยังรอ = ไม่ยิงคำขอเพิ่ม) · รุ่นใหม่เริ่มอ่านได้ทันที', mid - n0 === 4 && after === mid, 'issued ' + (mid - n0) + ' then +' + (after - mid));
+    ok('[รอบ 13·race] หลัง Login ใหม่ หน้าแสดงข้อมูลของ session ปัจจุบัน (ไม่ค้างหน้า Login / ไม่มี error)', await T(page, '#loginView').count() === 0 && /อ่านจากต้นทาง/.test(await txt(page, '#stamp')), await txt(page, '#stamp'));
+    page.off('request', onReq);
+  }
   // ---------- 8) Logout / หมดอายุ ----------
   await page.click('#userBox .ub-out'); await page.waitForSelector('#loginView');
   const afterOut = await page.evaluate(async () => [(await fetch('/api/data?dataset=staff', { credentials: 'include' })).status, (await fetch('/api/img?id=MOCKDRIVEFILEID0000000000000001', { credentials: 'include' })).status, (await fetch('/api/roster', { credentials: 'include' })).status]);

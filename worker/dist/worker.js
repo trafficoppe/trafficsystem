@@ -59,10 +59,11 @@ function applyLive(stats, extra, live) {
   if (!live) return L;
   const e = live.errors || {};
   L.errors = Object.assign({}, e);
+  const RD = live.sourceReadAt || {}, PART = { incidents: "incidents", lostfound: "lostfoundYear", gate: "gate" };
   ["incidents", "lostfound", "gate"].forEach((k) => {
     if (live[k] && M[k]) {
       Object.assign(M[k], live[k]);
-      L.topics[k] = live.checkedAt;
+      L.topics[k] = RD[PART[k]] || live[k].readAt || "";
     }
   });
   ["incidentsDaily", "lostfoundDaily"].forEach((k) => {
@@ -343,8 +344,8 @@ var SOURCES = (env) => ({
   // ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย → RuenThai_Survey (ไม่อ่านแท็บ Tokens)
 });
 var PRIVATE_SRC = /* @__PURE__ */ new Set(["studentMoto", "ruenthai"]);
-var RELAY_VERSION = "r12";
-var RELAY_OK = ["r11", "r12"];
+var RELAY_VERSION = "r13";
+var RELAY_OK = ["r13"];
 var RELAY_COLS = {
   studentMoto: { cols: ["Timestamp", "RefCode", "\u0E27\u0E34\u0E17\u0E22\u0E32\u0E40\u0E02\u0E15", "\u0E04\u0E13\u0E30/\u0E2A\u0E16\u0E32\u0E1A\u0E31\u0E19/\u0E2A\u0E48\u0E27\u0E19\u0E07\u0E32\u0E19", "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E19\u0E31\u0E01\u0E28\u0E36\u0E01\u0E29\u0E32", "\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E28\u0E36\u0E01\u0E29\u0E32", "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E19\u0E15\u0E4C", "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E23\u0E16"], present: ["\u0E23\u0E161_\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19", "\u0E23\u0E162_\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19", "\u0E23\u0E163_\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19"] },
   ruenthai: { cols: ["Timestamp", "Ref_Code", "Group_Type", "Group_Label", "User_SubType", "Faculty_Dept", "Sub_Unit_Project", "Car_Count", "Car1_Type", "Car2_Type", "LPR_Status"], present: ["Car1_Plate", "Car2_Plate"] }
@@ -360,12 +361,13 @@ async function metaGet(env, keys) {
   }
   return o;
 }
-async function relayCfg(env) {
-  if (env.HUB_RELAY_URL && env.HUB_RELAY_SECRET) return { url: env.HUB_RELAY_URL, secret: env.HUB_RELAY_SECRET, via: "env", imgVer: "1" };
-  if (relayMemo && Date.now() - relayMemo.at < 6e4) return relayMemo.v;
-  const o = await metaGet(env, ["relay_url", "relay_secret", "img_cache_ver"]);
-  const v = o.relay_url && o.relay_secret ? { url: o.relay_url, secret: o.relay_secret, via: "enrolled", imgVer: o.img_cache_ver || "1" } : null;
-  relayMemo = { at: Date.now(), v };
+async function relayCfg(env, deps) {
+  if (env.HUB_RELAY_URL && env.HUB_RELAY_SECRET) return { url: env.HUB_RELAY_URL, secret: env.HUB_RELAY_SECRET, via: "env", imgVer: "1", rev: "env:" + env.HUB_RELAY_URL };
+  const now = deps && deps.now ? deps.now() : Date.now();
+  if (relayMemo && now - relayMemo.at >= 0 && now - relayMemo.at < 3e4) return relayMemo.v;
+  const o = await metaGet(env, ["relay_url", "relay_secret", "img_cache_ver", "relay_enrolled_at"]);
+  const v = o.relay_url && o.relay_secret ? { url: o.relay_url, secret: o.relay_secret, via: "enrolled", imgVer: o.img_cache_ver || "1", rev: "d1:" + o.relay_url + "|" + str(o.relay_enrolled_at) + "|" + (o.img_cache_ver || "1") } : null;
+  relayMemo = { at: now, v };
   return v;
 }
 async function postJson(deps, url, body, ms) {
@@ -388,7 +390,7 @@ async function postJson(deps, url, body, ms) {
   return j;
 }
 async function relayCall(env, deps, body, cfg) {
-  const c = cfg || await relayCfg(env);
+  const c = cfg || await relayCfg(env, deps);
   if (!c) throw new Err(503, "relay-not-configured");
   return postJson(deps, c.url, { ...body, secret: c.secret });
 }
@@ -436,24 +438,34 @@ var memo = /* @__PURE__ */ new Map();
 var inflight = /* @__PURE__ */ new Map();
 var _stat = { reads: {} };
 var SRC_TIMEOUT = 25e3;
-function table(env, key, deps, maxAge = 12e4) {
-  const now = deps.now(), hit2 = memo.get(key);
-  if (hit2 && now - hit2.at < maxAge) return Promise.resolve(hit2);
-  const cur = inflight.get(key);
+async function srcKey(env, key, deps) {
+  const src = SOURCES(env)[key] || [], cfg = PRIVATE_SRC.has(key) ? await relayCfg(env, deps) : null;
+  const via = PRIVATE_SRC.has(key) ? "relay:" + (cfg ? cfg.rev : "none") : env.HUB_GS_URL && env.HUB_SHARED_SECRET ? "hubdata:" + env.HUB_GS_URL : "csv";
+  return { mk: key + "|" + hashStr(JSON.stringify(src) + "|" + via), cfg };
+}
+async function memoOf(env, key, deps) {
+  return memo.get((await srcKey(env, key, deps)).mk);
+}
+async function table(env, key, deps, maxAge = 12e4) {
+  const { mk, cfg } = await srcKey(env, key, deps), now = deps.now();
+  for (const k of memo.keys()) if (k !== mk && k.startsWith(key + "|")) memo.delete(k);
+  const hit2 = memo.get(mk);
+  if (hit2 && now - hit2.at >= 0 && now - hit2.at < maxAge) return hit2;
+  const cur = inflight.get(mk);
   if (cur) return cur;
-  const p = readTable(env, key, deps, now).finally(() => {
-    if (inflight.get(key) === p) inflight.delete(key);
+  const p = readTable(env, key, deps, mk, cfg).finally(() => {
+    if (inflight.get(mk) === p) inflight.delete(mk);
   });
-  inflight.set(key, p);
+  inflight.set(mk, p);
   return p;
 }
-async function readTable(env, key, deps, now) {
+async function readTable(env, key, deps, mk, cfg) {
   const src = SOURCES(env)[key];
   if (!src || !src[0]) throw new Err(503, "source-not-configured");
   _stat.reads[key] = (_stat.reads[key] || 0) + 1;
   let rows;
   if (PRIVATE_SRC.has(key)) {
-    const j = await relayCall(env, deps, { action: "table", source: key, ...RELAY_COLS[key] });
+    const j = await relayCall(env, deps, { action: "table", source: key, ...RELAY_COLS[key] }, cfg || void 0);
     if (!Array.isArray(j.rows)) throw new Err(502, "source-error");
     rows = j.rows.map((x) => x.map(str));
   } else if (env.HUB_GS_URL && env.HUB_SHARED_SECRET) {
@@ -470,7 +482,7 @@ async function readTable(env, key, deps, now) {
   }
   if (!rows.length) throw new Err(502, "source-schema");
   const t = { head: rows[0].map(str), rows: rows.slice(1).filter((x) => x.some((c) => str(c) !== "")), at: deps.now() };
-  memo.set(key, t);
+  memo.set(mk, t);
   return t;
 }
 var pick = (t, map, required) => {
@@ -736,11 +748,11 @@ var hashStr = (t) => {
   return h.toString(36);
 };
 async function liveStats(env, deps, scope) {
-  const names = STATS_SCOPES[scope || "all"];
+  const sc = scope || "all", names = Object.prototype.hasOwnProperty.call(STATS_SCOPES, sc) ? STATS_SCOPES[sc] : null;
   if (!names) throw new Err(400, "bad-scope");
   const now = deps.now(), stamp = bkk(now), res = { ok: true, checkedAt: stamp, scope: scope || "all", errors: {}, sourceReadAt: {} }, P = {};
   P.incidents = async (out) => {
-    const rows = await BUILD.incidents(env, deps), by = {}, mon = {}, daily = {};
+    const at = (await table(env, "incidents", deps)).at, rd = bkk(at), rows = await BUILD.incidents(env, deps), by = {}, mon = {}, daily = {};
     let inj = 0, last = "", lastRec = "";
     rows.forEach((r) => {
       const m = r.date.slice(0, 7), n2 = r.injured || 0;
@@ -756,10 +768,11 @@ async function liveStats(env, deps, scope) {
     });
     const months = Object.keys(mon).sort();
     out.incidents = { total: rows.length, injuredTotal: inj, byType: Object.values(by), monthly: months.map((m) => ({ month: m, byType: mon[m] })), range: { from: rows.reduce((a, r) => r.date < a ? r.date : a, "9999"), to: last }, updated: lastRec || last };
-    out.incidentsDaily = { rows: Object.values(daily).sort((a, b) => a.date + a.type < b.date + b.type ? -1 : 1), checkedAt: stamp, lastEntry: last, lastRecordedAt: lastRec, complete: true, source: "\u0E10\u0E32\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E07\u0E32\u0E19\u0E08\u0E23\u0E32\u0E08\u0E23 \u2192 \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E1C\u0E48\u0E32\u0E19\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25)" };
+    out.incidentsDaily = { rows: Object.values(daily).sort((a, b) => a.date + a.type < b.date + b.type ? -1 : 1), checkedAt: rd, lastEntry: last, lastRecordedAt: lastRec, complete: true, source: "\u0E10\u0E32\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E07\u0E32\u0E19\u0E08\u0E23\u0E32\u0E08\u0E23 \u2192 \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E1C\u0E48\u0E32\u0E19\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25)" };
+    return at;
   };
   P.lostfound = async (out) => {
-    const t = await table(env, "lostfound", deps), rows = pick(t, { at: "Timestamp", type: "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17" }, ["at", "type"]).map((r) => ({ d: normDT(r.at), type: r.type })).filter((r) => r.d), day = {};
+    const t = await table(env, "lostfound", deps), rd = bkk(t.at), rows = pick(t, { at: "Timestamp", type: "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17" }, ["at", "type"]).map((r) => ({ d: normDT(r.at), type: r.type })).filter((r) => r.d), day = {};
     let last = "";
     rows.forEach((r) => {
       const d = r.d.slice(0, 10), o = day[d] = day[d] || { date: d, lost: 0, found: 0, returnForms: 0 };
@@ -769,10 +782,11 @@ async function liveStats(env, deps, scope) {
       if (r.d > last) last = r.d;
     });
     const ds = Object.keys(day).sort();
-    out.lostfoundDaily = { from: ds[0] || "", rows: ds.map((d) => day[d]), checkedAt: stamp, lastEntry: last.slice(0, 10), lastRecordedAt: last, complete: true, source: "Sheet \u0E41\u0E08\u0E49\u0E07\u0E02\u0E2D\u0E07\u0E2B\u0E32\u0E22 \u2192 LF_New (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E1C\u0E48\u0E32\u0E19\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25)" };
+    out.lostfoundDaily = { from: ds[0] || "", rows: ds.map((d) => day[d]), checkedAt: rd, lastEntry: last.slice(0, 10), lastRecordedAt: last, complete: true, source: "Sheet \u0E41\u0E08\u0E49\u0E07\u0E02\u0E2D\u0E07\u0E2B\u0E32\u0E22 \u2192 LF_New (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E1C\u0E48\u0E32\u0E19\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25)" };
+    return t.at;
   };
   P.lostfoundYear = async (out) => {
-    const rows = pick(await table(env, "lfYear", deps), { date: "\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", type: "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17", status: "\u0E2A\u0E16\u0E32\u0E19\u0E30" }, ["date", "type", "status"]).map((r) => ({ m: normDT(r.date).slice(0, 7), type: r.type || "(\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17)", status: r.status })).filter((r) => r.m);
+    const ty = await table(env, "lfYear", deps), rd = bkk(ty.at), rows = pick(ty, { date: "\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", type: "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17", status: "\u0E2A\u0E16\u0E32\u0E19\u0E30" }, ["date", "type", "status"]).map((r) => ({ m: normDT(r.date).slice(0, 7), type: r.type || "(\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17)", status: r.status })).filter((r) => r.m);
     const byType = {}, byStatus = {}, mon = {}, st = {};
     let last = "";
     rows.forEach((r) => {
@@ -785,8 +799,9 @@ async function liveStats(env, deps, scope) {
       if (r.m > last) last = r.m;
     });
     const months = Object.keys(mon).sort();
-    out.lostfound = { total: rows.length, byType, byStatus, returned: byStatus["\u0E23\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E37\u0E19\u0E41\u0E25\u0E49\u0E27"] || 0, monthly: months.map((m) => ({ month: m, byType: mon[m] })), range: { from: months[0] || "", to: last }, updated: stamp };
+    out.lostfound = { total: rows.length, byType, byStatus, returned: byStatus["\u0E23\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E37\u0E19\u0E41\u0E25\u0E49\u0E27"] || 0, monthly: months.map((m) => ({ month: m, byType: mon[m] })), range: { from: months[0] || "", to: last }, updated: rd, readAt: rd };
     out.lostfoundStatus = { monthly: months.map((m) => st[m]), total: rows.length };
+    return ty.at;
   };
   P.gate = async (out) => {
     const t = await table(env, "gate", deps), di = t.head.indexOf("\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25"), ri = t.head.indexOf("\u0E40\u0E27\u0E25\u0E32\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E02\u0E49\u0E32\u0E23\u0E30\u0E1A\u0E1A");
@@ -811,20 +826,23 @@ async function liveStats(env, deps, scope) {
       o.noHelmet += d.noHelmet;
     });
     if (!daily.length) throw new Err(502, "source-schema");
-    out.gate = { daily, monthly: Object.values(mon), days: daily.length, totals: daily.reduce((a, d) => ({ cars: a.cars + d.cars, motorcycles: a.motorcycles + d.motorcycles, noHelmet: a.noHelmet + d.noHelmet }), { cars: 0, motorcycles: 0, noHelmet: 0 }), range: { from: daily[0].date, to: daily[daily.length - 1].date }, updated: rec || daily[daily.length - 1].date };
+    out.gate = { daily, monthly: Object.values(mon), days: daily.length, totals: daily.reduce((a, d) => ({ cars: a.cars + d.cars, motorcycles: a.motorcycles + d.motorcycles, noHelmet: a.noHelmet + d.noHelmet }), { cars: 0, motorcycles: 0, noHelmet: 0 }), range: { from: daily[0].date, to: daily[daily.length - 1].date }, updated: rec || daily[daily.length - 1].date, readAt: bkk(t.at) };
+    return t.at;
   };
   P.studentMoto = async (out) => {
     const t = await table(env, "studentMoto", deps);
     out.studentMoto = studentMotoSummary(t, bkk(t.at));
+    return t.at;
   };
   P.ruenthai = async (out) => {
     const t = await table(env, "ruenthai", deps);
     out.ruenthai = ruenthaiSummary(t, bkk(t.at));
+    return t.at;
   };
-  const rc = names.some((k) => PRIVATE_SRC.has(PART_SRC[k])) ? await relayCfg(env) : null;
-  const cfgKey = STATS_SCHEMA + "-" + RELAY_VERSION + "-" + cacheEpoch + "-" + hashStr(JSON.stringify(SOURCES(env)) + "|" + (rc ? rc.url : "") + "|" + str(env.HUB_GS_URL));
+  const rc = names.some((k) => PRIVATE_SRC.has(PART_SRC[k])) ? await relayCfg(env, deps) : null;
+  const cfgKey = STATS_SCHEMA + "-" + RELAY_VERSION + "-" + cacheEpoch + "-" + hashStr(JSON.stringify(SOURCES(env)) + "|" + (rc ? rc.rev : "") + "|" + str(env.HUB_GS_URL));
   await Promise.all(names.map(async (k) => {
-    const ck = deps.cache ? new Request("https://stats-cache.mu-traffic-hub.internal/" + cfgKey + "/" + k) : null, src = PART_SRC[k], mem = memo.get(src);
+    const ck = deps.cache ? new Request("https://stats-cache.mu-traffic-hub.internal/" + cfgKey + "/" + k) : null, mem = await memoOf(env, PART_SRC[k], deps);
     try {
       if (ck && !(mem && now - mem.at < STATS_TTL)) {
         const h = await deps.cache.match(ck).catch(() => null), j = h ? await h.json().catch(() => null) : null;
@@ -834,9 +852,7 @@ async function liveStats(env, deps, scope) {
           return;
         }
       }
-      const frag = {};
-      await P[k](frag);
-      const at = (memo.get(src) || { at: deps.now() }).at;
+      const frag = {}, at = await P[k](frag);
       Object.assign(res, frag);
       res.sourceReadAt[k] = bkk(at);
       if (ck) {
@@ -1103,7 +1119,7 @@ async function img(request, env, deps) {
   const u = new URL(request.url), id = u.searchParams.get("id") || "", w = IMG_W.includes(+u.searchParams.get("w")) ? +u.searchParams.get("w") : 400;
   if (!/^[-\w]{20,60}$/.test(id)) throw new Err(400, "bad-id");
   if (!knownImg.has(id) && !await env.DB.prepare("SELECT 1 AS x FROM imgids WHERE id = ?").bind(id).first()) throw new Err(404, "unknown-image");
-  const rc = await relayCfg(env), ver = rc && rc.imgVer || (await metaGet(env, ["img_cache_ver"])).img_cache_ver || "1", etag = '"' + id + "-" + w + "-v" + ver + '"';
+  const rc = await relayCfg(env, deps), ver = rc && rc.imgVer || (await metaGet(env, ["img_cache_ver"])).img_cache_ver || "1", etag = '"' + id + "-" + w + "-v" + ver + '"';
   const H = (ct, via) => ({ "content-type": ct, "cache-control": "private, no-cache", etag, "x-img-via": via, ...SEC });
   if (request.headers.get("If-None-Match") === etag) return new Response(null, { status: 304, headers: { "cache-control": "private, no-cache", etag, ...SEC } });
   const ck = new Request("https://img-cache.mu-traffic-hub.internal/v" + ver + "/" + id + "/" + w), cache = deps.cache;
@@ -1146,7 +1162,7 @@ async function img(request, env, deps) {
       };
       const relayErr = (e) => {
         const c = e instanceof Err ? e.code : "relay-error";
-        return new Err(c === "relay-not-found" ? 404 : 502, c === "relay-not-found" ? "image-not-found" : c === "relay-not-allowed" ? "image-not-allowed" : c);
+        return new Err(c === "relay-not-found" ? 404 : c === "relay-retry" ? 503 : 502, c === "relay-not-found" ? "image-not-found" : c === "relay-not-allowed" ? "image-not-allowed" : c === "relay-retry" ? "image-retry" : c);
       };
       if (rc && (privImg.has(id) || u.searchParams.get("p") === "1")) {
         let re = null;
@@ -1281,7 +1297,7 @@ async function pool(items, n2, fn) {
   }));
 }
 async function sourcesStatus(env, deps, deep) {
-  const out = {}, rc = await relayCfg(env), pend = await metaGet(env, ["relay_pending_url", "relay_enroll"]);
+  const out = {}, rc = await relayCfg(env, deps), pend = await metaGet(env, ["relay_pending_url", "relay_enroll"]);
   await pool(Object.keys(SOURCES(env)).filter((k) => k !== "staff"), 4, async (k) => {
     try {
       const t = await table(env, k, deps);
@@ -1392,7 +1408,7 @@ async function handle(request, env, deps) {
       if (!Object.prototype.hasOwnProperty.call(BUILD, k)) throw new Err(400, "unknown-dataset");
       let rows = await BUILD[k](env, deps);
       if (k === "staff") rows = rows.map(PUBLIC_STAFF(env));
-      return json({ ok: true, dataset: k, rows, asOf: bkk((memo.get(k === "staff" ? "staff" : k) || { at: deps.now() }).at), role: s.role });
+      return json({ ok: true, dataset: k, rows, asOf: bkk((await memoOf(env, k, deps) || { at: deps.now() }).at), role: s.role });
     }
     if (path === "/api/sources" && m === "GET") {
       await need(request, env, deps);

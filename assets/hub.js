@@ -234,9 +234,10 @@
   function hashParts() { var h = (location.hash || '').replace('#', ''), q = h.indexOf('?'); if (q >= 0) h = h.slice(0, q); try { h = decodeURIComponent(h); } catch (e) { h = ''; } var i = h.indexOf('/'); return i < 0 ? [h, ''] : [h.slice(0, i), h.slice(i + 1)]; }
   function currentPage() { var h = hashParts()[0]; h = ALIAS[h] || h; return PAGES[h] ? h : 'dashboard'; }
   function go(page) { if (currentPage() === page) route(true); else location.hash = '#' + page; }
+  var routeN = 0;
   function route(first) {
     if (AUTH.on && !AUTH.user) return;          /* ยังไม่ผ่าน Login กลาง: ไม่วาดหน้าและไม่เรียกข้อมูลใด ๆ */
-    var page = currentPage(), grp = PAGE_GROUP[page];
+    var page = currentPage(), grp = PAGE_GROUP[page]; routeN++;
     state.rerender = state.curPage === page; state.curPage = page;
     if (MONTHS.length && page !== 'dashboard' && page !== 'report-monthly') scopeRange('all', { from: MONTHS[0], to: MONTHS[MONTHS.length - 1] });
     if (!first || !Object.keys(openGroups).length) openGroups = {};     // เปลี่ยนหน้า = เปิดเฉพาะหมวดของหน้าปัจจุบัน (เมนูไม่ยาวเกิน)
@@ -361,12 +362,19 @@
     if (onPick) { node.classList.add('pick'); node.addEventListener('click', function () { if (touchFirst) { touchFirst = false; return; } onPick(); }); }
   }
   /* รอบ 12: ตัวสังเกตขนาดของกราฟผูกกับหน้าปัจจุบัน — เปลี่ยนหน้า/วาดใหม่แล้วปลดออกทั้งหมด (ไม่สะสม) */
-  var liveObs = [];
+  /* รอบ 13: ปลดเฉพาะส่วนที่ถูกแทนที่ (ไม่ใช้ dropObs ทั้งหน้า) — disposeIn(ส่วนที่จะล้าง) ก่อนวาดใหม่ในที่เดิม (สลับรูปแบบ/ซ่อนชุด/ตัวกรอง)
+   * + กวาดตัวสังเกตของกราฟที่เคยอยู่บนหน้าแล้วถูกถอดออก (เช่น ตัวกรองเรือนไทยวาดรายการใหม่) — กราฟที่สร้างแล้วยังไม่ได้แปะลงหน้าไม่ถูกปลด */
+  var liveObs = [], pruneT = 0;
   function dropObs() { liveObs.forEach(function (o) { try { o.disconnect(); } catch (e) {} }); liveObs = []; }
+  function trackObs(o, node) { o.node = node; liveObs.push(o); if (!pruneT) pruneT = setTimeout(function () { pruneT = 0; pruneObs(); }, 60); }
+  function untrack(test) { liveObs = liveObs.filter(function (o) { if (test(o)) { try { o.disconnect(); } catch (e) {} return false; } return true; }); }
+  function pruneObs() { untrack(function (o) { return o.node && o.node.__seen && !o.node.isConnected; }); }
+  if (window.MutationObserver) new MutationObserver(function () { if (liveObs.length && !pruneT) pruneT = setTimeout(function () { pruneT = 0; pruneObs(); }, 120); }).observe(document.documentElement, { childList: true, subtree: true });   /* ส่วนที่ถูกถอดออก → ปลดตัวสังเกต */
+  function disposeIn(root) { if (root) untrack(function (o) { return o.node && root.contains(o.node); }); }
   function responsive(draw) {
     var box = el('div', { class: 'chart-box' }), last = 0;
-    function run() { var w = Math.round(box.clientWidth); if (!w || w === last) return; last = w; box.textContent = ''; draw(box, w); }
-    if (window.ResizeObserver) { var ro = new ResizeObserver(run); ro.observe(box); liveObs.push(ro); } else { window.addEventListener('resize', run); liveObs.push({ disconnect: function () { window.removeEventListener('resize', run); } }); }
+    function run() { if (box.isConnected) box.__seen = true; var w = Math.round(box.clientWidth); if (!w || w === last) return; last = w; box.textContent = ''; draw(box, w); }
+    if (window.ResizeObserver) { var ro = new ResizeObserver(run); ro.observe(box); trackObs(ro, box); } else { window.addEventListener('resize', run); trackObs({ disconnect: function () { window.removeEventListener('resize', run); } }, box); }
     (window.requestAnimationFrame || setTimeout)(run);
     return box;
   }
@@ -398,7 +406,7 @@
     var wrap = el('div', { class: 'chartw' }), body = el('div', { class: 'chart-body' }), tb = null, note = el('p', { class: 'chart-hid', role: 'status', hidden: '' });
     function vis() { return series.filter(function (s, i) { return !hidden[i]; }); }
     function draw() {
-      var S = vis(); body.textContent = ''; wrap.setAttribute('data-mode', mode);
+      var S = vis(); disposeIn(body); body.textContent = ''; wrap.setAttribute('data-mode', mode);
       if (!S.length) body.appendChild(el('div', { class: 'empty', text: 'ซ่อนทุกชุดข้อมูลอยู่ — กดชื่อชุดด้านล่างเพื่อแสดง' }));
       else if (mode === 'table') body.appendChild(chartTable(cols, S, opt));
       else if (mode === 'line') { var mx = 1; S.forEach(function (s) { s.values.forEach(function (v) { if (v != null && v > mx) mx = v; }); }); var sc = niceTop(mx, opt.int);
@@ -425,10 +433,13 @@
     draw();
     return wrap;
   }
+  function sumTxt(t, any, miss, what, unit) { return !any ? 'ไม่มีข้อมูล' : num(t) + (unit || '') + (miss ? ' (ไม่ครบ: ขาด ' + miss + ' ' + what + ')' : ''); }
   function chartTable(cols, series, opt) {
     var multi = series.length > 1, head = [opt.cat ? 'หมวด' : 'ช่วงเวลา'].concat(series.map(function (s) { return s.name; }), multi ? ['รวม'] : []), nums = head.map(function (_, i) { return i; }).slice(1);
-    var rows = cols.map(function (c, i) { var t = 0, any = false, r = [c.full || c.label]; series.forEach(function (s) { var v = s.values[i]; if (v != null) { any = true; t += v; } r.push(v == null ? 'ไม่มีข้อมูล' : num(v)); }); if (multi) r.push(any ? num(t) : 'ไม่มีข้อมูล'); return r; });
-    var tot = ['รวมทั้งช่วง']; var grand = 0; series.forEach(function (s) { var t = s.values.reduce(function (a, v) { return a + (v || 0); }, 0); grand += t; tot.push(num(t)); }); if (multi) tot.push(num(grand));
+    var rows = cols.map(function (c, i) { var t = 0, any = false, miss = 0, r = [c.full || c.label]; series.forEach(function (s) { var v = s.values[i]; if (v != null) { any = true; t += v; } else miss++; r.push(v == null ? 'ไม่มีข้อมูล' : num(v)); }); if (multi) r.push(sumTxt(t, any, miss, 'ชุด')); return r; });
+    /* รอบ 13: แยก “ไม่มีข้อมูลทั้งหมด” (ไม่ใช่ 0) · “มีข้อมูลยืนยันเป็น 0” · “มีข้อมูลบางช่วง” (บอกจำนวนช่วงที่ขาด) */
+    var tot = ['รวมทั้งช่วง'], grand = 0, gAny = false, gMiss = 0; series.forEach(function (s) { var t = 0, any = false, miss = 0; cols.forEach(function (_, i) { var v = s.values[i]; if (v == null) miss++; else { any = true; t += v; } }); grand += t; gAny = gAny || any; gMiss += miss; tot.push(sumTxt(t, any, miss, 'ช่วง')); });
+    if (multi) tot.push(sumTxt(grand, gAny, gMiss, 'ค่า'));
     if (!opt.noSum) rows.push(tot);
     return el('div', { class: 'tbl-wrap chart-tbl', tabindex: '0', role: 'region', 'aria-label': (opt.aria || 'ตารางตัวเลข') + (opt.unit ? ' (หน่วย: ' + opt.unit + ')' : '') }, [table(head, rows, { num: nums })]);
   }
@@ -436,7 +447,9 @@
     var n = series.length, unit = opt.unit ? ' ' + opt.unit : '', V = function (s, i) { var v = s.values[i]; return v == null ? null : v; }, TV = function (s, i) { var v = V(s, i); return v == null ? 'ไม่มีข้อมูล' : num(v) + unit; };
     return responsive(function (box, W0) {
       var H = opt.h || 250, L = 46, R = 8, T = 22, B = 28, minBw = grouped ? n * 7 + 8 : 0, W = Math.max(W0, grouped ? L + R + cols.length * minBw : 0), pw = W - L - R, ph = H - T - B;
-      var totals = cols.map(function (_, i) { return series.reduce(function (a, s) { return a + (s.values[i] || 0); }, 0); });
+      var totals = cols.map(function (_, i) { return series.reduce(function (a, s) { return a + (s.values[i] || 0); }, 0); }),
+        miss = cols.map(function (_, i) { return series.filter(function (s) { return s.values[i] == null; }).length; }),
+        totTxt = function (i) { return sumTxt(totals[i], miss[i] < n, miss[i], 'ชุด', unit); };
       var peak = grouped ? Math.max.apply(null, series.map(function (s) { return Math.max.apply(null, s.values.map(function (v) { return v || 0; }).concat([0])); }).concat([0])) : Math.max.apply(null, totals);
       var sc = niceTop(peak, opt.int), top = sc.top;
       var root = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'group', 'aria-label': (opt.aria || 'แผนภูมิแท่ง') + (grouped ? ' (แท่งตั้งแยกชุด)' : '') });
@@ -446,7 +459,7 @@
       cols.forEach(function (c, i) {
         var x = L + bw * i + (bw - w) / 2, acc = 0;
         var g = svg('g', { class: 'col' + (opt.sel === i ? ' sel' : ''), tabindex: i === 0 ? '0' : '-1', role: 'img',
-          'aria-label': c.full + ': ' + series.map(function (s) { var v = V(s, i); return s.name + ' ' + (v == null ? 'ไม่มีข้อมูล' : num(v)); }).join(', ') + (n > 1 ? ', รวม ' + num(totals[i]) : '') + unit });
+          'aria-label': c.full + ': ' + series.map(function (s) { var v = V(s, i); return s.name + ' ' + (v == null ? 'ไม่มีข้อมูล' : num(v)); }).join(', ') + (n > 1 ? ', รวม ' + totTxt(i) : V(series[0], i) == null ? '' : unit) });
         g.appendChild(svg('rect', { class: 'hit', x: L + bw * i, y: T - 16, width: bw, height: ph + 16 + B, rx: 6 }));
         series.forEach(function (s, k) {
           var val = s.values[i] || 0; if (!val) return;
@@ -458,7 +471,7 @@
         if (i % every === 0) g.appendChild(svg('text', { class: 'ax', x: x + w / 2, y: H - 9, 'text-anchor': 'middle', text: c.label }));
         bindTip(g, function () {
           return tipNodes(c.full, series.map(function (s) { return { name: s.name, color: s.color, value: TV(s, i) }; }),
-            { total: n > 1 ? num(totals[i]) + unit : null, hint: opt.onPick ? (opt.pickHint || 'คลิกเพื่อดูรายละเอียดของเดือนนี้') : null });
+            { total: n > 1 ? totTxt(i) : null, hint: opt.onPick ? (opt.pickHint || 'คลิกเพื่อดูรายละเอียดของเดือนนี้') : null });
         }, opt.onPick ? function () { opt.onPick(i, c); } : null);
         root.appendChild(g);
       });
@@ -484,7 +497,7 @@
       });
       cols.forEach(function (c, i) {
         var g = svg('g', { class: 'col' + (opt.sel === i ? ' sel' : ''), tabindex: i === 0 ? '0' : '-1', role: 'img',
-          'aria-label': c.full + ': ' + series.map(function (s) { return s.name + ' ' + (s.values[i] == null ? 'ไม่มีข้อมูล' : fv(s.values[i])); }).join(', ') + unit });
+          'aria-label': c.full + ': ' + series.map(function (s) { return s.name + ' ' + (s.values[i] == null ? 'ไม่มีข้อมูล' : fv(s.values[i]) + unit); }).join(', ') });
         g.appendChild(svg('rect', { class: 'hit', x: L + bw * i, y: T - 16, width: bw, height: ph + 16 + B, rx: 6 }));
         series.forEach(function (s) {
           var v = s.values[i]; if (v == null) return;
@@ -1149,8 +1162,8 @@
   /* รอบ 12: เริ่มงานหนัก (ไลบรารีแผนที่ + ภาพพื้นหลัง) เมื่อส่วนนั้นใกล้เข้าหน้าจอ — ไม่แย่งเวลาข้อมูลหลักด้านบน · ตัวสังเกตถูกปลดเมื่อเปลี่ยนหน้า */
   function whenNear(node, fn) {
     if (!window.IntersectionObserver) return fn();
-    var io = new IntersectionObserver(function (es) { if (es.some(function (e) { return e.isIntersecting; })) { io.disconnect(); fn(); } }, { rootMargin: '400px 0px' });
-    io.observe(node); liveObs.push(io);
+    var io = new IntersectionObserver(function (es) { if (node.isConnected) node.__seen = true; if (es.some(function (e) { return e.isIntersecting; })) { untrack(function (o) { return o === io; }); fn(); } }, { rootMargin: '400px 0px' });
+    io.observe(node); trackObs(io, node);
   }
   function dashMap() {
     var am = mod('accidentMap'), box = el('div', { class: 'dash-map' }), pts = mapPoints();
@@ -1796,7 +1809,7 @@
     var seg = el('div', { class: 'seg period', role: 'group', 'aria-label': 'ช่วงข้อมูลของส่วนบน' }, [['today', 'วันนี้'], ['month', 'เดือนนี้'], ['year', 'ปีนี้'], ['custom', 'กำหนดช่วง']].map(function (x) {
       return el('button', { type: 'button', 'aria-pressed': String(state.period === x[0]), text: x[1], onclick: function () { state.period = x[0]; route(true); } }); }));
     v.appendChild(el('div', { class: 'dash-head' }, [el('div', {}, [el('h1', { text: 'ภาพรวมงานจราจรและความปลอดภัย' }),
-      el('div', { class: 'dash-meta' }, [el('span', { class: 'upd' }, [ic('calendar'), 'วันนี้ ' + dLabel(t)]), el('span', { class: 'dash-chk', text: AUTH.on && AUTH.user && live.at ? 'ข้อมูลสดอ่านเมื่อ ' + dLabel(live.at) + ' · หมวดอื่นจากไฟล์สรุป ' + stampTxt(gen) : 'ตรวจข้อมูลล่าสุด ' + stampTxt(gen) })])]), el('div', { class: 'dash-ctl' }, [seg, state.period === 'custom' ? rangeCtrl() : null])]));
+      el('div', { class: 'dash-meta' }, [el('span', { class: 'upd' }, [ic('calendar'), 'วันนี้ ' + dLabel(t)]), el('span', { class: 'dash-chk', text: dashChkText() })])]), el('div', { class: 'dash-ctl' }, [seg, state.period === 'custom' ? rangeCtrl() : null])]));
     var cards = [nowIncidents(Q), nowLostFound(Q), nowGate(Q), nowAnywheel(Q), nowTram(Q), nowCctv(Q), nowAssets(Q), nowGuard(Q)].filter(Boolean);
     v.appendChild(el('section', { class: 'sec', 'aria-label': 'ข้อมูล' + Q.label }, [el('div', { class: 'sec-h' }, [Q.kind === 'today' ? el('h2', { class: 'h-xl' }, [el('span', { class: 'h-emo', 'aria-hidden': 'true', text: '📊' }), ' ข้อมูลวันนี้']) : el('h2', { text: 'ข้อมูล' + Q.label }), el('span', { class: 'note', text: Q.kind === 'today' ? dLabel(t) + ' · เรื่องที่ยังไม่มีข้อมูลวันนี้จะแสดงข้อมูลล่าสุดพร้อมป้ายวันที่' : '' })]), el('div', { class: 'nows' }, cards.map(nowCard))]));
     /* แนวโน้มรายเดือน — ใช้ช่วงของปีนี้ (หรือช่วงที่กำหนดเอง) ไม่ขึ้นกับปุ่ม “วันนี้/เดือนนี้” */
@@ -1841,7 +1854,7 @@
     refills: { mode: 'legacy', tab: 'ประวัติการเติมสารถังดับเพลิง', gid: 680269898, q: 'select C,D,E,F,G,H,I,K', keys: ['plate', 'assetNo', 'date', 'before', 'after', 'agent', 'vendor', 'remark'] },
     staff: { mode: 'api', tab: 'พนักงานจราจร' }, ruenthai: { mode: 'api', tab: 'RuenThai_Survey' }, areaPhotos: { mode: 'api', tab: 'ภาพการตรวจพื้นที่' }, radio: { mode: 'api', tab: 'บันทึกรายงานวิทยุสื่อสาร' }
   };
-  var HCFG = window.HUB_CONFIG || {}, dsCache = {}, gvSeq = 0, DS_TTL = 5 * 60000;
+  var HCFG = window.HUB_CONFIG || {}, dsCache = {}, gvSeq = 0, DS_TTL = 5 * 60000, authChk = null;
   function gvCell(c) {
     if (!c || c.v == null) return '';
     var m = typeof c.v === 'string' && /^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+))?/.exec(c.v);
@@ -1877,6 +1890,9 @@
   function dsMode(key) { return (HCFG.dataAccess || {})[key] || DS[key].mode; }
   function loadDS(key, force) {
     if (force || (dsCache[key] && dsCache[key].t0 && Date.now() - dsCache[key].t0 > DS_TTL)) delete dsCache[key];        /* รอบ 12: รายการมีอายุ 5 นาที (เท่ารอบอัปเดตสถิติสด) — ไม่ค้างทั้ง session */
+    else if (dsCache[key] && dsMode(key) === 'api' && AUTH.on && AUTH.user && !authChk) {      /* รอบ 13: ใช้รายการที่อยู่ในหน่วยความจำ → ตรวจ session ฝั่งบริการเบื้องหลังทุกครั้ง (คำขอเดียวพร้อมกัน) หมดอายุ/ถูกถอน → กลับหน้า Login */
+      var g0 = authGen; authChk = apiCall('/me').then(function (x) { authChk = null; if (g0 === authGen && x.s === 401) authLost(); });
+    }
     if (!dsCache[key]) { var m = dsMode(key); dsCache[key] = (m === 'off' ? Promise.reject({ code: 'off' }) : m === 'api' ? apiGet(key) : gviz(DS[key])).then(function (rows) { return { rows: rows, at: new Date() }; }); dsCache[key].catch(function () { delete dsCache[key]; }); dsCache[key].t0 = Date.now(); }
     return dsCache[key];
   }
@@ -1922,7 +1938,7 @@
   }
   /* ภาพโหลดไม่ได้: ถามบริการภาพว่าเพราะอะไร แล้วแสดงสาเหตุสั้น ๆ + ปุ่มลองใหม่ — ไม่สรุปว่า “ไม่มีรูปภาพ” เมื่อต้นทางมีไฟล์แนบ */
   var IMG_WHY = { 'image-private': 'ภาพเป็นไฟล์ส่วนตัว — ยังไม่ได้เปิดตัวกลางอ่านภาพของเจ้าของไฟล์', 'relay-not-configured': 'ภาพเป็นไฟล์ส่วนตัว — ยังไม่ได้เปิดตัวกลางอ่านภาพของเจ้าของไฟล์',
-    'image-not-found': 'ไม่พบไฟล์ภาพที่ต้นทาง (อาจถูกลบหรือย้าย)', 'image-not-allowed': 'ไฟล์นี้อยู่นอกโฟลเดอร์ที่อนุญาตให้อ่าน', 'relay-login-required': 'ตัวกลางอ่านภาพยังไม่ได้เปิดสิทธิ์ “Anyone”',
+    'image-not-found': 'ไม่พบไฟล์ภาพที่ต้นทาง (อาจถูกลบหรือย้าย)', 'image-retry': 'ตรวจสิทธิ์โฟลเดอร์ของภาพไม่สำเร็จชั่วคราว — ลองเปิดใหม่อีกครั้ง', 'image-not-allowed': 'ไฟล์นี้อยู่นอกโฟลเดอร์ที่อนุญาตให้อ่าน', 'relay-login-required': 'ตัวกลางอ่านภาพยังไม่ได้เปิดสิทธิ์ “Anyone”',
     'relay-forbidden': 'ตัวกลางอ่านภาพปฏิเสธ (ค่าลับไม่ตรง — ต้องลงทะเบียนใหม่)', 'relay-timeout': 'ตัวกลางอ่านภาพตอบช้าเกินไป', 'relay-unreachable': 'ติดต่อตัวกลางอ่านภาพไม่ได้', 'no-session': 'หมดเวลาเข้าสู่ระบบ — เข้าสู่ระบบใหม่',
     'unknown-image': 'ระบบยังไม่รู้จักภาพนี้ — โหลดรายการใหม่', 'image-unreachable': 'ติดต่อ Google Drive ไม่ได้ชั่วคราว', 'image-unavailable': 'ต้นทางส่งข้อมูลที่ไม่ใช่ภาพ' };
   function imgWhy(src, cb) {
@@ -2334,12 +2350,13 @@
     apiCall('/me').then(function (x) { if (x.s === 200 && x.j.ok) { AUTH.user = x.j.user; authReady(); } else showLogin(x.s === 0 ? { code: 'net' } : x.j); });
   }
   function authReady() {                      /* ผ่าน Login แล้ว: เริ่มหน้าเว็บครั้งแรก หรือกลับมาหน้าที่เปิดค้างไว้ (อยู่ใน #hash ของหน้าเดียวกัน จึงไม่มีการพาไปเว็บอื่น) */
-    authGen++; live.sig = {}; live.busy = 0; userBox(); for (var k in dsCache) delete dsCache[k]; rosterNamesState = 'none'; rosterNames = null;
+    authGen++; liveReset(); userBox(); for (var k in dsCache) delete dsCache[k]; rosterNamesState = 'none'; rosterNames = null;
     if (!AUTH.started) { AUTH.started = true; AUTH.cb(); } else route(true);
     liveRefresh();
   }
-  function authLost() { if (!AUTH.on || !AUTH.user) return; AUTH.user = null; authGen++; for (var k in dsCache) delete dsCache[k]; userBox(); $('view').textContent = ''; dropObs(); showLogin({ expired: true }); }
-  function logout() { authGen++; clearTimeout(live.timer); apiCall('/logout', { method: 'POST', body: {} }).then(function () { AUTH.user = null; for (var k in dsCache) delete dsCache[k]; userBox(); $('view').textContent = ''; dropObs();
+  function liveReset() { live.sig = {}; live.busy = null; live.at = null; live.readAt = {}; live.errors = null; live.ok = null; }      /* รอบ 13: ข้ามรุ่น Login ไม่ใช้สถานะ/เวลาอ่านของรุ่นก่อน */
+  function authLost() { if (!AUTH.on || !AUTH.user) return; AUTH.user = null; authGen++; liveReset(); for (var k in dsCache) delete dsCache[k]; userBox(); $('view').textContent = ''; dropObs(); showLogin({ expired: true }); }
+  function logout() { authGen++; liveReset(); clearTimeout(live.timer); apiCall('/logout', { method: 'POST', body: {} }).then(function () { AUTH.user = null; for (var k in dsCache) delete dsCache[k]; userBox(); $('view').textContent = ''; dropObs();
     try { location.reload(); } catch (e) { showLogin(null); } }); }      /* รอบ 12: โหลดหน้าใหม่หลังออกจากระบบ — ล้างข้อมูลสด/รายการทั้งหมดออกจากหน่วยความจำของแท็บ */
   /* รอบ 12: ข้อความท้ายหน้าตามสถานะจริง — ก่อน Login แสดงเฉพาะสถิติรวม · หลัง Login มีข้อมูลภายในบางส่วน และแบบฟอร์มภายในบางรายการยังไม่เปิดบันทึก */
   var FOOT0 = null;
@@ -2352,7 +2369,7 @@
     var st = $('stamp'); st.parentNode.insertBefore(box, st);
   }
   /* สถิติสด: อ่านต้นทางผ่านบริการ ณ เวลาที่เรียก — ส่วนที่อ่านไม่สำเร็จคงข้อมูลล่าสุดในไฟล์ไว้และบอกสถานะ (ไม่เติม 0 ไม่เปลี่ยนเวลาให้ดูสด) */
-  var live = { at: null, errors: null, timer: null, sig: {}, busy: 0 }, authGen = 0;
+  var live = { at: null, errors: null, timer: null, sig: {}, busy: null, readAt: {} }, authGen = 0;
   function liveApply(j) {
     var M = DATA.stats.modules, X = DATA.extra;
     ['incidents', 'lostfound', 'gate'].forEach(function (k) { if (j[k] && M[k]) { for (var f in j[k]) M[k][f] = j[k][f]; } });
@@ -2366,30 +2383,38 @@
     if (!AUTH.on || !AUTH.user || !HCFG.liveStatsUrl) return;
     clearTimeout(live.timer); live.timer = setTimeout(liveRefresh, 5 * 60000);
     if (document.hidden) { live.due = true; return; }
-    if (live.busy) return; live.busy = 2; live.due = false; live.last = Date.now();
-    var gen = authGen, draw = function (sig, scope) {
+    if (live.busy && live.busy.gen === authGen && live.busy.n > 0) return;      /* รอบ 13: ตัวนับงานผูกกับรุ่น Login — คำตอบของรุ่นก่อนไม่ลดตัวนับของรุ่นใหม่ */
+    var gen = authGen, busy = live.busy = { gen: gen, n: 2 }; live.due = false; live.last = Date.now();
+    var draw = function (sig, scope) {
+      liveStampsUpdate(); liveNoteDraw();
       if (live.sig[scope] === sig) return; var firstTime = live.sig[scope] == null; live.sig[scope] = sig;
-      collectMonths(); renderStamp(); liveNoteDraw();
+      collectMonths();
       if (document.querySelector('.dlg-ov, .lightbox, .chat-panel.open') || isTyping()) { live.pending = true; return; }
       if (scope === 'private' && !firstTime && !LIVE_PRIVATE_PAGES[state.curPage]) return;        /* ชุดส่วนตัวเปลี่ยน: วาดใหม่เฉพาะหน้าที่ใช้ */
       route(true);
     };
-    var done = function () { live.busy = Math.max(0, live.busy - 1); };
+    var done = function () { busy.n = Math.max(0, busy.n - 1); };
     apiCall('/stats?scope=core').then(function (x) {
       done(); if (gen !== authGen) return;
       if (x.s === 401) { authLost(); return; }
       if (x.s !== 200 || !x.j.ok) { live.errors = { all: x.j.code || 'http ' + x.s }; liveNoteDraw(); return; }
       var j = x.j; liveApply(j);
       var core = {}; Object.keys(j.errors || {}).forEach(function (k) { core[k] = j.errors[k]; });
-      live.at = j.checkedAt; live.readAt = j.sourceReadAt || {}; live.errors = Object.keys(core).length ? core : null; live.ok = ['incidents', 'lostfound', 'gate'].filter(function (k) { return j[k]; });
-      draw(JSON.stringify([j.incidents, j.lostfound, j.gate, j.incidentsDaily && j.incidentsDaily.rows, j.lostfoundDaily && j.lostfoundDaily.rows, j.errors]), 'core');
+      live.at = j.checkedAt; live.readAt = Object.assign({}, live.readAt, j.sourceReadAt || {}); LIVE_CORE_PARTS.forEach(function (k) { if (!(j.sourceReadAt || {})[k]) delete live.readAt[k]; }); live.errors = Object.keys(core).length ? core : null; live.ok = ['incidents', 'lostfound', 'gate'].filter(function (k) { return j[k]; });
+      draw(liveSig(j, ['incidents', 'lostfound', 'lostfoundStatus', 'gate', 'incidentsDaily', 'lostfoundDaily']), 'core');
     });
     apiCall('/stats?scope=private').then(function (x) {
-      done(); if (gen !== authGen || x.s === 401) return;
+      done(); if (gen !== authGen) return;
+      if (x.s === 401) { authLost(); return; }        /* รอบ 13: ชุดส่วนตัวตอบ 401 ก็ถือว่าหมดสิทธิ์ (เดิมเงียบ) */
       if (x.s !== 200 || !x.j.ok) { applyLive10({ errors: { studentMoto: x.j.code || 'http ' + x.s, ruenthai: x.j.code || 'http ' + x.s } }); draw('err' + x.s, 'private'); return; }
-      applyLive10(x.j); var a = x.j.studentMoto, r = x.j.ruenthai;
-      draw(JSON.stringify([a && [a.registrations, a.vehiclesDeclared, a.platesFilled, a.range], r && [r.surveys, r.carsDeclared, r.lastEntry, r.byLpr], x.j.errors]), 'private');
+      applyLive10(x.j); live.readAt = Object.assign({}, live.readAt, x.j.sourceReadAt || {}); var a = x.j.studentMoto, r = x.j.ruenthai;
+      draw(liveSig(x.j, ['studentMoto', 'ruenthai']), 'private');
     });
+  }
+  /* รอบ 13: ลายเซ็นตามความหมาย = ข้อมูลทุกส่วนที่หน้าเว็บแสดง (ยอด การแยกตามวิทยาเขต/คณะ/เครื่องยนต์/กลุ่ม รายเดือน รายวัน ค่าไม่ตรง ข้อผิดพลาด)
+   * ไม่รวมเวลา (checkedAt/readAt) — เวลาอ่านเปลี่ยนอย่างเดียวอัปเดตเฉพาะป้ายเวลา ไม่วาดหน้าใหม่ (คงตัวกรอง/หน้า/ตำแหน่งเลื่อน/โฟกัส/ส่วนที่พับ) */
+  function liveSig(j, keys) {
+    return JSON.stringify(keys.map(function (k) { return j[k] === undefined ? null : j[k]; }).concat([j.errors || {}]), function (k, v) { return k === 'checkedAt' || k === 'readAt' || (k === 'updated' && this === j.lostfound) ? undefined : v; });
   }
   var LIVE_PRIVATE_PAGES = { dashboard: 1, vehicle: 1, parking: 1, settings: 1, 'vehicle-all': 1 };
   document.addEventListener('visibilitychange', function () { if (!document.hidden && AUTH.user && (live.due || (live.last && Date.now() - live.last > 5 * 60000))) liveRefresh(); });
@@ -2894,12 +2919,32 @@
   wrapPage('vehicle', function (v) { var s2 = studentMotoSection(), last = v.lastElementChild; if (s2) v.insertBefore(s2, last); });
 
 
+  /* รอบ 13: เวลาอ่านต้นทางจริงรายแหล่ง (sourceReadAt) ≠ เวลาที่บริการตอบคำขอ (checkedAt) ≠ วันที่ของรายการล่าสุด
+   * ถ้าแหล่งอ่านต่างเวลากัน แสดงเป็นช่วงและบอกว่าต่างเวลา (ไม่ยุบเป็นเวลาเดียว) */
+  var LIVE_CORE_PARTS = ['incidents', 'lostfound', 'lostfoundYear', 'gate'];
+  function liveReadText() {
+    var t = LIVE_CORE_PARTS.map(function (k) { return live.readAt && live.readAt[k]; }).filter(Boolean).sort();
+    if (!t.length) return '';
+    return t[0] === t[t.length - 1] ? 'ข้อมูลสดอ่านจากต้นทางเมื่อ ' + dLabel(t[0]) : 'ข้อมูลสดอ่านจากต้นทาง ' + dLabel(t[0]) + ' – ' + dLabel(t[t.length - 1]) + ' (แต่ละแหล่งอ่านต่างเวลา)';
+  }
+  function liveReadTitle() {
+    var N = { incidents: 'เหตุการณ์', lostfound: 'L&F รายวัน', lostfoundYear: 'L&F รายปี/สถานะ', gate: 'รถเข้า', studentMoto: 'นักศึกษา–จยย.', ruenthai: 'เรือนไทย' };
+    return 'เวลาอ่านต้นทาง: ' + Object.keys(N).filter(function (k) { return live.readAt && live.readAt[k]; }).map(function (k) { return N[k] + ' ' + live.readAt[k].slice(11, 16) + ' น.'; }).join(' · ') + (live.at ? ' · บริการตอบคำขอล่าสุด ' + dLabel(live.at) : '');
+  }
+  function dashChkText() {
+    var gen = (DATA.extra || {}).generatedAt || DATA.stats.generatedAt || '', rt = AUTH.on && AUTH.user ? liveReadText() : '';
+    return rt ? rt + ' · หมวดอื่นจากไฟล์สรุป ' + stampTxt(gen) : 'ตรวจข้อมูลล่าสุด ' + stampTxt(gen);
+  }
+  function liveStampsUpdate() {                  /* อัปเดตป้ายเวลาโดยไม่วาดหน้าใหม่ (เวลาอ่านเปลี่ยนแต่ข้อมูลไม่เปลี่ยน) */
+    renderStamp(); var c = document.querySelector('.dash-chk'); if (c) { c.textContent = dashChkText(); c.title = liveReadTitle(); }
+  }
   function renderStamp() {
     var g = DATA.stats.generatedAt || '', g2 = (DATA.extra || {}).generatedAt || '', s = $('stamp'); if (g2 > g) g = g2; s.textContent = '';   /* เวลาที่ตรวจแหล่งข้อมูลครั้งล่าสุด (แต่ละเรื่องมีวันที่ของตัวเองกำกับในหน้า) */
-    if (AUTH.on && AUTH.user && live.at) {        /* แยกความหมาย: เวลาที่อ่านข้อมูลสดสำเร็จ (เหตุการณ์/L&F/รถเข้า) ≠ เวลาสร้างไฟล์สรุปของหมวดอื่น */
-      s.appendChild(el('b', { text: 'ข้อมูลสดอ่านเมื่อ ' + dLabel(live.at) })); s.appendChild(el('br'));
+    var rt = AUTH.on && AUTH.user ? liveReadText() : '';
+    if (rt) {        /* แยกความหมาย: เวลาที่อ่านข้อมูลสดสำเร็จ (เหตุการณ์/L&F/รถเข้า) ≠ เวลาสร้างไฟล์สรุปของหมวดอื่น */
+      s.appendChild(el('b', { text: rt })); s.appendChild(el('br'));
       s.appendChild(document.createTextNode((live.errors ? 'บางชุดอ่านไม่สำเร็จ · ' : 'เหตุการณ์ · L&F · รถเข้า · ') + 'หมวดอื่นจากไฟล์สรุป ' + dShort(g.slice(0, 10)) + ' ' + g.slice(11, 16) + ' น.'));
-      s.title = 'ข้อมูลสด: ' + (live.ok || []).join(', ') + ' · ไฟล์สรุป (snapshot) สร้างเมื่อ ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) + ' · วันที่ข้อมูลล่าสุดของแต่ละเรื่องดูที่ป้ายบนการ์ด';
+      s.title = liveReadTitle() + ' · ข้อมูลสด: ' + (live.ok || []).join(', ') + ' · ไฟล์สรุป (snapshot) สร้างเมื่อ ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) + ' · วันที่ข้อมูลล่าสุดของแต่ละเรื่องดูที่ป้ายบนการ์ด';
       return;
     }
     s.appendChild(el('b', { text: 'ตรวจข้อมูลล่าสุด ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) })); s.appendChild(el('br'));
@@ -2914,7 +2959,7 @@
     DATA = d; DATA.systems.categories.forEach(function (c) { c.systems.forEach(function (s) { SYS[s.id] = s; }); });
     collectMonths(); renderStamp(); authStart(function () { setupChat(); route(true); });
     window.addEventListener('hashchange', function () { route(false); });
-    window.__hub = { rerender: function () { route(true); }, obs: function () { return liveObs.length; } };      /* ใช้ตรวจการทำงาน (วาดซ้ำ/จำนวนตัวสังเกตที่ยังผูกอยู่) — ไม่มีข้อมูล */
+    window.__hub = { rerender: function () { route(true); }, obs: function () { return liveObs.length; }, renders: function () { return routeN; }, live: function () { liveRefresh(); }, bars: bars };      /* ใช้ตรวจการทำงาน (วาดซ้ำ/จำนวนตัวสังเกตที่ยังผูกอยู่) — ไม่มีข้อมูล */
   }).catch(function (e) {
     $('stamp').textContent = 'โหลดข้อมูลไม่สำเร็จ';
     showBanner('ยังเชื่อมต่อไฟล์สถิติรวมไม่ได้: ' + e.message + ' — หน้านี้จะไม่แสดงตัวเลขใด ๆ จนกว่าจะโหลดข้อมูลจริงได้');

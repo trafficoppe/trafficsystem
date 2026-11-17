@@ -52,7 +52,8 @@ export const NAV_HINTS = [
 export function applyLive(stats, extra, live) {
   const M = (stats && stats.modules) || {}, X = extra || {}, L = { topics: {}, errors: {} };
   if (!live) return L; const e = live.errors || {}; L.errors = Object.assign({}, e);
-  ['incidents', 'lostfound', 'gate'].forEach((k) => { if (live[k] && M[k]) { Object.assign(M[k], live[k]); L.topics[k] = live.checkedAt; } });
+  const RD = live.sourceReadAt || {}, PART = { incidents: 'incidents', lostfound: 'lostfoundYear', gate: 'gate' };     // รอบ 13: เวลาอ่านต้นทางจริงของแต่ละหัวข้อ (ไม่ใช่เวลาตอบคำขอ checkedAt)
+  ['incidents', 'lostfound', 'gate'].forEach((k) => { if (live[k] && M[k]) { Object.assign(M[k], live[k]); L.topics[k] = RD[PART[k]] || live[k].readAt || ''; } });
   ['incidentsDaily', 'lostfoundDaily'].forEach((k) => { if (live[k]) X[k] = Object.assign(X[k] || {}, live[k]); });
   if (live.lostfoundStatus && X.lostfoundStatus) Object.assign(X.lostfoundStatus, live.lostfoundStatus);
   const vr = M.vehicleRegistration;
