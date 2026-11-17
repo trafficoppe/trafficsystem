@@ -393,7 +393,7 @@
     opt = opt || {};
     if (!cols.length) return el('div', { class: 'empty', text: 'ไม่มีข้อมูลในช่วงที่เลือก' });
     var multi = series.length > 1, key = opt.key || opt.aria || 'chart', modes = multi ? ['stack', 'group'] : ['bar'], def = modes[0];
-    if (!opt.cat) modes.push('line'); modes.push('table');
+    if (!opt.cat && cols.length >= 2) modes.push('line'); modes.push('table');      /* เส้นต้องมีอย่างน้อย 2 ช่วงเวลา */
     var saved = opt.modes === false ? null : chartPrefs()[key], mode = modes.indexOf(saved) >= 0 ? saved : def, hidden = {}, unit = opt.unit ? ' ' + opt.unit : '';
     var wrap = el('div', { class: 'chartw' }), body = el('div', { class: 'chart-body' }), tb = null, note = el('p', { class: 'chart-hid', role: 'status', hidden: '' });
     function vis() { return series.filter(function (s, i) { return !hidden[i]; }); }

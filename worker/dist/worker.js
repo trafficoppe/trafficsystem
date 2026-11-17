@@ -505,6 +505,7 @@ var driveId = (u) => {
 var images = (v) => str(v).split(/[\s,]+/).map((u) => driveId(u) || (/^https:\/\/(github\.com\/user-attachments\/assets\/|op\.mahidol\.ac\.th\/)[^\s"'<>]+$/.test(u) ? u : "")).filter(Boolean);
 var knownImg = /* @__PURE__ */ new Set();
 var privImg = /* @__PURE__ */ new Set();
+var imgInflight = /* @__PURE__ */ new Map();
 async function remember(env, ids) {
   const fresh = [...new Set(ids)].filter((i) => /^[-\w]{20,60}$/.test(i) && !knownImg.has(i));
   if (!fresh.length) return;
@@ -1103,76 +1104,90 @@ async function img(request, env, deps) {
   if (!/^[-\w]{20,60}$/.test(id)) throw new Err(400, "bad-id");
   if (!knownImg.has(id) && !await env.DB.prepare("SELECT 1 AS x FROM imgids WHERE id = ?").bind(id).first()) throw new Err(404, "unknown-image");
   const rc = await relayCfg(env), ver = rc && rc.imgVer || (await metaGet(env, ["img_cache_ver"])).img_cache_ver || "1", etag = '"' + id + "-" + w + "-v" + ver + '"';
-  const H = (ct2, via2) => ({ "content-type": ct2, "cache-control": "private, no-cache", etag, "x-img-via": via2, ...SEC });
+  const H = (ct, via) => ({ "content-type": ct, "cache-control": "private, no-cache", etag, "x-img-via": via, ...SEC });
   if (request.headers.get("If-None-Match") === etag) return new Response(null, { status: 304, headers: { "cache-control": "private, no-cache", etag, ...SEC } });
   const ck = new Request("https://img-cache.mu-traffic-hub.internal/v" + ver + "/" + id + "/" + w), cache = deps.cache;
   if (cache) {
     const hitC = await cache.match(ck);
     if (hitC) return new Response(hitC.body, { status: 200, headers: H(hitC.headers.get("content-type") || "image/jpeg", "cache") });
   }
-  let body = null, ct = "", via = "public", status = 0;
-  const viaPublic = async () => {
-    try {
-      const r = await deps.fetch("https://drive.google.com/thumbnail?id=" + id + "&sz=w" + w, { redirect: "follow", signal: AbortSignal.timeout(15e3) });
-      status = r.status;
-      ct = r.headers.get("content-type") || "";
-      if (r.ok && /^image\//.test(ct)) {
-        body = await r.arrayBuffer();
-        via = "public";
+  let job = imgInflight.get(ck.url);
+  if (!job) {
+    job = (async () => {
+      let body = null, ct = "", via = "public", status = 0;
+      const viaPublic = async () => {
+        try {
+          const r = await deps.fetch("https://drive.google.com/thumbnail?id=" + id + "&sz=w" + w, { redirect: "follow", signal: AbortSignal.timeout(15e3) });
+          status = r.status;
+          ct = r.headers.get("content-type") || "";
+          if (r.ok && /^image\//.test(ct)) {
+            body = await r.arrayBuffer();
+            via = "public";
+          }
+        } catch (e) {
+          status = -1;
+        }
+      };
+      const viaRelay = async () => {
+        const j = await relayCall(env, deps, { action: "img", id, w }, rc);
+        if (!/^image\/(jpeg|png|webp|gif)$/.test(str(j.mime)) || !j.b64 || j.b64.length > 6e6) throw new Err(502, "image-unavailable");
+        let bin;
+        try {
+          bin = atob(j.b64);
+        } catch (e) {
+          throw new Err(502, "image-unavailable");
+        }
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        body = arr.buffer;
+        ct = j.mime;
+        via = "relay";
+        privImg.add(id);
+      };
+      const relayErr = (e) => {
+        const c = e instanceof Err ? e.code : "relay-error";
+        return new Err(c === "relay-not-found" ? 404 : 502, c === "relay-not-found" ? "image-not-found" : c === "relay-not-allowed" ? "image-not-allowed" : c);
+      };
+      if (rc && (privImg.has(id) || u.searchParams.get("p") === "1")) {
+        let re = null;
+        try {
+          await viaRelay();
+        } catch (e) {
+          re = e;
+        }
+        if (!body) {
+          await viaPublic();
+          if (!body) throw relayErr(re);
+        }
+      } else {
+        await viaPublic();
+        if (!body) {
+          if (!rc) throw new Err(status === 404 ? 404 : 502, status === 404 ? "image-not-found" : status === -1 ? "image-unreachable" : "image-private");
+          try {
+            await viaRelay();
+          } catch (e) {
+            throw relayErr(e);
+          }
+        }
       }
-    } catch (e) {
-      status = -1;
-    }
-  };
-  const viaRelay = async () => {
-    const j = await relayCall(env, deps, { action: "img", id, w }, rc);
-    if (!/^image\/(jpeg|png|webp|gif)$/.test(str(j.mime)) || !j.b64 || j.b64.length > 6e6) throw new Err(502, "image-unavailable");
-    let bin;
-    try {
-      bin = atob(j.b64);
-    } catch (e) {
-      throw new Err(502, "image-unavailable");
-    }
-    const arr = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    body = arr.buffer;
-    ct = j.mime;
-    via = "relay";
-    privImg.add(id);
-  };
-  const relayErr = (e) => {
-    const c = e instanceof Err ? e.code : "relay-error";
-    return new Err(c === "relay-not-found" ? 404 : 502, c === "relay-not-found" ? "image-not-found" : c === "relay-not-allowed" ? "image-not-allowed" : c);
-  };
-  if (rc && (privImg.has(id) || u.searchParams.get("p") === "1")) {
-    let re = null;
-    try {
-      await viaRelay();
-    } catch (e) {
-      re = e;
-    }
-    if (!body) {
-      await viaPublic();
-      if (!body) throw relayErr(re);
-    }
-  } else {
-    await viaPublic();
-    if (!body) {
-      if (!rc) throw new Err(status === 404 ? 404 : 502, status === 404 ? "image-not-found" : status === -1 ? "image-unreachable" : "image-private");
-      try {
-        await viaRelay();
-      } catch (e) {
-        throw relayErr(e);
+      if (cache) {
+        try {
+          await cache.put(ck, new Response(body.slice(0), { headers: { "content-type": ct, "cache-control": "public, max-age=604800" } }));
+        } catch (e) {
+        }
       }
-    }
+      return { body, ct, via };
+    })();
+    imgInflight.set(ck.url, job);
+    const done = () => {
+      if (imgInflight.get(ck.url) === job) imgInflight.delete(ck.url);
+    };
+    job.then(done, done);
+    if (deps.waitUntil) deps.waitUntil(job.catch(() => {
+    }));
   }
-  if (cache) {
-    try {
-      await cache.put(ck, new Response(body.slice(0), { headers: { "content-type": ct, "cache-control": "public, max-age=604800" } }));
-    } catch (e) {
-    }
-  }
-  return new Response(body, { status: 200, headers: H(ct, via) });
+  const got = await job;
+  return new Response(got.body.slice(0), { status: 200, headers: H(got.ct, got.via) });
 }
 var RELAY_URL_RX = /^https:\/\/script\.google\.com\/(a\/macros\/[\w.-]+\/|macros\/)s\/[-\w]{20,120}\/exec$/;
 async function relayEnroll(request, env, deps) {
@@ -1413,6 +1428,7 @@ var _reset = () => {
   inflight.clear();
   knownImg.clear();
   privImg.clear();
+  imgInflight.clear();
   relayMemo = null;
   lastDeep = null;
   cacheEpoch++;

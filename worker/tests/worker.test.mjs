@@ -319,6 +319,10 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
     _reset(); await runC('/api/data?dataset=gps', { cookie: U10 }); const th0 = thumbCalls.length; h = await runC('/api/img?id=' + PRIV + '&w=400&p=1', { cookie: U10 });
     ok('[รอบ 12] ภาพ GPS (p=1): ไปตัวกลางก่อน ไม่ลองลิงก์สาธารณะ', h.s === 200 && h.h.get('x-img-via') === 'relay' && thumbCalls.length === th0, h.s + ' ' + h.h.get('x-img-via'));
     const rl2 = relayCalls.length; h = await runC('/api/img?id=' + PRIV + '&w=400&p=1', { cookie: U10 }); ok('[รอบ 12] เรียกซ้ำ → จากแคช ไม่เรียกตัวกลาง · ไม่มี session → 401 แม้มีแคช · รหัสภาพที่ไม่รู้จัก + p=1 → 404', h.h.get('x-img-via') === 'cache' && relayCalls.length === rl2 && (await runC('/api/img?id=' + PRIV + '&w=400&p=1')).s === 401 && (await runC('/api/img?id=ZZZZZZZZZZZZZZZZZZZZZZZZZZ&w=400&p=1', { cookie: U10 })).s === 404);
+    { _reset(); await runC('/api/data?dataset=gps', { cookie: U10 }); const wu = [], depsW = Object.assign({}, depsC, { waitUntil: (p) => wu.push(p) }); const rl3 = relayCalls.length;
+      const [x1, x2] = await Promise.all([handle(req('/api/img?id=' + PRIV + '&w=800&p=1', { cookie: U10 }), E, depsW), handle(req('/api/img?id=' + PRIV + '&w=800&p=1', { cookie: U10 }), E, depsW)]);
+      const b1 = new Uint8Array(await x1.arrayBuffer()), b2 = new Uint8Array(await x2.arrayBuffer());
+      ok('[รอบ 12] ภาพเดียวกัน 2 คำขอพร้อมกัน → เรียกตัวกลางครั้งเดียว ได้ภาพครบทั้งสอง · งานโหลดผูก waitUntil', x1.status === 200 && x2.status === 200 && relayCalls.slice(rl3).filter((c) => /^img:/.test(c)).length === 1 && b1.length > 0 && b1.length === b2.length && wu.length === 1, relayCalls.slice(rl3).join(',') + ' wu=' + wu.length); }
     h = await runC('/api/img?id=' + IMG1 + '&w=400&p=1', { cookie: U10 }); ok('[รอบ 12] p=1 กับภาพที่ตัวกลางไม่อนุญาตแต่เป็นภาพสาธารณะ → ใช้ลิงก์สาธารณะตามเดิม (p=1 ไม่เปิดสิทธิ์เพิ่ม)', h.s === 200 && h.h.get('x-img-via') === 'public');
   }
   _reset(); }

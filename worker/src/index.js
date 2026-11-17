@@ -143,7 +143,7 @@ export function normDT(s, mdy) {
 }
 const driveId = (u) => { const m = /(?:\/d\/|[?&]id=)([-\w]{20,})/.exec(str(u)); return m ? m[1] : /^[-\w]{25,60}$/.test(str(u)) ? str(u) : ''; };
 const images = (v) => str(v).split(/[\s,]+/).map((u) => driveId(u) || (/^https:\/\/(github\.com\/user-attachments\/assets\/|op\.mahidol\.ac\.th\/)[^\s"'<>]+$/.test(u) ? u : '')).filter(Boolean);
-const knownImg = new Set(), privImg = new Set();
+const knownImg = new Set(), privImg = new Set(), imgInflight = new Map();
 async function remember(env, ids) {
   const fresh = [...new Set(ids)].filter((i) => /^[-\w]{20,60}$/.test(i) && !knownImg.has(i)); if (!fresh.length) return;
   fresh.forEach((i) => knownImg.add(i));
@@ -446,30 +446,40 @@ async function img(request, env, deps) {
   if (request.headers.get('If-None-Match') === etag) return new Response(null, { status: 304, headers: { 'cache-control': 'private, no-cache', etag, ...SEC } });
   const ck = new Request('https://img-cache.mu-traffic-hub.internal/v' + ver + '/' + id + '/' + w), cache = deps.cache;
   if (cache) { const hitC = await cache.match(ck); if (hitC) return new Response(hitC.body, { status: 200, headers: H(hitC.headers.get('content-type') || 'image/jpeg', 'cache') }); }
-  let body = null, ct = '', via = 'public', status = 0;
-  const viaPublic = async () => { try { const r = await deps.fetch('https://drive.google.com/thumbnail?id=' + id + '&sz=w' + w, { redirect: 'follow', signal: AbortSignal.timeout(15e3) }); status = r.status; ct = r.headers.get('content-type') || ''; if (r.ok && /^image\//.test(ct)) { body = await r.arrayBuffer(); via = 'public'; } } catch (e) { status = -1; } };
-  const viaRelay = async () => {
-    const j = await relayCall(env, deps, { action: 'img', id, w }, rc);
-    if (!/^image\/(jpeg|png|webp|gif)$/.test(str(j.mime)) || !j.b64 || j.b64.length > 6e6) throw new Err(502, 'image-unavailable');
-    let bin; try { bin = atob(j.b64); } catch (e) { throw new Err(502, 'image-unavailable'); }
-    const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    body = arr.buffer; ct = j.mime; via = 'relay'; privImg.add(id);
-  };
-  const relayErr = (e) => { const c = e instanceof Err ? e.code : 'relay-error'; return new Err(c === 'relay-not-found' ? 404 : 502, c === 'relay-not-found' ? 'image-not-found' : c === 'relay-not-allowed' ? 'image-not-allowed' : c); };
-  // รอบ 12: ภาพที่รู้ว่าเป็นไฟล์ส่วนตัว (เคยอ่านผ่านตัวกลางสำเร็จ หรือหน้าเว็บแจ้งว่าเป็นชุดภาพ GPS ด้วย p=1) → ไปตัวกลางก่อน ไม่เสียรอบลองลิงก์สาธารณะ
-  //   p=1 เป็นเพียงลำดับการลอง: ยังต้องเป็นภาพที่ระบบรู้จัก และตัวกลางยังตรวจโฟลเดอร์ที่อนุญาตเองทุกครั้ง · ตัวกลางไม่อนุญาต → ลองลิงก์สาธารณะตามเดิม
-  if (rc && (privImg.has(id) || u.searchParams.get('p') === '1')) {
-    let re = null; try { await viaRelay(); } catch (e) { re = e; }
-    if (!body) { await viaPublic(); if (!body) throw relayErr(re); }
-  } else {
-    await viaPublic();
-    if (!body) {
-      if (!rc) throw new Err(status === 404 ? 404 : 502, status === 404 ? 'image-not-found' : status === -1 ? 'image-unreachable' : 'image-private');
-      try { await viaRelay(); } catch (e) { throw relayErr(e); }
+  // รอบ 12: ภาพเดียวกัน (รหัส+ขนาด) ที่กำลังโหลดอยู่ใช้งานเดียวกัน · งานโหลด+เก็บแคชผูกกับ waitUntil — ผู้ใช้เลื่อน/เปลี่ยนหน้าระหว่างรอ ภาพก็ยังเข้าแคชไว้ใช้ครั้งถัดไป
+  let job = imgInflight.get(ck.url);
+  if (!job) {
+    job = (async () => {
+    let body = null, ct = '', via = 'public', status = 0;
+    const viaPublic = async () => { try { const r = await deps.fetch('https://drive.google.com/thumbnail?id=' + id + '&sz=w' + w, { redirect: 'follow', signal: AbortSignal.timeout(15e3) }); status = r.status; ct = r.headers.get('content-type') || ''; if (r.ok && /^image\//.test(ct)) { body = await r.arrayBuffer(); via = 'public'; } } catch (e) { status = -1; } };
+    const viaRelay = async () => {
+      const j = await relayCall(env, deps, { action: 'img', id, w }, rc);
+      if (!/^image\/(jpeg|png|webp|gif)$/.test(str(j.mime)) || !j.b64 || j.b64.length > 6e6) throw new Err(502, 'image-unavailable');
+      let bin; try { bin = atob(j.b64); } catch (e) { throw new Err(502, 'image-unavailable'); }
+      const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      body = arr.buffer; ct = j.mime; via = 'relay'; privImg.add(id);
+    };
+    const relayErr = (e) => { const c = e instanceof Err ? e.code : 'relay-error'; return new Err(c === 'relay-not-found' ? 404 : 502, c === 'relay-not-found' ? 'image-not-found' : c === 'relay-not-allowed' ? 'image-not-allowed' : c); };
+    // รอบ 12: ภาพที่รู้ว่าเป็นไฟล์ส่วนตัว (เคยอ่านผ่านตัวกลางสำเร็จ หรือหน้าเว็บแจ้งว่าเป็นชุดภาพ GPS ด้วย p=1) → ไปตัวกลางก่อน ไม่เสียรอบลองลิงก์สาธารณะ
+    //   p=1 เป็นเพียงลำดับการลอง: ยังต้องเป็นภาพที่ระบบรู้จัก และตัวกลางยังตรวจโฟลเดอร์ที่อนุญาตเองทุกครั้ง · ตัวกลางไม่อนุญาต → ลองลิงก์สาธารณะตามเดิม
+    if (rc && (privImg.has(id) || u.searchParams.get('p') === '1')) {
+      let re = null; try { await viaRelay(); } catch (e) { re = e; }
+      if (!body) { await viaPublic(); if (!body) throw relayErr(re); }
+    } else {
+      await viaPublic();
+      if (!body) {
+        if (!rc) throw new Err(status === 404 ? 404 : 502, status === 404 ? 'image-not-found' : status === -1 ? 'image-unreachable' : 'image-private');
+        try { await viaRelay(); } catch (e) { throw relayErr(e); }
+      }
     }
+    if (cache) { try { await cache.put(ck, new Response(body.slice(0), { headers: { 'content-type': ct, 'cache-control': 'public, max-age=604800' } })); } catch (e) { /* แคชเป็นส่วนเสริม */ } }
+      return { body, ct, via };
+    })();
+    imgInflight.set(ck.url, job); const done = () => { if (imgInflight.get(ck.url) === job) imgInflight.delete(ck.url); }; job.then(done, done);
+    if (deps.waitUntil) deps.waitUntil(job.catch(() => {}));
   }
-  if (cache) { try { await cache.put(ck, new Response(body.slice(0), { headers: { 'content-type': ct, 'cache-control': 'public, max-age=604800' } })); } catch (e) { /* แคชเป็นส่วนเสริม */ } }
-  return new Response(body, { status: 200, headers: H(ct, via) });
+  const got = await job;
+  return new Response(got.body.slice(0), { status: 200, headers: H(got.ct, got.via) });
 }
 // ลงทะเบียนตัวกลาง 2 ขั้น (ไม่แตะตัวกลางที่ทำงานอยู่จนกว่าตัวใหม่ผ่านการตรวจ):
 //   1) /api/relay/enroll {token, url}: ตรวจ token แล้ว “จอง” แบบ atomic (DELETE … RETURNING — คำขอพร้อมกันสำเร็จได้ครั้งเดียว) → เก็บเป็น relay_pending_* → ส่งค่าลับกลับให้สคริปต์เก็บ
@@ -596,7 +606,7 @@ export async function handle(request, env, deps) {
   }
 }
 export const _coldIsolate = () => { memo.clear(); inflight.clear(); };      // จำลองเครื่องรับคำขอใหม่ (ชุดทดสอบ)
-export const _reset = () => { memo.clear(); inflight.clear(); knownImg.clear(); privImg.clear(); relayMemo = null; lastDeep = null; cacheEpoch++; _stat.reads = {}; };
+export const _reset = () => { memo.clear(); inflight.clear(); knownImg.clear(); privImg.clear(); imgInflight.clear(); relayMemo = null; lastDeep = null; cacheEpoch++; _stat.reads = {}; };
 export const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, staff TEXT NOT NULL, name TEXT, unit TEXT, role TEXT NOT NULL, created INTEGER NOT NULL, exp INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS attempts(k TEXT PRIMARY KEY, n INTEGER NOT NULL, exp INTEGER NOT NULL)',
