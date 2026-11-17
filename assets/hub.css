@@ -763,3 +763,8 @@ body.charts-stack .grid2,body.charts-stack .trends{grid-template-columns:1fr}
 @keyframes skel{from{background-position:100% 0}to{background-position:-100% 0}}
 @media (prefers-reduced-motion:reduce){.kpi.skel{animation:none}}
 .lf-map.map-wait{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.9rem}
+/* รอบ 12: กันหน้าเลื่อนตอนตรวจ session เสร็จ (CLS) — จองบรรทัดชื่อหน้า และให้พื้นที่เนื้อหาสูงเต็มจอตั้งแต่แรก (ท้ายหน้าไม่ถูกดันลง) */
+.tb-page:empty::before{content:"\00a0"}
+.view{min-height:calc(100vh - 64px)}
+@supports (height:100dvh){.view{min-height:calc(100dvh - 64px)}}
+@media print{.view{min-height:0}}
