@@ -1146,13 +1146,19 @@
   }
   var dash = { map: null, layer: null, pts: [], pick: function (p) { state.sel = p.i; go('accident-map'); } };
   /* แผนที่บน Dashboard: แผนที่ถนน/อาคารจริง (OpenStreetMap) เมื่อเปิดผ่าน http(s) — เปิดจากไฟล์ในเครื่องจะบอกเหตุผลและแสดงแผนผังตามพิกัดแทน */
+  /* รอบ 12: เริ่มงานหนัก (ไลบรารีแผนที่ + ภาพพื้นหลัง) เมื่อส่วนนั้นใกล้เข้าหน้าจอ — ไม่แย่งเวลาข้อมูลหลักด้านบน · ตัวสังเกตถูกปลดเมื่อเปลี่ยนหน้า */
+  function whenNear(node, fn) {
+    if (!window.IntersectionObserver) return fn();
+    var io = new IntersectionObserver(function (es) { if (es.some(function (e) { return e.isIntersecting; })) { io.disconnect(); fn(); } }, { rootMargin: '400px 0px' });
+    io.observe(node); liveObs.push(io);
+  }
   function dashMap() {
     var am = mod('accidentMap'), box = el('div', { class: 'dash-map' }), pts = mapPoints();
     if (dash.map) { try { dash.map.remove(); } catch (e) {} dash.map = null; dash.layer = null; }
     var plan = function (msg) { box.textContent = ''; box.appendChild(el('div', { class: 'map-warn', role: 'status' }, [el('b', { text: msg })])); var w = el('div', { class: 'map-svg map-mini' }); drawPlan(w, pts, am.box); box.appendChild(w); };
     if (!tilesAllowed()) { plan('เปิดจากไฟล์ในเครื่อง จึงแสดงเป็นแผนผังตามพิกัด — แผนที่ถนนและอาคารจะแสดงเมื่อเปิดผ่านเว็บไซต์ (http/https)'); return box; }
-    box.appendChild(el('div', { class: 'empty', role: 'status', text: 'กำลังโหลดแผนที่…' }));
-    tilesReady(function (ok) { setTimeout(function () {
+    box.appendChild(el('div', { class: 'lf-map dash map-wait', role: 'status', text: 'กำลังโหลดแผนที่…' }));      /* จองความสูงเท่าแผนที่จริง — โหลดภายหลังไม่ดันเนื้อหาเลื่อน */
+    whenNear(box, function () { tilesReady(function (ok) { setTimeout(function () {
       if (!document.body.contains(box)) return;
       if (!ok) { plan((lf.reason || 'โหลดแผนที่พื้นหลังไม่สำเร็จ') + ' — แสดงแผนผังตามพิกัดแทน'); return; }
       box.textContent = '';
@@ -1162,7 +1168,7 @@
       dash.map.attributionControl.setPrefix(false); osmLayer().addTo(dash.map);
       dash.pts = pts; dash.map.on('zoomend', function () { drawMarkersOn(dash); }); drawMarkersOn(dash);
       if (touch) box.appendChild(el('p', { class: 'map-cap', text: 'ใช้สองนิ้วเพื่อย่อ/ขยาย · เปิดแผนที่เต็มเพื่อเลื่อนดูและเปิดรายชื่อจุด' }));
-    }, 0); });
+    }, 0); }); });
     return box;
   }
   function drawLeaflet(box, pts, b) {
@@ -2335,7 +2341,12 @@
   function authLost() { if (!AUTH.on || !AUTH.user) return; AUTH.user = null; authGen++; for (var k in dsCache) delete dsCache[k]; userBox(); $('view').textContent = ''; dropObs(); showLogin({ expired: true }); }
   function logout() { authGen++; clearTimeout(live.timer); apiCall('/logout', { method: 'POST', body: {} }).then(function () { AUTH.user = null; for (var k in dsCache) delete dsCache[k]; userBox(); $('view').textContent = ''; dropObs();
     try { location.reload(); } catch (e) { showLogin(null); } }); }      /* รอบ 12: โหลดหน้าใหม่หลังออกจากระบบ — ล้างข้อมูลสด/รายการทั้งหมดออกจากหน่วยความจำของแท็บ */
+  /* รอบ 12: ข้อความท้ายหน้าตามสถานะจริง — ก่อน Login แสดงเฉพาะสถิติรวม · หลัง Login มีข้อมูลภายในบางส่วน และแบบฟอร์มภายในบางรายการยังไม่เปิดบันทึก */
+  var FOOT0 = null;
+  function footText() { var f = document.querySelector('.foot'); if (!f) return; if (FOOT0 == null) FOOT0 = f.textContent;
+    f.textContent = AUTH.on && AUTH.user ? 'หน้ารวมรุ่นทดลอง (Preview) · ข้อมูลภายในสำหรับเจ้าหน้าที่ที่เข้าสู่ระบบ — ห้ามเผยแพร่ภาพ/รายการต่อ · บางหมวดเป็นไฟล์สรุปตามวันที่ที่ระบุ · แบบฟอร์มภายในบางรายการยังไม่เปิดบันทึก · ระบบต้นทางทุกระบบยังทำงานตามเดิม' : FOOT0; }
   function userBox() {
+    footText();
     var old = $('userBox'); if (old) old.remove(); if (!AUTH.on || !AUTH.user) return;
     var box = el('div', { class: 'user-box', id: 'userBox' }, [el('span', { class: 'ub-name', text: AUTH.user.name + (AUTH.user.role === 'admin' ? ' · ผู้ดูแล' : '') }), el('button', { type: 'button', class: 'btn-ghost ub-out', text: 'ออกจากระบบ', onclick: logout })]);
     var st = $('stamp'); st.parentNode.insertBefore(box, st);
@@ -2818,7 +2829,8 @@
   function studentMotoNa() { var vr = mod('vehicleRegistration'); return vr && vr.studentMotoErr ? srcWhy(vr.studentMotoErr) : AUTH.on && !AUTH.user ? 'แสดงหลังเข้าสู่ระบบ' : 'กำลังอ่านข้อมูลสด'; }
   function studentMotoSection() {
     var vr = mod('vehicleRegistration'), m = vr && vr.studentMoto;
-    if (!m) return vr && vr.studentMotoErr ? section('นักศึกษา – รถจักรยานยนต์', { note: 'Registrations_Motorcycle' }, [el('div', { class: 'empty', role: 'status', text: srcWhy(vr.studentMotoErr) })]) : null;
+    if (!m) return vr && vr.studentMotoErr ? section('นักศึกษา – รถจักรยานยนต์', { note: 'Registrations_Motorcycle' }, [el('div', { class: 'empty', role: 'status', text: srcWhy(vr.studentMotoErr) })])
+      : AUTH.on && AUTH.user ? section('นักศึกษา – รถจักรยานยนต์', { note: 'กำลังอ่านข้อมูลสดผ่านตัวกลางของเจ้าของไฟล์…' }, [el('div', { class: 'kpis skel-kpis', role: 'status', 'aria-label': 'กำลังโหลด' }, [0, 1, 2, 3].map(function () { return el('div', { class: 'kpi skel' }); }))]) : null;   /* รอบ 12: ที่ว่างขนาดใกล้ของจริงระหว่างรอ (ไม่ใช่ตัวเลข) */
     var hb = function (o, unit) { var ks = Object.keys(o), mx = Math.max.apply(null, ks.map(function (k) { return o[k]; }).concat([1])); return hbars(ks.sort(function (a, b) { return o[b] - o[a]; }).map(function (k) { return { label: k, value: o[k] }; }), mx, { unit: unit || 'รายการ' }); };
     return section('นักศึกษา – รถจักรยานยนต์', { note: 'อ่านสดเมื่อ ' + fdate(m.checkedAt) + ' · ' + fdate(m.range.from) + ' – ' + fdate(m.range.to) }, [
       kpiGrid([{ icon: 'file', label: 'รายการลงทะเบียน', value: num(m.registrations), unit: 'รายการ', sub: '1 RefCode = 1 รายการ' + (m.duplicateRefs ? ' · RefCode ซ้ำ ' + num(m.duplicateRefs) + ' แถว (นับครั้งเดียว)' : ''), color: C.c1 },

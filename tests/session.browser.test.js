@@ -36,6 +36,7 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
   await login(page, '0123'); await page.waitForSelector('#userBox'); await page.waitForSelector('.it, .dv-err');
   ok('รหัสถูก + กด Enter → เข้าได้ทันที และกลับมาหน้าที่เปิดค้างไว้ (#staff) พร้อมรายชื่อจากบริการ', /#staff/.test(page.url()) && await T(page, '.it').count() === 3 && await T(page, '#loginView').count() === 0, page.url());
   ok('cookie เป็น HttpOnly (JavaScript ในหน้าอ่านไม่ได้) และไม่มีการเก็บสถานะ Login ใน storage', await page.evaluate(() => !/hub_s/.test(document.cookie) && !Object.keys(localStorage).concat(Object.keys(sessionStorage)).some((k) => /auth|login|session|code/i.test(k))));
+  ok('[รอบ 12] ข้อความท้ายหน้าหลัง Login บอกตามจริง: ข้อมูลภายใน · บางหมวดเป็นไฟล์สรุป · ฟอร์มภายในบางรายการยังไม่เปิดบันทึก', /ข้อมูลภายในสำหรับเจ้าหน้าที่/.test(await txt(page, '.foot')) && /ยังไม่เปิดบันทึก/.test(await txt(page, '.foot')) && !/แสดงเฉพาะสถิติรวม/.test(await txt(page, '.foot')));
   ok('แถบบนแสดงชื่อผู้ใช้ + ปุ่มออกจากระบบ', /ผู้ใช้สมมติ ก/.test(await txt(page, '#userBox')) && /ออกจากระบบ/.test(await txt(page, '#userBox')));
   ok('ไม่มีข้อความ “ต้องเข้าสู่ระบบภายในก่อน” ค้างในหน้าบุคลากร', !/ต้องเข้าสู่ระบบภายในก่อน/.test(await txt(page, '#view')));
 

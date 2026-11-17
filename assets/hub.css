@@ -757,3 +757,9 @@ body.tab-hidden .chat-fab .fab-bot,body.chat-open .chat-fab .fab-bot,body.tab-hi
 body.charts-stack .grid2,body.charts-stack .trends{grid-template-columns:1fr}
 @media (max-width:640px){.layout-ctl{display:none}.chart-tb{justify-content:flex-start}.chart-tb button{min-height:36px;padding:8px 12px}.legend-btn button{min-height:36px}}
 @media (prefers-reduced-motion:reduce){.chart-body{animation:none}.chart-tb button{transition:none}}
+
+/* รอบ 12: ที่ว่างระหว่างรอข้อมูลสด (ไม่ใช่ข้อมูล) */
+.kpi.skel{min-height:132px;background:linear-gradient(90deg,var(--card) 0%,color-mix(in srgb,var(--line) 55%,var(--card)) 50%,var(--card) 100%);background-size:200% 100%;animation:skel 1.2s ease-in-out infinite;border-color:var(--line)}
+@keyframes skel{from{background-position:100% 0}to{background-position:-100% 0}}
+@media (prefers-reduced-motion:reduce){.kpi.skel{animation:none}}
+.lf-map.map-wait{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.9rem}
