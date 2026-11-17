@@ -62,7 +62,7 @@ export const SOURCES = (env) => ({
 //   - HubData (ถ้าผู้ดูแลตั้ง) ใช้เฉพาะแหล่งเดิมที่ไม่ใช่ PRIVATE_SRC — ตั้งค่าหนึ่งไม่ทำให้อีกบริการหรือ Login เปลี่ยนเส้นทาง
 // ค่าลับไม่อยู่ใน Repository/หน้าเว็บ/log
 export const PRIVATE_SRC = new Set(['studentMoto', 'ruenthai']);
-export const RELAY_VERSION = 'r11';                    // ต้องตรงกับ RELAY_VERSION ใน apps-script/HubRelay.gs (ตรวจว่า Deploy เป็นโค้ดรุ่นล่าสุด)
+export const RELAY_VERSION = 'r12', RELAY_OK = ['r11', 'r12'];      // r12 = อ่านข้อมูลไฟล์ภาพครั้งเดียว + จำผลตรวจโฟลเดอร์ (r11 ยังใช้ได้)                    // ต้องตรงกับ RELAY_VERSION ใน apps-script/HubRelay.gs (ตรวจว่า Deploy เป็นโค้ดรุ่นล่าสุด)
 // ขอเฉพาะคอลัมน์ที่ใช้ (สคริปต์ตรวจรายการอนุญาตซ้ำอีกชั้น) · present = ส่งแค่ “มี/ไม่มีค่า” ไม่ส่งเนื้อข้อมูล (เช่น ทะเบียนรถ)
 export const RELAY_COLS = {
   studentMoto: { cols: ['Timestamp', 'RefCode', 'วิทยาเขต', 'คณะ/สถาบัน/ส่วนงาน', 'ประเภทนักศึกษา', 'ระดับการศึกษา', 'ประเภทเครื่องยนต์', 'จำนวนรถ'], present: ['รถ1_ทะเบียน', 'รถ2_ทะเบียน', 'รถ3_ทะเบียน'] },
@@ -493,7 +493,7 @@ async function relayEnroll(request, env, deps) {
 // ตรวจตัวกลางจริงจาก Cloudflare: แยกผลทีละขั้น (ตอบ/รุ่นโค้ด · ตารางแต่ละชุด · ภาพที่อนุญาต) — ไม่สรุปว่าใช้ได้เพียงเพราะมีค่าตั้ง
 async function relayCheck(env, deps, cfg) {
   const out = { ping: 'fail', version: '', tables: {}, image: 'skipped' };
-  try { const j = await relayCall(env, deps, { action: 'ping' }, cfg); out.version = str(j.v); out.ping = out.version === RELAY_VERSION ? 'ok' : 'outdated'; }
+  try { const j = await relayCall(env, deps, { action: 'ping' }, cfg); out.version = str(j.v); out.ping = RELAY_OK.includes(out.version) ? 'ok' : 'outdated'; }
   catch (e) { out.ping = e instanceof Err ? e.code : 'relay-error'; return out; }
   for (const k of PRIVATE_SRC) { try { const j = await relayCall(env, deps, { action: 'table', source: k, ...RELAY_COLS[k] }, cfg); out.tables[k] = Array.isArray(j.rows) ? 'ok:' + Math.max(0, j.rows.length - 1) : 'relay-error'; } catch (e) { out.tables[k] = e instanceof Err ? e.code : 'relay-error'; } }
   try { const g = await table(env, 'gps', deps), i = g.head.indexOf('Photo_File_ID'), id = i < 0 ? '' : (g.rows.map((r) => driveId(r[i])).filter(Boolean)[0] || '');

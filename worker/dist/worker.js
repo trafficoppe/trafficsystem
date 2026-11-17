@@ -343,7 +343,8 @@ var SOURCES = (env) => ({
   // ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย → RuenThai_Survey (ไม่อ่านแท็บ Tokens)
 });
 var PRIVATE_SRC = /* @__PURE__ */ new Set(["studentMoto", "ruenthai"]);
-var RELAY_VERSION = "r11";
+var RELAY_VERSION = "r12";
+var RELAY_OK = ["r11", "r12"];
 var RELAY_COLS = {
   studentMoto: { cols: ["Timestamp", "RefCode", "\u0E27\u0E34\u0E17\u0E22\u0E32\u0E40\u0E02\u0E15", "\u0E04\u0E13\u0E30/\u0E2A\u0E16\u0E32\u0E1A\u0E31\u0E19/\u0E2A\u0E48\u0E27\u0E19\u0E07\u0E32\u0E19", "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E19\u0E31\u0E01\u0E28\u0E36\u0E01\u0E29\u0E32", "\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E28\u0E36\u0E01\u0E29\u0E32", "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E19\u0E15\u0E4C", "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E23\u0E16"], present: ["\u0E23\u0E161_\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19", "\u0E23\u0E162_\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19", "\u0E23\u0E163_\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19"] },
   ruenthai: { cols: ["Timestamp", "Ref_Code", "Group_Type", "Group_Label", "User_SubType", "Faculty_Dept", "Sub_Unit_Project", "Car_Count", "Car1_Type", "Car2_Type", "LPR_Status"], present: ["Car1_Plate", "Car2_Plate"] }
@@ -1202,7 +1203,7 @@ async function relayCheck(env, deps, cfg) {
   try {
     const j = await relayCall(env, deps, { action: "ping" }, cfg);
     out.version = str(j.v);
-    out.ping = out.version === RELAY_VERSION ? "ok" : "outdated";
+    out.ping = RELAY_OK.includes(out.version) ? "ok" : "outdated";
   } catch (e) {
     out.ping = e instanceof Err ? e.code : "relay-error";
     return out;
@@ -1431,6 +1432,7 @@ export {
   IMG_W,
   PRIVATE_SRC,
   RELAY_COLS,
+  RELAY_OK,
   RELAY_VERSION,
   SCHEMA,
   SOURCES,

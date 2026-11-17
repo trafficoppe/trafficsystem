@@ -1,5 +1,5 @@
 /**
- * HubRelay.gs — ตัวกลางอ่าน “Sheet ส่วนตัว” และ “ภาพส่วนตัว” ให้ระบบภายใน mu-traffic-hub (รอบ 11 · RELAY_VERSION r11)
+ * HubRelay.gs — ตัวกลางอ่าน “Sheet ส่วนตัว” และ “ภาพส่วนตัว” ให้ระบบภายใน mu-traffic-hub (รอบ 11–12 · RELAY_VERSION r11)
  *
  * ทำไมต้องมี: Sheet ทะเบียนนักศึกษา–รถจักรยานยนต์, แบบสำรวจเรือนไทย และภาพประกอบรายงาน GPS งานปริญญา เป็นไฟล์ส่วนตัวของเจ้าของ
  *   บริการบน Cloudflare อ่านเองไม่ได้ (และห้ามเปลี่ยนการแชร์เป็นสาธารณะ) จึงให้สคริปต์นี้ซึ่งรันด้วยบัญชีเจ้าของไฟล์อ่านแทน
@@ -13,7 +13,7 @@
  * วิธีติดตั้ง: ดู docs/ส่งมอบรอบ10.md หัวข้อ “เปิดตัวกลางอ่านข้อมูลส่วนตัว”
  */
 var RELAY_HUB = 'https://mu-traffic-hub.pages.dev';
-var RELAY_VERSION = 'r11';                            // ต้องตรงกับ RELAY_VERSION ใน worker/src/index.js
+var RELAY_VERSION = 'r12';                            // ต้องตรงกับ RELAY_VERSION ใน worker/src/index.js
 var RELAY_ENROLL_TOKEN = '__ENROLL_TOKEN__';          // token ใช้ครั้งเดียว (หมดอายุภายใน 7 วัน) · กู้คืน: ผู้ดูแลออก token ใหม่ แล้วใส่ใน Script Properties → ENROLL_TOKEN (ไม่ต้องแก้โค้ด)
 var RELAY_TABLES = {
   studentMoto: { id: '1v0LYqEkWIb3MaNKqp1T50tBlDmYn7UP8xl36cPlpllQ', tab: 'Registrations_Motorcycle', gid: '1304328494',
@@ -67,6 +67,29 @@ function relayCsv_(T) {
   if (c !== 200 || /html/i.test(ct)) return { code: c === 401 || c === 403 || /html/i.test(ct) ? 'source-forbidden' : 'source-error' };
   return { v: Utilities.parseCsv(r.getContentText('UTF-8')) };
 }
+// รอบ 12 (r12): ลดจำนวนครั้งที่เรียก Drive ต่อภาพ — ข้อมูลไฟล์ (ชนิด/โฟลเดอร์แม่/ลิงก์รูปย่อ/ขนาด) ขอครั้งเดียวผ่าน Drive API ด้วยสิทธิ์อ่านอย่างเดียวเดิม
+//   ผลตรวจ “โฟลเดอร์นี้อยู่ใต้โฟลเดอร์ที่อนุญาตหรือไม่” จำไว้ใน CacheService 1 ชั่วโมง (ภาพจำนวนมากอยู่โฟลเดอร์เดียวกัน) — ตัวไฟล์ยังตรวจโฟลเดอร์แม่ปัจจุบันทุกครั้ง
+function relayMeta_(id, fields, tok) {
+  var r; try { r = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + id + '?supportsAllDrives=true&fields=' + fields, { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true }); } catch (e) { return { code: 'meta-error' }; }
+  var c = r.getResponseCode(); if (c === 404) return { code: 'not-found' }; if (c !== 200) return { code: 'meta-' + c };
+  try { return { m: JSON.parse(r.getContentText()) }; } catch (e) { return { code: 'meta-parse' }; }
+}
+function relayFolderOk_(folderId, tok) {
+  if (RELAY_IMAGE_ROOTS.indexOf(folderId) >= 0) return true;
+  var cache = CacheService.getScriptCache(), k = 'dir:' + folderId, hit = cache.get(k); if (hit === '1') return true; if (hit === '0') return false;
+  var ok = false, queue = [folderId], depth = 0, seen = {};
+  while (queue.length && depth < 8 && !ok) {
+    var next = [];
+    for (var i = 0; i < queue.length && !ok; i++) {
+      if (seen[queue[i]]) continue; seen[queue[i]] = 1;
+      var x = relayMeta_(queue[i], 'parents', tok), ps = (x.m && x.m.parents) || [];
+      for (var j = 0; j < ps.length; j++) { if (RELAY_IMAGE_ROOTS.indexOf(ps[j]) >= 0) { ok = true; break; } next.push(ps[j]); }
+    }
+    queue = next; depth++;
+  }
+  cache.put(k, ok ? '1' : '0', 3600); return ok;
+}
+var RELAY_MIME = /^image\/(jpeg|png|webp|gif)$/, RELAY_MAX_BYTES = 4 * 1024 * 1024;
 function relayAllowed_(file) {
   var queue = [], it = file.getParents(), depth = 0;
   while (it.hasNext()) queue.push(it.next());
@@ -77,21 +100,30 @@ function relayAllowed_(file) {
   }
   return false;
 }
-var RELAY_MIME = /^image\/(jpeg|png|webp|gif)$/, RELAY_MAX_BYTES = 4 * 1024 * 1024;
+function relayImgLegacy_(id) {
+  var f; try { f = DriveApp.getFileById(id); } catch (e) { return { ok: false, code: 'not-found' }; }
+  if (!RELAY_MIME.test(f.getMimeType()) || !relayAllowed_(f)) return { ok: false, code: 'not-allowed' };
+  if (f.getSize() > RELAY_MAX_BYTES) return { ok: false, code: 'too-large' };
+  var blob = f.getBlob(); if (!RELAY_MIME.test(blob.getContentType())) return { ok: false, code: 'not-allowed' };
+  return { ok: true, mime: String(blob.getContentType()).split(';')[0], b64: Utilities.base64Encode(blob.getBytes()) };
+}
 function relayImg_(id, w) {
   if (!/^[-\w]{20,60}$/.test(id)) return { ok: false, code: 'bad-id' };
   if (RELAY_WIDTHS.indexOf(w) < 0) w = 400;
-  var f; try { f = DriveApp.getFileById(id); } catch (e) { return { ok: false, code: 'not-found' }; }
-  if (!RELAY_MIME.test(f.getMimeType()) || !relayAllowed_(f)) return { ok: false, code: 'not-allowed' };
+  var tok = ScriptApp.getOAuthToken(), x = relayMeta_(id, 'mimeType,parents,thumbnailLink,size', tok);
+  if (!x.m) return x.code === 'not-found' ? { ok: false, code: 'not-found' } : relayImgLegacy_(id);      // Drive API ใช้ไม่ได้ชั่วคราว → ทางเดิม (DriveApp) ที่ตรวจโฟลเดอร์เองทุกชั้น
+  var m = x.m, ps = m.parents || [], allowed = false;
+  if (!RELAY_MIME.test(String(m.mimeType))) return { ok: false, code: 'not-allowed' };
+  for (var i = 0; i < ps.length && !allowed; i++) allowed = relayFolderOk_(ps[i], tok);
+  if (!allowed) return { ok: false, code: 'not-allowed' };
   var blob = null;
-  try {                                                  // ทางหลัก: รูปย่อตามความกว้างที่ขอ (Drive API ด้วยสิทธิ์ของสคริปต์นี้) — ล้มเหลวแล้วไปทางสำรอง ไม่ลองซ้ำ
-    var tok = ScriptApp.getOAuthToken(), m = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + id + '?fields=thumbnailLink', { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true });
-    var link = m.getResponseCode() === 200 ? JSON.parse(m.getContentText()).thumbnailLink : '';
-    if (link) { var r = UrlFetchApp.fetch(String(link).replace(/=s\d+$/, '') + '=s' + w, { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true });
+  try {                                                  // ทางหลัก: รูปย่อตามความกว้างที่ขอ — ล้มเหลวแล้วไปทางสำรอง ไม่ลองซ้ำ
+    if (m.thumbnailLink) { var r = UrlFetchApp.fetch(String(m.thumbnailLink).replace(/=s\d+$/, '') + '=s' + w, { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true });
       if (r.getResponseCode() === 200 && RELAY_MIME.test(String(r.getHeaders()['Content-Type'] || '').split(';')[0])) blob = r.getBlob(); }
   } catch (e) { blob = null; }
   if (!blob) {                                            // ทางสำรอง: ไฟล์ต้นฉบับ (ชนิดภาพที่อนุญาต และไม่เกิน 4 MB)
-    if (f.getSize() > RELAY_MAX_BYTES) return { ok: false, code: 'too-large' };
+    if (+m.size > RELAY_MAX_BYTES) return { ok: false, code: 'too-large' };
+    var f; try { f = DriveApp.getFileById(id); } catch (e2) { return { ok: false, code: 'not-found' }; }
     blob = f.getBlob(); if (!RELAY_MIME.test(blob.getContentType())) return { ok: false, code: 'not-allowed' };
   }
   return { ok: true, mime: String(blob.getContentType()).split(';')[0], b64: Utilities.base64Encode(blob.getBytes()) };

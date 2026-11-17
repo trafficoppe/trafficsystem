@@ -5,7 +5,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let n = 0, fails = 0; const ok = (name, c, info) => { n++; if (!c) fails++; console.log((c ? 'PASS ' : 'FAIL ') + name + (c || info === undefined ? '' : ' — ' + info)); };
 
 function load(over = {}) {
-  const props = Object.assign({}, over.props || {}), calls = [], logs = [];
+  const props = Object.assign({}, over.props || {}), calls = [], logs = [], metaCalls = [], cacheStore = new Map();
   const SHEET = { 'Registrations_Motorcycle': [['Timestamp', 'RefCode', 'วิทยาเขต', 'คณะ/สถาบัน/ส่วนงาน', 'ชื่อ-นามสกุล', 'ประเภทนักศึกษา', 'ระดับการศึกษา', 'ประเภทเครื่องยนต์', 'จำนวนรถ', 'รถ1_ทะเบียน', 'รถ2_ทะเบียน', 'รถ3_ทะเบียน', 'อีเมล'],
     ['6/7/2026', 'MR-1', 'ศาลายา', 'คณะ ก', 'ชื่อสมมติ', '', '', 'สันดาป', '1', 'กข1', '', '', 'x@example.test'], ['', '', '', '', '', '', '', '', '', '', '', '', '']],
     'RuenThai_Survey': [['Timestamp', 'Ref_Code', 'Token_Code', 'Group_Type', 'Group_Label', 'User_SubType', 'Faculty_Dept', 'Sub_Unit_Project', 'Full_Name', 'Car_Count', 'Car1_Type', 'Car1_Plate', 'Car2_Type', 'Car2_Plate', 'LPR_Status'],
@@ -23,18 +23,22 @@ function load(over = {}) {
     // ไม่มี SpreadsheetApp ในของจำลอง: ยืนยันว่าสคริปต์ไม่ใช้บริการที่ต้องขอสิทธิ์แก้ไขสเปรดชีต
     DriveApp: { getFileById: (id) => { const f = FILES[id]; if (!f) throw new Error('nf'); return { getMimeType: () => f.mime, getSize: () => f.size, getParents: () => iter([folder(f.parent)]), getBlob: () => blob(f.mime) }; }, getFolderById: (id) => ({ getName: () => 'SecurityGuardReports' }) },
     ScriptApp: { getOAuthToken: () => 'OAUTH-TOKEN-MOCK', getService: () => ({ getUrl: () => over.url === undefined ? 'https://script.google.com/a/macros/mahidol.ac.th/s/MOCKDEPLOYMENTID0000000001/exec' : over.url }) },
-    UrlFetchApp: { fetch: (u, o) => { let m; calls.push(u); if (/googleapis\.com\/drive/.test(u)) { if (over.thumbFail) throw new Error('drive api down'); return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ thumbnailLink: 'https://lh3.googleusercontent.com/thumb=s220' }) }; }
+    UrlFetchApp: { fetch: (u, o) => { let m; calls.push(u); if (/googleapis\.com\/drive/.test(u)) { if (over.thumbFail) throw new Error('drive api down'); const fid = /files\/([\w-]+)\?/.exec(u)[1], F = FILES[fid], D = Object.keys(FOLDERS).find((k) => FOLDERS[k].id === fid); metaCalls.push(fid);
+        if (F) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ mimeType: F.mime, parents: [FOLDERS[F.parent].id], thumbnailLink: 'https://lh3.googleusercontent.com/thumb=s220', size: String(F.size) }) };
+        if (D) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ parents: FOLDERS[D].parents.map((k) => FOLDERS[k].id) }) };
+        return { getResponseCode: () => 404, getContentText: () => '{}' }; }
       m = /docs\.google\.com\/spreadsheets\/d\/([\w-]+)\/export\?format=csv&gid=(\d+)/.exec(u);
       if (m) { const tab = { 1304328494: 'Registrations_Motorcycle', 873571277: 'RuenThai_Survey' }[m[2]]; calls.push('csv:' + m[2] + ':' + (o.headers && /^Bearer /.test(o.headers.Authorization))); if (over.csvDenied) return { getResponseCode: () => 200, getHeaders: () => ({ 'Content-Type': 'text/html' }), getContentText: () => '<html>' };
         return SHEET[tab] ? { getResponseCode: () => 200, getHeaders: () => ({ 'Content-Type': 'text/csv' }), getContentText: () => SHEET[tab].map((r) => r.join(',')).join('\n') } : { getResponseCode: () => 404, getHeaders: () => ({}), getContentText: () => '' }; }
       if (/googleusercontent/.test(u)) return { getResponseCode: () => 200, getHeaders: () => ({ 'Content-Type': 'image/jpeg' }), getBlob: () => blob('image/jpeg') };
       const p = u.replace(/^https:\/\/mu-traffic-hub\.pages\.dev/, ''), body = JSON.parse(o.payload); const h = over.hub || {};
       const res = h[p] ? h[p](body) : { ok: false, code: 'not-found' }; return { getResponseCode: () => (res.ok ? 200 : 403), getContentText: () => JSON.stringify(res) }; } },
+    CacheService: { getScriptCache: () => ({ get: (k) => (cacheStore.has(k) ? cacheStore.get(k) : null), put: (k, v) => { cacheStore.set(k, v); } }) },
     Logger: { log: (m) => logs.push(String(m)) }, JSON, Object, Array, String, Number, Error, Math
   };
   vm.createContext(ctx); vm.runInContext(fs.readFileSync(path.join(ROOT, 'apps-script/HubRelay.gs'), 'utf8').replace("'__ENROLL_TOKEN__'", "'" + (over.token || 'aa'.repeat(24)) + "'"), ctx);
   const post = (b) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(b) } }).text);
-  return { ctx, props, calls, logs, post };
+  return { ctx, props, calls, logs, post, metaCalls };
 }
 import crypto from 'node:crypto'; function require_crypto() { return crypto; }
 const SEC = 'f'.repeat(64);
@@ -44,7 +48,7 @@ let G = load({ props: { RELAY_SECRET: SEC } });
 ok('ไม่มีค่าลับ → forbidden', G.post({ action: 'ping' }).code === 'forbidden');
 ok('ค่าลับผิด → forbidden (ไม่มีข้อมูล)', G.post({ action: 'table', source: 'ruenthai', secret: 'e'.repeat(64) }).code === 'forbidden');
 ok('ยังไม่มีค่าลับในสคริปต์ → ทุกคำขอ forbidden', load().post({ action: 'ping', secret: '' }).code === 'forbidden');
-let r = G.post({ action: 'ping', secret: SEC }); ok('ping ตอบรุ่นโค้ด r11', r.ok && r.v === 'r11');
+let r = G.post({ action: 'ping', secret: SEC }); ok('ping ตอบรุ่นโค้ด r12', r.ok && r.v === 'r12');
 r = G.post({ action: 'table', source: 'staff', secret: SEC }); ok('ตารางนอกรายการ → unknown-source', r.code === 'unknown-source');
 r = G.post({ action: 'table', source: 'studentMoto', secret: SEC, cols: ['RefCode', 'ชื่อ-นามสกุล', 'อีเมล', 'จำนวนรถ'], present: ['รถ1_ทะเบียน', 'อีเมล'] });
 ok('ขอคอลัมน์นอกรายการ (ชื่อ/อีเมล) → ถูกตัดออก · ทะเบียนส่งเป็น 1/ว่าง · ข้ามแถวว่าง', r.ok && JSON.stringify(r.rows[0]) === JSON.stringify(['RefCode', 'จำนวนรถ', 'รถ1_ทะเบียน']) && JSON.stringify(r.rows[1]) === JSON.stringify(['MR-1', '1', '1']) && r.rows.length === 2 && !/ชื่อสมมติ|example\.test|กข1/.test(JSON.stringify(r)), JSON.stringify(r));
@@ -79,4 +83,7 @@ G = load({ props: { RELAY_SECRET: SEC } }); G.post({ action: 'table', source: 'r
 ok('อ่านตารางเป็น CSV ด้วย OAuth ของบัญชีเจ้าของ (Bearer ภายในสคริปต์ ไม่ส่งออก) ตาม gid ที่กำหนด', G.calls.includes('csv:873571277:true'));
 G = load({ props: { RELAY_SECRET: SEC }, csvDenied: true });
 ok('บัญชีนี้ไม่มีสิทธิ์อ่าน Sheet (ได้หน้า HTML) → source-forbidden ไม่ส่งข้อมูล', G.post({ action: 'table', source: 'studentMoto', secret: SEC }).code === 'source-forbidden');
+G = load({ props: { RELAY_SECRET: SEC } }); G.post({ action: 'img', id: 'GPSPHOTO000000000000000001', w: 400, secret: SEC }); const mc1 = G.metaCalls.length; r = G.post({ action: 'img', id: 'GPSPHOTO000000000000000001', w: 1600, secret: SEC });
+ok('[r12] ภาพแรก: ข้อมูลไฟล์ 1 ครั้ง + ไล่โฟลเดอร์ถึงรากที่อนุญาต · ภาพถัดไปในโฟลเดอร์เดียวกัน: ข้อมูลไฟล์ครั้งเดียว (ผลตรวจโฟลเดอร์จำไว้)', mc1 === 3 && G.metaCalls.length === mc1 + 1 && r.ok, mc1 + ' → ' + G.metaCalls.length);
+ok('[r12] ผลตรวจโฟลเดอร์ที่จำไว้ไม่เปิดสิทธิ์ให้ไฟล์นอกโฟลเดอร์: ยัง not-allowed', G.post({ action: 'img', id: 'OUTSIDEPHOTO00000000000001', w: 400, secret: SEC }).code === 'not-allowed' && G.post({ action: 'img', id: 'OUTSIDEPHOTO00000000000001', w: 400, secret: SEC }).code === 'not-allowed');
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ตรรกะสคริปต์กับบริการ Google จำลอง)'); process.exit(fails ? 1 : 0);

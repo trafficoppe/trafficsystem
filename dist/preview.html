@@ -1965,7 +1965,7 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
         series.forEach(function (s, k) {
           var val = s.values[i] || 0; if (!val) return;
           if (grouped) { g.appendChild(svg('rect', { x: x + gw * k + (gw > 6 ? 0.75 : 0), y: T + ph - ph * val / top, width: Math.max(gw - (gw > 6 ? 1.5 : 0), 2), height: Math.max(ph * val / top, 1), rx: Math.min(2.5, gw / 3), fill: s.color }));
-            if (gw >= 26) g.appendChild(svg('text', { class: 'vl', x: x + gw * k + gw / 2, y: T + ph - ph * val / top - 5, 'text-anchor': 'middle', text: compact(val) })); }
+            if (gw >= 15 && compact(val).length * 6.2 <= gw + 6) g.appendChild(svg('text', { class: 'vl', x: x + gw * k + gw / 2, y: T + ph - ph * val / top - 5, 'text-anchor': 'middle', text: compact(val) })); }
           else { g.appendChild(svg('rect', { x: x, y: T + ph - ph * (acc + val) / top, width: w, height: Math.max(ph * val / top - (n > 1 ? 1 : 0), 1), rx: 2.5, fill: s.color })); acc += val; }
         });
         if (showTotals && totals[i]) g.appendChild(svg('text', { class: 'vl', x: x + w / 2, y: T + ph - ph * totals[i] / top - 5, 'text-anchor': 'middle', text: compact(totals[i]) }));
