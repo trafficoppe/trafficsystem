@@ -342,6 +342,21 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
     const S = await page.evaluate(() => [...document.querySelectorAll('#view .dash-map')].map((b) => [...b.children].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.className).join('+')));
     ok('[แพตช์ท้าย·print local] รายงานประจำเดือน (สื่อพิมพ์): แผนที่ที่ยังไม่โหลดพิมพ์เป็นแผนผังตามพิกัด ไม่ใช่กล่องว่าง · ปุ่ม AI ไม่ถูกพิมพ์ · กลับหน้าจอแล้วแสดงแบบเดิม', P.wait === 0 && P.plan >= 1 && P.chat === 0 && S.every((x) => !/map-print/.test(x)), JSON.stringify(P) + ' screen:' + S.join(','));
   }
+  { // แพตช์ 19 พ.ย.: แถว “นักศึกษา – รถจักรยานยนต์” ในกราฟยานพาหนะ ระหว่างรอ/อ่านล้ม ต้องบอกสถานะจริง ไม่ใช่ “ยังเชื่อมต่อไม่ได้”
+    const M = await mk(); const p2 = M.page;
+    await p2.route('**/api/stats?scope=private', async (r) => { await new Promise((z) => setTimeout(z, 4000)); return r.continue().catch(() => {}); });
+    await p2.goto(BASE + '/#dashboard'); await p2.waitForSelector('#loginView'); await login(p2, '0123'); await p2.waitForSelector('.nows .now'); await p2.waitForTimeout(800);
+    const vcard = () => p2.evaluate(() => { const c = [...document.querySelectorAll('#view .trend, #view .card')].find((x) => /ยานพาหนะที่ลงทะเบียน/.test(x.textContent) && /นักศึกษา – รถจักรยานยนต์/.test(x.textContent)); return c ? c.innerText.replace(/\s+/g, ' ') : ''; });
+    const w1 = await vcard(); await p2.waitForTimeout(4500); const w2 = await vcard();
+    ok('[แพตช์ 19 พ.ย.] Dashboard ระหว่างรอข้อมูลสดชุดส่วนตัว: แถวนักศึกษา–จยย. แสดง “กำลังอ่านข้อมูลสด” (ไม่ใช่ “ยังเชื่อมต่อไม่ได้”) · ได้ข้อมูลแล้วแสดงตัวเลขพร้อมเวลาอ่าน', /กำลังอ่านข้อมูลสด/.test(w1) && !/ยังเชื่อมต่อไม่ได้/.test(w1) && /นักศึกษา – รถจักรยานยนต์ \d/.test(w2) && /อ่านสด/.test(w2), w1.slice(-90) + ' || ' + w2.slice(0, 120));
+    await M.ctx.close();
+    const M2 = await mk(); const p3 = M2.page;
+    await p3.route('**/api/stats?scope=private', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, scope: 'private', checkedAt: '', sourceReadAt: {}, errors: { studentMoto: 'relay-timeout' } }) }));
+    await p3.goto(BASE + '/#dashboard'); await p3.waitForSelector('#loginView'); await login(p3, '0123'); await p3.waitForSelector('.nows .now'); await p3.waitForTimeout(1500);
+    const w3 = await p3.evaluate(() => { const c = [...document.querySelectorAll('#view .trend, #view .card')].find((x) => /ยานพาหนะที่ลงทะเบียน/.test(x.textContent) && /นักศึกษา – รถจักรยานยนต์/.test(x.textContent)); return c ? c.innerText.replace(/\s+/g, ' ') : ''; });
+    ok('[แพตช์ 19 พ.ย.] ชุดส่วนตัวอ่านล้ม → แถวนักศึกษา–จยย. บอกเหตุผลจริงของการอ่าน (ไม่ใช่ข้อความรวม “ยังเชื่อมต่อไม่ได้”)', !/ยังเชื่อมต่อไม่ได้/.test(w3) && /นักศึกษา – รถจักรยานยนต์ \S/.test(w3) && !/นักศึกษา – รถจักรยานยนต์ \d/.test(w3), w3.slice(-120));
+    await M2.ctx.close();
+  }
   { // รอบ 13 ต่อ: เปิด Dashboard ค้างข้าม 00:00 (เวลาไทย) โดยข้อมูลไม่เปลี่ยน → “วันนี้” และยอดของวันนี้ต้องเปลี่ยนตามวันจริง
     const M = await mk(); const p2 = M.page; await p2.goto(BASE + '/#dashboard'); await p2.waitForSelector('#loginView'); await login(p2, '0123'); await p2.waitForSelector('.nows .now'); await p2.waitForTimeout(1200);
     const bk = new Date(Date.now() + 7 * 3600e3), nd = new Date(Date.UTC(bk.getUTCFullYear(), bk.getUTCMonth(), bk.getUTCDate() + 1, 0, 5) - 7 * 3600e3);

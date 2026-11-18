@@ -736,7 +736,7 @@
     if (vr || gr || rts) { var pk = [];
       if (vr) { var names = Object.keys(vr.rows), mx = Math.max.apply(null, names.map(function (n) { return vr.rows[n] || 0; })), vt = names.reduce(function (a, n) { return a + (vr.rows[n] || 0); }, 0);
         ov.push({ to: 'parking', icon: 'car', l: 'ยานพาหนะที่ลงทะเบียน', v: num(vt), u: 'รายการ', s: rts ? 'แบบสำรวจเรือนไทย ' + num(rts.total) + ' ชุด' : null, color: C.c5 });
-        pk.push(figure('ยานพาหนะที่ลงทะเบียน', 'หน่วย: รายการลงทะเบียน · อัปเดต ' + dLabel(vr.updated), hbars(names.map(function (n) { return { label: n, value: vr.rows[n], color: C.c5 }; }), mx, { unit: 'รายการ', series: 'ลงทะเบียน', labelW: 170, nullText: 'ยังเชื่อมต่อไม่ได้', aria: 'ยานพาหนะที่ลงทะเบียน' }))); }
+        pk.push(figure('ยานพาหนะที่ลงทะเบียน', 'หน่วย: รายการลงทะเบียน · อัปเดต ' + dLabel(vr.updated) + vrMotoNote(vr), hbars(names.map(function (n) { return { label: n, value: vr.rows[n], color: C.c5 }; }), mx, { unit: 'รายการ', series: 'ลงทะเบียน', labelW: 170, nullText: studentMotoNa(), aria: 'ยานพาหนะที่ลงทะเบียน' }))); }
       if (gr) pk.push(figure('ลานจอดงานพิธีพระราชทานปริญญาบัตร', 'หน่วย: % ของความจุ ' + num(gr.capacity) + ' คัน (' + gr.lots + ' ลาน)', hbars(gr.days.map(function (d) { return { label: dLabel(d.date), value: d.occupancyPercent, note: num(d.latestCount) + ' คัน', color: C.c3 }; }), 100, { ticks: [0, 25, 50, 75, 100], labelW: 120, dec: 1, unit: '%', series: 'อัตราการใช้ลานจอด' })));
       if (rts) pk.push(figure('แบบสำรวจลานจอดรถเรือนไทย — จำนวนแบบสำรวจที่ส่งรายวัน', 'หน่วย: ชุด · รวม ' + num(rts.total) + ' ชุด · ' + dLabel(rts.from).replace(/ \d{4}$/, '') + ' – ' + dLabel(rts.updated),
         bars(rts.daily.map(function (d) { return { label: (+d.date.slice(8)) + ' ' + TH_M[+d.date.slice(5, 7) - 1], full: dLabel(d.date) }; }), [{ name: 'แบบสำรวจที่ส่ง', color: C.c4, values: rts.daily.map(function (d) { return d.count; }) }], { unit: 'ชุด', int: true, h: 230, aria: 'แบบสำรวจลานจอดรถเรือนไทยรายวัน' })));
@@ -1833,7 +1833,7 @@
       tc.push(trendCard({ title: 'รถรางบริการพิเศษ', unit: 'รอบ/เดือน', page: 'tram', color: C.c2, kpis: [{ v: num(sumK(tr, 'jobs')), l: 'งาน' }, { v: num(sumK(tr, 'rounds')), l: 'รอบ' }, { v: num(sumK(tr, 'km')), l: 'กม.' }], chart: bars(mCols(tr), [{ name: 'จำนวนรอบ', color: C.c2, values: tr.map(function (r) { return r.rounds; }) }], { unit: 'รอบ', int: true, h: 210, aria: 'จำนวนรอบรถรางรายเดือน', onPick: function () { go('tram'); } }) })); }
     if (cctv) tc.push(trendCard({ title: 'คำขอดูกล้อง CCTV', unit: 'คำขอ/เดือน', page: 'cctv', color: C.c2, kpis: [{ v: num(sumMonthly(cctv.monthly, function (r) { return r.count; })), l: 'คำขอ' }], chart: cctvMonthChart(pickMonth('cctv')) }));
     if (vr) { var names = Object.keys(vr.rows), mx = Math.max.apply(null, names.map(function (n) { return vr.rows[n] || 0; }));
-      tc.push(trendCard({ title: 'ยานพาหนะที่ลงทะเบียน', unit: 'รายการ · ณ ' + dShort(vr.updated), page: 'vehicle', color: C.c5, chart: hbars(names.map(function (n) { return { label: n, value: vr.rows[n], color: C.c5 }; }), mx, { unit: 'รายการ', series: 'ลงทะเบียน', labelW: 170, nullText: 'ยังเชื่อมต่อไม่ได้', aria: 'ยานพาหนะที่ลงทะเบียน' }) })); }
+      tc.push(trendCard({ title: 'ยานพาหนะที่ลงทะเบียน', unit: 'รายการ · ณ ' + dShort(vr.updated) + vrMotoNote(vr), page: 'vehicle', color: C.c5, chart: hbars(names.map(function (n) { return { label: n, value: vr.rows[n], color: C.c5 }; }), mx, { unit: 'รายการ', series: 'ลงทะเบียน', labelW: 170, nullText: studentMotoNa(), aria: 'ยานพาหนะที่ลงทะเบียน' }) })); }
     if (sat) tc.push(trendCard({ title: 'ความพึงพอใจ รปภ.ส่วนกลาง', unit: 'คะแนน 1–5/เดือน', page: 'report-guard', color: C.fine, chart: satScoreChart('central', function (i, c) { state.satSrc = 'central'; state.satMonth = c.month; go('report-guard'); }, null, 210) }));
     v.appendChild(el('section', { class: 'sec', 'aria-label': 'แนวโน้มรายเดือน' }, [el('div', { class: 'sec-h' }, [el('h2', { text: 'แนวโน้มรายเดือน' }), el('span', { class: 'note', text: rt + ' · คลิกแท่งเพื่อดูรายละเอียด' }),
       el('a', { class: 'more', href: '#report-monthly', text: 'รายงานประจำเดือน →' })]), el('div', { class: 'trends' }, tc)]));
@@ -2876,6 +2876,8 @@
     if (j.ruenthai) { var r = j.ruenthai, rs = X.ruenthaiSurvey || (X.ruenthaiSurvey = {}); rs.total = r.surveys; rs.daily = r.daily.map(function (d) { return { date: d.date, count: d.count }; }); rs.from = r.range.from; rs.updated = r.lastEntry; rs.checkedAt = r.checkedAt; rs.live = r; rs.liveErr = null; }
     else if (e.ruenthai && X.ruenthaiSurvey) X.ruenthaiSurvey.liveErr = e.ruenthai;
   }
+  /* แพตช์ 19 พ.ย.: กราฟยานพาหนะรวมยอดไฟล์สรุป (ณ วันที่ไฟล์) กับ นศ.–จยย. ที่อ่านสด → บอกเวลาอ่านของแถวที่อ่านสดแยก */
+  function vrMotoNote(vr) { var m = vr && vr.studentMoto; return m ? ' · นักศึกษา–จยย. อ่านสด ' + dLabel(m.checkedAt) + (vr.studentMotoErr ? ' (รอบล่าสุดอ่านไม่สำเร็จ)' : '') : ''; }
   function studentMotoNa() { var vr = mod('vehicleRegistration'); return vr && vr.studentMotoErr ? srcWhy(vr.studentMotoErr) : AUTH.on && !AUTH.user ? 'แสดงหลังเข้าสู่ระบบ' : 'กำลังอ่านข้อมูลสด'; }
   function studentMotoSection() {
     var vr = mod('vehicleRegistration'), m = vr && vr.studentMoto;
