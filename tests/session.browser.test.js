@@ -287,7 +287,39 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
     await page.request.get(BASE + '/__test/moto/shift'); await page.request.get(BASE + '/__test/clock/180'); await liveOnce();
     const c1 = await camp(), n2 = await page.evaluate(() => window.__hub.renders()), y1 = await page.evaluate(() => window.pageYOffset);
     ok('[รอบ 13·D] ยอดรวมเท่าเดิม (3 รายการ) แต่การแยกตามวิทยาเขตเปลี่ยน → หน้าแสดงตัวเลขใหม่ · ตำแหน่งเลื่อนคงเดิม', n2 === n1 + 1 && c1 !== c0 && /3/.test(c1) && Math.abs(y1 - y0) < 2, 'renders ' + n1 + '→' + n2 + ' y ' + y0 + '→' + y1);
+    // รอบ 13 ต่อ: ป้ายเวลาในเนื้อหา (ไม่ใช่แค่หัวเว็บ) ต้องตามเวลาอ่านจริงโดยไม่วาดหน้าใหม่
+    const readAt = (k) => page.evaluate(async (kk) => (await fetch('/api/stats?scope=' + (kk === 'studentMoto' ? 'private' : 'core'), { credentials: 'include' }).then((r) => r.json())).sourceReadAt[kk], k);
+    const fdt = (d) => +d.slice(8, 10) + ' ' + ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][+d.slice(5, 7) - 1] + ' ' + (+d.slice(0, 4) + 543) + ' ' + d.slice(11, 16);
+    const motoNote = () => page.evaluate(() => ((document.querySelector('section[aria-label="นักศึกษา – รถจักรยานยนต์"] .note') || {}).textContent || ''));
+    await page.request.get(BASE + '/__test/clock/180'); await liveOnce(); const mn1 = await motoNote(), rm = await readAt('studentMoto'), nR = await page.evaluate(() => window.__hub.renders());
+    ok('[รอบ 13·A2] หน้า vehicle: อ่านใหม่หลัง TTL ข้อมูลเท่าเดิม → ป้าย “อ่านสดเมื่อ” ของ นักศึกษา–จยย. = เวลาอ่านล่าสุดของแหล่งนั้น (ไม่วาดหน้าใหม่)', mn1.includes(fdt(rm)) && nR === n2, mn1 + ' | readAt ' + rm + ' | renders ' + nR);
+    await go(page, 'dashboard'); await page.waitForSelector('.nows .now'); await liveOnce();
+    const nowTxt = () => page.evaluate(() => [...document.querySelectorAll('.nows .now')].slice(0, 2).map((c) => c.innerText.replace(/\s+/g, ' ')).join(' | '));
+    const ri0 = await readAt('incidents'), d0 = await nowTxt(); const hasT = d0.includes('ณ ' + ri0.slice(11, 16));
+    await page.request.get(BASE + '/__test/clock/180'); const r0 = await page.evaluate(() => window.__hub.renders()); await liveOnce();
+    const ri1 = await readAt('incidents'), d1 = await nowTxt(), r1 = await page.evaluate(() => window.__hub.renders());
+    ok('[รอบ 13·A2] Dashboard: ป้าย “วันนี้ ณ …” ของการ์ดเหตุการณ์/L&F ตามเวลาอ่านใหม่ โดยไม่วาดทั้งหน้า', hasT && ri1 !== ri0 && d1.includes('ณ ' + ri1.slice(11, 16)) && !d1.includes('ณ ' + ri0.slice(11, 16)) && r1 === r0, (hasT ? '' : '[ก่อนหน้าไม่มีเวลาในการ์ด] ') + d1.slice(0, 160) + ' | ' + ri0 + '→' + ri1 + ' renders ' + r0 + '→' + r1);
+    // pending: เปิดแชทค้างขณะข้อมูลเปลี่ยน → ไม่ขัดจังหวะ · ปิดแชทแล้วนำข้อมูลใหม่มาแสดง (ไม่ต้อง reload)
     await page.request.get(BASE + '/__test/moto/reset'); await page.request.get(BASE + '/__test/clock/180'); await liveOnce();
+    await go(page, 'vehicle'); await page.waitForSelector('section[aria-label="นักศึกษา – รถจักรยานยนต์"]'); await page.waitForTimeout(300);
+    await page.click('#chatFab'); await page.waitForSelector('.chat-panel:not([hidden])'); await page.click('.chat-panel .chat-x'); await page.waitForTimeout(200);
+    await page.click('#chatFab'); await page.waitForSelector('.chat-panel:not([hidden])'); await page.locator('.chat-panel').click({ position: { x: 20, y: 20 } }).catch(() => {});
+    const campFig = () => page.evaluate(() => { const f = [...document.querySelectorAll('section[aria-label="นักศึกษา – รถจักรยานยนต์"] figure')].find((x) => /แยกวิทยาเขต/.test(x.textContent)); return f ? f.innerText.replace(/\s+/g, ' ') : ''; }), cF0 = await campFig();
+    const pr0 = await page.evaluate(() => window.__hub.renders()); await page.request.get(BASE + '/__test/moto/shift'); await page.request.get(BASE + '/__test/clock/180'); await liveOnce();
+    const pr1 = await page.evaluate(() => window.__hub.renders()); await page.keyboard.press('Escape'); await page.waitForTimeout(150); if (await page.locator('.chat-panel:not([hidden])').count()) await page.click('.chat-panel .chat-x'); await page.waitForTimeout(1200);
+    const pr2 = await page.evaluate(() => window.__hub.renders()), cS = await campFig();
+    ok('[รอบ 13·pending] แชทเปิดอยู่ → ไม่วาดทับ · ปิดแชทแล้ววาดข้อมูลใหม่ภายใน ~1 วินาที', pr1 === pr0 && pr2 === pr0 + 1 && cS !== cF0, 'renders ' + pr0 + '→' + pr1 + '→' + pr2);
+    await page.request.get(BASE + '/__test/moto/reset'); await page.request.get(BASE + '/__test/clock/180'); await liveOnce();
+  }
+  { // รอบ 13 ต่อ: เปิด Dashboard ค้างข้าม 00:00 (เวลาไทย) โดยข้อมูลไม่เปลี่ยน → “วันนี้” และยอดของวันนี้ต้องเปลี่ยนตามวันจริง
+    const M = await mk(); const p2 = M.page; await p2.goto(BASE + '/#dashboard'); await p2.waitForSelector('#loginView'); await login(p2, '0123'); await p2.waitForSelector('.nows .now'); await p2.waitForTimeout(1200);
+    const bk = new Date(Date.now() + 7 * 3600e3), nd = new Date(Date.UTC(bk.getUTCFullYear(), bk.getUTCMonth(), bk.getUTCDate() + 1, 0, 5) - 7 * 3600e3);
+    const ndKey = nd.getTime() + 7 * 3600e3, ndD = new Date(ndKey), lab = ndD.getUTCDate() + ' ' + ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][ndD.getUTCMonth()] + ' ' + (ndD.getUTCFullYear() + 543);
+    const chip0 = await txt(p2, '.dash-meta .upd'); await p2.clock.setFixedTime(nd);
+    let n0 = 0; p2.on('request', (q) => { if (/\/api\/stats\?/.test(q.url())) n0++; }); await p2.evaluate(() => window.__hub.live()); for (let i = 0; i < 40 && n0 < 2; i++) await p2.waitForTimeout(100); await p2.waitForTimeout(800);
+    const chip1 = await txt(p2, '.dash-meta .upd'), inc1 = await p2.evaluate(() => (document.querySelector('.nows .now') || {}).innerText || '');
+    ok('[รอบ 13·วันใหม่] เปิด Dashboard ค้างข้ามเที่ยงคืน ข้อมูลไม่เปลี่ยน → ป้าย “วันนี้” เป็นวันใหม่ และการ์ดไม่อ้างยอด “วันนี้ ณ …” ของเมื่อวาน', chip1.includes(lab) && chip1 !== chip0 && !/วันนี้ ณ/.test(inc1), chip0 + ' → ' + chip1 + ' | ' + inc1.replace(/\s+/g, ' ').slice(0, 90));
+    await M.ctx.close();
   }
   // ทะเบียนนักศึกษา–จยย. / เรือนไทย / สถานะแหล่งข้อมูล (ข้อมูลสดผ่านตัวกลาง MOCK)
   await page.reload(); await page.waitForTimeout(800); await go(page, 'vehicle'); await page.waitForSelector('section[aria-label="นักศึกษา – รถจักรยานยนต์"]');

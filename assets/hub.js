@@ -237,7 +237,7 @@
   var routeN = 0;
   function route(first) {
     if (AUTH.on && !AUTH.user) return;          /* ยังไม่ผ่าน Login กลาง: ไม่วาดหน้าและไม่เรียกข้อมูลใด ๆ */
-    var page = currentPage(), grp = PAGE_GROUP[page]; routeN++;
+    var page = currentPage(), grp = PAGE_GROUP[page]; routeN++; state.renderDay = todayStr();
     state.rerender = state.curPage === page; state.curPage = page;
     if (MONTHS.length && page !== 'dashboard' && page !== 'report-monthly') scopeRange('all', { from: MONTHS[0], to: MONTHS[MONTHS.length - 1] });
     if (!first || !Object.keys(openGroups).length) openGroups = {};     // เปลี่ยนหน้า = เปิดเฉพาะหมวดของหน้าปัจจุบัน (เมนูไม่ยาวเกิน)
@@ -1696,6 +1696,7 @@
     vals.forEach(function (x, i) { var h = x == null ? 0 : Math.max(x > 0 ? 2 : 0.8, x / mx * (H - 2)); s.appendChild(svg('rect', { x: i * (w + g), y: H - h, width: w, height: h, rx: 1, fill: x == null ? 'var(--line)' : color, opacity: i === n - 1 ? 1 : 0.55 })); });
     return s;
   }
+  function nowCards() { var Q = periodOf(); return [nowIncidents(Q), nowLostFound(Q), nowGate(Q), nowAnywheel(Q), nowTram(Q), nowCctv(Q), nowAssets(Q), nowGuard(Q)].filter(Boolean); }
   function nowCard(o) {
     var kids = [el('div', { class: 'now-h' }, [el('span', { class: 'now-ico' }, [ic(o.icon, 18)]), el('h3', { text: o.title }), o.badge ? el('span', { class: 'now-badge' + (o.stale ? ' stale' : ''), text: o.badge }) : null])];
     if (o.mainNa) kids.push(el('div', { class: 'now-na', text: o.mainNa }));
@@ -1810,8 +1811,8 @@
       return el('button', { type: 'button', 'aria-pressed': String(state.period === x[0]), text: x[1], onclick: function () { state.period = x[0]; route(true); } }); }));
     v.appendChild(el('div', { class: 'dash-head' }, [el('div', {}, [el('h1', { text: 'ภาพรวมงานจราจรและความปลอดภัย' }),
       el('div', { class: 'dash-meta' }, [el('span', { class: 'upd' }, [ic('calendar'), 'วันนี้ ' + dLabel(t)]), el('span', { class: 'dash-chk', text: dashChkText() })])]), el('div', { class: 'dash-ctl' }, [seg, state.period === 'custom' ? rangeCtrl() : null])]));
-    var cards = [nowIncidents(Q), nowLostFound(Q), nowGate(Q), nowAnywheel(Q), nowTram(Q), nowCctv(Q), nowAssets(Q), nowGuard(Q)].filter(Boolean);
-    v.appendChild(el('section', { class: 'sec', 'aria-label': 'ข้อมูล' + Q.label }, [el('div', { class: 'sec-h' }, [Q.kind === 'today' ? el('h2', { class: 'h-xl' }, [el('span', { class: 'h-emo', 'aria-hidden': 'true', text: '📊' }), ' ข้อมูลวันนี้']) : el('h2', { text: 'ข้อมูล' + Q.label }), el('span', { class: 'note', text: Q.kind === 'today' ? dLabel(t) + ' · เรื่องที่ยังไม่มีข้อมูลวันนี้จะแสดงข้อมูลล่าสุดพร้อมป้ายวันที่' : '' })]), el('div', { class: 'nows' }, cards.map(nowCard))]));
+    var cards = nowCards();
+    v.appendChild(el('section', { class: 'sec', 'aria-label': 'ข้อมูล' + Q.label }, [el('div', { class: 'sec-h' }, [Q.kind === 'today' ? el('h2', { class: 'h-xl' }, [el('span', { class: 'h-emo', 'aria-hidden': 'true', text: '📊' }), ' ข้อมูลวันนี้']) : el('h2', { text: 'ข้อมูล' + Q.label }), el('span', { class: 'note', text: Q.kind === 'today' ? dLabel(t) + ' · เรื่องที่ยังไม่มีข้อมูลวันนี้จะแสดงข้อมูลล่าสุดพร้อมป้ายวันที่' : '' })]), liveBlock(el('div', { class: 'nows' }, cards.map(nowCard)), nowCards, cards)]));
     /* แนวโน้มรายเดือน — ใช้ช่วงของปีนี้ (หรือช่วงที่กำหนดเอง) ไม่ขึ้นกับปุ่ม “วันนี้/เดือนนี้” */
     var rt = rangeText(), inc = mod('incidents'), lf = mod('lostfound'), gate = mod('gate'), cctv = mod('cctv'), sat = mod('guardSatisfaction'), vr = mod('vehicleRegistration'), aw = extra('anywheel'), tram = extra('tram'), am = mod('accidentMap'), tc = [];
     var inR = function (r) { return inRange(r.month); };
@@ -2386,11 +2387,12 @@
     if (live.busy && live.busy.gen === authGen && live.busy.n > 0) return;      /* รอบ 13: ตัวนับงานผูกกับรุ่น Login — คำตอบของรุ่นก่อนไม่ลดตัวนับของรุ่นใหม่ */
     var gen = authGen, busy = live.busy = { gen: gen, n: 2 }; live.due = false; live.last = Date.now();
     var draw = function (sig, scope) {
-      liveStampsUpdate(); liveNoteDraw();
-      if (live.sig[scope] === sig) return; var firstTime = live.sig[scope] == null; live.sig[scope] = sig;
+      var dayCh = !!state.renderDay && state.renderDay !== todayStr();      /* รอบ 13 ต่อ: ข้าม 00:00 (เวลาไทย) → “วันนี้/เดือนนี้” เปลี่ยนความหมาย วาดใหม่แม้ข้อมูลเท่าเดิม */
+      if (!dayCh) liveStampsUpdate(); liveNoteDraw();
+      if (live.sig[scope] === sig && !dayCh) return; var firstTime = live.sig[scope] == null; live.sig[scope] = sig;
       collectMonths();
-      if (document.querySelector('.dlg-ov, .lightbox, .chat-panel.open') || isTyping()) { live.pending = true; return; }
-      if (scope === 'private' && !firstTime && !LIVE_PRIVATE_PAGES[state.curPage]) return;        /* ชุดส่วนตัวเปลี่ยน: วาดใหม่เฉพาะหน้าที่ใช้ */
+      if (uiBusy()) { live.pending = true; return; }
+      if (scope === 'private' && !firstTime && !dayCh && !LIVE_PRIVATE_PAGES[state.curPage]) return;        /* ชุดส่วนตัวเปลี่ยน: วาดใหม่เฉพาะหน้าที่ใช้ */
       route(true);
     };
     var done = function () { busy.n = Math.max(0, busy.n - 1); };
@@ -2418,8 +2420,13 @@
   }
   var LIVE_PRIVATE_PAGES = { dashboard: 1, vehicle: 1, parking: 1, settings: 1, 'vehicle-all': 1 };
   document.addEventListener('visibilitychange', function () { if (!document.hidden && AUTH.user && (live.due || (live.last && Date.now() - live.last > 5 * 60000))) liveRefresh(); });
-  document.addEventListener('focusout', function () { setTimeout(function () { if (live.pending && AUTH.user && !isTyping() && !document.querySelector('.dlg-ov, .lightbox, .chat-panel.open')) { live.pending = false; route(true); } }, 400); });
-  function isTyping() { var a = document.activeElement; return !!a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName); }
+  /* รอบ 13 ต่อ: แผงแชทใช้ attribute hidden (ไม่มี class open) — เดิมตรวจ .chat-panel.open จึงไม่เคยเลื่อนการวาดขณะแชทเปิด
+   * และการอัปเดตที่เลื่อนไว้ปล่อยได้เฉพาะตอน focusout → ปิดด้วย Esc/ปุ่มแล้วค้าง · ตรวจปล่อยหลังคลิก/กดปุ่ม/focusout ด้วย */
+  function uiBusy() { return !!document.querySelector('.dlg-ov, .lightbox, .chat-panel:not([hidden])') || isTyping(); }
+  var flushT = 0;
+  function flushSoon() { if (!live.pending || flushT) return; flushT = setTimeout(function () { flushT = 0; if (live.pending && AUTH.user && !uiBusy()) { live.pending = false; route(true); } }, 400); }
+  ['focusout', 'click', 'keyup'].forEach(function (ev) { document.addEventListener(ev, flushSoon, true); });
+  function isTyping() { var a = document.activeElement; return !!a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.isConnected && !a.closest('[hidden]') && a.getClientRects().length > 0; }
   function liveNoteDraw() {
     var b = $('banner'); if (!b || !AUTH.on) return;
     if (live.errors) { b.hidden = false; b.textContent = 'อัปเดตสถิติจากต้นทางไม่สำเร็จบางส่วน (' + Object.keys(live.errors).map(function (k) { return k + ': ' + live.errors[k]; }).join(' · ') + ') — ส่วนนั้นแสดงข้อมูลล่าสุดที่มี พร้อมวันที่ของข้อมูล'; }
@@ -2857,14 +2864,15 @@
     if (!m) return vr && vr.studentMotoErr ? section('นักศึกษา – รถจักรยานยนต์', { note: 'Registrations_Motorcycle' }, [el('div', { class: 'empty', role: 'status', text: srcWhy(vr.studentMotoErr) })])
       : AUTH.on && AUTH.user ? section('นักศึกษา – รถจักรยานยนต์', { note: 'กำลังอ่านข้อมูลสดผ่านตัวกลางของเจ้าของไฟล์…' }, [el('div', { class: 'kpis skel-kpis', role: 'status', 'aria-label': 'กำลังโหลด' }, [0, 1, 2, 3].map(function () { return el('div', { class: 'kpi skel' }); }))]) : null;   /* รอบ 12: ที่ว่างขนาดใกล้ของจริงระหว่างรอ (ไม่ใช่ตัวเลข) */
     var hb = function (o, unit) { var ks = Object.keys(o), mx = Math.max.apply(null, ks.map(function (k) { return o[k]; }).concat([1])); return hbars(ks.sort(function (a, b) { return o[b] - o[a]; }).map(function (k) { return { label: k, value: o[k] }; }), mx, { unit: unit || 'รายการ' }); };
-    return section('นักศึกษา – รถจักรยานยนต์', { note: 'อ่านสดเมื่อ ' + fdate(m.checkedAt) + ' · ' + fdate(m.range.from) + ' – ' + fdate(m.range.to) }, [
+    var motoNote = function () { var m2 = (mod('vehicleRegistration') || {}).studentMoto; return m2 ? 'อ่านสดเมื่อ ' + fdate(m2.checkedAt) + ' · ' + fdate(m2.range.from) + ' – ' + fdate(m2.range.to) : null; };
+    return liveText(section('นักศึกษา – รถจักรยานยนต์', { note: motoNote() }, [
       kpiGrid([{ icon: 'file', label: 'รายการลงทะเบียน', value: num(m.registrations), unit: 'รายการ', sub: '1 RefCode = 1 รายการ' + (m.duplicateRefs ? ' · RefCode ซ้ำ ' + num(m.duplicateRefs) + ' แถว (นับครั้งเดียว)' : ''), color: C.c1 },
         { icon: 'car', label: 'จำนวนรถตามที่กรอก', value: num(m.vehiclesDeclared), unit: 'คัน', sub: 'ช่อง “จำนวนรถ”' + (m.rowsNoCount ? ' · ไม่ได้กรอก ' + num(m.rowsNoCount) + ' รายการ' : ''), color: C.c3 },
         { icon: 'car', label: 'ช่องทะเบียนรถที่กรอก (รถ1–3)', value: num(m.platesFilled), unit: 'ช่อง', sub: 'จำนวนรถไม่ตรงกับช่องทะเบียน ' + num(m.rowsCountMismatch) + ' รายการ', color: C.c4 },
         { icon: 'alert', label: 'แถวที่ไม่มี RefCode', value: num(m.rowsWithoutRef), unit: 'แถว', sub: 'ไม่นับเป็นรายการลงทะเบียน', color: C.c5 }]),
       el('div', { class: 'grid2' }, [figure('แยกวิทยาเขต', 'หน่วย: รายการลงทะเบียน', hb(m.byCampus)), figure('แยกประเภทเครื่องยนต์', 'หน่วย: รายการลงทะเบียน', hb(m.byEngine)),
         figure('แยกคณะ/ส่วนงาน (12 อันดับแรก)', 'หน่วย: รายการลงทะเบียน', hb(m.byFaculty)), figure('รายเดือน (ตามวันที่ส่ง)', 'หน่วย: รายการลงทะเบียน', hb(m.monthly.reduce(function (a, r) { a[mLabel(r.month)] = r.count; return a; }, {})))]),
-      el('p', { class: 'src', text: 'นิยาม: ' + m.definition + ' · ที่มา: ' + m.source + ' · ไม่ส่งชื่อ เบอร์ อีเมล ทะเบียนรถ หรือรหัสนักศึกษาลงหน้าเว็บ' })]);
+      el('p', { class: 'src', text: 'นิยาม: ' + m.definition + ' · ที่มา: ' + m.source + ' · ไม่ส่งชื่อ เบอร์ อีเมล ทะเบียนรถ หรือรหัสนักศึกษาลงหน้าเว็บ' })]), '.sec-h .note', motoNote);
   }
 
   /* เรือนไทย: ภาพรวมจากสรุปสด + รายการหลัง Login (ไม่มีชื่อ เบอร์ อีเมล ทะเบียน Token) กรองช่วงวันที่ กลุ่ม สถานะ LPR ค้นหา แบ่งหน้า */
@@ -2935,8 +2943,21 @@
     var gen = (DATA.extra || {}).generatedAt || DATA.stats.generatedAt || '', rt = AUTH.on && AUTH.user ? liveReadText() : '';
     return rt ? rt + ' · หมวดอื่นจากไฟล์สรุป ' + stampTxt(gen) : 'ตรวจข้อมูลล่าสุด ' + stampTxt(gen);
   }
+  /* รอบ 13 ต่อ: ป้ายเวลาในเนื้อหาที่มาจากข้อมูลสด ลงทะเบียนตัวสร้างข้อความ/ส่วนย่อยไว้ → อ่านใหม่แล้วอัปเดตเฉพาะจุด (ไม่วาดทั้งหน้า)
+   * ตัวสร้างอ่านจาก DATA ปัจจุบัน — แหล่งที่อ่านไม่สำเร็จไม่ถูกแทนค่าใน DATA จึงคงเวลาเดิม (ไม่ดูเหมือนสด) */
+  function liveText(root, sel, fn) { var n = root.querySelector ? root.querySelector(sel) : null; if (n) { n.classList.add('live-ts'); n.__ts = fn; } return root; }
+  function liveBlock(node, build, data) { node.classList.add('live-blk'); node.__blk = build; node.__key = blkKey(data); return node; }
+  function blkKey(d) { try { return JSON.stringify(d); } catch (e) { return String(Math.random()); } }
   function liveStampsUpdate() {                  /* อัปเดตป้ายเวลาโดยไม่วาดหน้าใหม่ (เวลาอ่านเปลี่ยนแต่ข้อมูลไม่เปลี่ยน) */
     renderStamp(); var c = document.querySelector('.dash-chk'); if (c) { c.textContent = dashChkText(); c.title = liveReadTitle(); }
+    [].forEach.call(document.querySelectorAll('#view .live-ts'), function (n) { var t = n.__ts && n.__ts(); if (t != null && n.textContent !== t) n.textContent = t; });
+    [].forEach.call(document.querySelectorAll('#view .live-blk'), function (n) {
+      if (n.contains(document.activeElement) && isTyping()) return;
+      var data = n.__blk(), k = blkKey(data); if (k === n.__key) return;
+      var fs = [].slice.call(n.querySelectorAll('a,button')), fi = fs.indexOf(document.activeElement);
+      n.textContent = ''; data.map(nowCard).forEach(function (x) { n.appendChild(x); }); n.__key = k;
+      if (fi >= 0) { var nf = n.querySelectorAll('a,button')[fi]; if (nf) nf.focus({ preventScroll: true }); }
+    });
   }
   function renderStamp() {
     var g = DATA.stats.generatedAt || '', g2 = (DATA.extra || {}).generatedAt || '', s = $('stamp'); if (g2 > g) g = g2; s.textContent = '';   /* เวลาที่ตรวจแหล่งข้อมูลครั้งล่าสุด (แต่ละเรื่องมีวันที่ของตัวเองกำกับในหน้า) */
