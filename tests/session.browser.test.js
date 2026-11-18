@@ -311,6 +311,37 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
     ok('[รอบ 13·pending] แชทเปิดอยู่ → ไม่วาดทับ · ปิดแชทแล้ววาดข้อมูลใหม่ภายใน ~1 วินาที', pr1 === pr0 && pr2 === pr0 + 1 && cS !== cF0, 'renders ' + pr0 + '→' + pr1 + '→' + pr2);
     await page.request.get(BASE + '/__test/moto/reset'); await page.request.get(BASE + '/__test/clock/180'); await liveOnce();
   }
+  { // แพตช์ท้าย: ป้ายเวลา “สถานะ L&F” (รายงาน) และหัวรายงานประจำวัน ต้องตามเวลาอ่านต้นทางของแหล่งนั้น
+    const fdt = (d) => +d.slice(8, 10) + ' ' + ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][+d.slice(5, 7) - 1] + ' ' + (+d.slice(0, 4) + 543) + ' ' + d.slice(11, 16);
+    const rd = () => page.evaluate(async () => (await fetch('/api/stats?scope=core', { credentials: 'include' }).then((r) => r.json())).sourceReadAt);
+    const liveOnce = async () => { let n = 0; const on = (q) => { if (/\/api\/stats\?/.test(q.url())) n++; }; page.on('request', on); await page.evaluate(() => window.__hub.live()); for (let i = 0; i < 40 && n < 2; i++) await page.waitForTimeout(100); await page.waitForTimeout(700); page.off('request', on); };
+    const lfsCap = () => page.evaluate(() => { const f = [...document.querySelectorAll('figure')].find((x) => /สถานะตรวจ/.test(x.textContent)); return f ? f.querySelector('figcaption span').textContent : ''; });
+    const rnd = () => page.evaluate(() => window.__hub.renders());
+    await go(page, 'report-monthly'); await page.waitForTimeout(600); await liveOnce(); const r0 = await rd(), c0 = await lfsCap();
+    ok('[แพตช์ท้าย] รายงาน: “สถานะตรวจ” ของ L&F = เวลาอ่าน LF รายปี/สถานะ จริง (ไม่ค้างเวลาไฟล์สรุป 15 พ.ย. 01:05)', !!r0.lostfoundYear && c0.includes(fdt(r0.lostfoundYear)) && !c0.includes('01:05'), c0 + ' | readAt ' + r0.lostfoundYear);
+    await page.request.get(BASE + '/__test/clock/180'); const n0 = await rnd(); await liveOnce(); const r1 = await rd(), c1 = await lfsCap(), n1 = await rnd();
+    ok('[แพตช์ท้าย] รายงาน: อ่านใหม่หลัง TTL ยอดเท่าเดิม → “สถานะตรวจ” เปลี่ยนตามเวลาอ่าน โดยไม่วาดทั้งหน้า', r1.lostfoundYear !== r0.lostfoundYear && c1.includes(fdt(r1.lostfoundYear)) && n1 === n0, c1 + ' | renders ' + n0 + '→' + n1);
+    // รายงานประจำวัน: เลือกวันที่ก่อนหน้า แล้วอ่านใหม่ → หัวรายงานบอกเวลาอ่านรายแหล่งใหม่ วันที่ที่เลือกคงเดิม
+    await go(page, 'report-daily'); await page.waitForSelector('input[aria-label="เลือกวันที่"]'); await page.click('.ctrls button:has-text("ก่อนหน้า")'); await page.waitForTimeout(400);
+    const dsel = await page.inputValue('input[aria-label="เลือกวันที่"]'), sub = () => page.evaluate(() => (document.querySelector('#view .ph p') || {}).textContent || '');
+    await page.request.get(BASE + '/__test/clock/180'); const n2 = await rnd(); await liveOnce(); const r2 = await rd(), s2 = await sub(), n3 = await rnd(), dsel2 = await page.inputValue('input[aria-label="เลือกวันที่"]');
+    ok('[แพตช์ท้าย] รายงานประจำวัน: หัวรายงานระบุเวลาอ่านของแหล่งเหตุการณ์ / L&F / รถเข้า ตามรอบอ่านล่าสุด · ไม่วาดทั้งหน้า · วันที่ที่เลือกคงเดิม', /เหตุการณ์/.test(s2) && /L&F/.test(s2) && /รถเข้า/.test(s2) && s2.includes(r2.incidents.slice(11, 16)) && n3 === n2 && dsel2 === dsel, s2 + ' | renders ' + n2 + '→' + n3 + ' | ' + dsel + '→' + dsel2);
+    // แหล่ง LF รายปี/สถานะ อ่านล้ม แต่แหล่งอื่นอ่านได้ → ป้ายสถานะไม่ดูเหมือนอ่านสำเร็จรอบนี้
+    await go(page, 'report-monthly'); await page.waitForTimeout(500); const cBefore = await lfsCap();
+    await page.request.get(BASE + '/__test/gid/1811117659/down'); await page.request.get(BASE + '/__test/clock/180'); await liveOnce(); const r3 = await rd(), c3 = await lfsCap();
+    ok('[แพตช์ท้าย] LF รายปีอ่านล้ม แหล่งอื่นอ่านได้ → “สถานะตรวจ” คงเวลาอ่านสำเร็จครั้งก่อน + บอกว่ารอบล่าสุดอ่านไม่สำเร็จ (ไม่ใช้เวลาของแหล่งอื่น)', !r3.lostfoundYear && !!r3.incidents && !c3.includes(fdt(r3.incidents)) && c3.includes(fdt(r2.lostfoundYear)) && /ไม่สำเร็จ/.test(c3), cBefore + ' → ' + c3);
+    await page.request.get(BASE + '/__test/gid/1811117659/up'); await page.request.get(BASE + '/__test/clock/180'); await liveOnce();
+  }
+  { // แพตช์ท้าย (local print media): แผนที่จุดเกิดเหตุที่ยังไม่ได้เลื่อนถึง (lazy) ต้องไม่พิมพ์เป็นกล่องว่าง “กำลังโหลดแผนที่…”
+    await go(page, 'report-monthly'); await page.waitForTimeout(800); await page.evaluate(() => window.scrollTo(0, 0));
+    await page.emulateMedia({ media: 'print' }); await page.waitForTimeout(200);
+    const P = await page.evaluate(() => { const vis = (e) => { const s = getComputedStyle(e); return s.display !== 'none' && e.getClientRects().length > 0; };
+      const w = [...document.querySelectorAll('#view .map-wait')].filter(vis).length, plan = [...document.querySelectorAll('#view .dash-map svg')].filter(vis).length;
+      return { wait: w, plan, chat: [...document.querySelectorAll('#chatFab, .chat-panel')].filter(vis).length }; });
+    await page.emulateMedia({ media: 'screen' }); await page.waitForTimeout(200);
+    const S = await page.evaluate(() => [...document.querySelectorAll('#view .dash-map')].map((b) => [...b.children].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.className).join('+')));
+    ok('[แพตช์ท้าย·print local] รายงานประจำเดือน (สื่อพิมพ์): แผนที่ที่ยังไม่โหลดพิมพ์เป็นแผนผังตามพิกัด ไม่ใช่กล่องว่าง · ปุ่ม AI ไม่ถูกพิมพ์ · กลับหน้าจอแล้วแสดงแบบเดิม', P.wait === 0 && P.plan >= 1 && P.chat === 0 && S.every((x) => !/map-print/.test(x)), JSON.stringify(P) + ' screen:' + S.join(','));
+  }
   { // รอบ 13 ต่อ: เปิด Dashboard ค้างข้าม 00:00 (เวลาไทย) โดยข้อมูลไม่เปลี่ยน → “วันนี้” และยอดของวันนี้ต้องเปลี่ยนตามวันจริง
     const M = await mk(); const p2 = M.page; await p2.goto(BASE + '/#dashboard'); await p2.waitForSelector('#loginView'); await login(p2, '0123'); await p2.waitForSelector('.nows .now'); await p2.waitForTimeout(1200);
     const bk = new Date(Date.now() + 7 * 3600e3), nd = new Date(Date.UTC(bk.getUTCFullYear(), bk.getUTCMonth(), bk.getUTCDate() + 1, 0, 5) - 7 * 3600e3);

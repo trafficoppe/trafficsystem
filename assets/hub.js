@@ -303,7 +303,10 @@
     return el('article', { class: 'card kpi', style: '--accent:' + (o.color || C.c1) }, b);
   }
   function kpiGrid(list) { return el('div', { class: 'kpis' }, list.map(kpi)); }
-  function figure(title, caption, body) { var f = el('figure', { class: 'card chart' }, [el('figcaption', {}, [el('strong', { text: title }), caption ? el('span', { text: caption }) : null])]); f.appendChild(body); return f; }
+  function figure(title, caption, body) {          /* caption เป็นฟังก์ชันได้ = ป้ายที่ตามรอบอ่านข้อมูลสด (อัปเดตเฉพาะจุด) */
+    var cap = typeof caption === 'function' ? caption() : caption, sp = cap ? el('span', { text: cap }) : null;
+    if (sp && typeof caption === 'function') { sp.classList.add('live-ts'); sp.__ts = caption; }
+    var f = el('figure', { class: 'card chart' }, [el('figcaption', {}, [el('strong', { text: title }), sp])]); f.appendChild(body); return f; }
   function notesList(list, tone) { return list && list.length ? el('ul', { class: 'notes' + (tone ? ' ' + tone : '') }, list.map(function (n) { return el('li', { text: n }); })) : null; }
   function srcLine(m) { return m ? el('p', { class: 'src', text: 'ที่มา: ' + m.source + (m.updated ? ' · อัปเดตล่าสุด ' + dLabel(m.updated) : '') }) : null; }
   /* นิยาม สูตร และข้อสังเกตเชิงเทคนิค: แสดงเฉพาะในหน้า “ข้อมูลระบบเพิ่มเติม” (ผู้ดูแล) — หน้าใช้งานทั่วไปไม่แสดง */
@@ -665,7 +668,7 @@
       add('lostfound', 'Lost & Found', repSec('lostfound', 'search', 'Lost & Found — แจ้งของหาย / เก็บของได้', { more: 'lostfound', note: rt + ' · อัปเดต ' + dLabel(lf.updated), color: C.c4 }, [
         tiles([{ l: 'แจ้งของหาย', v: num(lsum('สิ่งของสูญหาย')), u: 'รายการ', color: C.fine }, { l: 'เก็บของได้', v: num(lsum('พบสิ่งของ')), u: 'รายการ', color: C.c2 }, { l: 'แบบฟอร์มรับของคืน', v: num(lsum('รับของคืน')), u: 'ฉบับ', s: 'จำนวนแบบฟอร์ม ไม่ใช่สถานะ', color: C.c4 },
           lfs ? { l: 'สถานะ “รับของคืนแล้ว”', v: num(ret), u: 'รายการ', s: 'นับจากสถานะของทุกรายการ', color: C.c1 } : { l: 'สถานะ “รับของคืนแล้ว”', na: 'ไม่มีข้อมูลยืนยัน' }, lfs ? { l: 'ยังดำเนินการอยู่', v: num(pend), u: 'รายการ', s: 'ยังไม่พบ / รอเจ้าของมารับ / รอดำเนินการ', color: C.c5 } : null]),
-        figure('ตารางรายเดือน', 'หน่วย: รายการ' + (lfs ? ' · สถานะตรวจ ' + dLabel(lfs.checkedAt) : ''), rtable(['เดือน', 'แจ้งของหาย', 'เก็บของได้', 'แบบรับของคืน', 'ไม่ระบุประเภท', 'รวม', 'รับคืนแล้ว', 'ยังดำเนินการ'],
+        figure('ตารางรายเดือน', function () { var s2 = extra('lostfoundStatus'); return 'หน่วย: รายการ' + (s2 ? ' · สถานะตรวจ ' + srcReadTxt('lostfoundYear', s2.checkedAt) : ''); }, rtable(['เดือน', 'แจ้งของหาย', 'เก็บของได้', 'แบบรับของคืน', 'ไม่ระบุประเภท', 'รวม', 'รับคืนแล้ว', 'ยังดำเนินการ'],
           lm.map(function (r) { var x = st[r.month]; return [mFull(r.month), num(ty(r, 'สิ่งของสูญหาย')), num(ty(r, 'พบสิ่งของ')), num(ty(r, 'รับของคืน')), num(ty(r, '(ไม่ระบุประเภท)')), num(sumObj(r.byType)), x ? num(x.returned) : '–', x ? num(pendOf(x)) : '–']; }),
           { num: [1, 2, 3, 4, 5, 6, 7], foot: ['รวม', num(lsum('สิ่งของสูญหาย')), num(lsum('พบสิ่งของ')), num(lsum('รับของคืน')), num(lsum('(ไม่ระบุประเภท)')), num(lall), lfs ? num(ret) : '–', lfs ? num(pend) : '–'] })),
         el('div', { class: 'grid2' }, [figure('รายเดือน แยกประเภทรายการ', 'หน่วย: รายการ', lfChart(pickMonth('lostfound'))), lfs ? figure('รายเดือน แยกสถานะ', 'หน่วย: รายการ', lfStatusChart(pickMonth('lostfound'))) : null])]));
@@ -1170,7 +1173,8 @@
     if (dash.map) { try { dash.map.remove(); } catch (e) {} dash.map = null; dash.layer = null; }
     var plan = function (msg) { box.textContent = ''; box.appendChild(el('div', { class: 'map-warn', role: 'status' }, [el('b', { text: msg })])); var w = el('div', { class: 'map-svg map-mini' }); drawPlan(w, pts, am.box); box.appendChild(w); };
     if (!tilesAllowed()) { plan('เปิดจากไฟล์ในเครื่อง จึงแสดงเป็นแผนผังตามพิกัด — แผนที่ถนนและอาคารจะแสดงเมื่อเปิดผ่านเว็บไซต์ (http/https)'); return box; }
-    box.appendChild(el('div', { class: 'lf-map dash map-wait', role: 'status', text: 'กำลังโหลดแผนที่…' }));      /* จองความสูงเท่าแผนที่จริง — โหลดภายหลังไม่ดันเนื้อหาเลื่อน */
+    box.appendChild(el('div', { class: 'lf-map dash map-wait', role: 'status', text: 'กำลังโหลดแผนที่…' }));
+    var pp = el('div', { class: 'map-svg map-mini map-print', 'aria-hidden': 'true' }); drawPlan(pp, pts, am.box); box.appendChild(pp);      /* แพตช์ท้าย: ถ้าพิมพ์ก่อนแผนที่โหลด (ยังไม่เลื่อนถึง) พิมพ์แผนผังตามพิกัดแทนกล่องว่าง — แสดงเฉพาะสื่อพิมพ์ ถูกล้างเมื่อแผนที่จริงโหลด */      /* จองความสูงเท่าแผนที่จริง — โหลดภายหลังไม่ดันเนื้อหาเลื่อน */
     whenNear(box, function () { tilesReady(function (ok) { setTimeout(function () {
       if (!document.body.contains(box)) return;
       if (!ok) { plan((lf.reason || 'โหลดแผนที่พื้นหลังไม่สำเร็จ') + ' — แสดงแผนผังตามพิกัดแทน'); return; }
@@ -2127,12 +2131,18 @@
   ['staff', 'staff-strategy', 'staff-ops', 'area-inspect', 'area-assist', 'area-traffic', 'report-radio'].forEach(function (id) { PAGE_TITLE[id] = PAGE_TITLE[id] || id; });
 
   /* ---------- รายงานประจำวัน: สถิติรวมของวันที่เลือก (จากข้อมูลรายวันที่ตรวจแล้ว) ---------- */
+  /* แพตช์ท้าย: หัวรายงานประจำวันบอกเวลาอ่านต้นทางรายแหล่ง (ไม่ใช้เวลาเหตุการณ์เวลาเดียวแทนทุกแหล่ง)
+   * เวลาอ่านต้นทาง ≠ วันที่รายการล่าสุด ≠ เวลาสร้างไฟล์สรุป */
+  function repDailyDesc() {
+    var inc = extra('incidentsDaily'), lfd = extra('lostfoundDaily'), g = mod('gate');
+    return 'สรุปตัวเลขของวันที่เลือก · อ่านต้นทาง: เหตุการณ์ ' + srcReadTxt('incidents', inc && inc.checkedAt) + ' · L&F ' + srcReadTxt('lostfound', lfd && lfd.checkedAt) + ' · รถเข้า ' + srcReadTxt('gate', stampTxt(DATA.stats.generatedAt || ''));
+  }
   PAGES['report-daily'] = function (v) {
     var inc = extra('incidentsDaily'), lfd = extra('lostfoundDaily'), gate = mod('gate'), t = todayStr();
     var icv = coverOf(inc), cover = inc ? (icv.ok ? icv.day : inc.lastEntry) : t, day = state.repDay && state.repDay <= cover ? state.repDay : (t <= cover ? t : cover);
     var inp = el('input', { type: 'date', value: day, max: cover, 'aria-label': 'เลือกวันที่' }); inp.onchange = function () { if (inp.value) { state.repDay = inp.value; route(true); } };
-    v.appendChild(pageHead('รายงานประจำวัน', 'สรุปตัวเลขของวันที่เลือก · ข้อมูลตรวจถึง ' + dLabel(inc && icv.ok ? inc.checkedAt : cover), el('div', { class: 'ctrls' }, [ic('calendar'), el('label', { text: 'วันที่' }), inp,
-      el('button', { type: 'button', class: 'btn-ghost', text: 'ก่อนหน้า', onclick: function () { state.repDay = addDays(day, -1); route(true); } }), el('button', { type: 'button', class: 'btn-ghost', text: 'ถัดไป', disabled: day >= cover ? '' : null, onclick: function () { state.repDay = addDays(day, 1); route(true); } })])));
+    v.appendChild(liveText(pageHead('รายงานประจำวัน', repDailyDesc(), el('div', { class: 'ctrls' }, [ic('calendar'), el('label', { text: 'วันที่' }), inp,
+      el('button', { type: 'button', class: 'btn-ghost', text: 'ก่อนหน้า', onclick: function () { state.repDay = addDays(day, -1); route(true); } }), el('button', { type: 'button', class: 'btn-ghost', text: 'ถัดไป', disabled: day >= cover ? '' : null, onclick: function () { state.repDay = addDays(day, 1); route(true); } })])), '.ph p', repDailyDesc));
     var s = incSum(incRows(function (r) { return r.date === day; })), g = gate ? gate.daily.filter(function (r) { return r.date === day; })[0] : null, l = lfd ? lfd.rows.filter(function (r) { return r.date === day; })[0] : null;
     v.appendChild(section('เหตุการณ์และอุบัติเหตุ — ' + dLabel(day), { more: 'traffic' }, [kpiGrid([{ icon: 'alert', label: 'เหตุการณ์ทั้งหมด', value: num(s.n), unit: 'เหตุการณ์', color: C.c1 }, { icon: 'car', label: 'อุบัติเหตุจากยานพาหนะ', value: num(s.v), unit: 'เหตุ', color: C.c3 },
       { icon: 'alert', label: 'อุบัติเหตุทั่วไป', value: num(s.g), unit: 'เหตุ', color: C.c2 }, { icon: 'heart', label: 'รับส่งผู้ป่วย', value: num(s.p), unit: 'ครั้ง', color: C.c4 }, { icon: 'users', label: 'ผู้บาดเจ็บ/ผู้ป่วย', value: num(s.inj), unit: 'คน', color: C.fine }])]));
@@ -2355,7 +2365,15 @@
     if (!AUTH.started) { AUTH.started = true; AUTH.cb(); } else route(true);
     liveRefresh();
   }
-  function liveReset() { live.sig = {}; live.busy = null; live.at = null; live.readAt = {}; live.errors = null; live.ok = null; }      /* รอบ 13: ข้ามรุ่น Login ไม่ใช้สถานะ/เวลาอ่านของรุ่นก่อน */
+  function liveReset() { live.sig = {}; live.busy = null; live.at = null; live.readAt = {}; live.lastOk = {}; live.errors = null; live.ok = null; }
+  /* แพตช์ท้าย: ข้อความเวลาของแหล่ง k — อ่านสำเร็จรอบนี้ = เวลาอ่านจริง · รอบล่าสุดล้ม = เวลาอ่านสำเร็จครั้งก่อน + บอกว่าไม่สำเร็จ
+   * ยังไม่เคยอ่านสด (ไม่ Login/ไฟล์สรุป) = “ไฟล์สรุป …” — ไม่ใช้เวลาตอบคำขอหรือเวลาของแหล่งอื่นแทน */
+  function srcReadTxt(k, snapAt) {
+    var r = live.readAt && live.readAt[k], last = live.lastOk && live.lastOk[k];
+    if (r) return dLabel(r);
+    if (live.errors && (live.errors[k] || live.errors.all)) return (last ? dLabel(last) : 'ยังไม่เคยอ่านสำเร็จ') + ' (รอบล่าสุดอ่านไม่สำเร็จ)';
+    return last ? dLabel(last) : 'ไฟล์สรุป ' + (/^\d{4}-\d\d-\d\d \d/.test(snapAt || '') ? dLabel(snapAt) : snapAt || 'ไม่ทราบ');
+  }      /* รอบ 13: ข้ามรุ่น Login ไม่ใช้สถานะ/เวลาอ่านของรุ่นก่อน */
   function authLost() { if (!AUTH.on || !AUTH.user) return; AUTH.user = null; authGen++; liveReset(); for (var k in dsCache) delete dsCache[k]; userBox(); $('view').textContent = ''; dropObs(); showLogin({ expired: true }); }
   function logout() { authGen++; liveReset(); clearTimeout(live.timer); apiCall('/logout', { method: 'POST', body: {} }).then(function () { AUTH.user = null; for (var k in dsCache) delete dsCache[k]; userBox(); $('view').textContent = ''; dropObs();
     try { location.reload(); } catch (e) { showLogin(null); } }); }      /* รอบ 12: โหลดหน้าใหม่หลังออกจากระบบ — ล้างข้อมูลสด/รายการทั้งหมดออกจากหน่วยความจำของแท็บ */
@@ -2370,12 +2388,12 @@
     var st = $('stamp'); st.parentNode.insertBefore(box, st);
   }
   /* สถิติสด: อ่านต้นทางผ่านบริการ ณ เวลาที่เรียก — ส่วนที่อ่านไม่สำเร็จคงข้อมูลล่าสุดในไฟล์ไว้และบอกสถานะ (ไม่เติม 0 ไม่เปลี่ยนเวลาให้ดูสด) */
-  var live = { at: null, errors: null, timer: null, sig: {}, busy: null, readAt: {} }, authGen = 0;
+  var live = { at: null, errors: null, timer: null, sig: {}, busy: null, readAt: {}, lastOk: {} }, authGen = 0;
   function liveApply(j) {
     var M = DATA.stats.modules, X = DATA.extra;
     ['incidents', 'lostfound', 'gate'].forEach(function (k) { if (j[k] && M[k]) { for (var f in j[k]) M[k][f] = j[k][f]; } });
     ['incidentsDaily', 'lostfoundDaily'].forEach(function (k) { if (j[k]) X[k] = j[k]; });
-    if (j.lostfoundStatus && X.lostfoundStatus) { for (var f2 in j.lostfoundStatus) X.lostfoundStatus[f2] = j.lostfoundStatus[f2]; }
+    if (j.lostfoundStatus && X.lostfoundStatus) { for (var f2 in j.lostfoundStatus) X.lostfoundStatus[f2] = j.lostfoundStatus[f2]; if ((j.sourceReadAt || {}).lostfoundYear) X.lostfoundStatus.checkedAt = j.sourceReadAt.lostfoundYear; }      /* แพตช์ท้าย: เวลาตรวจสถานะ = เวลาอ่าน LF รายปี (เดิมค้างเวลาไฟล์สรุป) */
     applyLive10(j);
   }
   /* รอบ 12: ขอ 2 ชุดแยกกัน — ชุดหลัก (เหตุการณ์/L&F/รถเข้า) แสดงทันทีที่มา ไม่รอชุดไฟล์ส่วนตัว (นักศึกษา–จยย./เรือนไทย) ซึ่งผ่านตัวกลางและช้ากว่า
@@ -2402,7 +2420,7 @@
       if (x.s !== 200 || !x.j.ok) { live.errors = { all: x.j.code || 'http ' + x.s }; liveNoteDraw(); return; }
       var j = x.j; liveApply(j);
       var core = {}; Object.keys(j.errors || {}).forEach(function (k) { core[k] = j.errors[k]; });
-      live.at = j.checkedAt; live.readAt = Object.assign({}, live.readAt, j.sourceReadAt || {}); LIVE_CORE_PARTS.forEach(function (k) { if (!(j.sourceReadAt || {})[k]) delete live.readAt[k]; }); live.errors = Object.keys(core).length ? core : null; live.ok = ['incidents', 'lostfound', 'gate'].filter(function (k) { return j[k]; });
+      live.at = j.checkedAt; live.readAt = Object.assign({}, live.readAt, j.sourceReadAt || {}); live.lastOk = Object.assign({}, live.lastOk, j.sourceReadAt || {}); LIVE_CORE_PARTS.forEach(function (k) { if (!(j.sourceReadAt || {})[k]) delete live.readAt[k]; }); live.errors = Object.keys(core).length ? core : null; live.ok = ['incidents', 'lostfound', 'gate'].filter(function (k) { return j[k]; });
       draw(liveSig(j, ['incidents', 'lostfound', 'lostfoundStatus', 'gate', 'incidentsDaily', 'lostfoundDaily']), 'core');
     });
     apiCall('/stats?scope=private').then(function (x) {

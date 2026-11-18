@@ -33,7 +33,7 @@ const SHEETS = {
 };
 const csv = (rows) => rows.map((r) => r.map((c) => (/[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c)).join(',')).join('\n');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFklEQVR4XmOsmNbOgA0wYRVlYKCLBADuLwGhta8zygAAAABJRU5ErkJggg==', 'base64');
-export const control = { sourceDown: false, clock: 0 };      // clock = เลื่อนนาฬิกาของบริการ (ms) เพื่อทดสอบ TTL โดยไม่ต้องรอจริง
+export const control = { sourceDown: false, clock: 0, downGid: {} };      // clock = เลื่อนนาฬิกาของบริการ (ms) เพื่อทดสอบ TTL โดยไม่ต้องรอจริง
 // รอบ 10: ตัวกลางอ่านไฟล์ส่วนตัว (MOCK) — เปิดไว้เป็นค่าเริ่มต้น (/__test/relay/off = ยังไม่ได้ติดตั้ง) · ภาพ GPS เป็นไฟล์ส่วนตัว อ่านได้เฉพาะผ่านตัวกลาง
 const REL = 'https://script.google.com/macros/s/MOCKRELAYDEVSERVER0000000000001/exec', RSEC = 'f'.repeat(64), PRIVATE_IMG = new Set([ID(51)]);
 const RT = {
@@ -53,6 +53,7 @@ const fetchMock = async (u, o) => { u = String(u); let m = /export\?format=csv&g
     if (b.action === 'table') { const T = RT[b.source], want = b.cols.concat(b.present), ix = want.map((c) => T[0].indexOf(c)); return Response.json({ ok: true, rows: [want].concat(T.slice(1).map((r) => ix.map((i, k) => (k < b.cols.length ? r[i] : (r[i] ? '1' : ''))))) }); }
     if (b.action === 'img') return PRIVATE_IMG.has(b.id) ? Response.json({ ok: true, mime: 'image/png', b64: PNG.toString('base64') }) : Response.json({ ok: false, code: 'not-allowed' });
     return Response.json({ ok: false, code: 'unknown-action' }); }
+  if (m && control.downGid[m[1]]) return new Response('<html>', { headers: { 'content-type': 'text/html' } });      // แพตช์ท้าย: แหล่งเดียวล้ม (แหล่งอื่นอ่านได้)
   if (m) return control.sourceDown ? new Response('<html>', { headers: { 'content-type': 'text/html' } }) : SHEETS[m[1]] ? new Response(csv(SHEETS[m[1]]), { headers: { 'content-type': 'text/csv' } }) : new Response('', { status: 404 });
   m = /drive\.google\.com\/thumbnail\?id=([-\w]+)/.exec(u); if (m) return PRIVATE_IMG.has(m[1]) ? new Response('<html>Sign in</html>', { headers: { 'content-type': 'text/html' } }) : new Response(PNG, { headers: { 'content-type': 'image/png' } });
   return new Response('', { status: 404 }); };
@@ -70,6 +71,7 @@ export function start(port, opt = {}) {
         a[10] = 'รถจักรยานยนต์'; a[11] = 'นักศึกษา'; a[12] = 'รถยนต์'; a[13] = 'บุคลากร'; a[4] = '11:25'; a[23] = D(ID(61)) + ', ' + D(ID(62)); b[4] = '8:10'; INC.push(a, b); }
       _reset(); rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/relay/')) { relayOn(rq.url.endsWith('on')); _reset(); rs.end('ok'); return; }
+    if (rq.url.startsWith('/__test/gid/')) { const [, , , g, st] = rq.url.split('/'); control.downGid[g] = st === 'down'; rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/clock/')) { control.clock += +rq.url.slice(14) * 1000 || 0; rs.end('ok'); return; }      // รอบ 13
     if (rq.url.startsWith('/__test/moto/')) { RT.studentMoto[3][2] = rq.url.endsWith('shift') ? 'วิทยาเขตพญาไท' : 'วิทยาเขตศาลายา'; rs.end('ok'); return; }   // รอบ 13: ยอดรวมเท่าเดิม แต่การแยกตามวิทยาเขตเปลี่ยน
     if (rq.url.startsWith('/__test/source/')) { control.sourceDown = rq.url.endsWith('down'); rs.end('ok'); return; }

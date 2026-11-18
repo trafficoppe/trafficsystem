@@ -768,3 +768,5 @@ body.charts-stack .grid2,body.charts-stack .trends{grid-template-columns:1fr}
 .view{min-height:calc(100vh - 64px)}
 @supports (height:100dvh){.view{min-height:calc(100dvh - 64px)}}
 @media print{.view{min-height:0}}
+.map-print{display:none}
+@media print{.dash-map .map-wait{display:none!important}.dash-map .map-print{display:block}}
