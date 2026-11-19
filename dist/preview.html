@@ -522,6 +522,13 @@ html[data-theme="dark"] .sh-M{background:#4a3a10;color:#ffe29a}html[data-theme="
 .chat-m.err{border-color:var(--bad);color:var(--bad);display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .chat-m.note{border-color:var(--warn);font-weight:700}
 .chat-src{font-size:.76rem;color:var(--muted);margin-top:5px!important;font-weight:400}
+.chat-ev{list-style:none;margin:6px 0 0;padding:0;font-size:.76rem;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.ev-tag{display:inline-block;border-radius:6px;padding:0 6px;font-weight:700;font-size:.72rem}
+.ev-live{background:var(--ok-bg);color:var(--ok)}.ev-stale{background:var(--warn-bg);color:var(--warn)}.ev-snap{background:var(--info-bg);color:var(--info)}
+.chat-act{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.chat-act .chip{text-decoration:none;display:inline-flex;align-items:center}
+.chat-sum{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.chat-m.wait{display:flex;flex-direction:column;gap:4px;align-items:flex-start}.chat-m.wait .btn-ghost{font-style:normal}
+.chip-sum{border-color:var(--brand-d);color:var(--brand-d);font-weight:700}
 .chat-quick{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 8px;background:var(--card2)}
 .chat-quick:empty{display:none}
 .chat-form{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
@@ -3814,23 +3821,64 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
     }
     function ctx() { var sc = chatScope(); return { today: todayStr(), page: currentPage(), period: sc.kind, label: sc.label, from: sc.from, to: sc.to, dataAsOf: (DATA && ((DATA.extra || {}).generatedAt || DATA.stats.generatedAt)) || '' }; }
     function busy(on) { chat.busy = on; send.disabled = on; fab.classList.toggle('busy', on); ava.classList.toggle('busy', on); }
-    function ask(text) {
-      if (chat.busy || !text) return; chat.last = text; busy(true); quick.textContent = '';
-      add('user', text); var wait = add('ai wait', 'กำลังคิดคำตอบ…'), ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(function () { if (ctl) ctl.abort(); }, 40000);
-      var fail = function (t) { wait.remove(); add('ai err', t, el('button', { type: 'button', class: 'btn-ghost', text: 'ลองใหม่', onclick: function (e) { e.target.closest('.chat-m').remove(); ask(chat.last); } })); };
-      fetch(HCFG.aiApiUrl, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, signal: ctl ? ctl.signal : undefined,
-        body: JSON.stringify({ action: 'chat', userMessage: text, chatHistory: chat.hist.slice(-6), context: ctx() }) })
+    /* รอบ 14·P2: ปุ่ม “ดูต่อ” จากบริการ — รับเฉพาะหน้าที่อยู่ในรายการ และช่วงวันที่รูปแบบ YYYY-MM-DD (ไม่รับ URL/JS อิสระ) */
+    var ACT_OK = { traffic: 1, 'accident-map': 1, lostfound: 1, gate: 1, cctv: 1, tram: 1, 'report-guard': 1, vehicle: 1, safety: 1, 'vehicle-fleet': 1, parking: 1 }, DRX = /^\d{4}-\d{2}-\d{2}$/;
+    function actBtns(list) {
+      var ok = (list || []).filter(function (a) { return a && ACT_OK[a.route] && PAGES[a.route]; }).slice(0, 4); if (!ok.length) return null;
+      return el('div', { class: 'chat-act' }, ok.map(function (a) { var h = '#' + a.route + (a.route === 'traffic' && DRX.test(a.from || '') && DRX.test(a.to || '') ? '?from=' + a.from + '&to=' + a.to : '');
+        return el('a', { class: 'chip', href: h, text: String(a.label || PAGE_TITLE[a.route] || a.route).slice(0, 60), onclick: function () { if (isMobile()) open(false); } }); }));
+    }
+    var FRESH = { live: ['ev-live', 'สด'], stale: ['ev-stale', 'ผลอ่านสำเร็จล่าสุด'], snapshot: ['ev-snap', 'ไฟล์สรุป'] };
+    function evList(ev) {
+      if (!ev || !ev.length) return null;
+      return el('ul', { class: 'chat-ev', 'aria-label': 'ที่มาและความสดของข้อมูล' }, ev.map(function (e) { var f = FRESH[e.freshness] || FRESH.snapshot;
+        return el('li', {}, [el('span', { class: 'ev-tag ' + f[0], text: f[1] }), el('span', { text: ' ' + (e.name || '') + ' — ' + (e.text || '') })]); }));
+    }
+    function metaLine(j, sec) {
+      var t = j.mode === 'canned' ? 'ตอบจากเมนูของระบบ (ไม่ได้ใช้ AI และไม่ได้อ่านแหล่งข้อมูล)' : j.mode === 'summary' ? 'คำนวณจากข้อมูลโดยตรง (ไม่ได้ใช้ AI)' : j.mode === 'cached' ? 'ใช้คำตอบเดิมของคำถามเดียวกันกับข้อมูลรุ่นเดียวกัน' : '';
+      var n = (j.reads || []).length; t = [t, j.mode === 'canned' ? '' : n ? 'อ่านแหล่งข้อมูลสด ' + n + ' ส่วน' : 'ใช้ไฟล์สรุป (ไม่ต้องอ่านแหล่งสด)', sec != null ? sec + ' วินาที' : ''].filter(Boolean).join(' · ');
+      return el('p', { class: 'chat-src', text: t });
+    }
+    function waitBox() {     /* รอบ 14·P2: บอกสถานะจริง — เวลาที่รอ + ปุ่มยกเลิก (ไม่แสดงขั้นตอนปลอม) */
+      var t0 = Date.now(), tx = el('p', { text: 'กำลังอ่านข้อมูลที่เกี่ยวข้องและเรียบเรียงคำตอบ…' }), sub = el('p', { class: 'chat-src', text: '0 วินาที' }), cancel = el('button', { type: 'button', class: 'btn-ghost', text: 'ยกเลิก' });
+      var m = el('div', { class: 'chat-m ai wait', role: 'status' }, [tx, sub, cancel]); log.appendChild(m); log.scrollTop = log.scrollHeight;
+      var iv = setInterval(function () { var sec = Math.round((Date.now() - t0) / 1000); sub.textContent = sec + ' วินาที' + (sec >= 15 ? ' — บริการ AI ตอบช้ากว่าปกติ รอได้สูงสุด 40 วินาที หรือกดยกเลิก' : ''); }, 1000);
+      return { node: m, cancel: cancel, sec: function () { return Math.round((Date.now() - t0) / 100) / 10; }, remove: function () { clearInterval(iv); m.remove(); } };
+    }
+    function request(body, onOk, label) {
+      if (chat.busy) return; chat.lastReq = { body: body, onOk: onOk, label: label }; busy(true); quick.textContent = '';
+      if (label) add('user', label);
+      var w = waitBox(), ctl = window.AbortController ? new AbortController() : null, cancelled = false, tm = setTimeout(function () { if (ctl) ctl.abort(); }, 40000);
+      w.cancel.onclick = function () { cancelled = true; if (ctl) ctl.abort(); };
+      var fail = function (t) { w.remove(); add('ai err', t, el('button', { type: 'button', class: 'btn-ghost', text: 'ลองใหม่', onclick: function (e) { e.target.closest('.chat-m').remove(); var L = chat.lastReq; request(L.body, L.onOk, ''); } })); };
+      fetch(HCFG.aiApiUrl, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, signal: ctl ? ctl.signal : undefined, body: JSON.stringify(body) })
         .then(function (r) { return r.json().then(function (j) { return { s: r.status, j: j }; }, function () { return { s: r.status, j: null }; }); })
         .then(function (x) {
           var code = x.j && x.j.code;
           if (x.s === 401) { if (AUTH.on) authLost(); return fail('หมดเวลาการเข้าสู่ระบบ — เข้าสู่ระบบใหม่แล้วถามอีกครั้ง'); }
           if (x.s === 403 && code !== 'bad-origin') return fail('บัญชีนี้ไม่มีสิทธิ์ใช้ผู้ช่วย AI');
           if (code && CHAT_ERR[code]) return fail(CHAT_ERR[code]);
-          if (!x.j || x.j.status !== 'success' || typeof x.j.reply !== 'string') return fail('ผู้ช่วย AI ตอบกลับผิดพลาด (HTTP ' + x.s + ')');
-          wait.remove(); if (x.j.verified !== false) { chat.hist.push({ role: 'User', text: text }); chat.hist.push({ role: 'AI', text: x.j.reply }); }
-          add('ai', x.j.reply, x.j.sources && x.j.sources.length ? el('p', { class: 'chat-src', text: 'ที่มา: ' + x.j.sources.join(' · ') + (x.j.asOf ? ' · ข้อมูล ณ ' + x.j.asOf : '') + (x.j.snapshot && x.j.snapshot.length ? ' · จากไฟล์สรุป (ไม่ใช่ข้อมูลสด): ' + x.j.snapshot.join(', ') : '') }) : null);
-        }, function () { fail('เชื่อมต่อผู้ช่วย AI ไม่ได้ หรือใช้เวลานานเกินไป'); })
+          if (!x.j || x.j.status !== 'success') return fail('ผู้ช่วย AI ตอบกลับผิดพลาด (HTTP ' + x.s + ')');
+          var sec = w.sec(); w.remove(); onOk(x.j, sec);
+        }, function () { fail(cancelled ? 'ยกเลิกคำถามแล้ว — ถามใหม่ได้ทุกเมื่อ' : 'เชื่อมต่อผู้ช่วย AI ไม่ได้ หรือใช้เวลานานเกิน 40 วินาที — ลองใหม่อีกครั้ง'); })
         .then(function () { clearTimeout(tm); busy(false); });
+    }
+    function ask(text) {
+      if (chat.busy || !text) return; chat.last = text;
+      request({ action: 'chat', userMessage: text, chatHistory: chat.hist.slice(-6), context: ctx() }, function (j, sec) {
+        if (typeof j.reply !== 'string') return add('ai err', 'ผู้ช่วย AI ตอบกลับผิดพลาด');
+        if (j.verified !== false && j.mode !== 'canned') { chat.hist.push({ role: 'User', text: text }); chat.hist.push({ role: 'AI', text: j.reply }); }
+        var m = add('ai', j.reply, el('div', {}, [evList(j.evidence), j.sources && j.sources.length && !(j.evidence && j.evidence.length) ? el('p', { class: 'chat-src', text: 'ที่มา: ' + j.sources.join(' · ') + (j.asOf ? ' · ข้อมูล ณ ' + j.asOf : '') }) : null, actBtns(j.actions), metaLine(j, sec)]));
+        if (j.summary) m.appendChild(el('div', { class: 'chat-act' }, [el('button', { type: 'button', class: 'chip', text: 'สรุปช่วงที่กำลังดู', onclick: summary })]));
+      }, text);
+    }
+    /* รอบ 14·P2: “สรุปช่วงที่กำลังดู” — 3–5 ประเด็น ตัวเลขคำนวณที่บริการ (ไม่ใช้ AI/โควตา) พร้อมความสดของข้อมูลและปุ่มดูต่อ */
+    function summary() {
+      var sc = chatScope();
+      request({ action: 'summary', context: ctx() }, function (j, sec) {
+        var ul = el('ul', { class: 'chat-sum' }, (j.points || []).map(function (p) { return el('li', { text: p.text }); }));
+        add('ai', 'สรุป ' + (j.label || sc.label), el('div', {}, [ul, evList(j.evidence), actBtns(j.actions), metaLine(j, sec)]));
+      }, 'สรุปช่วงที่กำลังดู (' + sc.label + ')');
     }
     function open(on) {
       panel.hidden = !on; fab.setAttribute('aria-expanded', String(on)); document.body.classList.toggle('chat-open', on);
@@ -3839,6 +3887,7 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
       if (!log.childNodes.length) {
         if (!HCFG.aiApiUrl) { add('ai note', 'ยังเชื่อมต่อผู้ช่วย AI ไม่ได้', el('p', { class: 'chat-src' }, ['เว็บไซต์นี้ยังไม่ได้ตั้งค่าบริการผู้ช่วย AI ที่ตรวจตัวตน จึงยังถามตอบไม่ได้ — ', el('a', { href: '#ai', text: 'ดูสิ่งที่ต้องตั้งค่า' })])); inp.disabled = true; send.disabled = true; }
         else { add('ai', 'สวัสดีครับ ผมช่วยสรุปสถิติของงานจราจรและความปลอดภัยได้ เช่น อุบัติเหตุ รถเข้า หรือของหาย และบอกได้ว่าดูรายละเอียดที่เมนูไหน — ถามต่อเนื่องได้เลย เช่น “แล้วเดือนก่อนล่ะ”');
+          quick.appendChild(el('button', { type: 'button', class: 'chip chip-sum', text: 'สรุปช่วงที่กำลังดู', onclick: summary }));
           ['อุบัติเหตุเดือนนี้เทียบเดือนก่อน', 'สรุป Lost & Found เดือนนี้', 'รถเข้ามหาวิทยาลัยล่าสุดวันไหน', 'ดูรายละเอียดเหตุการณ์ได้ที่ไหน'].forEach(function (t) { quick.appendChild(el('button', { type: 'button', class: 'chip', text: t, onclick: function () { ask(t); } })); }); }
       }
       if (!inp.disabled) inp.focus(); else closeB.focus();
@@ -4035,6 +4084,8 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
       var min = all.reduce(function (a, r) { return r.date < a ? r.date : a; }, '9999-12-31'), max = all.reduce(function (a, r) { return r.date > a ? r.date : a; }, '0000-01-01');
       var years = {}; all.forEach(function (r) { years[r.date.slice(0, 4)] = 1; }); var yl = Object.keys(years).sort();
       var st = state.incB || (state.incB = { from: min, to: max, autoFrom: true, autoTo: true, type: 'all', q: '', asc: false, page: 0, year: yl.indexOf(String(bkkNow().y)) >= 0 ? String(bkkNow().y) : yl[yl.length - 1] });
+      { var hq = hashQuery(), hk = (state.pageSeq || 0) + '|' + location.hash;      /* รอบ 14·P2: ลิงก์ “ดูต่อ” จากผู้ช่วย AI (#traffic?from=…&to=…) ใช้ครั้งเดียวต่อการเปิดหน้า — ผู้ใช้เปลี่ยนตัวกรองต่อได้ */
+        if (st.hqKey !== hk && (hq.from || hq.to)) { st.hqKey = hk; if (/^\d{4}-\d{2}-\d{2}$/.test(hq.from || '')) { st.from = hq.from < min ? min : hq.from; st.autoFrom = false; } if (/^\d{4}-\d{2}-\d{2}$/.test(hq.to || '')) { st.to = hq.to > max ? max : hq.to; st.autoTo = false; } if (st.from > st.to) { st.from = min; st.to = max; st.autoFrom = st.autoTo = true; } st.page = 0; } }
       if (st.autoFrom || st.from < min || st.from > max) st.from = min; if (st.autoTo || st.to > max || st.to < min) st.to = max;      /* รอบ 14: ค่าเริ่มต้น “ทั้งช่วงข้อมูล” ขยายตามรายการใหม่ · ผู้ใช้เลือกเองแล้วคงไว้ */
       var host = el('div', { class: 'incb' }), kp = el('div', { class: 'kstrips' }), yr = el('div'), list = el('div', { class: 'incb-list' }), mapBox = el('div');
       var inRangeRows = function () { return all.filter(function (r) { return r.date >= st.from && r.date <= st.to; }); };

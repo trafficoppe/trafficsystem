@@ -511,6 +511,13 @@ html[data-theme="dark"] .sh-M{background:#4a3a10;color:#ffe29a}html[data-theme="
 .chat-m.err{border-color:var(--bad);color:var(--bad);display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .chat-m.note{border-color:var(--warn);font-weight:700}
 .chat-src{font-size:.76rem;color:var(--muted);margin-top:5px!important;font-weight:400}
+.chat-ev{list-style:none;margin:6px 0 0;padding:0;font-size:.76rem;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.ev-tag{display:inline-block;border-radius:6px;padding:0 6px;font-weight:700;font-size:.72rem}
+.ev-live{background:var(--ok-bg);color:var(--ok)}.ev-stale{background:var(--warn-bg);color:var(--warn)}.ev-snap{background:var(--info-bg);color:var(--info)}
+.chat-act{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.chat-act .chip{text-decoration:none;display:inline-flex;align-items:center}
+.chat-sum{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.chat-m.wait{display:flex;flex-direction:column;gap:4px;align-items:flex-start}.chat-m.wait .btn-ghost{font-style:normal}
+.chip-sum{border-color:var(--brand-d);color:var(--brand-d);font-weight:700}
 .chat-quick{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 8px;background:var(--card2)}
 .chat-quick:empty{display:none}
 .chat-form{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
