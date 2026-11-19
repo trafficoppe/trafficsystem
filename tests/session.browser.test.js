@@ -388,7 +388,7 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
     const M = await mk(); const pg = M.page; await pg.goto(BASE + '/#dashboard'); await pg.waitForSelector('#loginView'); await login(pg, '0123'); await pg.waitForSelector('#userBox'); await pg.waitForTimeout(2500);
     await pg.evaluate(() => { window.__mark = 1; window.scrollTo(0, 300); });
     const st = () => pg.evaluate(() => ({ stamp: document.getElementById('stamp').innerText.replace(/\s+/g, ' '), ban: document.getElementById('banner').hidden ? '' : document.getElementById('banner').innerText.replace(/\s+/g, ' '), det: [...document.querySelectorAll('#banner details li')].map((x) => x.textContent), mark: window.__mark, y: Math.round(window.pageYOffset), anchor: Math.round((document.querySelector('#view section') || document.body).getBoundingClientRect().top), inc: ([...document.querySelectorAll('#view .now-card, #view .card')].find((c) => /เหตุการณ์และอุบัติเหตุ/.test(c.textContent)) || {}).textContent || '' }));
-    const refresh = async () => { await page.request.get(BASE + '/__test/clock/200'); await pg.evaluate(() => window.__hub.live()); await pg.waitForTimeout(1800); };
+    let adv = 0; const refresh = async () => { adv += 200; await page.request.get(BASE + '/__test/clock/200'); await pg.evaluate(() => window.__hub.live()); await pg.waitForTimeout(1800); };      // นาฬิกาจำลองคืนค่าเมื่อจบชุด (ไม่ดันเวลาบริการข้ามวันให้ชุดอื่น)
     const s0 = await st();
     await page.request.get(BASE + '/__test/scope500/rest/on'); await refresh(); const s1 = await st();
     ok('[รอบ 14.1] คำขอ rest ล้ม (HTTP 500) → คำเตือนภาษาไทย “อัปเดตข้อมูลบางรายการไม่สำเร็จ ขณะนี้แสดงข้อมูลที่อ่านสำเร็จล่าสุด” · รายละเอียดเฉพาะ L&F/รถเข้า (ไม่ป้ายรายงานเหตุการณ์) + รหัสอ้างอิง · ไม่แสดงชื่อภายใน', /อัปเดตข้อมูลบางรายการไม่สำเร็จ ขณะนี้แสดงข้อมูลที่อ่านสำเร็จล่าสุด/.test(s1.ban) && s1.det.length === 3 && s1.det.every((t) => /^(Lost & Found|รถเข้า)/.test(t) && /รหัสอ้างอิง TESTREF500-rest/.test(t) && /ใช้ข้อมูลที่อ่านสำเร็จเมื่อ/.test(t)) && !/lostfound:|internal/.test(s1.ban), JSON.stringify({ ban: s1.ban.slice(0, 160), det: s1.det }));
@@ -408,7 +408,34 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
     ok('[รอบ 14.1] HTTP 200 แต่ส่วนรายงานเหตุการณ์อ่านเนื้อหาไม่ครบ → เตือนเฉพาะรายงานเหตุการณ์ (สาเหตุ “ต้นทางตอบช้าเกินกำหนด” ไม่ใช่ internal)', s4.det.length === 1 && /^รายงานเหตุการณ์/.test(s4.det[0]) && /ต้นทางตอบช้าเกินกำหนด/.test(s4.det[0]), JSON.stringify(s4.det));
     await refresh(); const s5 = await st();
     ok('[รอบ 14.1] รอบถัดไปอ่านสำเร็จ → error ของแหล่งนั้นไม่ค้าง', !s5.ban && /ข้อมูลสดอ่านจากต้นทางเมื่อ/.test(s5.stamp), s5.ban);
-    await shot(pg, '14_1_banner_MOCK'); await M.ctx.close();
+    await shot(pg, '14_1_banner_MOCK'); await M.ctx.close(); await page.request.get(BASE + '/__test/clock/-' + adv);
+  }
+  { // ===== รอบ 14.2 (local-mock): รหัสอ้างอิงไม่หาย · ข้อความไม่ฟันธงสาเหตุ · คัดลอกรายงาน · เน็ตหลุด/กลับมา · ซ่อน→แสดงแท็บ =====
+    const M = await mk(); const pg = M.page; await pg.goto(BASE + '/#dashboard'); await pg.waitForSelector('#loginView'); await login(pg, '0123'); await pg.waitForSelector('#userBox'); await pg.waitForTimeout(2500);
+    const det = () => pg.evaluate(() => ({ ban: document.getElementById('banner').hidden ? '' : document.getElementById('banner').innerText.replace(/\s+/g, ' '), li: [...document.querySelectorAll('#banner details li')].map((x) => x.textContent), open: !!(document.querySelector('#banner details') || {}).open }));
+    let adv = 0; const refresh = async () => { adv += 200; await page.request.get(BASE + '/__test/clock/200'); await pg.evaluate(() => window.__hub.live()); await pg.waitForTimeout(1800); };      // นาฬิกาจำลองคืนค่าเมื่อจบชุด (ไม่ดันเวลาบริการข้ามวันให้ชุดอื่น)
+    await page.request.get(BASE + '/__test/scope500/rest/html'); await refresh(); const d1 = await det();
+    ok('[รอบ 14.2] HTTP 502 ที่ body ไม่ใช่ JSON แต่มี cf-ray → รายละเอียดยังมีรหัสอ้างอิง (ตัดรหัสศูนย์ท้าย) และบอกว่า “บริการตอบผิดพลาด (HTTP 502)” · รายละเอียดเริ่มแบบยุบ', d1.li.length === 3 && d1.li.every((t) => /รหัสอ้างอิง testray502rest(?!-)/.test(t) && /HTTP 502/.test(t)) && !d1.open, JSON.stringify(d1));
+    await page.request.get(BASE + '/__test/scope500/rest/off'); await page.request.get(BASE + '/__test/scope500/inc/on'); await refresh(); const d2 = await det();
+    ok('[รอบ 14.2] internal → “ระบบประมวลผลคำขอนี้ไม่สำเร็จ กรุณาลองใหม่หรือแจ้งรหัสอ้างอิง” (ไม่อ้างว่าไม่ใช่ปัญหาจากต้นทาง)', d2.li.length === 1 && /ระบบประมวลผลคำขอนี้ไม่สำเร็จ กรุณาลองใหม่หรือแจ้งรหัสอ้างอิง/.test(d2.li[0]) && !/ไม่ใช่ปัญหาจากไฟล์ต้นทาง/.test(d2.ban), d2.li[0]);
+    await page.request.get(BASE + '/__test/scope500/inc/off'); await page.request.get(BASE + '/__test/bodyfail/480256005/on'); await refresh(); await page.request.get(BASE + '/__test/bodyfail/480256005/off'); const d3 = await det();
+    const ref3 = ((d3.li[0] || '').match(/รหัสอ้างอิง (\w+)/) || [])[1] || '', rows3 = ref3 ? await (await page.request.get(BASE + '/__test/diag/' + ref3)).json() : [];
+    ok('[รอบ 14.2] HTTP 200 แต่ส่วนเหตุการณ์ล้ม → รหัสอ้างอิงในแถบเตือนตรงกับรายการใน diag_log (stats-part-error · incidents · source)', d3.li.length === 1 && ref3 && rows3.some((r) => r.ev === 'stats-part-error' && r.part === 'incidents' && r.stage === 'source' && r.code === 'source-timeout'), JSON.stringify({ ref3, rows3 }));
+    // คัดลอกรายงาน: ทางสำรองเมื่อ clipboard ใช้ไม่ได้ → ข้อความถูกเลือกไว้ · เนื้อหาไม่มีชื่อผู้ใช้/ตัวเลขสถิติ
+    await pg.evaluate(() => { document.querySelector('#banner details').open = true; Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.reject(new Error('denied')) } }); });
+    await pg.click('#banner .banner-rep button'); await pg.waitForTimeout(300);
+    const rep = await pg.evaluate(() => { const ta = document.querySelector('#banner .banner-rep textarea'); return { ta: ta ? ta.value : '', sel: ta ? ta.selectionEnd - ta.selectionStart : 0, msg: (document.querySelector('#banner .banner-rep-msg') || {}).textContent || '' }; });
+    ok('[รอบ 14.2] “คัดลอกรายงานปัญหา” (clipboard ใช้ไม่ได้) → แสดงข้อความให้เลือกเอง · มีเวลาพร้อมเขตเวลา/หน้า/รุ่นหน้าเว็บ+บริการ/แหล่ง/HTTP/code/stage/ref/สถานะที่แสดง · ไม่มีชื่อผู้ใช้', /เวลาไทย UTC\+7/.test(rep.ta) && /หน้า: #dashboard/.test(rep.ta) && /รุ่นบริการ: r14\.2/.test(rep.ta) && /- รายงานเหตุการณ์: แสดง .* · HTTP 200 · code source-timeout · stage source · ref dev\w+/.test(rep.ta) && rep.sel === rep.ta.length && rep.sel > 0 && !/ผู้ใช้สมมติ|0123/.test(rep.ta) && /เลือกไว้แล้ว/.test(rep.msg), rep.ta);
+    // เน็ตหลุด → “เชื่อมต่อบริการไม่สำเร็จ” + ไม่มีรหัสอ้างอิง (ไม่สร้างรหัสเอง) · กลับมา → คำเตือนหาย
+    await M.ctx.setOffline(true); await pg.evaluate(() => { window.__hub.live(); }); await pg.waitForTimeout(1200); const d4 = await det();
+    await M.ctx.setOffline(false); await refresh(); const d5 = await det();
+    ok('[รอบ 14.2] เน็ตหลุด → “เชื่อมต่อบริการไม่สำเร็จ” + “ไม่มีรหัสอ้างอิงจากเซิร์ฟเวอร์” (ไม่อ้างว่าเครื่องพัก/Sheet ล่ม) · เน็ตกลับมา → คำเตือนหายเอง', d4.li.length >= 1 && d4.li.every((t) => /เชื่อมต่อบริการไม่สำเร็จ/.test(t) && /ไม่มีรหัสอ้างอิงจากเซิร์ฟเวอร์/.test(t) && !/พักหน้าจอ|Sheet/.test(t)) && !d5.ban, JSON.stringify({ d4: d4.li.slice(0, 1), d5: d5.ban }));
+    // ซ่อนแท็บ → ไม่ยิงคำขอ (เลื่อนไว้) · แสดงแท็บอีกครั้ง → อัปเดตทันที
+    let nS = 0; const onR = (q) => { if (/\/api\/stats\?/.test(q.url())) nS++; }; pg.on('request', onR);
+    await pg.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); window.__hub.live(); }); await pg.waitForTimeout(800); const nHidden = nS;
+    await pg.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }); document.dispatchEvent(new Event('visibilitychange')); }); await pg.waitForTimeout(1500); pg.off('request', onR);
+    ok('[รอบ 14.2] แท็บซ่อน → เลื่อนการอัปเดต (0 คำขอ) · กลับมาแสดง → อัปเดตทันที', nHidden === 0 && nS >= 2, 'hidden ' + nHidden + ' · visible ' + nS);
+    await M.ctx.close(); await page.request.get(BASE + '/__test/clock/-' + adv);
   }
   { // รอบ 13 ต่อ: เปิด Dashboard ค้างข้าม 00:00 (เวลาไทย) โดยข้อมูลไม่เปลี่ยน → “วันนี้” และยอดของวันนี้ต้องเปลี่ยนตามวันจริง
     const M = await mk(); const p2 = M.page; await p2.goto(BASE + '/#dashboard'); await p2.waitForSelector('#loginView'); await login(p2, '0123'); await p2.waitForSelector('.nows .now'); await p2.waitForTimeout(1200);

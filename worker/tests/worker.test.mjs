@@ -76,7 +76,7 @@ const deps = { fetch: fetchMock, now: () => NOW };
 const ENV = (o = {}) => Object.assign({ DB: db, ASSET_REF: '7c183a7', ADMIN_CODES: '4567', SHEET_MAIN: 'MOCKMAIN', SHEET_LF: 'MOCKLF', SHEET_OPS: 'MOCKOPS', SHEET_EVENTS: 'MOCKEV', SHEET_GPS: 'MOCKGPS', AI_MODEL: '@cf/mock/model',
   AI: { run: async (model, input) => { aiCalls.push({ model, input }); if (ENV.aiThrow) throw new Error(ENV.aiThrow); return { response: ENV.aiReply || 'เดือน พ.ย. 2569 มีเหตุการณ์รวม 3 เหตุการณ์ (ข้อมูล ณ 15 พ.ย. 2569 19:00 น.)' }; } } }, o);
 let db = d1();
-const req = (p, o = {}) => new Request('https://hub.example.test' + p, { method: o.method || 'GET', headers: Object.assign({ 'CF-Connecting-IP': o.ip || '10.20.5.9' }, o.cookie ? { Cookie: o.cookie } : {}, o.origin ? { Origin: o.origin } : {}, o.inm ? { 'If-None-Match': o.inm } : {}, o.body ? { 'content-type': 'application/json' } : {}), body: o.body ? JSON.stringify(o.body) : undefined });
+const req = (p, o = {}) => new Request('https://hub.example.test' + p, { method: o.method || 'GET', headers: Object.assign({ 'CF-Connecting-IP': o.ip || '10.20.5.9' }, o.cookie ? { Cookie: o.cookie } : {}, o.origin ? { Origin: o.origin } : {}, o.inm ? { 'If-None-Match': o.inm } : {}, o.ray ? { 'cf-ray': o.ray } : {}, o.body ? { 'content-type': 'application/json' } : {}), body: o.body ? JSON.stringify(o.body) : undefined });
 const run = async (p, o = {}, env = ENV()) => { const r = await handle(req(p, o), env, deps); const ct = r.headers.get('content-type') || ''; return { s: r.status, j: /json/.test(ct) ? await r.json() : null, t: /json/.test(ct) ? '' : await r.text(), h: r.headers }; };
 const loginAs = async (code, o = {}) => { const r = await run('/api/login', Object.assign({ method: 'POST', body: { code } }, o)); const sc = r.h.get('set-cookie') || ''; return { r, cookie: sc.split(';')[0], sc }; };
 
@@ -485,8 +485,46 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
         // 4) ตรวจ session ใน D1 ล้มชั่วคราว → 503 auth-unavailable (ไม่ใช่ internal) และไม่มีข้อมูล · ไม่มี session → 401 · หัว x-hub-rev บอกรุ่นบริการ
         db.prepare = (sql) => { if (/FROM sessions WHERE id/.test(sql)) throw new Error('D1_ERROR: Network connection lost.'); return realPrep(sql); }; logs.length = 0; const a1 = await call('/api/stats?scope=inc', mk()); db.prepare = realPrep;
         const a2 = await call('/api/stats?scope=inc', mk(), '');
-        ok('[รอบ 14.1] D1 ตรวจ session ล้ม → 503 auth-unavailable ไม่มีข้อมูล (เดิม 500 internal) · ไม่มี session → 401 · ทุกคำตอบมี x-hub-rev', a1.s === 503 && a1.j.code === 'auth-unavailable' && !a1.j.incidents && logs.some((l) => /"ev":"auth-d1-error"/.test(l)) && a2.s === 401 && !a2.j.incidents && a1.rev === 'r14.1b' && a2.rev === 'r14.1b', JSON.stringify({ a1: a1.s + ' ' + a1.j.code, a2: a2.s, rev: a1.rev }));
+        ok('[รอบ 14.1] D1 ตรวจ session ล้ม → 503 auth-unavailable ไม่มีข้อมูล (เดิม 500 internal) · ไม่มี session → 401 · ทุกคำตอบมี x-hub-rev', a1.s === 503 && a1.j.code === 'auth-unavailable' && !a1.j.incidents && logs.some((l) => /"ev":"auth-d1-error"/.test(l)) && a2.s === 401 && !a2.j.incidents && a1.rev === 'r14.2' && a2.rev === 'r14.2', JSON.stringify({ a1: a1.s + ' ' + a1.j.code, a2: a2.s, rev: a1.rev }));
         ok('[รอบ 14.1] log ไม่มี cookie/รหัสพนักงาน/URL/รหัสไฟล์', logs.every((l) => !/0123|sid=|https?:\/\/|MOCK[A-Z]{3,}\d|[A-Za-z0-9_-]{30,}/.test(l)), logs.find((l) => /0123|sid=|https?:\/\/|[A-Za-z0-9_-]{30,}/.test(l)) || '');
+      } finally { console.error = ce; bodyFailGid = ''; downGid = ''; } }
+    // ================= รอบ 14.2: บันทึกข้อผิดพลาดย้อนหลังใน D1 (diag_log) — ฐาน SQLite จริงในเครื่อง ไม่ใช่ Map =================
+    { NOW += 86400e3; _reset(); const U = (await loginAs('0123')).cookie, INC = SOURCES(E).incidents[1], ce = console.error, out = []; console.error = (x) => { out.push(String(x)); };
+      const mk = () => ({ fetch: fetchMock, now: () => NOW });      // deps ใหม่ทุกคำขอ (เหมือน production)
+      const call = async (p, ray, cookie) => { const x = await handle(req(p, { cookie: cookie === undefined ? U : cookie, ray }), E, mk()); return { s: x.status, j: await x.json() }; };
+      const byRef = (ref) => db._db.prepare('SELECT ev, ref, rev, route, scope, part, stage, status, code, type, cause, msg FROM diag_log WHERE ref = ? ORDER BY id').all(ref);      // วิธีค้นเดียวกับเอกสาร (parameterized)
+      const nLog = () => db._db.prepare('SELECT COUNT(*) AS n FROM diag_log').get().n;
+      try {
+        db._db.exec('DELETE FROM diag_log'); _coldIsolate(); NOW += 130e3; const n0 = nLog(); await call('/api/stats?scope=inc', 'RAYOK1');
+        ok('[รอบ 14.2] คำขอที่สำเร็จไม่เขียน diag_log', nLog() === n0);
+        _coldIsolate(); NOW += 130e3; bodyFailGid = INC; const r1 = await call('/api/stats?scope=inc', 'RAYBODY1'); bodyFailGid = '';
+        _coldIsolate(); _coldImg(); const rows1 = byRef('RAYBODY1');      // อ่านคืนหลังจำลองเครื่องใหม่ (หน่วยความจำในเครื่องล้างแล้ว)
+        ok('[รอบ 14.2] เนื้อหาต้นทางขาด → บันทึก stats-part-error ลง D1 (part/stage/code/ชนิดสาเหตุเดิม/รุ่น) ค้นคืนด้วย ref ได้หลังเปลี่ยนเครื่อง', r1.j.errors.incidents === 'source-timeout' && rows1.length >= 1 && rows1.some((r) => r.ev === 'stats-part-error' && r.part === 'incidents' && r.stage === 'source' && r.code === 'source-timeout' && r.cause === 'TimeoutError' && r.rev === 'r14.2'), JSON.stringify(rows1));
+        const realPrep = db.prepare; db.prepare = (sql) => { if (/FROM sessions WHERE id/.test(sql)) throw new Error('D1_ERROR: Network connection lost.'); return realPrep(sql); };
+        const a1 = await call('/api/stats?scope=inc', 'RAYAUTH1'); db.prepare = realPrep; const rows2 = byRef('RAYAUTH1');
+        ok('[รอบ 14.2] D1 ตรวจ session ล้ม → 503 ไม่มีข้อมูล + ref ในคำตอบตรงกับ log · auth-d1-error และ route-error ผูก ref เดียวกัน (route = /api/stats ไม่มี query)', a1.s === 503 && !a1.j.incidents && a1.j.ref === 'RAYAUTH1' && rows2.some((r) => r.ev === 'auth-d1-error' && r.cause === null && r.type === 'Error') && rows2.some((r) => r.ev === 'route-error' && r.route === '/api/stats' && r.status === 503 && r.code === 'auth-unavailable' && r.cause === 'Error'), JSON.stringify(rows2));
+        db.prepare = (sql) => { if (/FROM sessions WHERE id/.test(sql)) throw new Error('D1_ERROR: x'); return realPrep(sql); }; const a2 = await call('/api/stats?scope=inc', 'a5cf000011112222-BKK'); db.prepare = realPrep;
+        ok('[รอบ 14.2] ref รูปแบบจริง (มีรหัสศูนย์ท้าย) → คำตอบและ log ใช้รหัสเดียวกัน a5cf000011112222', a2.j.ref === 'a5cf000011112222' && byRef('a5cf000011112222').length >= 2, JSON.stringify(a2.j));
+        // คำขอพร้อมกัน 2 รายการ → ref ไม่ปนกัน
+        _coldIsolate(); NOW += 130e3; downGid = INC; await Promise.all([call('/api/stats?scope=inc', 'RAYPARA'), call('/api/stats?scope=inc', 'RAYPARB')]); downGid = '';
+        const pa = byRef('RAYPARA'), pb = byRef('RAYPARB');
+        ok('[รอบ 14.2] คำขอพร้อมกัน 2 รายการ → แต่ละ ref มี log ของตัวเอง ไม่ปนกัน', pa.length >= 1 && pb.length >= 1 && pa.every((r) => r.ref === 'RAYPARA') && pb.every((r) => r.ref === 'RAYPARB'), JSON.stringify([pa.length, pb.length]));
+        // ตัดข้อมูลอ่อนไหวในข้อความ
+        db.prepare = (sql) => { if (/INSERT INTO stats_lkg/.test(sql)) throw new Error('D1_ERROR: fail "นายสมชาย ใจดี" somchai@mahidol.ac.th 0812345678 https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz123456/edit sid=abc'); return realPrep(sql); };
+        _coldIsolate(); NOW += 130e3; await call('/api/stats?scope=inc', 'RAYREDACT1'); db.prepare = realPrep;
+        const rr = byRef('RAYREDACT1'), allTxt = JSON.stringify(db._db.prepare('SELECT * FROM diag_log').all());
+        ok('[รอบ 14.2] ข้อความที่เก็บตัดชื่อ/อีเมล/เบอร์/URL/รหัสไฟล์ออก · ไม่มี cookie/รหัสพนักงาน/query ในตาราง', rr.some((r) => r.ev === 'lkg-write-error') && !/สมชาย|somchai|0812345678|docs\.google|1AbCdEf|sid=|0123|scope=|\?/.test(allTxt.replace(/"msg":"[^"]*"/g, (m) => m.replace(/\?/g, ''))), rr.map((r) => r.msg).join(' | '));
+        // เพดาน 1,000 รายการ + กันซ้ำในคำขอเดียว
+        const ins = db._db.prepare("INSERT INTO diag_log(at, ref, ev) VALUES (?, 'OLD', 'filler')"); for (let i = 0; i < 1005; i++) ins.run(i);
+        _coldIsolate(); NOW += 130e3; downGid = INC; await call('/api/stats?scope=inc', 'RAYCAP1'); downGid = '';
+        ok('[รอบ 14.2] เพดาน ≤ 1,000 รายการ (ล้างของเก่าตอนเขียนใหม่) และรายการใหม่ยังอยู่', nLog() <= 1000 && byRef('RAYCAP1').length >= 1, 'count=' + nLog());
+        // ตัวบันทึกล้ม → ผลข้อมูลไม่เปลี่ยน ไม่วนบันทึกซ้ำ · auth ที่ตรวจไม่ได้ยังไม่ส่งข้อมูล
+        db.prepare = (sql) => { if (/diag_log/.test(sql)) throw new Error('D1_ERROR: diag down'); return realPrep(sql); }; out.length = 0;
+        _coldIsolate(); NOW += 130e3; downGid = INC; const f1 = await call('/api/stats?scope=inc', 'RAYDIAGDOWN1'); downGid = '';
+        const dwe = out.filter((l) => /diag-write-error/.test(l)).length;
+        db.prepare = (sql) => { if (/diag_log/.test(sql) || /FROM sessions WHERE id/.test(sql)) throw new Error('D1_ERROR: all down'); return realPrep(sql); };
+        const f2 = await call('/api/stats?scope=inc', 'RAYDIAGDOWN2'); db.prepare = realPrep;
+        ok('[รอบ 14.2] diag_log เขียนไม่ได้ → คำตอบเหมือนเดิม (200 + ผลสำรอง) · แจ้ง console ครั้งเดียวต่อเหตุการณ์ ไม่วน · session ตรวจไม่ได้ยัง 503 ไม่มีข้อมูล', f1.s === 200 && f1.j.errors.incidents && dwe >= 1 && dwe <= 3 && f2.s === 503 && !f2.j.incidents, JSON.stringify({ f1: f1.s, dwe, f2: f2.s }));
       } finally { console.error = ce; bodyFailGid = ''; downGid = ''; } }
   _reset(); }
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ทั้งหมดเป็นการทดสอบ local ด้วยของจำลอง)'); process.exit(fails ? 1 : 0);

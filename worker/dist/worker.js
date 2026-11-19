@@ -428,14 +428,59 @@ var Err = class extends Error {
     this.extra = extra;
   }
 };
-var WORKER_REV = "r14.1b";
+var WORKER_REV = "r14.2";
 var SEC = { "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin", "x-hub-rev": WORKER_REV };
 var redact = (t) => String(t == null ? "" : t).replace(/https?:\/\/[^\s'")]+/g, "<url>").replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "<email>").replace(/[A-Za-z0-9_-]{24,}/g, "<id>").replace(/\d{6,}/g, "<n>");
-function logErr(ev, f, e) {
+var DIAG_ROUTES = /* @__PURE__ */ new Set(["/api/stats", "/api/data", "/api/img", "/api/chat", "/api/me", "/api/login", "/api/logout", "/api/roster", "/api/health", "/api/relay"]);
+var DIAG_MAX = 1e3;
+var DIAG_PER_REQ = 12;
+var safeMsg = (t) => redact(t).replace(/"[^"]*"|'[^']*'/g, "<q>").replace(/[\w.-]+=[^\s,;&]*/g, "<kv>").replace(/[^\x20-\x7E]/g, "?").slice(0, 160);
+var cut = (v, n2) => v == null || v === "" ? null : String(v).slice(0, n2);
+function logErr(ev, f, e, env, deps) {
+  const row = {
+    ev: cut(ev, 40),
+    ref: cut(f.ref || deps && deps.ref, 40),
+    route: f.path ? DIAG_ROUTES.has(f.path) ? f.path : "other" : null,
+    scope: cut(f.scope, 20),
+    part: cut(f.part, 20),
+    stage: cut(f.stage, 20),
+    status: typeof f.status === "number" ? f.status : null,
+    code: cut(e && typeof e.code === "string" ? e.code : null, 40),
+    type: cut(e && e.name ? e.name : typeof e, 40),
+    cause: cut(e && e.causeType, 40),
+    msg: cut(safeMsg(e && e.message), 160)
+  };
   try {
-    console.error(JSON.stringify({ ev, rev: WORKER_REV, ...f, type: e && e.name ? String(e.name) : typeof e, code: e && typeof e.code === "string" ? e.code : void 0, msg: redact(e && e.message).slice(0, 300), stack: redact(e && e.stack).split("\n").slice(1, 6).map((x) => x.trim()).join(" | ").slice(0, 600) }));
+    console.error(JSON.stringify({ rev: WORKER_REV, ...row, stack: redact(e && e.stack).split("\n").slice(1, 6).map((x) => x.trim()).join(" | ").slice(0, 600) }));
   } catch (x) {
   }
+  if (env && env.DB && deps) diagPut(env, deps, row);
+}
+function diagPut(env, deps, row) {
+  const d = deps.diag || (deps.diag = { n: 0, seen: /* @__PURE__ */ new Set(), pending: [] }), key = [row.ev, row.part, row.stage, row.code, row.status].join("|");
+  if (d.seen.has(key) || d.n >= DIAG_PER_REQ) return;
+  d.seen.add(key);
+  d.n++;
+  const p = (async () => {
+    try {
+      await env.DB.batch([
+        env.DB.prepare("INSERT INTO diag_log(at, ref, rev, ev, route, scope, part, stage, status, code, type, cause, msg) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(Date.now(), row.ref, WORKER_REV, row.ev, row.route, row.scope, row.part, row.stage, row.status, row.code, row.type, row.cause, row.msg),
+        env.DB.prepare("DELETE FROM diag_log WHERE id <= (SELECT MAX(id) FROM diag_log) - ?").bind(DIAG_MAX)
+      ]);
+    } catch (x) {
+      try {
+        console.error(JSON.stringify({ ev: "diag-write-error", rev: WORKER_REV, ref: row.ref, type: x && x.name ? String(x.name) : "unknown" }));
+      } catch (y) {
+      }
+    }
+  })();
+  if (deps.waitUntil) {
+    try {
+      deps.waitUntil(p);
+    } catch (x) {
+      d.pending.push(p);
+    }
+  } else d.pending.push(p);
 }
 var json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...SEC, ...headers } });
 var bkk = (ms) => new Date(ms + BKK).toISOString().slice(0, 16).replace("T", " ");
@@ -642,14 +687,20 @@ async function readTable(env, key, deps, mk, cfg) {
     try {
       r = await deps.fetch("https://docs.google.com/spreadsheets/d/" + src[0] + "/export?format=csv&gid=" + src[1], { redirect: "follow", signal: AbortSignal.timeout(SRC_TIMEOUT) });
     } catch (e) {
-      throw new Err(502, e && (e.name === "TimeoutError" || e.name === "AbortError") ? "source-timeout" : "source-unreachable");
+      const x = new Err(502, e && (e.name === "TimeoutError" || e.name === "AbortError") ? "source-timeout" : "source-unreachable");
+      x.causeType = e && e.name;
+      x.stage = "source-fetch";
+      throw x;
     }
     if (!r.ok || !/text\/csv/.test(r.headers.get("content-type") || "")) throw new Err(502, r.status === 401 || r.status === 403 || r.ok ? "source-private" : "source-error");
     let body;
     try {
       body = await r.text();
     } catch (e) {
-      throw new Err(502, e && (e.name === "TimeoutError" || e.name === "AbortError") ? "source-timeout" : "source-unreachable");
+      const x = new Err(502, e && (e.name === "TimeoutError" || e.name === "AbortError") ? "source-timeout" : "source-unreachable");
+      x.causeType = e && e.name;
+      x.stage = "source-body";
+      throw x;
     }
     rows = parseCsv(body);
   }
@@ -880,8 +931,10 @@ async function session(request, env, deps) {
   try {
     row = await env.DB.prepare("SELECT staff, name, unit, role, exp FROM sessions WHERE id = ?").bind(await sha(tok)).first();
   } catch (e) {
-    logErr("auth-d1-error", {}, e);
-    throw new Err(503, "auth-unavailable");
+    logErr("auth-d1-error", { stage: "auth" }, e, env, deps);
+    const x = new Err(503, "auth-unavailable");
+    x.causeType = e && e.name;
+    throw x;
   }
   return row && row.exp > deps.now() ? row : null;
 }
@@ -944,23 +997,23 @@ var mapSt = { "\u0E23\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E37\u0E19\u0E41\u0E2
 var STATS_SCOPES = { all: ["incidents", "lostfound", "lostfoundYear", "gate", "studentMoto", "ruenthai"], core: ["incidents", "lostfound", "lostfoundYear", "gate"], inc: ["incidents"], rest: ["lostfound", "lostfoundYear", "gate"], private: ["studentMoto", "ruenthai"] };
 var LKG_MAX = 7 * 864e5;
 var lkgCfg = async (env, k, deps) => STATS_SCHEMA + "-" + cacheEpoch + "|" + (await srcKey(env, PART_SRC[k], deps)).mk;
-async function lkgGet(env, k, cfg, now) {
+async function lkgGet(env, k, cfg, now, deps) {
   try {
     const r = await env.DB.prepare("SELECT at, frag FROM stats_lkg WHERE k = ? AND cfg = ?").bind(k, cfg).first();
     if (!r || typeof r.at !== "number" || !(now - r.at >= 0 && now - r.at <= LKG_MAX)) return null;
     const f = JSON.parse(r.frag);
     return f && typeof f === "object" && !Array.isArray(f) ? { at: r.at, frag: f } : null;
   } catch (e) {
-    logErr("lkg-read-error", { part: k }, e);
+    logErr("lkg-read-error", { part: k, stage: "lkg-read" }, e, env, deps);
     return null;
   }
 }
-async function lkgPut(env, k, cfg, at, frag) {
+async function lkgPut(env, k, cfg, at, frag, deps) {
   try {
     await env.DB.prepare("INSERT INTO stats_lkg(k, cfg, at, frag) VALUES(?, ?, ?, ?) ON CONFLICT(k) DO UPDATE SET cfg = excluded.cfg, at = excluded.at, frag = excluded.frag WHERE excluded.at >= stats_lkg.at OR excluded.cfg <> stats_lkg.cfg").bind(k, cfg, at, JSON.stringify(frag)).run();
     return true;
   } catch (e) {
-    logErr("lkg-write-error", { part: k }, e);
+    logErr("lkg-write-error", { part: k, stage: "lkg-write" }, e, env, deps);
     return false;
   }
 }
@@ -1087,32 +1140,32 @@ async function liveStats(env, deps, scope) {
       res.sourceReadAt[k] = bkk(at);
       stage = "lkg-write";
       try {
-        const w = lkgCfg(env, k, deps).then((c) => lkgPut(env, k, c, at, frag)).catch((e) => {
-          logErr("lkg-write-error", { part: k, ref: deps.ref }, e);
+        const w = lkgCfg(env, k, deps).then((c) => lkgPut(env, k, c, at, frag, deps)).catch((e) => {
+          logErr("lkg-write-error", { part: k, stage: "lkg-cfg" }, e, env, deps);
           return false;
         });
         if (deps.waitUntil) deps.waitUntil(w);
         else await w;
       } catch (e) {
-        logErr("lkg-write-error", { part: k, ref: deps.ref, stage }, e);
+        logErr("lkg-write-error", { part: k, stage }, e, env, deps);
       }
       if (ck) {
         try {
           await deps.cache.put(ck, new Response(JSON.stringify({ at, frag }), { headers: { "content-type": "application/json", "cache-control": "max-age=" + Math.max(1, Math.round((STATS_TTL - (deps.now() - at)) / 1e3)) } }));
         } catch (e) {
-          logErr("stats-cache-write-error", { part: k, ref: deps.ref }, e);
+          logErr("stats-cache-write-error", { part: k, stage: "cache-write" }, e, env, deps);
         }
       }
     } catch (e) {
       res.errors[k] = e instanceof Err ? e.code : "internal";
       delete res.sourceReadAt[k];
-      logErr("stats-part-error", { part: k, scope: res.scope, stage, ref: deps.ref }, e);
+      logErr("stats-part-error", { part: k, scope: res.scope, stage }, e, env, deps);
       (res.diag || (res.diag = {}))[k] = { stage, type: e && e.name ? String(e.name).slice(0, 40) : "unknown" };
       let l = null;
       try {
-        l = await lkgGet(env, k, await lkgCfg(env, k, deps), deps.now());
+        l = await lkgGet(env, k, await lkgCfg(env, k, deps), deps.now(), deps);
       } catch (x) {
-        logErr("lkg-read-error", { part: k, ref: deps.ref }, x);
+        logErr("lkg-read-error", { part: k, stage: "lkg-cfg" }, x, env, deps);
       }
       if (l) {
         Object.assign(res, l.frag);
@@ -1685,7 +1738,15 @@ async function asset(env, path, deps, origin, versioned) {
 }
 var page = (title, msg, ip) => new Response('<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + title + '</title><body style="font-family:system-ui,sans-serif;max-width:560px;margin:12vh auto;padding:0 20px;color:#14231d"><h1 style="font-size:1.3rem">' + title + "</h1><p>" + msg + "</p>" + (ip ? '<p style="color:#555">IP \u0E17\u0E35\u0E48\u0E23\u0E30\u0E1A\u0E1A\u0E40\u0E2B\u0E47\u0E19: <b>' + ip.replace(/[^0-9a-fA-F.:]/g, "") + "</b> \u2014 \u0E41\u0E08\u0E49\u0E07\u0E1C\u0E39\u0E49\u0E14\u0E39\u0E41\u0E25\u0E23\u0E30\u0E1A\u0E1A\u0E2B\u0E32\u0E01\u0E04\u0E27\u0E23\u0E40\u0E02\u0E49\u0E32\u0E44\u0E14\u0E49</p>" : "") + "</body></html>", { status: 403, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...SEC } });
 async function handle(request, env, deps) {
-  deps.ref = str(request.headers.get("cf-ray")).slice(0, 40) || void 0;
+  deps.ref = str(request.headers.get("cf-ray")).split("-")[0].slice(0, 40) || void 0;
+  deps.diag = { n: 0, seen: /* @__PURE__ */ new Set(), pending: [] };
+  try {
+    return await handleCore(request, env, deps);
+  } finally {
+    if (deps.diag.pending.length) await Promise.all(deps.diag.pending);
+  }
+}
+async function handleCore(request, env, deps) {
   const url = new URL(request.url), path = url.pathname, api = path.startsWith("/api/"), net = network(request, env);
   try {
     if (net.mode === "badconfig") throw new Err(503, "bad-network-config");
@@ -1764,8 +1825,8 @@ async function handle(request, env, deps) {
     if (path === "/api/chat" && m === "POST") return await chat(request, env, deps, await need(request, env, deps));
     throw new Err(404, "not-found");
   } catch (e) {
-    const status = e instanceof Err ? e.status : 500, code = e instanceof Err ? e.code : "internal", ref = str(request.headers.get("cf-ray")).slice(0, 40) || void 0;
-    if (!(e instanceof Err) || status >= 500) logErr("route-error", { path, method: request.method, status, ref, stage: e && e.stage }, e);
+    const status = e instanceof Err ? e.status : 500, code = e instanceof Err ? e.code : "internal", ref = deps.ref;
+    if (!(e instanceof Err) || status >= 500) logErr("route-error", { path, status, ref, stage: e && e.stage }, e, env, deps);
     return api ? json(path === "/api/chat" ? { status: "error", code, ref: status >= 500 ? ref : void 0 } : { ok: false, code, ref: status >= 500 ? ref : void 0, ...e instanceof Err && e.extra ? e.extra : {} }, status) : new Response("Error", { status, headers: SEC });
   }
 }
@@ -1799,11 +1860,16 @@ var SCHEMA = [
   "CREATE TABLE IF NOT EXISTS roster_log(seq INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, by TEXT NOT NULL, action TEXT NOT NULL, id TEXT, before TEXT, after TEXT)",
   "CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS imgids(id TEXT PRIMARY KEY, at INTEGER NOT NULL)",
-  "CREATE TABLE IF NOT EXISTS stats_lkg(k TEXT PRIMARY KEY, cfg TEXT NOT NULL, at INTEGER NOT NULL, frag TEXT NOT NULL)"
+  "CREATE TABLE IF NOT EXISTS stats_lkg(k TEXT PRIMARY KEY, cfg TEXT NOT NULL, at INTEGER NOT NULL, frag TEXT NOT NULL)",
   // รอบ 14 (migration: worker/migrations/0002_stats_lkg.sql)
+  "CREATE TABLE IF NOT EXISTS diag_log(id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, ref TEXT, rev TEXT, ev TEXT NOT NULL, route TEXT, scope TEXT, part TEXT, stage TEXT, status INTEGER, code TEXT, type TEXT, cause TEXT, msg TEXT)",
+  // รอบ 14.2 (migration 0003_diag_log.sql)
+  "CREATE INDEX IF NOT EXISTS diag_log_ref ON diag_log(ref)"
 ];
 var src_default = { fetch: (request, env, ctx) => handle(request, env, { fetch: (u, o) => fetch(u, o), now: () => Date.now(), cache: caches.default, waitUntil: ctx && ctx.waitUntil ? (p) => ctx.waitUntil(p) : null }) };
 export {
+  DIAG_MAX,
+  DIAG_PER_REQ,
   Err,
   IMG_ROWS_PER_STMT,
   IMG_STMTS_PER_BATCH,

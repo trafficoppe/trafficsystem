@@ -34,7 +34,7 @@ const SHEETS = {
 };
 const csv = (rows) => rows.map((r) => r.map((c) => (/[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c)).join(',')).join('\n');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFklEQVR4XmOsmNbOgA0wYRVlYKCLBADuLwGhta8zygAAAABJRU5ErkJggg==', 'base64');
-export const control = { sourceDown: false, clock: 0, downGid: {}, gidDelay: {}, scope500: {}, bodyFail: {} };      // รอบ 14.1: scope500 = คำขอทั้ง scope ล้มระดับ HTTP · bodyFail = ต้นทางส่งหัวแล้วเนื้อหาขาด      // clock = เลื่อนนาฬิกาของบริการ (ms) เพื่อทดสอบ TTL โดยไม่ต้องรอจริง
+export const control = { sourceDown: false, clock: 0, downGid: {}, gidDelay: {}, scope500: {}, bodyFail: {}, raySeq: 0 };      // รอบ 14.1: scope500 = คำขอทั้ง scope ล้มระดับ HTTP · bodyFail = ต้นทางส่งหัวแล้วเนื้อหาขาด      // clock = เลื่อนนาฬิกาของบริการ (ms) เพื่อทดสอบ TTL โดยไม่ต้องรอจริง
 // รอบ 10: ตัวกลางอ่านไฟล์ส่วนตัว (MOCK) — เปิดไว้เป็นค่าเริ่มต้น (/__test/relay/off = ยังไม่ได้ติดตั้ง) · ภาพ GPS เป็นไฟล์ส่วนตัว อ่านได้เฉพาะผ่านตัวกลาง
 const REL = 'https://script.google.com/macros/s/MOCKRELAYDEVSERVER0000000000001/exec', RSEC = 'f'.repeat(64), PRIVATE_IMG = new Set([ID(51)]);
 const RT = {
@@ -75,9 +75,11 @@ export function start(port, opt = {}) {
       _reset(); rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/relay/')) { relayOn(rq.url.endsWith('on')); _reset(); rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/gidDelay/')) { const [, , , g, ms] = rq.url.split('/'); control.gidDelay[g] = +ms || 0; rs.end('ok'); return; }      // รอบ 14
-    if (rq.url.startsWith('/__test/scope500/')) { const [, , , sc, st] = rq.url.split('/'); control.scope500[sc] = st === 'on'; rs.end('ok'); return; }      // รอบ 14.1
+    if (rq.url.startsWith('/__test/scope500/')) { const [, , , sc, st] = rq.url.split('/'); control.scope500[sc] = st === 'on' ? 'json' : st === 'html' ? 'html' : false; rs.end('ok'); return; }
+    if (rq.url.startsWith('/__test/diag/')) { rs.writeHead(200, { 'content-type': 'application/json' }); rs.end(JSON.stringify(db.prepare('SELECT ev, ref, part, stage, status, code FROM diag_log WHERE ref = ? ORDER BY id').all(decodeURIComponent(rq.url.split('/')[3])))); return; }      // รอบ 14.2: อ่าน diag_log ในฐานจำลอง (เฉพาะเครื่องทดสอบ)      // รอบ 14.1
     if (rq.url.startsWith('/__test/bodyfail/')) { const [, , , g, st] = rq.url.split('/'); control.bodyFail[g] = st === 'on'; rs.end('ok'); return; }
-    { const m5 = /^\/api\/stats\?scope=(\w+)/.exec(rq.url); if (m5 && control.scope500[m5[1]]) { rs.writeHead(500, { 'content-type': 'application/json; charset=utf-8', 'cf-ray': 'TESTREF500-' + m5[1] }); rs.end(JSON.stringify({ ok: false, code: 'internal', ref: 'TESTREF500-' + m5[1] })); return; } }
+    { const m5 = /^\/api\/stats\?scope=(\w+)/.exec(rq.url); if (m5 && control.scope500[m5[1]] === 'html') { rs.writeHead(502, { 'content-type': 'text/html', 'cf-ray': 'testray502' + m5[1] + '-LOC' }); rs.end('<html><body>Bad gateway</body></html>'); return; }
+      if (m5 && control.scope500[m5[1]]) { rs.writeHead(500, { 'content-type': 'application/json; charset=utf-8', 'cf-ray': 'TESTREF500-' + m5[1] }); rs.end(JSON.stringify({ ok: false, code: 'internal', ref: 'TESTREF500-' + m5[1] })); return; } }
     if (rq.url === '/__test/lkg/clear') { db.exec('DELETE FROM stats_lkg'); rs.end('ok'); return; }
     if (rq.url === '/__test/inc/add') { INC.push(inc(11, '2026-11-17', 'อุบัติเหตุทั่วไป', '-', '0', '-')); rs.end('ok'); return; }
     if (rq.url === '/__test/inc/reset') { INC.length = INC0; rs.end('ok'); return; }
@@ -86,10 +88,11 @@ export function start(port, opt = {}) {
     if (rq.url.startsWith('/__test/moto/')) { RT.studentMoto[3][2] = rq.url.endsWith('shift') ? 'วิทยาเขตพญาไท' : 'วิทยาเขตศาลายา'; rs.end('ok'); return; }   // รอบ 13: ยอดรวมเท่าเดิม แต่การแยกตามวิทยาเขตเปลี่ยน
     if (rq.url.startsWith('/__test/source/')) { control.sourceDown = rq.url.endsWith('down'); rs.end('ok'); return; }
     const headers = new Headers(); for (const [k, v] of Object.entries(rq.headers)) if (typeof v === 'string') headers.set(k, v);
-    headers.set('CF-Connecting-IP', opt.ip || '203.0.113.50');   // IP ภายนอกใดก็ได้ — ไม่มีด่านเครือข่ายเป็นค่าเริ่มต้น
+    headers.set('CF-Connecting-IP', opt.ip || '203.0.113.50');
+    const ray = 'dev' + (++control.raySeq).toString(16).padStart(13, '0') + '-LOC'; if (rq.url.startsWith('/api/')) headers.set('cf-ray', ray);      // รอบ 14.2: จำลองรหัส ray แบบ Cloudflare (ทั้งในคำขอและหัวคำตอบ)   // IP ภายนอกใดก็ได้ — ไม่มีด่านเครือข่ายเป็นค่าเริ่มต้น
     const req = new Request('http://localhost:' + port + rq.url, { method: rq.method, headers, body: ['GET', 'HEAD'].includes(rq.method) ? undefined : Buffer.concat(chunks) });
     const res = await handle(req, Object.assign({}, env, opt.env || {}), { fetch: fetchMock, now: () => Date.now() + control.clock });
-    const h = {}; res.headers.forEach((v, k) => { h[k] = v; }); rs.writeHead(res.status, h); rs.end(Buffer.from(await res.arrayBuffer()));
+    const h = {}; res.headers.forEach((v, k) => { h[k] = v; }); if (rq.url.startsWith('/api/')) h['cf-ray'] = ray; rs.writeHead(res.status, h); rs.end(Buffer.from(await res.arrayBuffer()));
   });
   return new Promise((ok) => srv.listen(port, '127.0.0.1', () => ok(srv)));
 }

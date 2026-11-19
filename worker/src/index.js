@@ -7,11 +7,33 @@ const REPO = 'https://raw.githubusercontent.com/trafficoppe/trafficsystem/';
 const COOKIE = '__Host-hub_s';
 const BKK = 7 * 3600e3;
 export class Err extends Error { constructor(status, code, extra) { super(code); this.status = status; this.code = code; this.extra = extra; } }
-export const WORKER_REV = 'r14.1b';      // รอบ 14.1: รุ่นของบริการ (หัว x-hub-rev) — ใช้ยืนยันว่า API ตอบจากรุ่นที่ Deploy ล่าสุด
+export const WORKER_REV = 'r14.2';      // รอบ 14.1: รุ่นของบริการ (หัว x-hub-rev) — ใช้ยืนยันว่า API ตอบจากรุ่นที่ Deploy ล่าสุด
 const SEC = { 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'referrer-policy': 'strict-origin-when-cross-origin', 'x-hub-rev': WORKER_REV };
 // รอบ 14.1: บันทึกข้อผิดพลาดแบบมีโครงสร้าง (ดูได้จาก real-time logs ของ Pages) — ตัด URL/รหัสยาว/ตัวเลขยาว/อีเมลออกก่อนบันทึก · ไม่บันทึก cookie/token/ข้อมูลดิบ/ข้อมูลบุคคล
 const redact = (t) => String(t == null ? '' : t).replace(/https?:\/\/[^\s'")]+/g, '<url>').replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '<email>').replace(/[A-Za-z0-9_-]{24,}/g, '<id>').replace(/\d{6,}/g, '<n>');
-export function logErr(ev, f, e) { try { console.error(JSON.stringify({ ev, rev: WORKER_REV, ...f, type: e && e.name ? String(e.name) : typeof e, code: e && typeof e.code === 'string' ? e.code : undefined, msg: redact(e && e.message).slice(0, 300), stack: redact(e && e.stack).split('\n').slice(1, 6).map((x) => x.trim()).join(' | ').slice(0, 600) })); } catch (x) { /* การบันทึกต้องไม่ทำให้คำขอล้ม */ } }
+// รอบ 14.2: Pages ไม่เก็บ console ย้อนหลัง → เก็บ “เฉพาะข้อผิดพลาด” ลงตาราง diag_log ใน D1 เดิม (แยกจากข้อมูลธุรกิจ) ให้ผู้ดูแลค้นย้อนหลังด้วยรหัสอ้างอิงได้
+//   ช่องที่เก็บเป็น allowlist: เวลา/ref/รุ่น/เหตุการณ์/route (เฉพาะในรายการ)/scope/part/stage/HTTP/code/ชนิด/ชนิดสาเหตุเดิม/ข้อความสั้นที่ตัดแล้ว
+//   ไม่เก็บ cookie/token/IP/query/เนื้อหาคำขอ/คำถาม AI/แถว Sheet/ข้อมูลบุคคล/stack · ข้อความตัด URL รหัส ตัวเลขยาว อีเมล ข้อความในเครื่องหมายคำพูด และอักษรนอก ASCII
+//   best effort: เขียนไม่ได้ → แจ้งใน console อย่างเดียว (ไม่เรียกตัวเองซ้ำ) · ไม่กระทบผลข้อมูลหรือการตรวจสิทธิ์
+const DIAG_ROUTES = new Set(['/api/stats', '/api/data', '/api/img', '/api/chat', '/api/me', '/api/login', '/api/logout', '/api/roster', '/api/health', '/api/relay']);
+export const DIAG_MAX = 1000, DIAG_PER_REQ = 12;
+const safeMsg = (t) => redact(t).replace(/"[^"]*"|'[^']*'/g, '<q>').replace(/[\w.-]+=[^\s,;&]*/g, '<kv>').replace(/[^\x20-\x7E]/g, '?').slice(0, 160);
+const cut = (v, n) => (v == null || v === '' ? null : String(v).slice(0, n));
+export function logErr(ev, f, e, env, deps) {
+  const row = { ev: cut(ev, 40), ref: cut(f.ref || (deps && deps.ref), 40), route: f.path ? (DIAG_ROUTES.has(f.path) ? f.path : 'other') : null, scope: cut(f.scope, 20), part: cut(f.part, 20), stage: cut(f.stage, 20), status: typeof f.status === 'number' ? f.status : null,
+    code: cut(e && typeof e.code === 'string' ? e.code : null, 40), type: cut(e && e.name ? e.name : typeof e, 40), cause: cut(e && e.causeType, 40), msg: cut(safeMsg(e && e.message), 160) };
+  try { console.error(JSON.stringify({ rev: WORKER_REV, ...row, stack: redact(e && e.stack).split('\n').slice(1, 6).map((x) => x.trim()).join(' | ').slice(0, 600) })); } catch (x) { /* การบันทึกต้องไม่ทำให้คำขอล้ม */ }
+  if (env && env.DB && deps) diagPut(env, deps, row);
+}
+function diagPut(env, deps, row) {
+  const d = deps.diag || (deps.diag = { n: 0, seen: new Set(), pending: [] }), key = [row.ev, row.part, row.stage, row.code, row.status].join('|');
+  if (d.seen.has(key) || d.n >= DIAG_PER_REQ) return; d.seen.add(key); d.n++;      // กันบันทึกซ้ำ/ล้นในคำขอเดียว
+  const p = (async () => { try { await env.DB.batch([
+    env.DB.prepare('INSERT INTO diag_log(at, ref, rev, ev, route, scope, part, stage, status, code, type, cause, msg) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(Date.now(), row.ref, WORKER_REV, row.ev, row.route, row.scope, row.part, row.stage, row.status, row.code, row.type, row.cause, row.msg),
+    env.DB.prepare('DELETE FROM diag_log WHERE id <= (SELECT MAX(id) FROM diag_log) - ?').bind(DIAG_MAX)]);      // เพดาน 1,000 รายการล่าสุด (ล้างตอนเขียนรายการใหม่ ไม่มี TTL อัตโนมัติ)
+  } catch (x) { try { console.error(JSON.stringify({ ev: 'diag-write-error', rev: WORKER_REV, ref: row.ref, type: x && x.name ? String(x.name) : 'unknown' })); } catch (y) { /* เงียบ */ } } })();
+  if (deps.waitUntil) { try { deps.waitUntil(p); } catch (x) { d.pending.push(p); } } else d.pending.push(p);
+}
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...SEC, ...headers } });
 const bkk = (ms) => new Date(ms + BKK).toISOString().slice(0, 16).replace('T', ' ');
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -138,9 +160,9 @@ async function readTable(env, key, deps, mk, cfg) {
   } else if (env.HUB_GS_URL && env.HUB_SHARED_SECRET) {     // บริการเดิม HubData (ถ้าผู้ดูแลตั้งไว้) สำหรับแหล่งเดิมเท่านั้น
     rows = (await hubDataCall(env, deps, key)).rows.map((x) => x.map(str));
   } else {
-    let r; try { r = await deps.fetch('https://docs.google.com/spreadsheets/d/' + src[0] + '/export?format=csv&gid=' + src[1], { redirect: 'follow', signal: AbortSignal.timeout(SRC_TIMEOUT) }); } catch (e) { throw new Err(502, e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'source-timeout' : 'source-unreachable'); }
+    let r; try { r = await deps.fetch('https://docs.google.com/spreadsheets/d/' + src[0] + '/export?format=csv&gid=' + src[1], { redirect: 'follow', signal: AbortSignal.timeout(SRC_TIMEOUT) }); } catch (e) { const x = new Err(502, e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'source-timeout' : 'source-unreachable'); x.causeType = e && e.name; x.stage = 'source-fetch'; throw x; }
     if (!r.ok || !/text\/csv/.test(r.headers.get('content-type') || '')) throw new Err(502, r.status === 401 || r.status === 403 || r.ok ? 'source-private' : 'source-error');
-    let body; try { body = await r.text(); } catch (e) { throw new Err(502, e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'source-timeout' : 'source-unreachable'); }      // รอบ 14.1: อ่านเนื้อหาล้ม/หมดเวลาระหว่างอ่าน (เดิมหลุดเป็น internal)
+    let body; try { body = await r.text(); } catch (e) { const x = new Err(502, e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'source-timeout' : 'source-unreachable'); x.causeType = e && e.name; x.stage = 'source-body'; throw x; }      // รอบ 14.1: อ่านเนื้อหาล้ม/หมดเวลาระหว่างอ่าน (เดิมหลุดเป็น internal)
     rows = parseCsv(body);
   }
   if (!rows.length) throw new Err(502, 'source-schema');
@@ -241,7 +263,7 @@ const cookieOf = (request) => { const m = new RegExp('(?:^|;\\s*)' + COOKIE + '=
 const setCookie = (v, maxAge) => COOKIE + '=' + v + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + maxAge;
 async function session(request, env, deps) {
   const tok = cookieOf(request); if (!tok) return null;
-  let row; try { row = await env.DB.prepare('SELECT staff, name, unit, role, exp FROM sessions WHERE id = ?').bind(await sha(tok)).first(); } catch (e) { logErr('auth-d1-error', {}, e); throw new Err(503, 'auth-unavailable'); }      // รอบ 14.1: ตรวจสิทธิ์ไม่ได้ชั่วคราว → 503 (ไม่ตอบข้อมูล) แยกจาก internal
+  let row; try { row = await env.DB.prepare('SELECT staff, name, unit, role, exp FROM sessions WHERE id = ?').bind(await sha(tok)).first(); } catch (e) { logErr('auth-d1-error', { stage: 'auth' }, e, env, deps); const x = new Err(503, 'auth-unavailable'); x.causeType = e && e.name; throw x; }      // รอบ 14.1: ตรวจสิทธิ์ไม่ได้ชั่วคราว → 503 (ไม่ตอบข้อมูล) แยกจาก internal
   return row && row.exp > deps.now() ? row : null;
 }
 // สิทธิ์ผู้ดูแลตรวจกับ ADMIN_CODES “ณ ตอนที่เรียก” ทุกครั้ง (ถอดรหัสออกจากรายการแล้วสิทธิ์หายทันที ไม่ต้องรอ session หมดอายุ)
@@ -283,8 +305,8 @@ export const STATS_SCOPES = { all: ['incidents', 'lostfound', 'lostfoundYear', '
 //   ใช้เมื่อรอบนี้อ่านต้นทางไม่สำเร็จเท่านั้น · อายุไม่เกิน 7 วัน · คีย์ผูกรุ่นค่าตั้งแหล่ง/ตัวกลาง (cfgKey) · ตอบเป็น stale[k] = { at, error } ไม่ใส่ใน sourceReadAt
 export const LKG_MAX = 7 * 86400e3;
 const lkgCfg = async (env, k, deps) => STATS_SCHEMA + '-' + cacheEpoch + '|' + (await srcKey(env, PART_SRC[k], deps)).mk;      // ผูกค่าตั้งของแหล่งนั้น (ไม่ขึ้นกับ scope ที่ขอ)
-async function lkgGet(env, k, cfg, now) { try { const r = await env.DB.prepare('SELECT at, frag FROM stats_lkg WHERE k = ? AND cfg = ?').bind(k, cfg).first(); if (!r || typeof r.at !== 'number' || !(now - r.at >= 0 && now - r.at <= LKG_MAX)) return null; const f = JSON.parse(r.frag); return f && typeof f === 'object' && !Array.isArray(f) ? { at: r.at, frag: f } : null; } catch (e) { logErr('lkg-read-error', { part: k }, e); return null; } }      // รอบ 14.1: รูปแบบผิด/หมดอายุ → ไม่มีผลสำรอง
-async function lkgPut(env, k, cfg, at, frag) { try { await env.DB.prepare('INSERT INTO stats_lkg(k, cfg, at, frag) VALUES(?, ?, ?, ?) ON CONFLICT(k) DO UPDATE SET cfg = excluded.cfg, at = excluded.at, frag = excluded.frag WHERE excluded.at >= stats_lkg.at OR excluded.cfg <> stats_lkg.cfg').bind(k, cfg, at, JSON.stringify(frag)).run(); return true; } catch (e) { logErr('lkg-write-error', { part: k }, e); return false; } }      // รอบ 14.1: เก็บไม่ได้ไม่กระทบคำตอบ แต่ต้องมีหลักฐานใน log
+async function lkgGet(env, k, cfg, now, deps) { try { const r = await env.DB.prepare('SELECT at, frag FROM stats_lkg WHERE k = ? AND cfg = ?').bind(k, cfg).first(); if (!r || typeof r.at !== 'number' || !(now - r.at >= 0 && now - r.at <= LKG_MAX)) return null; const f = JSON.parse(r.frag); return f && typeof f === 'object' && !Array.isArray(f) ? { at: r.at, frag: f } : null; } catch (e) { logErr('lkg-read-error', { part: k, stage: 'lkg-read' }, e, env, deps); return null; } }      // รอบ 14.1: รูปแบบผิด/หมดอายุ → ไม่มีผลสำรอง
+async function lkgPut(env, k, cfg, at, frag, deps) { try { await env.DB.prepare('INSERT INTO stats_lkg(k, cfg, at, frag) VALUES(?, ?, ?, ?) ON CONFLICT(k) DO UPDATE SET cfg = excluded.cfg, at = excluded.at, frag = excluded.frag WHERE excluded.at >= stats_lkg.at OR excluded.cfg <> stats_lkg.cfg').bind(k, cfg, at, JSON.stringify(frag)).run(); return true; } catch (e) { logErr('lkg-write-error', { part: k, stage: 'lkg-write' }, e, env, deps); return false; } }      // รอบ 14.1: เก็บไม่ได้ไม่กระทบคำตอบ แต่ต้องมีหลักฐานใน log
 const STATS_TTL = 120e3, STATS_SCHEMA = 's12', PART_SRC = { incidents: 'incidents', lostfound: 'lostfound', lostfoundYear: 'lfYear', gate: 'gate', studentMoto: 'studentMoto', ruenthai: 'ruenthai' };
 let cacheEpoch = 0;
 const hashStr = (t) => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) >>> 0; return h.toString(36); };
@@ -347,13 +369,13 @@ async function liveStats(env, deps, scope) {
       stage = 'transform'; const frag = {}, at = await P[k](frag);
       Object.assign(res, frag); res.sourceReadAt[k] = bkk(at);
       // รอบ 14.1: อ่าน+คำนวณสำเร็จแล้ว — งานเก็บสำรอง (LKG/แคช) แยกออกมา ล้มได้โดยไม่ทำให้แหล่งนี้ถูกตัดสินว่าอ่านล้ม แต่ต้องมีหลักฐานใน log
-      stage = 'lkg-write'; try { const w = lkgCfg(env, k, deps).then((c) => lkgPut(env, k, c, at, frag)).catch((e) => { logErr('lkg-write-error', { part: k, ref: deps.ref }, e); return false; }); if (deps.waitUntil) deps.waitUntil(w); else await w; } catch (e) { logErr('lkg-write-error', { part: k, ref: deps.ref, stage }, e); }
-      if (ck) { try { await deps.cache.put(ck, new Response(JSON.stringify({ at, frag }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=' + Math.max(1, Math.round((STATS_TTL - (deps.now() - at)) / 1000)) } })); } catch (e) { logErr('stats-cache-write-error', { part: k, ref: deps.ref }, e); } }
+      stage = 'lkg-write'; try { const w = lkgCfg(env, k, deps).then((c) => lkgPut(env, k, c, at, frag, deps)).catch((e) => { logErr('lkg-write-error', { part: k, stage: 'lkg-cfg' }, e, env, deps); return false; }); if (deps.waitUntil) deps.waitUntil(w); else await w; } catch (e) { logErr('lkg-write-error', { part: k, stage }, e, env, deps); }
+      if (ck) { try { await deps.cache.put(ck, new Response(JSON.stringify({ at, frag }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=' + Math.max(1, Math.round((STATS_TTL - (deps.now() - at)) / 1000)) } })); } catch (e) { logErr('stats-cache-write-error', { part: k, stage: 'cache-write' }, e, env, deps); } }
     } catch (e) {
       res.errors[k] = e instanceof Err ? e.code : 'internal'; delete res.sourceReadAt[k];      // รอบ 14.1: แหล่งที่ล้มต้องไม่มีเวลาอ่านสด
-      logErr('stats-part-error', { part: k, scope: res.scope, stage, ref: deps.ref }, e);
+      logErr('stats-part-error', { part: k, scope: res.scope, stage }, e, env, deps);
       (res.diag || (res.diag = {}))[k] = { stage, type: e && e.name ? String(e.name).slice(0, 40) : 'unknown' };      // ขั้นตอน+ชนิดเท่านั้น (ไม่มีข้อความภายใน/stack)
-      let l = null; try { l = await lkgGet(env, k, await lkgCfg(env, k, deps), deps.now()); } catch (x) { logErr('lkg-read-error', { part: k, ref: deps.ref }, x); }
+      let l = null; try { l = await lkgGet(env, k, await lkgCfg(env, k, deps), deps.now(), deps); } catch (x) { logErr('lkg-read-error', { part: k, stage: 'lkg-cfg' }, x, env, deps); }
       if (l) { Object.assign(res, l.frag); (res.stale || (res.stale = {}))[k] = { at: bkk(l.at), error: res.errors[k] }; }
     }
   }));
@@ -645,8 +667,12 @@ async function asset(env, path, deps, origin, versioned) {
 const page = (title, msg, ip) => new Response('<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + title + '</title><body style="font-family:system-ui,sans-serif;max-width:560px;margin:12vh auto;padding:0 20px;color:#14231d"><h1 style="font-size:1.3rem">' + title + '</h1><p>' + msg + '</p>' + (ip ? '<p style="color:#555">IP ที่ระบบเห็น: <b>' + ip.replace(/[^0-9a-fA-F.:]/g, '') + '</b> — แจ้งผู้ดูแลระบบหากควรเข้าได้</p>' : '') + '</body></html>', { status: 403, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SEC } });
 
 // ---------- ตัวจัดเส้นทาง ----------
+// รอบ 14.2: ref ผูกกับ deps ของคำขอนั้น (deps สร้างใหม่ทุกคำขอใน fetch) — ไม่ใช้ตัวแปร global · งานบันทึกที่ไม่มี waitUntil (เช่นในการทดสอบ) รอให้จบก่อนตอบ
 export async function handle(request, env, deps) {
-  deps.ref = str(request.headers.get('cf-ray')).slice(0, 40) || undefined;      // รอบ 14.1: รหัสอ้างอิงคำขอ (ไม่ใช่ค่าลับ) สำหรับ log
+  deps.ref = str(request.headers.get('cf-ray')).split('-')[0].slice(0, 40) || undefined; deps.diag = { n: 0, seen: new Set(), pending: [] };      // ref = รหัส ray (ไม่มีรหัสศูนย์ท้าย) — หน้าเว็บแสดงรูปแบบเดียวกัน
+  try { return await handleCore(request, env, deps); } finally { if (deps.diag.pending.length) await Promise.all(deps.diag.pending); }
+}
+async function handleCore(request, env, deps) {
   const url = new URL(request.url), path = url.pathname, api = path.startsWith('/api/'), net = network(request, env);
   try {
     if (net.mode === 'badconfig') throw new Err(503, 'bad-network-config');
@@ -683,8 +709,8 @@ export async function handle(request, env, deps) {
     if (path === '/api/chat' && m === 'POST') return await chat(request, env, deps, await need(request, env, deps));
     throw new Err(404, 'not-found');
   } catch (e) {
-    const status = e instanceof Err ? e.status : 500, code = e instanceof Err ? e.code : 'internal', ref = str(request.headers.get('cf-ray')).slice(0, 40) || undefined;
-    if (!(e instanceof Err) || status >= 500) logErr('route-error', { path, method: request.method, status, ref, stage: e && e.stage }, e);      // รอบ 14.1: เดิมกลืนสาเหตุ (ไม่มี log)
+    const status = e instanceof Err ? e.status : 500, code = e instanceof Err ? e.code : 'internal', ref = deps.ref;
+    if (!(e instanceof Err) || status >= 500) logErr('route-error', { path, status, ref, stage: e && e.stage }, e, env, deps);      // รอบ 14.1: เดิมกลืนสาเหตุ (ไม่มี log)
     return api ? json(path === '/api/chat' ? { status: 'error', code, ref: status >= 500 ? ref : undefined } : { ok: false, code, ref: status >= 500 ? ref : undefined, ...(e instanceof Err && e.extra ? e.extra : {}) }, status) : new Response('Error', { status, headers: SEC });
   }
 }
@@ -698,6 +724,8 @@ export const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS roster_log(seq INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, by TEXT NOT NULL, action TEXT NOT NULL, id TEXT, before TEXT, after TEXT)',
   'CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)',
   'CREATE TABLE IF NOT EXISTS imgids(id TEXT PRIMARY KEY, at INTEGER NOT NULL)',
-  'CREATE TABLE IF NOT EXISTS stats_lkg(k TEXT PRIMARY KEY, cfg TEXT NOT NULL, at INTEGER NOT NULL, frag TEXT NOT NULL)'      // รอบ 14 (migration: worker/migrations/0002_stats_lkg.sql)
+  'CREATE TABLE IF NOT EXISTS stats_lkg(k TEXT PRIMARY KEY, cfg TEXT NOT NULL, at INTEGER NOT NULL, frag TEXT NOT NULL)',      // รอบ 14 (migration: worker/migrations/0002_stats_lkg.sql)
+  'CREATE TABLE IF NOT EXISTS diag_log(id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, ref TEXT, rev TEXT, ev TEXT NOT NULL, route TEXT, scope TEXT, part TEXT, stage TEXT, status INTEGER, code TEXT, type TEXT, cause TEXT, msg TEXT)',      // รอบ 14.2 (migration 0003_diag_log.sql)
+  'CREATE INDEX IF NOT EXISTS diag_log_ref ON diag_log(ref)'
 ];
 export default { fetch: (request, env, ctx) => handle(request, env, { fetch: (u, o) => fetch(u, o), now: () => Date.now(), cache: caches.default, waitUntil: ctx && ctx.waitUntil ? (p) => ctx.waitUntil(p) : null }) };

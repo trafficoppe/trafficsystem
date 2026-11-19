@@ -92,6 +92,7 @@ button,select,input{font:inherit;color:inherit}
 .banner{margin:14px 22px 0;padding:10px 14px;border-radius:12px;background:var(--warn-bg);color:var(--warn);font-size:.9rem;font-weight:600}
 .banner .banner-retry{margin-left:6px;font-size:.82rem;padding:3px 10px}.banner .banner-retry:disabled{opacity:.55;cursor:default}
 .banner-det{margin-top:6px;font-weight:500}.banner-det summary{cursor:pointer;font-weight:600;width:max-content}.banner-det ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:.84rem}
+.banner-rep{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.banner-rep .btn-ghost{font-size:.82rem;padding:3px 10px}.banner-rep-msg{font-size:.82rem;font-weight:500}.banner-rep textarea{flex-basis:100%;font:inherit;font-size:.8rem;font-weight:400;padding:6px;border-radius:8px;border:1px solid var(--line)}
 @media print{.banner-retry,.banner-det{display:none}}
 .view{flex:1;padding:22px 22px 40px;max-width:1480px;width:100%;margin:0 auto;outline:none}
 .foot{padding:14px 22px;font-size:.78rem;color:var(--muted);border-top:1px solid var(--line);text-align:center}
@@ -3914,7 +3915,7 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
   function apiCall(path, opt) {
     opt = opt || {};
     return fetch(API + path, { method: opt.method || 'GET', credentials: 'include', cache: 'no-store', headers: opt.body ? { 'Content-Type': 'application/json', Accept: 'application/json' } : { Accept: 'application/json' }, body: opt.body ? JSON.stringify(opt.body) : undefined })
-      .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return { s: r.status, j: j || {}, ref: r.headers.get('cf-ray') || '' }; }); }, function () { return { s: 0, j: {}, ref: '' }; });      /* รอบ 14.1: รหัสอ้างอิงคำขอ (cf-ray) */
+      .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { var rv = r.headers.get('x-hub-rev'); if (rv) live.rev = rv; return { s: r.status, j: j || {}, ref: String(r.headers.get('cf-ray') || '').split('-')[0] }; }); }, function () { return { s: 0, j: {}, ref: '' }; });      /* รอบ 14.2: ref = รหัส ray (ไม่มีรหัสศูนย์ท้าย) ตรงกับที่บริการบันทึก · ไม่ได้รับคำตอบ = ไม่มี ref */      /* รอบ 14.1: รหัสอ้างอิงคำขอ (cf-ray) */
   }
   var LOGIN_MSG = { invalid: 'รหัสพนักงานไม่ถูกต้องหรือไม่มีสิทธิ์เข้าใช้งาน', 'rate-limited': 'ลองหลายครั้งเกินกำหนด กรุณารอสักครู่แล้วลองใหม่', 'verify-unavailable': 'ไม่สามารถตรวจสอบการเข้าสู่ระบบได้ในขณะนี้ กรุณาลองใหม่',
     'bad-network-config': 'ระบบตั้งค่าเครือข่ายไม่ถูกต้อง — แจ้งผู้ดูแลระบบ', 'network-denied': 'เข้าใช้งานไม่ได้จากเครือข่ายนี้', net: 'เชื่อมต่อบริการไม่ได้ กรุณาลองใหม่' };
@@ -4028,7 +4029,7 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
         if (x.s === 401) { authLost(); return; }
         var errs = Object.assign({}, live.errors || {}); delete errs.all; parts.forEach(function (k) { delete errs[k]; delete live.stale[k]; delete live.errInfo[k]; });      /* รอบ 14.1: ล้างเฉพาะแหล่งของคำขอนี้ (ไม่ล้างของแหล่งอื่น) */
         var tAt = nowStamp();
-        if (x.s !== 200 || !x.j.ok) { parts.forEach(function (k) { errs[k] = x.j.code || 'http ' + x.s; live.errInfo[k] = { code: errs[k], ref: x.j.ref || '', stage: 'request', http: x.s, at: tAt }; delete live.readAt[k]; }); live.errors = Object.keys(errs).length ? errs : null; liveRetrySchedule(); liveStampsUpdate(); liveNoteDraw(); return; }
+        if (x.s !== 200 || !x.j.ok) { parts.forEach(function (k) { errs[k] = x.j.code || 'http ' + x.s; live.errInfo[k] = { code: errs[k], ref: x.j.ref || x.ref || '', stage: x.s ? 'request' : 'network', http: x.s, at: tAt };      /* รอบ 14.2: body ไม่ใช่ JSON ก็ยังได้ ref จากหัว cf-ray */ delete live.readAt[k]; }); live.errors = Object.keys(errs).length ? errs : null; liveRetrySchedule(); liveStampsUpdate(); liveNoteDraw(); return; }
         var j = x.j, rd = j.sourceReadAt || {}, stl = j.stale || {}; liveApply(j);
         parts.forEach(function (k) {
           if (rd[k]) { live.readAt[k] = rd[k]; live.lastOk[k] = rd[k]; } else delete live.readAt[k];
@@ -4061,6 +4062,21 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
   function flushSoon() { if (!live.pending || flushT) return; flushT = setTimeout(function () { flushT = 0; if (live.pending && AUTH.user && !uiBusy()) { live.pending = false; route(true); } }, 400); }
   ['focusout', 'click', 'keyup'].forEach(function (ev) { document.addEventListener(ev, flushSoon, true); });
   function isTyping() { var a = document.activeElement; return !!a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.isConnected && !a.closest('[hidden]') && a.getClientRects().length > 0; }
+  /* รอบ 14.2: “คัดลอกรายงานปัญหา” — เฉพาะเวลา/ชื่อแหล่ง/สถานะ/รหัส/รุ่น (ไม่มีตัวเลขสถิติหรือข้อมูลบุคคล) · ไม่ส่งให้ใครอัตโนมัติ */
+  function liveReport() {
+    var ks = live.errors ? Object.keys(live.errors).filter(function (k) { return k !== 'all'; }) : [];
+    var lines = ['รายงานปัญหา — ระบบงานจราจรและความปลอดภัย ม.มหิดล', 'เวลาที่คัดลอก: ' + nowStamp() + ' (เวลาไทย UTC+7)', 'หน้า: ' + String(location.hash || '#').split('?')[0], 'รุ่นหน้าเว็บ: ' + String(HCFG.buildRef || '-').slice(0, 7) + ' · รุ่นบริการ: ' + (live.rev || '-')];
+    ks.forEach(function (k) { var i = live.errInfo[k] || {}, shown = live.stale[k] ? 'ผลสำรองจากบริการ (LKG) เมื่อ ' + live.stale[k].at : liveShownAt(k) ? 'ข้อมูลรอบก่อนในหน้านี้ เมื่อ ' + liveShownAt(k) : 'ไฟล์สรุป';
+      lines.push('- ' + (LIVE_NAME[k] || k) + ': แสดง ' + shown + ' · พยายามล่าสุด ' + (i.at || '-') + ' · HTTP ' + (i.http != null ? i.http : '-') + ' · code ' + live.errors[k] + ' · stage ' + (i.stage || '-') + ' · ref ' + (i.ref || 'ไม่มี (ไม่ได้รับคำตอบจากเซิร์ฟเวอร์)')); });
+    return lines.join('\n');
+  }
+  function liveReportBox() {
+    var box = el('div', { class: 'banner-rep' }), msg = el('span', { class: 'banner-rep-msg', role: 'status' });
+    var btn = el('button', { type: 'button', class: 'btn-ghost', text: 'คัดลอกรายงานปัญหา', onclick: function () {
+      var t = liveReport(), fallback = function () { var ta = el('textarea', { readonly: 'readonly', rows: '5', 'aria-label': 'รายงานปัญหา (เลือกแล้วคัดลอกเอง)' }); ta.value = t; box.querySelectorAll('textarea').forEach(function (x) { x.remove(); }); box.appendChild(ta); ta.focus(); ta.select(); msg.textContent = 'คัดลอกอัตโนมัติไม่ได้ — ข้อความถูกเลือกไว้แล้ว กด Ctrl+C / ⌘C'; };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { msg.textContent = 'คัดลอกแล้ว — วางส่งให้ผู้ดูแลได้ (ไม่ได้ส่งให้ใครอัตโนมัติ)'; }, fallback); else fallback(); } });
+    box.appendChild(btn); box.appendChild(msg); return box;
+  }
   function liveNoteDraw() {      /* รอบ 14.1: ข้อความหลักภาษาเข้าใจง่าย + รายละเอียด (ชื่อแหล่งภาษาไทย/เวลาที่อ่านสำเร็จ/เวลาที่พยายาม/สาเหตุ/รหัสอ้างอิง) + ปุ่มลองใหม่ */
     var b = $('banner'); if (!b || !AUTH.on) return;
     var ks = live.errors ? Object.keys(live.errors).filter(function (k) { return k !== 'all'; }) : [];
@@ -4070,7 +4086,7 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
     b.appendChild(el('span', { text: 'อัปเดตข้อมูลบางรายการไม่สำเร็จ ขณะนี้' + (noLast.length ? (noLast.length === ks.length ? 'แสดงไฟล์สรุปแทน' : 'แสดงข้อมูลที่อ่านสำเร็จล่าสุด (บางรายการเป็นไฟล์สรุป)') : 'แสดงข้อมูลที่อ่านสำเร็จล่าสุด') + ' ' }));
     var btn = el('button', { type: 'button', class: 'btn-ghost banner-retry', text: 'ลองอัปเดตอีกครั้ง', onclick: function () { liveRetryNow(btn); } }); if (live.busy && live.busy.gen === authGen && live.busy.n > 0) btn.disabled = true;
     var det = el('details', { class: 'banner-det' }, [el('summary', { text: 'ดูรายละเอียด' }), el('ul', {}, ks.map(function (k) { var i = live.errInfo[k] || {}, last = liveShownAt(k);
-      return el('li', { text: (LIVE_NAME[k] || k) + ' — ' + (last ? 'ใช้ข้อมูลที่อ่านสำเร็จเมื่อ ' + dLabel(last) : 'ยังไม่มีข้อมูลที่อ่านสำเร็จ (แสดงไฟล์สรุป)') + ' · พยายามล่าสุด ' + (i.at ? dLabel(i.at) : '-') + ' · ' + srcWhy(live.errors[k]) + (i.ref ? ' · รหัสอ้างอิง ' + i.ref : '') }); }))]);
+      return el('li', { text: (LIVE_NAME[k] || k) + ' — ' + (last ? 'ใช้ข้อมูลที่อ่านสำเร็จเมื่อ ' + dLabel(last) : 'ยังไม่มีข้อมูลที่อ่านสำเร็จ (แสดงไฟล์สรุป)') + ' · พยายามล่าสุด ' + (i.at ? dLabel(i.at) : '-') + ' · ' + srcWhy(live.errors[k]) + (i.ref ? ' · รหัสอ้างอิง ' + i.ref : ' · ไม่มีรหัสอ้างอิงจากเซิร์ฟเวอร์') }); })), liveReportBox()]);
     det.open = wasOpen; b.appendChild(btn); b.appendChild(det);
   }
 
@@ -4464,7 +4480,7 @@ window.__HUB_DATA__ = {"stats": {"schema": 1, "generatedAt": "2026-11-14T18:09:0
     'source-schema': 'หัวคอลัมน์ต้นทางเปลี่ยน', 'relay-timeout': 'ตัวกลางตอบช้าเกินไป', 'relay-unreachable': 'ติดต่อตัวกลางไม่ได้ชั่วคราว', 'source-unreachable': 'ติดต่อต้นทางไม่ได้ชั่วคราว', 'source-error': 'ต้นทางตอบผิดรูปแบบ',
     'relay-internal': 'ตัวกลางทำงานผิดพลาด', 'relay-error': 'ตัวกลางตอบผิดรูปแบบ', 'source-not-configured': 'ยังไม่ได้ตั้ง ID ของแหล่งข้อมูล',
     'relay-not-deployed': 'ไม่พบ Web app ของตัวกลาง (ถูกลบหรือ URL ผิด)', 'outdated': 'ตัวกลาง Deploy เป็นโค้ดรุ่นเก่า — ต้อง Deploy เป็น New version', 'relay-not-allowed': 'ตัวกลางไม่อนุญาตไฟล์นี้ (อยู่นอกโฟลเดอร์ที่กำหนด)',
-    'relay-unknown-source': 'ตัวกลางรุ่นนี้ไม่รู้จักตารางนี้', internal: 'บริการของระบบขัดข้องระหว่างประมวลผล (ไม่ใช่ปัญหาจากไฟล์ต้นทาง)', 'auth-unavailable': 'ตรวจสิทธิ์เข้าใช้ไม่สำเร็จชั่วคราว', 'source-timeout': 'ต้นทางตอบช้าเกินกำหนด', 'http 0': 'เชื่อมต่อบริการไม่ได้ (เครือข่ายหลุดหรือเครื่องพักหน้าจอ)', 'relay-source-forbidden': 'บัญชีที่ติดตั้งตัวกลางเปิด Sheet นี้ไม่ได้', 'relay-source-error': 'ตัวกลางอ่าน Sheet ไม่สำเร็จ', 'relay-not-found': 'ตัวกลางไม่พบไฟล์/แท็บ', 'skipped': 'ไม่มีภาพตัวอย่างให้ตรวจ' };
+    'relay-unknown-source': 'ตัวกลางรุ่นนี้ไม่รู้จักตารางนี้', internal: 'ระบบประมวลผลคำขอนี้ไม่สำเร็จ กรุณาลองใหม่หรือแจ้งรหัสอ้างอิง', 'auth-unavailable': 'ตรวจสิทธิ์เข้าใช้ไม่สำเร็จชั่วคราว', 'source-timeout': 'ต้นทางตอบช้าเกินกำหนด', 'http 0': 'เชื่อมต่อบริการไม่สำเร็จ (ไม่ได้รับคำตอบจากเซิร์ฟเวอร์)', 'relay-source-forbidden': 'บัญชีที่ติดตั้งตัวกลางเปิด Sheet นี้ไม่ได้', 'relay-source-error': 'ตัวกลางอ่าน Sheet ไม่สำเร็จ', 'relay-not-found': 'ตัวกลางไม่พบไฟล์/แท็บ', 'skipped': 'ไม่มีภาพตัวอย่างให้ตรวจ' };
   function srcWhy(code) { return SRC_WHY[code] || (/^http \d+$/.test(code || '') ? 'บริการตอบผิดพลาด (' + code.toUpperCase() + ')' : 'อ่านไม่สำเร็จ (' + code + ')'); }
   function liveSourcesSection() {
     var host = el('div', {}, []);

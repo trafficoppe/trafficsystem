@@ -81,6 +81,7 @@ button,select,input{font:inherit;color:inherit}
 .banner{margin:14px 22px 0;padding:10px 14px;border-radius:12px;background:var(--warn-bg);color:var(--warn);font-size:.9rem;font-weight:600}
 .banner .banner-retry{margin-left:6px;font-size:.82rem;padding:3px 10px}.banner .banner-retry:disabled{opacity:.55;cursor:default}
 .banner-det{margin-top:6px;font-weight:500}.banner-det summary{cursor:pointer;font-weight:600;width:max-content}.banner-det ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:.84rem}
+.banner-rep{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.banner-rep .btn-ghost{font-size:.82rem;padding:3px 10px}.banner-rep-msg{font-size:.82rem;font-weight:500}.banner-rep textarea{flex-basis:100%;font:inherit;font-size:.8rem;font-weight:400;padding:6px;border-radius:8px;border:1px solid var(--line)}
 @media print{.banner-retry,.banner-det{display:none}}
 .view{flex:1;padding:22px 22px 40px;max-width:1480px;width:100%;margin:0 auto;outline:none}
 .foot{padding:14px 22px;font-size:.78rem;color:var(--muted);border-top:1px solid var(--line);text-align:center}
