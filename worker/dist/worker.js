@@ -1172,16 +1172,23 @@ async function chat(request, env, deps, s) {
   return json({ status: "success", reply: ok ? reply.slice(0, 3e3) : UNVERIFIED, verified: ok, sources: ok && hasNum ? meta.sources : [], asOf: ok && hasNum ? meta.asOf : "", live: meta.live.length > 0, liveTopics: meta.live, snapshot: ok && hasNum ? meta.snapshot : [] });
 }
 var IMG_W = [400, 800, 1600];
-async function img(request, env, deps) {
-  const u = new URL(request.url), id = u.searchParams.get("id") || "", w = IMG_W.includes(+u.searchParams.get("w")) ? +u.searchParams.get("w") : 400;
-  if (!/^[-\w]{20,60}$/.test(id)) throw new Err(400, "bad-id");
+async function img(request, env, deps, auth) {
+  const u = new URL(request.url), id = u.searchParams.get("id") || "", w = IMG_W.includes(+u.searchParams.get("w")) ? +u.searchParams.get("w") : 400, t0 = Date.now(), okId = /^[-\w]{20,60}$/.test(id);
+  const pre = auth && cookieOf(request), known = !okId || knownImg.has(id) || !pre ? null : env.DB.prepare("SELECT 1 AS x FROM imgids WHERE id = ?").bind(id).first(), rcP = pre ? relayCfg(env, deps) : null;
+  if (known) known.catch(() => {
+  });
+  if (rcP) rcP.catch(() => {
+  });
+  if (auth) await auth;
+  if (!okId) throw new Err(400, "bad-id");
   if (!knownImg.has(id)) {
-    if (!await env.DB.prepare("SELECT 1 AS x FROM imgids WHERE id = ?").bind(id).first()) throw new Err(404, "unknown-image");
+    if (!await (known || env.DB.prepare("SELECT 1 AS x FROM imgids WHERE id = ?").bind(id).first())) throw new Err(404, "unknown-image");
     knownImg.add(id);
     savedImg.add(id);
   }
-  const rc = await relayCfg(env, deps), ver = rc && rc.imgVer || (await metaGet(env, ["img_cache_ver"])).img_cache_ver || "1", etag = '"' + id + "-" + w + "-v" + ver + '"';
-  const H = (ct, via) => ({ "content-type": ct, "cache-control": "private, no-cache", etag, "x-img-via": via, ...SEC });
+  const rc = await (rcP || relayCfg(env, deps)), ver = rc && rc.imgVer || (await metaGet(env, ["img_cache_ver"])).img_cache_ver || "1", etag = '"' + id + "-" + w + "-v" + ver + '"';
+  const H = (ct, via) => ({ "content-type": ct, "cache-control": "private, no-cache", etag, "x-img-via": via, "server-timing": "pre;dur=" + (tPre - t0) + ", img;dur=" + (Date.now() - tPre) + ';desc="' + via + '"', ...SEC });
+  const tPre = Date.now();
   if (request.headers.get("If-None-Match") === etag) return new Response(null, { status: 304, headers: { "cache-control": "private, no-cache", etag, ...SEC } });
   const ck = new Request("https://img-cache.mu-traffic-hub.internal/v" + ver + "/" + id + "/" + w), cache = deps.cache;
   if (cache) {
@@ -1485,8 +1492,10 @@ async function handle(request, env, deps) {
       return json(await liveStats(env, deps, url.searchParams.get("scope") || "all"));
     }
     if (path === "/api/img" && m === "GET") {
-      await need(request, env, deps);
-      return await img(request, env, deps);
+      const a = need(request, env, deps);
+      a.catch(() => {
+      });
+      return await img(request, env, deps, a);
     }
     if (path === "/api/roster" && m === "GET") return await rosterGet(env, await need(request, env, deps));
     if (path === "/api/roster" && m === "POST") return await rosterWrite(request, env, deps, await need(request, env, deps, true));
@@ -1509,6 +1518,7 @@ var _coldImg = () => {
   knownImg.clear();
   savedImg.clear();
   imgSaveFailAt = -Infinity;
+  relayMemo = null;
 };
 var _reset = () => {
   memo.clear();

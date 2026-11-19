@@ -415,6 +415,13 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
       failW = false; NOW += 61e3; const f3 = await runH('/api/data?dataset=areaPhotos', { cookie: U10 }); const nNew = db._db.prepare("SELECT COUNT(*) AS n FROM imgids WHERE id LIKE 'MOCKAREANEW00X%'").get().n;
       _coldImg(); const fo = await runH('/api/img?id=' + ids2[7], { cookie: U10 });
       ok('[รอบ 14·P1] D1 เขียนล้ม → รายการยังได้ 200 ครบ + ภาพในเครื่องเดิมเปิดได้ · ไม่ลองเขียนซ้ำภายใน 60 วินาที · หลังนั้นลองใหม่สำเร็จ → เครื่องอื่นเปิดภาพได้', f1.s === 200 && f1.j.rows.length === NIMG && /err/.test(f1.h.get('server-timing')) && fi.s === 200 && cF === 1 && f2.s === 200 && cF2 === 1 && f3.s === 200 && nNew === NIMG && fo.s === 200, JSON.stringify({ f1: f1.s, fi: fi.s, cF, cF2, f3: f3.s, nNew, fo: fo.s }));
+      // ภาพบนเครื่องใหม่: ตรวจ session + ทะเบียนรหัส + ค่าตั้งตัวกลาง พร้อมกัน (D1 ช้า 150 ms ต่อคำสั่ง → รวมไม่ถึง 2 รอบ) · ไม่มีคุกกี้ → 401 ก่อนทุกอย่าง และไม่ถาม D1 เรื่องภาพ
+      { const slow = (q) => ({ ...q, bind: (...a) => slow(q.bind(...a)), first: async () => { await new Promise((r) => setTimeout(r, 150)); return q.first(); }, all: async () => { await new Promise((r) => setTimeout(r, 150)); return q.all(); } });
+        db.prepare = (sql) => { if (/FROM imgids WHERE id = \?/.test(sql)) imgSel++; return slow(realPrep(sql)); };
+        _coldImg(); imgSel = 0; const t0 = Date.now(), q1 = await runH('/api/img?id=' + ids2[9], { cookie: U10 }), dt = Date.now() - t0;
+        const q2 = await runH('/api/img?id=' + ids2[11]), q3 = await runH('/api/img?id=bad'), sel2 = imgSel;
+        db.prepare = realPrep;
+        ok('[รอบ 14·P1] ภาพบนเครื่องใหม่: D1 3 คำสั่งเริ่มพร้อมกัน (ใช้เวลา < 2 รอบ) · ไม่มี session → 401 (รหัสถูก/ผิด) และไม่ค้นทะเบียนภาพ', q1.s === 200 && dt < 300 && /pre;dur=\d+/.test(q1.h.get('server-timing') || '') && q2.s === 401 && q3.s === 401 && sel2 === 1, JSON.stringify({ s: q1.s, dt, st: q1.h.get('server-timing'), q2: q2.s, q3: q3.s, sel2 })); }
       db.batch = realBatch; db.prepare = realPrep; SHEETS[AREA] = keepA; db._db.exec("DELETE FROM imgids WHERE id LIKE 'MOCKAREA%'"); }
   _reset(); }
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ทั้งหมดเป็นการทดสอบ local ด้วยของจำลอง)'); process.exit(fails ? 1 : 0);

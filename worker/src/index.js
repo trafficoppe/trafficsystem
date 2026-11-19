@@ -478,12 +478,18 @@ async function chat(request, env, deps, s) {
 export const IMG_W = [400, 800, 1600];
 // แคช: (1) Cloudflare เก็บภาพด้วยคีย์ภายในที่มีเลขรุ่นแคช (img_cache_ver ใน D1 — เพิ่มเลขเพื่อล้างภาพเก่าทั้งหมด และเพิ่มอัตโนมัติเมื่อเปลี่ยนตัวกลาง)
 //      (2) เบราว์เซอร์: private, no-cache + ETag → ทุกครั้งต้องถามบริการก่อน (ผ่าน need() ทุกครั้ง) ได้ 304 ถ้าภาพเดิม — หลัง Logout จึงเปิดภาพผ่านระบบไม่ได้
-async function img(request, env, deps) {
-  const u = new URL(request.url), id = u.searchParams.get('id') || '', w = IMG_W.includes(+u.searchParams.get('w')) ? +u.searchParams.get('w') : 400;
-  if (!/^[-\w]{20,60}$/.test(id)) throw new Err(400, 'bad-id');
-  if (!knownImg.has(id)) { if (!(await env.DB.prepare('SELECT 1 AS x FROM imgids WHERE id = ?').bind(id).first())) throw new Err(404, 'unknown-image'); knownImg.add(id); savedImg.add(id); }      // รอบ 14·P1: พบใน D1 แล้วจำไว้ในเครื่อง (ไม่ถาม D1 ซ้ำทุกภาพ) · สิทธิ์ผู้ใช้ยังตรวจทุกคำขอใน need()
-  const rc = await relayCfg(env, deps), ver = (rc && rc.imgVer) || (await metaGet(env, ['img_cache_ver'])).img_cache_ver || '1', etag = '"' + id + '-' + w + '-v' + ver + '"';
-  const H = (ct, via) => ({ 'content-type': ct, 'cache-control': 'private, no-cache', etag, 'x-img-via': via, ...SEC });
+async function img(request, env, deps, auth) {
+  const u = new URL(request.url), id = u.searchParams.get('id') || '', w = IMG_W.includes(+u.searchParams.get('w')) ? +u.searchParams.get('w') : 400, t0 = Date.now(), okId = /^[-\w]{20,60}$/.test(id);
+  // รอบ 14·P1: ตรวจ session · ทะเบียนรหัสภาพ · ค่าตั้งตัวกลาง เริ่มพร้อมกัน (เดิมเรียงกัน 3 รอบไป-กลับ D1 ≈ 0.75–1 วิ ต่อภาพบนเครื่องใหม่) — เริ่มเฉพาะคำขอที่มีคุกกี้
+  //   ไม่ตอบอะไร (แม้ 400/404/304) จนกว่า session ผ่าน · ผลค้นรหัสภาพไม่ออกไปนอกบริการ
+  const pre = auth && cookieOf(request), known = !okId || knownImg.has(id) || !pre ? null : env.DB.prepare('SELECT 1 AS x FROM imgids WHERE id = ?').bind(id).first(), rcP = pre ? relayCfg(env, deps) : null;
+  if (known) known.catch(() => {}); if (rcP) rcP.catch(() => {});
+  if (auth) await auth;
+  if (!okId) throw new Err(400, 'bad-id');
+  if (!knownImg.has(id)) { if (!(await (known || env.DB.prepare('SELECT 1 AS x FROM imgids WHERE id = ?').bind(id).first()))) throw new Err(404, 'unknown-image'); knownImg.add(id); savedImg.add(id); }      // พบใน D1 แล้วจำไว้ในเครื่อง (ไม่ถาม D1 ซ้ำทุกภาพ) · สิทธิ์ผู้ใช้ยังตรวจทุกคำขอ
+  const rc = await (rcP || relayCfg(env, deps)), ver = (rc && rc.imgVer) || (await metaGet(env, ['img_cache_ver'])).img_cache_ver || '1', etag = '"' + id + '-' + w + '-v' + ver + '"';
+  const H = (ct, via) => ({ 'content-type': ct, 'cache-control': 'private, no-cache', etag, 'x-img-via': via, 'server-timing': 'pre;dur=' + (tPre - t0) + ', img;dur=' + (Date.now() - tPre) + ';desc="' + via + '"', ...SEC });
+  const tPre = Date.now();      // pre = session + ทะเบียน + ค่าตั้ง (พร้อมกัน)
   if (request.headers.get('If-None-Match') === etag) return new Response(null, { status: 304, headers: { 'cache-control': 'private, no-cache', etag, ...SEC } });
   const ck = new Request('https://img-cache.mu-traffic-hub.internal/v' + ver + '/' + id + '/' + w), cache = deps.cache;
   if (cache) { const hitC = await cache.match(ck); if (hitC) return new Response(hitC.body, { status: 200, headers: H(hitC.headers.get('content-type') || 'image/jpeg', 'cache') }); }
@@ -641,7 +647,7 @@ export async function handle(request, env, deps) {
       return new Response(body, { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...SEC, 'server-timing': st } }); }
     if (path === '/api/sources' && m === 'GET') { await need(request, env, deps); return json(await sourcesStatus(env, deps, url.searchParams.get('deep') === '1')); }
     if (path === '/api/stats' && m === 'GET') { await need(request, env, deps); return json(await liveStats(env, deps, url.searchParams.get('scope') || 'all')); }
-    if (path === '/api/img' && m === 'GET') { await need(request, env, deps); return await img(request, env, deps); }
+    if (path === '/api/img' && m === 'GET') { const a = need(request, env, deps); a.catch(() => {}); return await img(request, env, deps, a); }      // รอบ 14·P1: img รอผลตรวจ session ก่อนตอบทุกกรณี
     if (path === '/api/roster' && m === 'GET') return await rosterGet(env, await need(request, env, deps));
     if (path === '/api/roster' && m === 'POST') return await rosterWrite(request, env, deps, await need(request, env, deps, true));
     if (path === '/api/roster/log' && m === 'GET') { await need(request, env, deps, true); return json({ ok: true, rows: (await env.DB.prepare('SELECT seq, at, by, action, id, before, after FROM roster_log ORDER BY seq DESC LIMIT 100').all()).results }); }
@@ -653,7 +659,7 @@ export async function handle(request, env, deps) {
   }
 }
 export const _coldIsolate = () => { memo.clear(); inflight.clear(); };
-export const _coldImg = () => { knownImg.clear(); savedImg.clear(); imgSaveFailAt = -Infinity; };      // รอบ 14·P1: จำลองเครื่องใหม่ที่ยังไม่รู้จักรหัสภาพ      // จำลองเครื่องรับคำขอใหม่ (ชุดทดสอบ)
+export const _coldImg = () => { knownImg.clear(); savedImg.clear(); imgSaveFailAt = -Infinity; relayMemo = null; };      // รอบ 14·P1: จำลองเครื่องใหม่ที่ยังไม่รู้จักรหัสภาพ      // จำลองเครื่องรับคำขอใหม่ (ชุดทดสอบ)
 export const _reset = () => { memo.clear(); inflight.clear(); knownImg.clear(); savedImg.clear(); imgSaveFailAt = -Infinity; privImg.clear(); imgInflight.clear(); relayMemo = null; lastDeep = null; cacheEpoch++; _stat.reads = {}; };
 export const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, staff TEXT NOT NULL, name TEXT, unit TEXT, role TEXT NOT NULL, created INTEGER NOT NULL, exp INTEGER NOT NULL)',
