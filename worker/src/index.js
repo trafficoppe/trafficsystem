@@ -7,7 +7,11 @@ const REPO = 'https://raw.githubusercontent.com/trafficoppe/trafficsystem/';
 const COOKIE = '__Host-hub_s';
 const BKK = 7 * 3600e3;
 export class Err extends Error { constructor(status, code, extra) { super(code); this.status = status; this.code = code; this.extra = extra; } }
-const SEC = { 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'referrer-policy': 'strict-origin-when-cross-origin' };
+export const WORKER_REV = 'r14.1';      // รอบ 14.1: รุ่นของบริการ (หัว x-hub-rev) — ใช้ยืนยันว่า API ตอบจากรุ่นที่ Deploy ล่าสุด
+const SEC = { 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'referrer-policy': 'strict-origin-when-cross-origin', 'x-hub-rev': WORKER_REV };
+// รอบ 14.1: บันทึกข้อผิดพลาดแบบมีโครงสร้าง (ดูได้จาก real-time logs ของ Pages) — ตัด URL/รหัสยาว/ตัวเลขยาว/อีเมลออกก่อนบันทึก · ไม่บันทึก cookie/token/ข้อมูลดิบ/ข้อมูลบุคคล
+const redact = (t) => String(t == null ? '' : t).replace(/https?:\/\/[^\s'")]+/g, '<url>').replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '<email>').replace(/[A-Za-z0-9_-]{24,}/g, '<id>').replace(/\d{6,}/g, '<n>');
+export function logErr(ev, f, e) { try { console.error(JSON.stringify({ ev, rev: WORKER_REV, ...f, type: e && e.name ? String(e.name) : typeof e, code: e && typeof e.code === 'string' ? e.code : undefined, msg: redact(e && e.message).slice(0, 300), stack: redact(e && e.stack).split('\n').slice(1, 6).map((x) => x.trim()).join(' | ').slice(0, 600) })); } catch (x) { /* การบันทึกต้องไม่ทำให้คำขอล้ม */ } }
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...SEC, ...headers } });
 const bkk = (ms) => new Date(ms + BKK).toISOString().slice(0, 16).replace('T', ' ');
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -236,7 +240,7 @@ const cookieOf = (request) => { const m = new RegExp('(?:^|;\\s*)' + COOKIE + '=
 const setCookie = (v, maxAge) => COOKIE + '=' + v + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + maxAge;
 async function session(request, env, deps) {
   const tok = cookieOf(request); if (!tok) return null;
-  const row = await env.DB.prepare('SELECT staff, name, unit, role, exp FROM sessions WHERE id = ?').bind(await sha(tok)).first();
+  let row; try { row = await env.DB.prepare('SELECT staff, name, unit, role, exp FROM sessions WHERE id = ?').bind(await sha(tok)).first(); } catch (e) { if (e && typeof e === 'object') e.stage = 'auth-d1'; throw e; }      // รอบ 14.1: ระบุขั้นตอนใน log
   return row && row.exp > deps.now() ? row : null;
 }
 // สิทธิ์ผู้ดูแลตรวจกับ ADMIN_CODES “ณ ตอนที่เรียก” ทุกครั้ง (ถอดรหัสออกจากรายการแล้วสิทธิ์หายทันที ไม่ต้องรอ session หมดอายุ)
@@ -278,8 +282,8 @@ export const STATS_SCOPES = { all: ['incidents', 'lostfound', 'lostfoundYear', '
 //   ใช้เมื่อรอบนี้อ่านต้นทางไม่สำเร็จเท่านั้น · อายุไม่เกิน 7 วัน · คีย์ผูกรุ่นค่าตั้งแหล่ง/ตัวกลาง (cfgKey) · ตอบเป็น stale[k] = { at, error } ไม่ใส่ใน sourceReadAt
 export const LKG_MAX = 7 * 86400e3;
 const lkgCfg = async (env, k, deps) => STATS_SCHEMA + '-' + cacheEpoch + '|' + (await srcKey(env, PART_SRC[k], deps)).mk;      // ผูกค่าตั้งของแหล่งนั้น (ไม่ขึ้นกับ scope ที่ขอ)
-async function lkgGet(env, k, cfg, now) { try { const r = await env.DB.prepare('SELECT at, frag FROM stats_lkg WHERE k = ? AND cfg = ?').bind(k, cfg).first(); return r && now - r.at >= 0 && now - r.at <= LKG_MAX ? { at: r.at, frag: JSON.parse(r.frag) } : null; } catch (e) { return null; } }
-async function lkgPut(env, k, cfg, at, frag) { try { await env.DB.prepare('INSERT INTO stats_lkg(k, cfg, at, frag) VALUES(?, ?, ?, ?) ON CONFLICT(k) DO UPDATE SET cfg = excluded.cfg, at = excluded.at, frag = excluded.frag WHERE excluded.at >= stats_lkg.at OR excluded.cfg <> stats_lkg.cfg').bind(k, cfg, at, JSON.stringify(frag)).run(); } catch (e) { /* เก็บไม่ได้ = ไม่มีผลสำรอง ไม่กระทบคำตอบ */ } }
+async function lkgGet(env, k, cfg, now) { try { const r = await env.DB.prepare('SELECT at, frag FROM stats_lkg WHERE k = ? AND cfg = ?').bind(k, cfg).first(); return r && now - r.at >= 0 && now - r.at <= LKG_MAX ? { at: r.at, frag: JSON.parse(r.frag) } : null; } catch (e) { logErr('lkg-read-error', { part: k }, e); return null; } }
+async function lkgPut(env, k, cfg, at, frag) { try { await env.DB.prepare('INSERT INTO stats_lkg(k, cfg, at, frag) VALUES(?, ?, ?, ?) ON CONFLICT(k) DO UPDATE SET cfg = excluded.cfg, at = excluded.at, frag = excluded.frag WHERE excluded.at >= stats_lkg.at OR excluded.cfg <> stats_lkg.cfg').bind(k, cfg, at, JSON.stringify(frag)).run(); return true; } catch (e) { logErr('lkg-write-error', { part: k }, e); return false; } }      // รอบ 14.1: เก็บไม่ได้ไม่กระทบคำตอบ แต่ต้องมีหลักฐานใน log
 const STATS_TTL = 120e3, STATS_SCHEMA = 's12', PART_SRC = { incidents: 'incidents', lostfound: 'lostfound', lostfoundYear: 'lfYear', gate: 'gate', studentMoto: 'studentMoto', ruenthai: 'ruenthai' };
 let cacheEpoch = 0;
 const hashStr = (t) => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) >>> 0; return h.toString(36); };
@@ -331,18 +335,22 @@ async function liveStats(env, deps, scope) {
   const rc = names.some((k) => PRIVATE_SRC.has(PART_SRC[k])) ? await relayCfg(env, deps) : null;
   const cfgKey = STATS_SCHEMA + '-' + RELAY_VERSION + '-' + cacheEpoch + '-' + hashStr(JSON.stringify(SOURCES(env)) + '|' + (rc ? rc.rev : '') + '|' + str(env.HUB_GS_URL));       // ผูกกับแหล่ง/รุ่นโค้ด/ตัวกลาง (ไม่มีค่าลับในคีย์)
   await Promise.all(names.map(async (k) => {
-    const ck = deps.cache ? new Request('https://stats-cache.mu-traffic-hub.internal/' + cfgKey + '/' + k) : null, mem = await memoOf(env, PART_SRC[k], deps);
+    let stage = 'cache-read';      // รอบ 14.1 (วินิจฉัย): ขั้นตอนที่กำลังทำ — ระบุใน log/diag เมื่อล้ม
     try {
+      const ck = deps.cache ? new Request('https://stats-cache.mu-traffic-hub.internal/' + cfgKey + '/' + k) : null, mem = await memoOf(env, PART_SRC[k], deps);
       if (ck && !(mem && now - mem.at < STATS_TTL)) {          // เครื่องนี้ยังไม่มีตารางสด → ใช้ผลรวมที่เครื่องอื่นเพิ่งอ่าน (อายุไม่เกิน 2 นาทีนับจากเวลาอ่านต้นทาง)
         const h = await deps.cache.match(ck).catch(() => null), j = h ? await h.json().catch(() => null) : null;
         if (j && j.frag && now - j.at >= 0 && now - j.at < STATS_TTL) { Object.assign(res, j.frag); res.sourceReadAt[k] = bkk(j.at); return; }
       }
-      const frag = {}, at = await P[k](frag);
+      stage = 'source'; await table(env, PART_SRC[k], deps);
+      stage = 'transform'; const frag = {}, at = await P[k](frag);
       Object.assign(res, frag); res.sourceReadAt[k] = bkk(at);
-      const w = lkgPut(env, k, await lkgCfg(env, k, deps), at, frag); if (deps.waitUntil) deps.waitUntil(w); else await w;      // งานอ่านที่จบช้าแต่เก่ากว่าไม่ทับ (เงื่อนไข at >= เดิม)
-      if (ck) { try { await deps.cache.put(ck, new Response(JSON.stringify({ at, frag }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=' + Math.max(1, Math.round((STATS_TTL - (deps.now() - at)) / 1000)) } })); } catch (e) { /* แคชเป็นส่วนเสริม */ } }
+      stage = 'lkg-write'; const w = lkgPut(env, k, await lkgCfg(env, k, deps), at, frag); if (deps.waitUntil) deps.waitUntil(w); else await w;      // งานอ่านที่จบช้าแต่เก่ากว่าไม่ทับ (เงื่อนไข at >= เดิม)
+      stage = 'cache-write'; if (ck) { try { await deps.cache.put(ck, new Response(JSON.stringify({ at, frag }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=' + Math.max(1, Math.round((STATS_TTL - (deps.now() - at)) / 1000)) } })); } catch (e) { logErr('stats-cache-write-error', { part: k, ref: deps.ref }, e); } }
     } catch (e) {
       res.errors[k] = e instanceof Err ? e.code : 'internal';
+      logErr('stats-part-error', { part: k, scope: res.scope, stage, ref: deps.ref, hadRead: !!res.sourceReadAt[k] }, e);
+      (res.diag || (res.diag = {}))[k] = { stage, type: e && e.name ? String(e.name).slice(0, 40) : 'unknown' };      // ขั้นตอน+ชนิดเท่านั้น (ไม่มีข้อความภายใน/stack)
       const l = await lkgGet(env, k, await lkgCfg(env, k, deps), deps.now());
       if (l) { Object.assign(res, l.frag); (res.stale || (res.stale = {}))[k] = { at: bkk(l.at), error: res.errors[k] }; }
     }
@@ -636,6 +644,7 @@ const page = (title, msg, ip) => new Response('<!doctype html><html lang="th"><m
 
 // ---------- ตัวจัดเส้นทาง ----------
 export async function handle(request, env, deps) {
+  deps.ref = str(request.headers.get('cf-ray')).slice(0, 40) || undefined;      // รอบ 14.1: รหัสอ้างอิงคำขอ (ไม่ใช่ค่าลับ) สำหรับ log
   const url = new URL(request.url), path = url.pathname, api = path.startsWith('/api/'), net = network(request, env);
   try {
     if (net.mode === 'badconfig') throw new Err(503, 'bad-network-config');
@@ -672,8 +681,9 @@ export async function handle(request, env, deps) {
     if (path === '/api/chat' && m === 'POST') return await chat(request, env, deps, await need(request, env, deps));
     throw new Err(404, 'not-found');
   } catch (e) {
-    const status = e instanceof Err ? e.status : 500, code = e instanceof Err ? e.code : 'internal';
-    return api ? json(path === '/api/chat' ? { status: 'error', code } : { ok: false, code, ...(e instanceof Err && e.extra ? e.extra : {}) }, status) : new Response('Error', { status, headers: SEC });
+    const status = e instanceof Err ? e.status : 500, code = e instanceof Err ? e.code : 'internal', ref = str(request.headers.get('cf-ray')).slice(0, 40) || undefined;
+    if (!(e instanceof Err) || status >= 500) logErr('route-error', { path, method: request.method, status, ref, stage: e && e.stage }, e);      // รอบ 14.1: เดิมกลืนสาเหตุ (ไม่มี log)
+    return api ? json(path === '/api/chat' ? { status: 'error', code, ref: status >= 500 ? ref : undefined } : { ok: false, code, ref: status >= 500 ? ref : undefined, ...(e instanceof Err && e.extra ? e.extra : {}) }, status) : new Response('Error', { status, headers: SEC });
   }
 }
 export const _coldIsolate = () => { memo.clear(); inflight.clear(); };

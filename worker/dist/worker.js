@@ -428,7 +428,15 @@ var Err = class extends Error {
     this.extra = extra;
   }
 };
-var SEC = { "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin" };
+var WORKER_REV = "r14.1";
+var SEC = { "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin", "x-hub-rev": WORKER_REV };
+var redact = (t) => String(t == null ? "" : t).replace(/https?:\/\/[^\s'")]+/g, "<url>").replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "<email>").replace(/[A-Za-z0-9_-]{24,}/g, "<id>").replace(/\d{6,}/g, "<n>");
+function logErr(ev, f, e) {
+  try {
+    console.error(JSON.stringify({ ev, rev: WORKER_REV, ...f, type: e && e.name ? String(e.name) : typeof e, code: e && typeof e.code === "string" ? e.code : void 0, msg: redact(e && e.message).slice(0, 300), stack: redact(e && e.stack).split("\n").slice(1, 6).map((x) => x.trim()).join(" | ").slice(0, 600) }));
+  } catch (x) {
+  }
+}
 var json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...SEC, ...headers } });
 var bkk = (ms) => new Date(ms + BKK).toISOString().slice(0, 16).replace("T", " ");
 var hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -862,7 +870,13 @@ var setCookie = (v, maxAge) => COOKIE + "=" + v + "; Path=/; HttpOnly; Secure; S
 async function session(request, env, deps) {
   const tok = cookieOf(request);
   if (!tok) return null;
-  const row = await env.DB.prepare("SELECT staff, name, unit, role, exp FROM sessions WHERE id = ?").bind(await sha(tok)).first();
+  let row;
+  try {
+    row = await env.DB.prepare("SELECT staff, name, unit, role, exp FROM sessions WHERE id = ?").bind(await sha(tok)).first();
+  } catch (e) {
+    if (e && typeof e === "object") e.stage = "auth-d1";
+    throw e;
+  }
   return row && row.exp > deps.now() ? row : null;
 }
 async function roleOf(env, staffHash) {
@@ -929,13 +943,17 @@ async function lkgGet(env, k, cfg, now) {
     const r = await env.DB.prepare("SELECT at, frag FROM stats_lkg WHERE k = ? AND cfg = ?").bind(k, cfg).first();
     return r && now - r.at >= 0 && now - r.at <= LKG_MAX ? { at: r.at, frag: JSON.parse(r.frag) } : null;
   } catch (e) {
+    logErr("lkg-read-error", { part: k }, e);
     return null;
   }
 }
 async function lkgPut(env, k, cfg, at, frag) {
   try {
     await env.DB.prepare("INSERT INTO stats_lkg(k, cfg, at, frag) VALUES(?, ?, ?, ?) ON CONFLICT(k) DO UPDATE SET cfg = excluded.cfg, at = excluded.at, frag = excluded.frag WHERE excluded.at >= stats_lkg.at OR excluded.cfg <> stats_lkg.cfg").bind(k, cfg, at, JSON.stringify(frag)).run();
+    return true;
   } catch (e) {
+    logErr("lkg-write-error", { part: k }, e);
+    return false;
   }
 }
 var STATS_TTL = 12e4;
@@ -1042,8 +1060,9 @@ async function liveStats(env, deps, scope) {
   const rc = names.some((k) => PRIVATE_SRC.has(PART_SRC[k])) ? await relayCfg(env, deps) : null;
   const cfgKey = STATS_SCHEMA + "-" + RELAY_VERSION + "-" + cacheEpoch + "-" + hashStr(JSON.stringify(SOURCES(env)) + "|" + (rc ? rc.rev : "") + "|" + str(env.HUB_GS_URL));
   await Promise.all(names.map(async (k) => {
-    const ck = deps.cache ? new Request("https://stats-cache.mu-traffic-hub.internal/" + cfgKey + "/" + k) : null, mem = await memoOf(env, PART_SRC[k], deps);
+    let stage = "cache-read";
     try {
+      const ck = deps.cache ? new Request("https://stats-cache.mu-traffic-hub.internal/" + cfgKey + "/" + k) : null, mem = await memoOf(env, PART_SRC[k], deps);
       if (ck && !(mem && now - mem.at < STATS_TTL)) {
         const h = await deps.cache.match(ck).catch(() => null), j = h ? await h.json().catch(() => null) : null;
         if (j && j.frag && now - j.at >= 0 && now - j.at < STATS_TTL) {
@@ -1052,20 +1071,28 @@ async function liveStats(env, deps, scope) {
           return;
         }
       }
+      stage = "source";
+      await table(env, PART_SRC[k], deps);
+      stage = "transform";
       const frag = {}, at = await P[k](frag);
       Object.assign(res, frag);
       res.sourceReadAt[k] = bkk(at);
+      stage = "lkg-write";
       const w = lkgPut(env, k, await lkgCfg(env, k, deps), at, frag);
       if (deps.waitUntil) deps.waitUntil(w);
       else await w;
+      stage = "cache-write";
       if (ck) {
         try {
           await deps.cache.put(ck, new Response(JSON.stringify({ at, frag }), { headers: { "content-type": "application/json", "cache-control": "max-age=" + Math.max(1, Math.round((STATS_TTL - (deps.now() - at)) / 1e3)) } }));
         } catch (e) {
+          logErr("stats-cache-write-error", { part: k, ref: deps.ref }, e);
         }
       }
     } catch (e) {
       res.errors[k] = e instanceof Err ? e.code : "internal";
+      logErr("stats-part-error", { part: k, scope: res.scope, stage, ref: deps.ref, hadRead: !!res.sourceReadAt[k] }, e);
+      (res.diag || (res.diag = {}))[k] = { stage, type: e && e.name ? String(e.name).slice(0, 40) : "unknown" };
       const l = await lkgGet(env, k, await lkgCfg(env, k, deps), deps.now());
       if (l) {
         Object.assign(res, l.frag);
@@ -1638,6 +1665,7 @@ async function asset(env, path, deps, origin, versioned) {
 }
 var page = (title, msg, ip) => new Response('<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + title + '</title><body style="font-family:system-ui,sans-serif;max-width:560px;margin:12vh auto;padding:0 20px;color:#14231d"><h1 style="font-size:1.3rem">' + title + "</h1><p>" + msg + "</p>" + (ip ? '<p style="color:#555">IP \u0E17\u0E35\u0E48\u0E23\u0E30\u0E1A\u0E1A\u0E40\u0E2B\u0E47\u0E19: <b>' + ip.replace(/[^0-9a-fA-F.:]/g, "") + "</b> \u2014 \u0E41\u0E08\u0E49\u0E07\u0E1C\u0E39\u0E49\u0E14\u0E39\u0E41\u0E25\u0E23\u0E30\u0E1A\u0E1A\u0E2B\u0E32\u0E01\u0E04\u0E27\u0E23\u0E40\u0E02\u0E49\u0E32\u0E44\u0E14\u0E49</p>" : "") + "</body></html>", { status: 403, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...SEC } });
 async function handle(request, env, deps) {
+  deps.ref = str(request.headers.get("cf-ray")).slice(0, 40) || void 0;
   const url = new URL(request.url), path = url.pathname, api = path.startsWith("/api/"), net = network(request, env);
   try {
     if (net.mode === "badconfig") throw new Err(503, "bad-network-config");
@@ -1716,8 +1744,9 @@ async function handle(request, env, deps) {
     if (path === "/api/chat" && m === "POST") return await chat(request, env, deps, await need(request, env, deps));
     throw new Err(404, "not-found");
   } catch (e) {
-    const status = e instanceof Err ? e.status : 500, code = e instanceof Err ? e.code : "internal";
-    return api ? json(path === "/api/chat" ? { status: "error", code } : { ok: false, code, ...e instanceof Err && e.extra ? e.extra : {} }, status) : new Response("Error", { status, headers: SEC });
+    const status = e instanceof Err ? e.status : 500, code = e instanceof Err ? e.code : "internal", ref = str(request.headers.get("cf-ray")).slice(0, 40) || void 0;
+    if (!(e instanceof Err) || status >= 500) logErr("route-error", { path, method: request.method, status, ref, stage: e && e.stage }, e);
+    return api ? json(path === "/api/chat" ? { status: "error", code, ref: status >= 500 ? ref : void 0 } : { ok: false, code, ref: status >= 500 ? ref : void 0, ...e instanceof Err && e.extra ? e.extra : {} }, status) : new Response("Error", { status, headers: SEC });
   }
 }
 var _coldIsolate = () => {
@@ -1768,6 +1797,7 @@ export {
   SCHEMA,
   SOURCES,
   STATS_SCOPES,
+  WORKER_REV,
   _coldImg,
   _coldIsolate,
   _reset,
@@ -1776,6 +1806,7 @@ export {
   src_default as default,
   handle,
   ipNum,
+  logErr,
   network,
   normDT,
   parseCidrs,
