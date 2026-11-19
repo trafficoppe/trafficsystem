@@ -428,7 +428,7 @@ var Err = class extends Error {
     this.extra = extra;
   }
 };
-var WORKER_REV = "r14.1";
+var WORKER_REV = "r14.1b";
 var SEC = { "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin", "x-hub-rev": WORKER_REV };
 var redact = (t) => String(t == null ? "" : t).replace(/https?:\/\/[^\s'")]+/g, "<url>").replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "<email>").replace(/[A-Za-z0-9_-]{24,}/g, "<id>").replace(/\d{6,}/g, "<n>");
 function logErr(ev, f, e) {
@@ -645,7 +645,13 @@ async function readTable(env, key, deps, mk, cfg) {
       throw new Err(502, e && (e.name === "TimeoutError" || e.name === "AbortError") ? "source-timeout" : "source-unreachable");
     }
     if (!r.ok || !/text\/csv/.test(r.headers.get("content-type") || "")) throw new Err(502, r.status === 401 || r.status === 403 || r.ok ? "source-private" : "source-error");
-    rows = parseCsv(await r.text());
+    let body;
+    try {
+      body = await r.text();
+    } catch (e) {
+      throw new Err(502, e && (e.name === "TimeoutError" || e.name === "AbortError") ? "source-timeout" : "source-unreachable");
+    }
+    rows = parseCsv(body);
   }
   if (!rows.length) throw new Err(502, "source-schema");
   const t = { head: rows[0].map(str), rows: rows.slice(1).filter((x) => x.some((c) => str(c) !== "")), at: deps.now() };
@@ -874,8 +880,8 @@ async function session(request, env, deps) {
   try {
     row = await env.DB.prepare("SELECT staff, name, unit, role, exp FROM sessions WHERE id = ?").bind(await sha(tok)).first();
   } catch (e) {
-    if (e && typeof e === "object") e.stage = "auth-d1";
-    throw e;
+    logErr("auth-d1-error", {}, e);
+    throw new Err(503, "auth-unavailable");
   }
   return row && row.exp > deps.now() ? row : null;
 }
@@ -941,7 +947,9 @@ var lkgCfg = async (env, k, deps) => STATS_SCHEMA + "-" + cacheEpoch + "|" + (aw
 async function lkgGet(env, k, cfg, now) {
   try {
     const r = await env.DB.prepare("SELECT at, frag FROM stats_lkg WHERE k = ? AND cfg = ?").bind(k, cfg).first();
-    return r && now - r.at >= 0 && now - r.at <= LKG_MAX ? { at: r.at, frag: JSON.parse(r.frag) } : null;
+    if (!r || typeof r.at !== "number" || !(now - r.at >= 0 && now - r.at <= LKG_MAX)) return null;
+    const f = JSON.parse(r.frag);
+    return f && typeof f === "object" && !Array.isArray(f) ? { at: r.at, frag: f } : null;
   } catch (e) {
     logErr("lkg-read-error", { part: k }, e);
     return null;
@@ -1078,10 +1086,16 @@ async function liveStats(env, deps, scope) {
       Object.assign(res, frag);
       res.sourceReadAt[k] = bkk(at);
       stage = "lkg-write";
-      const w = lkgPut(env, k, await lkgCfg(env, k, deps), at, frag);
-      if (deps.waitUntil) deps.waitUntil(w);
-      else await w;
-      stage = "cache-write";
+      try {
+        const w = lkgCfg(env, k, deps).then((c) => lkgPut(env, k, c, at, frag)).catch((e) => {
+          logErr("lkg-write-error", { part: k, ref: deps.ref }, e);
+          return false;
+        });
+        if (deps.waitUntil) deps.waitUntil(w);
+        else await w;
+      } catch (e) {
+        logErr("lkg-write-error", { part: k, ref: deps.ref, stage }, e);
+      }
       if (ck) {
         try {
           await deps.cache.put(ck, new Response(JSON.stringify({ at, frag }), { headers: { "content-type": "application/json", "cache-control": "max-age=" + Math.max(1, Math.round((STATS_TTL - (deps.now() - at)) / 1e3)) } }));
@@ -1091,9 +1105,15 @@ async function liveStats(env, deps, scope) {
       }
     } catch (e) {
       res.errors[k] = e instanceof Err ? e.code : "internal";
-      logErr("stats-part-error", { part: k, scope: res.scope, stage, ref: deps.ref, hadRead: !!res.sourceReadAt[k] }, e);
+      delete res.sourceReadAt[k];
+      logErr("stats-part-error", { part: k, scope: res.scope, stage, ref: deps.ref }, e);
       (res.diag || (res.diag = {}))[k] = { stage, type: e && e.name ? String(e.name).slice(0, 40) : "unknown" };
-      const l = await lkgGet(env, k, await lkgCfg(env, k, deps), deps.now());
+      let l = null;
+      try {
+        l = await lkgGet(env, k, await lkgCfg(env, k, deps), deps.now());
+      } catch (x) {
+        logErr("lkg-read-error", { part: k, ref: deps.ref }, x);
+      }
       if (l) {
         Object.assign(res, l.frag);
         (res.stale || (res.stale = {}))[k] = { at: bkk(l.at), error: res.errors[k] };

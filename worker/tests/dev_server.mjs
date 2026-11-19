@@ -34,7 +34,7 @@ const SHEETS = {
 };
 const csv = (rows) => rows.map((r) => r.map((c) => (/[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c)).join(',')).join('\n');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFklEQVR4XmOsmNbOgA0wYRVlYKCLBADuLwGhta8zygAAAABJRU5ErkJggg==', 'base64');
-export const control = { sourceDown: false, clock: 0, downGid: {}, gidDelay: {} };      // clock = เลื่อนนาฬิกาของบริการ (ms) เพื่อทดสอบ TTL โดยไม่ต้องรอจริง
+export const control = { sourceDown: false, clock: 0, downGid: {}, gidDelay: {}, scope500: {}, bodyFail: {} };      // รอบ 14.1: scope500 = คำขอทั้ง scope ล้มระดับ HTTP · bodyFail = ต้นทางส่งหัวแล้วเนื้อหาขาด      // clock = เลื่อนนาฬิกาของบริการ (ms) เพื่อทดสอบ TTL โดยไม่ต้องรอจริง
 // รอบ 10: ตัวกลางอ่านไฟล์ส่วนตัว (MOCK) — เปิดไว้เป็นค่าเริ่มต้น (/__test/relay/off = ยังไม่ได้ติดตั้ง) · ภาพ GPS เป็นไฟล์ส่วนตัว อ่านได้เฉพาะผ่านตัวกลาง
 const REL = 'https://script.google.com/macros/s/MOCKRELAYDEVSERVER0000000000001/exec', RSEC = 'f'.repeat(64), PRIVATE_IMG = new Set([ID(51)]);
 const RT = {
@@ -55,6 +55,7 @@ const fetchMock = async (u, o) => { u = String(u); let m = /export\?format=csv&g
     if (b.action === 'img') return PRIVATE_IMG.has(b.id) ? Response.json({ ok: true, mime: 'image/png', b64: PNG.toString('base64') }) : Response.json({ ok: false, code: 'not-allowed' });
     return Response.json({ ok: false, code: 'unknown-action' }); }
   if (m && control.gidDelay[m[1]]) await new Promise((r) => setTimeout(r, control.gidDelay[m[1]]));      // รอบ 14: แหล่งเดียวช้า
+  if (m && control.bodyFail[m[1]]) return new Response(new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode('a,b\n')); c.error(new DOMException('The operation timed out.', 'TimeoutError')); } }), { headers: { 'content-type': 'text/csv' } });
   if (m && control.downGid[m[1]]) return new Response('<html>', { headers: { 'content-type': 'text/html' } });      // แพตช์ท้าย: แหล่งเดียวล้ม (แหล่งอื่นอ่านได้)
   if (m) return control.sourceDown ? new Response('<html>', { headers: { 'content-type': 'text/html' } }) : SHEETS[m[1]] ? new Response(csv(SHEETS[m[1]]), { headers: { 'content-type': 'text/csv' } }) : new Response('', { status: 404 });
   m = /drive\.google\.com\/thumbnail\?id=([-\w]+)/.exec(u); if (m) return PRIVATE_IMG.has(m[1]) ? new Response('<html>Sign in</html>', { headers: { 'content-type': 'text/html' } }) : new Response(PNG, { headers: { 'content-type': 'image/png' } });
@@ -74,6 +75,9 @@ export function start(port, opt = {}) {
       _reset(); rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/relay/')) { relayOn(rq.url.endsWith('on')); _reset(); rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/gidDelay/')) { const [, , , g, ms] = rq.url.split('/'); control.gidDelay[g] = +ms || 0; rs.end('ok'); return; }      // รอบ 14
+    if (rq.url.startsWith('/__test/scope500/')) { const [, , , sc, st] = rq.url.split('/'); control.scope500[sc] = st === 'on'; rs.end('ok'); return; }      // รอบ 14.1
+    if (rq.url.startsWith('/__test/bodyfail/')) { const [, , , g, st] = rq.url.split('/'); control.bodyFail[g] = st === 'on'; rs.end('ok'); return; }
+    { const m5 = /^\/api\/stats\?scope=(\w+)/.exec(rq.url); if (m5 && control.scope500[m5[1]]) { rs.writeHead(500, { 'content-type': 'application/json; charset=utf-8', 'cf-ray': 'TESTREF500-' + m5[1] }); rs.end(JSON.stringify({ ok: false, code: 'internal', ref: 'TESTREF500-' + m5[1] })); return; } }
     if (rq.url === '/__test/lkg/clear') { db.exec('DELETE FROM stats_lkg'); rs.end('ok'); return; }
     if (rq.url === '/__test/inc/add') { INC.push(inc(11, '2026-11-17', 'อุบัติเหตุทั่วไป', '-', '0', '-')); rs.end('ok'); return; }
     if (rq.url === '/__test/inc/reset') { INC.length = INC0; rs.end('ok'); return; }

@@ -47,12 +47,13 @@ const RELAY_TABLES = {
     ['2026-11-03 9:00:00', 'RT-1', 'TOKEN-SECRET-1', 'B', 'กลุ่มที่ 2: บุคลากรส่วนงานอื่น', 'จอดประจำ', 'ส่วนงานสมมติ', 'หน่วยสมมติ', '', '', '', '1', 'รถยนต์ทั่วไป', 'ทบ1111', '', '', 'รออัปเดตเข้ากล้อง', 'HASH1'],
     ['2026-11-04 9:00:00', 'RT-3', 'TOKEN-SECRET-3', 'C', 'กลุ่มที่ 3: อื่น ๆ', 'อื่น ๆ', '', '', '', '', '', '2', 'รถยนต์ทั่วไป', 'ทบ4444', '', '', 'อัปเดตแล้ว', 'HASH3']]
 };
-let csvDelay = 0, downGid = ''; const csvCalls = [], thumbCalls = [];
+let csvDelay = 0, downGid = '', bodyFailGid = ''; const csvCalls = [], thumbCalls = [];
 const fetchMock = async (u, o) => { u = String(u);
   let m = /docs\.google\.com\/spreadsheets\/d\/([\w-]+)\/export\?format=csv&gid=(\d+)/.exec(u);
   // รอบ 13: Sheet อีกชุด (MOCKLF2 = ตั้งค่าใหม่) มีข้อมูลต่างจากชุดเดิม 1 แถว
   if (m) { const sid = m[1]; m = [m[0], m[2]]; csvCalls.push(m[1]);
     if (sid === 'MOCKLF2' && m[1] === '1811117659') { if (csvDelay) await new Promise((r) => setTimeout(r, csvDelay)); return new Response(csv(SHEETS[m[1]].concat([['2026-11-15', 'พ.ศ. 2569', 'พบสิ่งของ', 'FND-MOCK-9', 'รอดำเนินการ']])), { headers: { 'content-type': 'text/csv; charset=utf-8' } }); }
+    if (bodyFailGid === m[1]) return new Response(new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode('a,b\n')); c.error(new DOMException('The operation timed out.', 'TimeoutError')); } }), { headers: { 'content-type': 'text/csv; charset=utf-8' } });      // รอบ 14.1: หัวตอบแล้วแต่เนื้อหาขาดกลางทาง
     if (csvDelay) await new Promise((r) => setTimeout(r, csvDelay)); if (sourceDown || downGid === m[1]) return new Response('<html>Sign in</html>', { status: 200, headers: { 'content-type': 'text/html' } }); return SHEETS[m[1]] ? new Response(csv(SHEETS[m[1]]), { headers: { 'content-type': 'text/csv; charset=utf-8' } }) : new Response('', { status: 404 }); }
   m = /raw\.githubusercontent\.com\/trafficoppe\/trafficsystem\/[0-9a-f]+\/(.+)$/.exec(u);
   if (m) { const f = path.join(ROOT, m[1]); return fs.existsSync(f) ? new Response(fs.readFileSync(f)) : new Response('', { status: 404 }); }
@@ -458,5 +459,34 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
       ENV.aiReply = 'ข้อมูลส่วนตัว'; const bad = await run('/api/chat', { method: 'POST', cookie: U14, body: { action: 'sql', userMessage: 'SELECT * FROM roster' } }, E);
       ok('[รอบ 14·P2] action อื่นนอกจาก chat/summary → 400 (ไม่มีช่องให้หน้าเว็บส่ง SQL/URL/Sheet)', bad.s === 400);
       ENV.aiReply = ''; }
+    // ================= รอบ 14.1: hotfix สถานะ internal (failure injection ในเครื่องจำลองเท่านั้น) =================
+    { NOW += 86400e3; _reset(); const U = (await loginAs('0123')).cookie, INC = SOURCES(E).incidents[1], logs = [], ce = console.error; console.error = (x) => { logs.push(String(x)); };
+      const mk = (o) => { const m = new Map(); return Object.assign({ fetch: fetchMock, now: () => NOW, cache: { match: async (k) => { const v = m.get(k.url || String(k)); return v ? v.clone() : undefined; }, put: async (k, v) => { m.set(k.url || String(k), v.clone()); } } }, o || {}); };
+      const call = async (p, d, cookie) => { const x = await handle(req(p, { cookie: cookie === undefined ? U : cookie }), E, d); return { s: x.status, j: await x.json(), rev: x.headers.get('x-hub-rev') }; };
+      try {
+        // 1) ต้นทางส่งหัวมาแล้วแต่เนื้อหาขาด/หมดเวลา → รหัสต้นทาง (source-timeout) ไม่ใช่ internal · มี log
+        _coldIsolate(); NOW += 130e3; bodyFailGid = INC; logs.length = 0; const b1 = await call('/api/stats?scope=inc', mk()); bodyFailGid = '';
+        ok('[รอบ 14.1] เนื้อหาต้นทางขาดกลางทาง → errors.incidents = source-timeout (เดิม internal) · ไม่มีเวลาอ่านสด · log ระบุขั้นตอน', b1.s === 200 && b1.j.errors.incidents === 'source-timeout' && !b1.j.sourceReadAt.incidents && logs.some((l) => /"ev":"stats-part-error".*"part":"incidents".*"stage":"source"/.test(l)), JSON.stringify({ e: b1.j.errors, r: b1.j.sourceReadAt, logs: logs.slice(-2) }));
+        // 2) อ่านสำเร็จ แต่ระบบสำรอง (waitUntil/LKG) ล้ม → ยังเป็นข้อมูลสด ไม่ติด error · มีหลักฐานใน log
+        _coldIsolate(); NOW += 130e3; logs.length = 0; const b2 = await call('/api/stats?scope=rest', mk({ waitUntil: () => { throw new TypeError('waitUntil boom'); } }));
+        ok('[รอบ 14.1] อ่านสำเร็จแต่ waitUntil/งานเก็บสำรองล้ม → ไม่ตัดสินว่าแหล่งอ่านล้ม (เวลาอ่านสดครบ 3 ส่วน) · log lkg-write-error', b2.s === 200 && Object.keys(b2.j.errors).length === 0 && ['lostfound', 'lostfoundYear', 'gate'].every((k) => b2.j.sourceReadAt[k]) && logs.some((l) => /"ev":"lkg-write-error"/.test(l)), JSON.stringify({ e: b2.j.errors, r: b2.j.sourceReadAt, n: logs.length }));
+        const realPrep = db.prepare; db.prepare = (sql) => { if (/INSERT INTO stats_lkg/.test(sql)) throw new Error('D1_ERROR: mock write failure'); return realPrep(sql); };
+        _coldIsolate(); NOW += 130e3; logs.length = 0; const b3 = await call('/api/stats?scope=inc', mk()); db.prepare = realPrep;
+        ok('[รอบ 14.1] D1 เขียน LKG ล้ม → ผลสด/เวลาอ่านถูกต้อง · มี log lkg-write-error (เดิมกลืนเงียบ)', b3.s === 200 && !b3.j.errors.incidents && b3.j.sourceReadAt.incidents && logs.some((l) => /"ev":"lkg-write-error".*"part":"incidents"/.test(l)), JSON.stringify({ e: b3.j.errors, n: logs.length }));
+        const d4 = mk(); d4.cache.put = async () => { throw new Error('cache put failed'); }; _coldIsolate(); NOW += 130e3; logs.length = 0; const b4 = await call('/api/stats?scope=inc', d4);
+        ok('[รอบ 14.1] เขียนแคชล้ม → ผลสดถูกต้อง · มี log stats-cache-write-error', b4.s === 200 && !b4.j.errors.incidents && b4.j.sourceReadAt.incidents && logs.some((l) => /"ev":"stats-cache-write-error"/.test(l)));
+        // 3) LKG ข้ามเครื่องตามอายุ/คีย์ · รูปแบบเสีย → ไม่ใช้ ไม่เติมศูนย์ ไม่บอกว่าสด
+        _coldIsolate(); NOW += 130e3; await call('/api/stats?scope=inc', mk()); const good = db._db.prepare("SELECT at, frag FROM stats_lkg WHERE k = 'incidents'").get();
+        _coldIsolate(); NOW += 130e3; downGid = INC; const s1 = await call('/api/stats?scope=inc', mk());
+        db._db.prepare("UPDATE stats_lkg SET frag = '[1]' WHERE k = 'incidents'").run(); _coldIsolate(); NOW += 130e3; logs.length = 0; const s2 = await call('/api/stats?scope=inc', mk());
+        db._db.prepare("UPDATE stats_lkg SET frag = '{bad' WHERE k = 'incidents'").run(); _coldIsolate(); NOW += 130e3; const s3 = await call('/api/stats?scope=inc', mk()); downGid = '';
+        db._db.prepare("UPDATE stats_lkg SET frag = ? WHERE k = 'incidents'").run(good.frag);
+        ok('[รอบ 14.1] สำเร็จ → หมดอายุ 2 นาที → ต้นทางล้ม → เครื่องใหม่ใช้ LKG ที่บันทึกจริง (เวลาอ่านเดิม) · LKG รูปแบบเสีย (array/JSON พัง) → ไม่ใช้ ไม่มีตัวเลข ไม่มีเวลาอ่านสด', s1.j.stale && s1.j.stale.incidents && s1.j.incidents && !s1.j.sourceReadAt.incidents && !(s2.j.stale && s2.j.stale.incidents) && !s2.j.incidents && !s2.j['0'] && !s2.j.sourceReadAt.incidents && !(s3.j.stale && s3.j.stale.incidents) && !s3.j.incidents && logs.length >= 0, JSON.stringify({ s1: s1.j.stale, s2: [s2.j.stale, !!s2.j.incidents, Object.keys(s2.j)], s3: [s3.j.stale, !!s3.j.incidents] }));
+        // 4) ตรวจ session ใน D1 ล้มชั่วคราว → 503 auth-unavailable (ไม่ใช่ internal) และไม่มีข้อมูล · ไม่มี session → 401 · หัว x-hub-rev บอกรุ่นบริการ
+        db.prepare = (sql) => { if (/FROM sessions WHERE id/.test(sql)) throw new Error('D1_ERROR: Network connection lost.'); return realPrep(sql); }; logs.length = 0; const a1 = await call('/api/stats?scope=inc', mk()); db.prepare = realPrep;
+        const a2 = await call('/api/stats?scope=inc', mk(), '');
+        ok('[รอบ 14.1] D1 ตรวจ session ล้ม → 503 auth-unavailable ไม่มีข้อมูล (เดิม 500 internal) · ไม่มี session → 401 · ทุกคำตอบมี x-hub-rev', a1.s === 503 && a1.j.code === 'auth-unavailable' && !a1.j.incidents && logs.some((l) => /"ev":"auth-d1-error"/.test(l)) && a2.s === 401 && !a2.j.incidents && a1.rev === 'r14.1b' && a2.rev === 'r14.1b', JSON.stringify({ a1: a1.s + ' ' + a1.j.code, a2: a2.s, rev: a1.rev }));
+        ok('[รอบ 14.1] log ไม่มี cookie/รหัสพนักงาน/URL/รหัสไฟล์', logs.every((l) => !/0123|sid=|https?:\/\/|MOCK[A-Z]{3,}\d|[A-Za-z0-9_-]{30,}/.test(l)), logs.find((l) => /0123|sid=|https?:\/\/|[A-Za-z0-9_-]{30,}/.test(l)) || '');
+      } finally { console.error = ce; bodyFailGid = ''; downGid = ''; } }
   _reset(); }
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ทั้งหมดเป็นการทดสอบ local ด้วยของจำลอง)'); process.exit(fails ? 1 : 0);

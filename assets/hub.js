@@ -1701,6 +1701,7 @@
     vals.forEach(function (x, i) { var h = x == null ? 0 : Math.max(x > 0 ? 2 : 0.8, x / mx * (H - 2)); s.appendChild(svg('rect', { x: i * (w + g), y: H - h, width: w, height: h, rx: 1, fill: x == null ? 'var(--line)' : color, opacity: i === n - 1 ? 1 : 0.55 })); });
     return s;
   }
+  function liveFailed(k) { return !!(AUTH.on && AUTH.user && live.errors && live.errors[k] && liveShownAt(k)); }
   function nowCards() { var Q = periodOf(); return [nowIncidents(Q), nowLostFound(Q), nowGate(Q), nowAnywheel(Q), nowTram(Q), nowCctv(Q), nowAssets(Q), nowGuard(Q)].filter(Boolean); }
   function nowCard(o) {
     var kids = [el('div', { class: 'now-h' }, [el('span', { class: 'now-ico' }, [ic(o.icon, 18)]), el('h3', { text: o.title }), o.badge ? el('span', { class: 'now-badge' + (o.stale ? ' stale' : ''), text: o.badge }) : null])];
@@ -1727,6 +1728,7 @@
       if (!cv.ok || Q.day > cv.day) { s = incSum(incRows(function (r) { return r.date === d.lastEntry; }));
         base.mainNa = cv.ok ? 'ยังไม่มีข้อมูลวันนี้' : 'ยังยืนยันข้อมูลวันนี้ไม่ได้'; base.badge = 'ล่าสุด ' + dShort(d.lastEntry); base.stale = true; base.subs = [{ l: 'เหตุการณ์', v: num(s.n) }, { l: 'ผู้บาดเจ็บ/ป่วย', v: num(s.inj) + ' คน' }]; base.note = cv.ok ? 'ตรวจข้อมูลล่าสุด ' + dLabel(d.checkedAt) : 'อ่านต้นทางไม่ครบ'; return base; }
       s = incSum(incRows(function (r) { return r.date === Q.day; })); base.badge = Q.day === cv.day ? 'วันนี้ ณ ' + cv.time + ' น.' : 'วันนี้'; base.note = 'รายการที่บันทึกแล้ว ณ เวลาตรวจ · ล่าสุด ' + dShort(d.lastEntry);
+      if (liveFailed('incidents')) { base.stale = true; base.note = 'ยอด ณ ' + cv.time + ' น. · รอบล่าสุดอัปเดตไม่สำเร็จ — ยังยืนยันยอดหลังเวลานี้ไม่ได้'; }      /* รอบ 14.1: ไม่ให้ 0 ของรอบก่อนดูเหมือนยอดล่าสุด */
     } else { s = incSum(incRows(function (r) { return Q.months.indexOf(r.date.slice(0, 7)) >= 0; })); base.badge = Q.label; if (Q.months.indexOf(Q.cm) >= 0) base.note = 'ข้อมูลถึง ' + dLabel(cv.ok ? d.checkedAt : d.lastEntry); }
     base.main = { v: num(s.n), u: 'เหตุการณ์' };
     base.subs = [{ l: 'ยานพาหนะ', v: num(s.v) }, { l: 'ทั่วไป', v: num(s.g) }, { l: 'รับส่งผู้ป่วย', v: num(s.p) }, { l: 'ผู้บาดเจ็บ/ป่วย', v: num(s.inj) + ' คน' }];
@@ -1741,7 +1743,8 @@
         if (!cv.ok || Q.day > cv.day || Q.day < d.from) { var l = by[d.lastEntry] || { lost: 0, found: 0 }; base.mainNa = !cv.ok ? 'ยังยืนยันข้อมูลวันนี้ไม่ได้' : Q.day < d.from ? 'ข้อมูลรายวันยังไม่รองรับ' : 'ยังไม่มีข้อมูลวันนี้'; base.badge = 'ล่าสุด ' + dShort(d.lastEntry); base.stale = true;
           base.subs = [{ l: 'แจ้งหาย', v: num(l.lost) }, { l: 'เก็บได้', v: num(l.found) }]; base.note = cv.ok ? 'ตรวจข้อมูลล่าสุด ' + dLabel(d.checkedAt) : 'อ่านต้นทางไม่ครบ'; return base; }
         var t = by[Q.day] || { lost: 0, found: 0, returnForms: 0 }; base.badge = Q.day === cv.day ? 'วันนี้ ณ ' + cv.time + ' น.' : 'วันนี้'; base.main = { v: num(t.lost), u: 'แจ้งของหาย' };
-        base.subs = [{ l: 'เก็บของได้', v: num(t.found) }, { l: 'แบบรับของคืน', v: num(t.returnForms) }]; base.note = 'รายการที่บันทึกแล้ว ณ เวลาตรวจ · ล่าสุด ' + dShort(d.lastEntry); return base; } }
+        base.subs = [{ l: 'เก็บของได้', v: num(t.found) }, { l: 'แบบรับของคืน', v: num(t.returnForms) }]; base.note = 'รายการที่บันทึกแล้ว ณ เวลาตรวจ · ล่าสุด ' + dShort(d.lastEntry);
+        if (liveFailed('lostfound')) { base.stale = true; base.note = 'ยอด ณ ' + cv.time + ' น. · รอบล่าสุดอัปเดตไม่สำเร็จ — ยังยืนยันยอดหลังเวลานี้ไม่ได้'; } return base; } }
     else if (Q.kind === 'today') { base.mainNa = 'ข้อมูลรายวันยังไม่รองรับ'; return base; }
     var rows = lf.monthly.filter(function (r) { return Q.months.indexOf(r.month) >= 0; }), st = (lfs ? lfs.monthly : []).filter(function (r) { return Q.months.indexOf(r.month) >= 0; });
     var sum = function (k) { return rows.reduce(function (a, r) { return a + (r.byType[k] || 0); }, 0); };
@@ -1758,7 +1761,7 @@
     base.spark = { vals: daySeries(end, 14, function (x) { return by[x] ? by[x].cars + by[x].motorcycles : null; }), aria: 'รถเข้า 14 วันล่าสุด', cap: '14 วันถึง ' + dShort(end) + ' · เฉพาะรถเข้า' };
     var fill = function (r, n) { base.main = { v: num(r.cars + r.motorcycles), u: 'คันเข้า' }; base.subs = [{ l: 'รถยนต์', v: num(r.cars) }, { l: 'จักรยานยนต์', v: num(r.motorcycles) }, { l: 'ไม่สวมหมวก', v: num(r.noHelmet) + ' ราย' }]; if (n) base.subs.push({ l: 'วันที่มีข้อมูล', v: n + ' วัน' }); };
     if (Q.kind === 'today') {
-      if (by[Q.day]) { fill(by[Q.day]); base.badge = 'วันนี้'; return base; }
+      if (by[Q.day]) { fill(by[Q.day]); base.badge = 'วันนี้'; if (liveFailed('gate')) { base.stale = true; base.note = 'ข้อมูลที่อ่านสำเร็จเมื่อ ' + dLabel(liveShownAt('gate')) + ' · รอบล่าสุดอัปเดตไม่สำเร็จ'; } return base; }
       base.mainNa = 'ยังไม่มีข้อมูลวันนี้'; base.badge = 'ล่าสุด ' + dShort(last.date); base.stale = true;
       base.subs = [{ l: 'รถเข้า', v: num(last.cars + last.motorcycles) + ' คัน' }, { l: 'ไม่สวมหมวก', v: num(last.noHelmet) + ' ราย' }]; return base; }
     var rows = g.monthly.filter(function (r) { return Q.months.indexOf(r.month) >= 0; });
@@ -2369,7 +2372,7 @@
   function apiCall(path, opt) {
     opt = opt || {};
     return fetch(API + path, { method: opt.method || 'GET', credentials: 'include', cache: 'no-store', headers: opt.body ? { 'Content-Type': 'application/json', Accept: 'application/json' } : { Accept: 'application/json' }, body: opt.body ? JSON.stringify(opt.body) : undefined })
-      .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return { s: r.status, j: j || {} }; }); }, function () { return { s: 0, j: {} }; });
+      .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return { s: r.status, j: j || {}, ref: r.headers.get('cf-ray') || '' }; }); }, function () { return { s: 0, j: {}, ref: '' }; });      /* รอบ 14.1: รหัสอ้างอิงคำขอ (cf-ray) */
   }
   var LOGIN_MSG = { invalid: 'รหัสพนักงานไม่ถูกต้องหรือไม่มีสิทธิ์เข้าใช้งาน', 'rate-limited': 'ลองหลายครั้งเกินกำหนด กรุณารอสักครู่แล้วลองใหม่', 'verify-unavailable': 'ไม่สามารถตรวจสอบการเข้าสู่ระบบได้ในขณะนี้ กรุณาลองใหม่',
     'bad-network-config': 'ระบบตั้งค่าเครือข่ายไม่ถูกต้อง — แจ้งผู้ดูแลระบบ', 'network-denied': 'เข้าใช้งานไม่ได้จากเครือข่ายนี้', net: 'เชื่อมต่อบริการไม่ได้ กรุณาลองใหม่' };
@@ -2409,7 +2412,7 @@
     if (!AUTH.started) { AUTH.started = true; AUTH.cb(); } else route(true);
     liveRefresh();
   }
-  function liveReset() { live.sig = {}; live.busy = null; live.at = null; live.readAt = {}; live.lastOk = {}; live.stale = {}; live.errors = null; live.ok = null; }
+  function liveReset() { live.sig = {}; live.busy = null; live.at = null; live.readAt = {}; live.lastOk = {}; live.stale = {}; live.errors = null; live.ok = null; live.errInfo = {}; live.retryN = 0; }
   /* แพตช์ท้าย: ข้อความเวลาของแหล่ง k — อ่านสำเร็จรอบนี้ = เวลาอ่านจริง · รอบล่าสุดล้ม = เวลาอ่านสำเร็จครั้งก่อน + บอกว่าไม่สำเร็จ
    * ยังไม่เคยอ่านสด (ไม่ Login/ไฟล์สรุป) = “ไฟล์สรุป …” — ไม่ใช้เวลาตอบคำขอหรือเวลาของแหล่งอื่นแทน */
   function srcReadTxt(k, snapAt) {
@@ -2432,7 +2435,7 @@
     var st = $('stamp'); st.parentNode.insertBefore(box, st);
   }
   /* สถิติสด: อ่านต้นทางผ่านบริการ ณ เวลาที่เรียก — ส่วนที่อ่านไม่สำเร็จคงข้อมูลล่าสุดในไฟล์ไว้และบอกสถานะ (ไม่เติม 0 ไม่เปลี่ยนเวลาให้ดูสด) */
-  var live = { at: null, errors: null, timer: null, sig: {}, busy: null, readAt: {}, lastOk: {}, stale: {} }, authGen = 0;
+  var live = { at: null, errors: null, timer: null, sig: {}, busy: null, readAt: {}, lastOk: {}, stale: {}, errInfo: {}, retryN: 0 }, authGen = 0;      /* รอบ 14.1: errInfo[k] = { code, ref, stage, at } (เวลาที่พยายามครั้งล่าสุด) */
   function liveApply(j) {
     var M = DATA.stats.modules, X = DATA.extra;
     if (M.incidents && !live.snapInc) live.snapInc = { updated: M.incidents.updated, total: M.incidents.total };      /* รอบ 14: จำวันที่ของไฟล์สรุปไว้ก่อนถูกแทนด้วยข้อมูลสด */
@@ -2444,6 +2447,20 @@
   }
   /* รอบ 12: ขอ 2 ชุดแยกกัน — ชุดหลัก (เหตุการณ์/L&F/รถเข้า) แสดงทันทีที่มา ไม่รอชุดไฟล์ส่วนตัว (นักศึกษา–จยย./เรือนไทย) ซึ่งผ่านตัวกลางและช้ากว่า
      · วาดหน้าใหม่เฉพาะเมื่อข้อมูลเปลี่ยนจริง และคงตำแหน่งเลื่อน/ส่วนที่เปิดอยู่ · คำตอบที่มาหลังออกจากระบบ/เปลี่ยนผู้ใช้ถูกทิ้ง (authGen) · แท็บซ่อนอยู่ไม่ยิงคำขอ */
+  /* รอบ 14.1: ชื่อแหล่งสำหรับผู้ใช้ · เวลาไทยตอนนี้ · ลองใหม่เร็วหลังล้ม (60/120 วินาที แล้วกลับเป็นทุก 5 นาที — ไม่ยิงวน) */
+  var LIVE_NAME = { incidents: 'รายงานเหตุการณ์', lostfound: 'Lost & Found (รายวัน)', lostfoundYear: 'Lost & Found (สถานะ/รายปี)', gate: 'รถเข้าและหมวกนิรภัย', studentMoto: 'ทะเบียนนักศึกษา–จยย.', ruenthai: 'ลานจอดเรือนไทย' };
+  function nowStamp() { return new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 16).replace('T', ' '); }
+  function liveRetrySchedule() {
+    var bad = LIVE_CORE_PARTS.some(function (k) { return live.errors && live.errors[k]; });
+    if (!bad) { live.retryN = 0; return; }
+    if (live.retryFor === live.last) return; live.retryFor = live.last;      /* นับครั้งเดียวต่อรอบ (inc/rest ตอบแยกกัน) */
+    if (live.retryN >= 2) return; live.retryN++;
+    clearTimeout(live.timer); live.timer = setTimeout(liveRefresh, live.retryN * 60000);
+  }
+  function liveRetryNow(btn) {          /* ปุ่มลองใหม่: กันกดซ้ำระหว่างทำงาน และเว้นอย่างน้อย 15 วินาที */
+    if ((live.busy && live.busy.gen === authGen && live.busy.n > 0) || Date.now() - (live.manualAt || 0) < 15000) { if (btn) { btn.disabled = true; setTimeout(function () { btn.disabled = false; }, 3000); } return; }
+    live.manualAt = Date.now(); live.retryN = 0; if (btn) btn.disabled = true; liveRefresh();
+  }
   function liveRefresh() {
     if (!AUTH.on || !AUTH.user || !HCFG.liveStatsUrl) return;
     clearTimeout(live.timer); live.timer = setTimeout(liveRefresh, 5 * 60000);
@@ -2467,15 +2484,16 @@
       apiCall('/stats?scope=' + q[0]).then(function (x) {
         done(); if (gen !== authGen) return;
         if (x.s === 401) { authLost(); return; }
-        var errs = Object.assign({}, live.errors || {}); delete errs.all; parts.forEach(function (k) { delete errs[k]; delete live.stale[k]; });
-        if (x.s !== 200 || !x.j.ok) { parts.forEach(function (k) { errs[k] = x.j.code || 'http ' + x.s; delete live.readAt[k]; }); live.errors = Object.keys(errs).length ? errs : null; liveStampsUpdate(); liveNoteDraw(); return; }
+        var errs = Object.assign({}, live.errors || {}); delete errs.all; parts.forEach(function (k) { delete errs[k]; delete live.stale[k]; delete live.errInfo[k]; });      /* รอบ 14.1: ล้างเฉพาะแหล่งของคำขอนี้ (ไม่ล้างของแหล่งอื่น) */
+        var tAt = nowStamp();
+        if (x.s !== 200 || !x.j.ok) { parts.forEach(function (k) { errs[k] = x.j.code || 'http ' + x.s; live.errInfo[k] = { code: errs[k], ref: x.j.ref || '', stage: 'request', http: x.s, at: tAt }; delete live.readAt[k]; }); live.errors = Object.keys(errs).length ? errs : null; liveRetrySchedule(); liveStampsUpdate(); liveNoteDraw(); return; }
         var j = x.j, rd = j.sourceReadAt || {}, stl = j.stale || {}; liveApply(j);
         parts.forEach(function (k) {
           if (rd[k]) { live.readAt[k] = rd[k]; live.lastOk[k] = rd[k]; } else delete live.readAt[k];
           if (stl[k]) { live.stale[k] = stl[k]; if (!live.lastOk[k] || stl[k].at > live.lastOk[k]) live.lastOk[k] = stl[k].at; }
-          if ((j.errors || {})[k]) errs[k] = j.errors[k];
+          if ((j.errors || {})[k]) { errs[k] = j.errors[k]; live.errInfo[k] = { code: j.errors[k], ref: x.ref || '', stage: ((j.diag || {})[k] || {}).stage || '', http: 200, at: tAt }; }
         });
-        live.at = j.checkedAt; live.errors = Object.keys(errs).length ? errs : null; live.ok = LIVE_CORE_PARTS.filter(function (k) { return live.readAt[k]; });
+        live.at = j.checkedAt; live.errors = Object.keys(errs).length ? errs : null; live.ok = LIVE_CORE_PARTS.filter(function (k) { return live.readAt[k]; }); liveRetrySchedule();
         draw(liveSig(j, q[2]), q[0]);
       });
     });
@@ -2501,11 +2519,19 @@
   function flushSoon() { if (!live.pending || flushT) return; flushT = setTimeout(function () { flushT = 0; if (live.pending && AUTH.user && !uiBusy()) { live.pending = false; route(true); } }, 400); }
   ['focusout', 'click', 'keyup'].forEach(function (ev) { document.addEventListener(ev, flushSoon, true); });
   function isTyping() { var a = document.activeElement; return !!a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.isConnected && !a.closest('[hidden]') && a.getClientRects().length > 0; }
-  function liveNoteDraw() {
+  function liveNoteDraw() {      /* รอบ 14.1: ข้อความหลักภาษาเข้าใจง่าย + รายละเอียด (ชื่อแหล่งภาษาไทย/เวลาที่อ่านสำเร็จ/เวลาที่พยายาม/สาเหตุ/รหัสอ้างอิง) + ปุ่มลองใหม่ */
     var b = $('banner'); if (!b || !AUTH.on) return;
-    if (live.errors) { b.hidden = false; b.textContent = 'อัปเดตสถิติจากต้นทางไม่สำเร็จบางส่วน (' + Object.keys(live.errors).map(function (k) { return k + ': ' + live.errors[k]; }).join(' · ') + ') — ส่วนนั้นแสดงข้อมูลล่าสุดที่มี พร้อมวันที่ของข้อมูล'; }
-    else { b.hidden = true; b.textContent = ''; }
+    var ks = live.errors ? Object.keys(live.errors).filter(function (k) { return k !== 'all'; }) : [];
+    if (!ks.length) { if (b.__live) { b.hidden = true; b.textContent = ''; b.__live = false; } return; }
+    var wasOpen = !!(b.querySelector('details') && b.querySelector('details').open), noLast = ks.filter(function (k) { return !liveShownAt(k); });
+    b.textContent = ''; b.hidden = false; b.__live = true;
+    b.appendChild(el('span', { text: 'อัปเดตข้อมูลบางรายการไม่สำเร็จ ขณะนี้' + (noLast.length ? (noLast.length === ks.length ? 'แสดงไฟล์สรุปแทน' : 'แสดงข้อมูลที่อ่านสำเร็จล่าสุด (บางรายการเป็นไฟล์สรุป)') : 'แสดงข้อมูลที่อ่านสำเร็จล่าสุด') + ' ' }));
+    var btn = el('button', { type: 'button', class: 'btn-ghost banner-retry', text: 'ลองอัปเดตอีกครั้ง', onclick: function () { liveRetryNow(btn); } }); if (live.busy && live.busy.gen === authGen && live.busy.n > 0) btn.disabled = true;
+    var det = el('details', { class: 'banner-det' }, [el('summary', { text: 'ดูรายละเอียด' }), el('ul', {}, ks.map(function (k) { var i = live.errInfo[k] || {}, last = liveShownAt(k);
+      return el('li', { text: (LIVE_NAME[k] || k) + ' — ' + (last ? 'ใช้ข้อมูลที่อ่านสำเร็จเมื่อ ' + dLabel(last) : 'ยังไม่มีข้อมูลที่อ่านสำเร็จ (แสดงไฟล์สรุป)') + ' · พยายามล่าสุด ' + (i.at ? dLabel(i.at) : '-') + ' · ' + srcWhy(live.errors[k]) + (i.ref ? ' · รหัสอ้างอิง ' + i.ref : '') }); }))]);
+    det.open = wasOpen; b.appendChild(btn); b.appendChild(det);
   }
+
 
   /* ---------- ชุดข้อมูลภายในเพิ่มเติม (อ่านผ่านบริการหลัง Login) ---------- */
   DS.incidents = { mode: 'api', tab: 'รายงานเหตุการณ์' }; DS.lostfound = { mode: 'api', tab: 'LF_New' }; DS.events = { mode: 'api', tab: 'กิจกรรมพิเศษ › Sheet1' }; DS.gps = { mode: 'api', tab: 'GPS งานปริญญา › Reports' };
@@ -2896,8 +2922,8 @@
     'source-schema': 'หัวคอลัมน์ต้นทางเปลี่ยน', 'relay-timeout': 'ตัวกลางตอบช้าเกินไป', 'relay-unreachable': 'ติดต่อตัวกลางไม่ได้ชั่วคราว', 'source-unreachable': 'ติดต่อต้นทางไม่ได้ชั่วคราว', 'source-error': 'ต้นทางตอบผิดรูปแบบ',
     'relay-internal': 'ตัวกลางทำงานผิดพลาด', 'relay-error': 'ตัวกลางตอบผิดรูปแบบ', 'source-not-configured': 'ยังไม่ได้ตั้ง ID ของแหล่งข้อมูล',
     'relay-not-deployed': 'ไม่พบ Web app ของตัวกลาง (ถูกลบหรือ URL ผิด)', 'outdated': 'ตัวกลาง Deploy เป็นโค้ดรุ่นเก่า — ต้อง Deploy เป็น New version', 'relay-not-allowed': 'ตัวกลางไม่อนุญาตไฟล์นี้ (อยู่นอกโฟลเดอร์ที่กำหนด)',
-    'relay-unknown-source': 'ตัวกลางรุ่นนี้ไม่รู้จักตารางนี้', 'relay-source-forbidden': 'บัญชีที่ติดตั้งตัวกลางเปิด Sheet นี้ไม่ได้', 'relay-source-error': 'ตัวกลางอ่าน Sheet ไม่สำเร็จ', 'relay-not-found': 'ตัวกลางไม่พบไฟล์/แท็บ', 'skipped': 'ไม่มีภาพตัวอย่างให้ตรวจ' };
-  function srcWhy(code) { return SRC_WHY[code] || ('อ่านไม่สำเร็จ (' + code + ')'); }
+    'relay-unknown-source': 'ตัวกลางรุ่นนี้ไม่รู้จักตารางนี้', internal: 'บริการของระบบขัดข้องระหว่างประมวลผล (ไม่ใช่ปัญหาจากไฟล์ต้นทาง)', 'auth-unavailable': 'ตรวจสิทธิ์เข้าใช้ไม่สำเร็จชั่วคราว', 'source-timeout': 'ต้นทางตอบช้าเกินกำหนด', 'http 0': 'เชื่อมต่อบริการไม่ได้ (เครือข่ายหลุดหรือเครื่องพักหน้าจอ)', 'relay-source-forbidden': 'บัญชีที่ติดตั้งตัวกลางเปิด Sheet นี้ไม่ได้', 'relay-source-error': 'ตัวกลางอ่าน Sheet ไม่สำเร็จ', 'relay-not-found': 'ตัวกลางไม่พบไฟล์/แท็บ', 'skipped': 'ไม่มีภาพตัวอย่างให้ตรวจ' };
+  function srcWhy(code) { return SRC_WHY[code] || (/^http \d+$/.test(code || '') ? 'บริการตอบผิดพลาด (' + code.toUpperCase() + ')' : 'อ่านไม่สำเร็จ (' + code + ')'); }
   function liveSourcesSection() {
     var host = el('div', {}, []);
     function load(deep) {
@@ -3014,18 +3040,26 @@
     if (!AUTH.on || !AUTH.user) return 'สถิติรวมจากไฟล์สรุป (ข้อมูลถึง ' + dLabel(snap) + ')';
     if (r) return 'ข้อมูลสด · อ่านจากต้นทางเมื่อ ' + dLabel(r);
     if (st) return 'ใช้ข้อมูลที่อ่านสำเร็จล่าสุดเมื่อ ' + dLabel(st.at) + ' · รอบล่าสุดอ่านไม่สำเร็จ (' + srcWhy(st.error) + ') — ระบบจะลองใหม่อัตโนมัติ';
-    if (e) return 'แสดงไฟล์สรุป (ข้อมูลถึง ' + dLabel(snap) + ') — ยังยืนยันยอดปัจจุบันไม่ได้ เพราะอ่านต้นทางไม่สำเร็จ (' + srcWhy(e) + ')';
+    if (e && live.lastOk[k]) return 'ใช้ข้อมูลที่อ่านสำเร็จล่าสุดเมื่อ ' + dLabel(live.lastOk[k]) + ' · รอบล่าสุดอัปเดตไม่สำเร็จ (' + srcWhy(e) + ') — ระบบจะลองใหม่อัตโนมัติ';      /* รอบ 14.1: ข้อมูลที่แสดงอยู่มาจากรอบก่อน ไม่ใช่ไฟล์สรุป */
+    if (e) return 'แสดงไฟล์สรุป (ข้อมูลถึง ' + dLabel(snap) + ') — ยังยืนยันยอดปัจจุบันไม่ได้ (' + srcWhy(e) + ')';
     return 'ไฟล์สรุป (ข้อมูลถึง ' + dLabel(snap) + ') · กำลังอ่านข้อมูลสด…';
   }
   function srcStateNode(k) {
     var p = el('p', { class: 'src-state', role: 'status', text: srcStateTxt(k) }); p.classList.add('live-ts'); p.__ts = function () { return srcStateTxt(k); };
-    var b = el('button', { type: 'button', class: 'btn-ghost src-retry', text: 'ลองอ่านใหม่', onclick: function () { live.busy = null; liveRefresh(); } });
+    var b = el('button', { type: 'button', class: 'btn-ghost src-retry', text: 'ลองอ่านใหม่', onclick: function () { liveRetryNow(b); } });
     var w = el('div', { class: 'src-state-wrap' }, [p, b]); b.hidden = !(live.errors && (live.errors[k] || live.errors.all)); return w;
   }
+  /* รอบ 14.1: ข้อความเวลาอธิบาย “ข้อมูลที่กำลังแสดงจริง” — อ่านสดรอบนี้ / ใช้ผลที่อ่านสำเร็จล่าสุด (รอบล่าสุดไม่สำเร็จ) / ไฟล์สรุป
+   * เดิมดูเฉพาะ readAt → แหล่งที่รอบล่าสุดล้มหายไปจากข้อความ แล้วหัวเว็บย้อนไปใช้วันที่ไฟล์สรุปทั้งที่การ์ดยังแสดงค่ารอบก่อน */
+  function liveShownAt(k) { return (live.readAt && live.readAt[k]) || (live.stale[k] && live.stale[k].at > (live.lastOk[k] || '') ? live.stale[k].at : live.lastOk[k]) || ''; }
   function liveReadText() {
-    var t = LIVE_CORE_PARTS.map(function (k) { return live.readAt && live.readAt[k]; }).filter(Boolean).sort();
-    if (!t.length) return '';
-    return t[0] === t[t.length - 1] ? 'ข้อมูลสดอ่านจากต้นทางเมื่อ ' + dLabel(t[0]) : 'ข้อมูลสดอ่านจากต้นทาง ' + dLabel(t[0]) + ' – ' + dLabel(t[t.length - 1]) + ' (แต่ละแหล่งอ่านต่างเวลา)';
+    var fresh = [], old = [], none = [];
+    LIVE_CORE_PARTS.forEach(function (k) { if (live.readAt && live.readAt[k]) fresh.push(live.readAt[k]); else if (liveShownAt(k)) old.push(liveShownAt(k)); else if (live.errors && live.errors[k]) none.push(k); });
+    if (!fresh.length && !old.length) return '';
+    if (old.length || none.length) { var all = fresh.concat(old).sort();
+      return 'ใช้ข้อมูลที่อ่านสำเร็จล่าสุดเมื่อ ' + (all[0] === all[all.length - 1] ? dLabel(all[0]) : dLabel(all[0]) + ' – ' + dLabel(all[all.length - 1])) + ' · รอบล่าสุดอัปเดตไม่สำเร็จ ' + (old.length + none.length) + ' รายการ'; }
+    fresh.sort();
+    return fresh[0] === fresh[fresh.length - 1] ? 'ข้อมูลสดอ่านจากต้นทางเมื่อ ' + dLabel(fresh[0]) : 'ข้อมูลสดอ่านจากต้นทาง ' + dLabel(fresh[0]) + ' – ' + dLabel(fresh[fresh.length - 1]) + ' (แต่ละแหล่งอ่านต่างเวลา)';
   }
   function liveReadTitle() {
     var N = { incidents: 'เหตุการณ์', lostfound: 'L&F รายวัน', lostfoundYear: 'L&F รายปี/สถานะ', gate: 'รถเข้า', studentMoto: 'นักศึกษา–จยย.', ruenthai: 'เรือนไทย' };
@@ -3057,7 +3091,7 @@
     var rt = AUTH.on && AUTH.user ? liveReadText() : '';
     if (rt) {        /* แยกความหมาย: เวลาที่อ่านข้อมูลสดสำเร็จ (เหตุการณ์/L&F/รถเข้า) ≠ เวลาสร้างไฟล์สรุปของหมวดอื่น */
       s.appendChild(el('b', { text: rt })); s.appendChild(el('br'));
-      s.appendChild(document.createTextNode((live.errors ? 'บางชุดอ่านไม่สำเร็จ · ' : 'เหตุการณ์ · L&F · รถเข้า · ') + 'หมวดอื่นจากไฟล์สรุป ' + dShort(g.slice(0, 10)) + ' ' + g.slice(11, 16) + ' น.'));
+      s.appendChild(document.createTextNode('เหตุการณ์ · L&F · รถเข้า · หมวดอื่นจากไฟล์สรุป ' + dShort(g.slice(0, 10)) + ' ' + g.slice(11, 16) + ' น.'));
       s.title = liveReadTitle() + ' · ข้อมูลสด: ' + (live.ok || []).join(', ') + ' · ไฟล์สรุป (snapshot) สร้างเมื่อ ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) + ' · วันที่ข้อมูลล่าสุดของแต่ละเรื่องดูที่ป้ายบนการ์ด';
       return;
     }

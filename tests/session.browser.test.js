@@ -384,6 +384,32 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
     ok('[รอบ 14·P0] ต้นทางเพิ่ม 1 เหตุ (วันที่ใหม่กว่า) → KPI 11 และรายการรายละเอียด/ช่วงวันที่ค่าเริ่มต้นตามรุ่นเดียวกัน (ไม่ค้างรายการเก่าในหน่วยความจำ)', /^เหตุการณ์ทั้งหมด 11\s*เหตุ/.test(k1) && l1 === l0 + 1, k1 + ' | list ' + l0 + '→' + l1);
     await page.request.get(BASE + '/__test/inc/reset'); await page.request.get(BASE + '/__test/clock/200'); await D.ctx.close();
   }
+  { // ===== รอบ 14.1 (local-mock): ป้ายสถานะ/เวลาเมื่ออัปเดตบางส่วนไม่สำเร็จ · ฟื้นแล้วคำเตือนหาย =====
+    const M = await mk(); const pg = M.page; await pg.goto(BASE + '/#dashboard'); await pg.waitForSelector('#loginView'); await login(pg, '0123'); await pg.waitForSelector('#userBox'); await pg.waitForTimeout(2500);
+    await pg.evaluate(() => { window.__mark = 1; window.scrollTo(0, 300); });
+    const st = () => pg.evaluate(() => ({ stamp: document.getElementById('stamp').innerText.replace(/\s+/g, ' '), ban: document.getElementById('banner').hidden ? '' : document.getElementById('banner').innerText.replace(/\s+/g, ' '), det: [...document.querySelectorAll('#banner details li')].map((x) => x.textContent), mark: window.__mark, y: Math.round(window.pageYOffset), anchor: Math.round((document.querySelector('#view section') || document.body).getBoundingClientRect().top), inc: ([...document.querySelectorAll('#view .now-card, #view .card')].find((c) => /เหตุการณ์และอุบัติเหตุ/.test(c.textContent)) || {}).textContent || '' }));
+    const refresh = async () => { await page.request.get(BASE + '/__test/clock/200'); await pg.evaluate(() => window.__hub.live()); await pg.waitForTimeout(1800); };
+    const s0 = await st();
+    await page.request.get(BASE + '/__test/scope500/rest/on'); await refresh(); const s1 = await st();
+    ok('[รอบ 14.1] คำขอ rest ล้ม (HTTP 500) → คำเตือนภาษาไทย “อัปเดตข้อมูลบางรายการไม่สำเร็จ ขณะนี้แสดงข้อมูลที่อ่านสำเร็จล่าสุด” · รายละเอียดเฉพาะ L&F/รถเข้า (ไม่ป้ายรายงานเหตุการณ์) + รหัสอ้างอิง · ไม่แสดงชื่อภายใน', /อัปเดตข้อมูลบางรายการไม่สำเร็จ ขณะนี้แสดงข้อมูลที่อ่านสำเร็จล่าสุด/.test(s1.ban) && s1.det.length === 3 && s1.det.every((t) => /^(Lost & Found|รถเข้า)/.test(t) && /รหัสอ้างอิง TESTREF500-rest/.test(t) && /ใช้ข้อมูลที่อ่านสำเร็จเมื่อ/.test(t)) && !/lostfound:|internal/.test(s1.ban), JSON.stringify({ ban: s1.ban.slice(0, 160), det: s1.det }));
+    ok('[รอบ 14.1] หัวเว็บอธิบายข้อมูลที่แสดงจริง: “ใช้ข้อมูลที่อ่านสำเร็จล่าสุดเมื่อ … · รอบล่าสุดอัปเดตไม่สำเร็จ” ไม่ย้อนไปวันที่ไฟล์สรุป', /ใช้ข้อมูลที่อ่านสำเร็จล่าสุดเมื่อ .* · รอบล่าสุดอัปเดตไม่สำเร็จ 3 รายการ/.test(s1.stamp) && !/ตรวจข้อมูลล่าสุด/.test(s1.stamp) && /ข้อมูลสดอ่านจากต้นทางเมื่อ/.test(s0.stamp), s0.stamp + ' → ' + s1.stamp);
+    await page.request.get(BASE + '/__test/scope500/inc/on'); await refresh(); const s2 = await st();
+    ok('[รอบ 14.1] inc+rest ล้มทั้งคู่ → หัวเว็บยังบอกเวลาที่อ่านสำเร็จล่าสุด (ไม่ใช่ไฟล์สรุป) · การ์ดเหตุการณ์วันนี้บอกว่า “ยอด ณ … รอบล่าสุดอัปเดตไม่สำเร็จ” (ไม่ให้ 0 ดูเป็นยอดล่าสุด)', /ใช้ข้อมูลที่อ่านสำเร็จล่าสุดเมื่อ .* · รอบล่าสุดอัปเดตไม่สำเร็จ 4 รายการ/.test(s2.stamp) && !/ตรวจข้อมูลล่าสุด/.test(s2.stamp) && /รอบล่าสุดอัปเดตไม่สำเร็จ/.test(s2.inc) && s2.det.length === 4, JSON.stringify({ stamp: s2.stamp, inc: s2.inc.slice(0, 200) }));
+    // ปุ่มลองใหม่กันกดซ้ำ
+    let nReq = 0; const onReq = (q) => { if (/\/api\/stats\?scope=inc/.test(q.url())) nReq++; }; pg.on('request', onReq);
+    await pg.click('#banner .banner-retry'); await pg.click('#banner .banner-retry').catch(() => {}); await pg.waitForTimeout(1500); pg.off('request', onReq);
+    ok('[รอบ 14.1] ปุ่ม “ลองอัปเดตอีกครั้ง” กดซ้ำทันที → ส่งคำขอรอบเดียว', nReq === 1, 'คำขอ inc ' + nReq + ' ครั้ง');
+    await pg.waitForTimeout(1200); await pg.evaluate(() => window.scrollTo(0, 300));      // การคลิกปุ่มบนแถบเตือนเลื่อนหน้าไปด้านบน — ตั้งตำแหน่งใหม่ก่อนวัดการฟื้น
+    const sPre = await st();
+    await page.request.get(BASE + '/__test/scope500/inc/off'); await page.request.get(BASE + '/__test/scope500/rest/off'); await refresh(); const s3 = await st();
+    ok('[รอบ 14.1] ต้นทาง/บริการกลับมา → คำเตือนหายเอง หัวเว็บเป็น “ข้อมูลสด” · ไม่โหลดหน้าใหม่ · เนื้อหาบนจอไม่กระโดด (สถานะหน้าเดิม)', !s3.ban && /ข้อมูลสดอ่านจากต้นทางเมื่อ/.test(s3.stamp) && s3.mark === 1 && Math.abs(s3.anchor - sPre.anchor) < 5, JSON.stringify({ ban: s3.ban, stamp: s3.stamp, mark: s3.mark, anchor: [sPre.anchor, s3.anchor], y: [sPre.y, s3.y] }));
+    // HTTP 200 แต่ส่วนเดียวล้ม (เนื้อหาต้นทางขาด) → เตือนเฉพาะแหล่งนั้น · ส่วนอื่นยังสด
+    await page.request.get(BASE + '/__test/bodyfail/480256005/on'); await refresh(); const s4 = await st(); await page.request.get(BASE + '/__test/bodyfail/480256005/off');
+    ok('[รอบ 14.1] HTTP 200 แต่ส่วนรายงานเหตุการณ์อ่านเนื้อหาไม่ครบ → เตือนเฉพาะรายงานเหตุการณ์ (สาเหตุ “ต้นทางตอบช้าเกินกำหนด” ไม่ใช่ internal)', s4.det.length === 1 && /^รายงานเหตุการณ์/.test(s4.det[0]) && /ต้นทางตอบช้าเกินกำหนด/.test(s4.det[0]), JSON.stringify(s4.det));
+    await refresh(); const s5 = await st();
+    ok('[รอบ 14.1] รอบถัดไปอ่านสำเร็จ → error ของแหล่งนั้นไม่ค้าง', !s5.ban && /ข้อมูลสดอ่านจากต้นทางเมื่อ/.test(s5.stamp), s5.ban);
+    await shot(pg, '14_1_banner_MOCK'); await M.ctx.close();
+  }
   { // รอบ 13 ต่อ: เปิด Dashboard ค้างข้าม 00:00 (เวลาไทย) โดยข้อมูลไม่เปลี่ยน → “วันนี้” และยอดของวันนี้ต้องเปลี่ยนตามวันจริง
     const M = await mk(); const p2 = M.page; await p2.goto(BASE + '/#dashboard'); await p2.waitForSelector('#loginView'); await login(p2, '0123'); await p2.waitForSelector('.nows .now'); await p2.waitForTimeout(1200);
     const bk = new Date(Date.now() + 7 * 3600e3), nd = new Date(Date.UTC(bk.getUTCFullYear(), bk.getUTCMonth(), bk.getUTCDate() + 1, 0, 5) - 7 * 3600e3);
