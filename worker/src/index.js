@@ -444,8 +444,9 @@ async function chat(request, env, deps, s) {
   sameOrigin(request);
   const b = await request.json().catch(() => null), act = b && b.action, q = str(b && b.userMessage).slice(0, 500); if (!b || !((act === 'chat' && q) || act === 'summary')) throw new Err(400, 'bad-body');
   const now = deps.now(), kM = 'chat:' + s.staff + ':' + Math.floor(now / 60000), kD = 'chatd:' + s.staff + ':' + Math.floor((now + BKK) / 864e5), t0 = Date.now();
-  if (await count(env, kM, deps) >= (+env.CHAT_RATE_PER_MIN || 6) || await count(env, kD, deps) >= (+env.CHAT_RATE_PER_DAY || 60)) throw new Err(429, 'rate-limited');
-  await hit(env, kM, 60, deps); await hit(env, kD, 86400, deps);
+  const [cM, cD] = await Promise.all([count(env, kM, deps), count(env, kD, deps)]);      // รอบ 14·P2: ตรวจ/นับพร้อมกัน (เดิมเรียง 4 รอบไป-กลับ D1) — เพดานเท่าเดิม
+  if (cM >= (+env.CHAT_RATE_PER_MIN || 6) || cD >= (+env.CHAT_RATE_PER_DAY || 60)) throw new Err(429, 'rate-limited');
+  await Promise.all([hit(env, kM, 60, deps), hit(env, kD, 86400, deps)]);
   // บทสนทนาก่อนหน้า: 6 ข้อความล่าสุด ไม่เกิน 600 ตัวอักษรต่อข้อความ และรวมไม่เกิน 2,400 ตัวอักษร (คุมค่าใช้จ่ายและความยาว)
   let hist = (Array.isArray(b.chatHistory) ? b.chatHistory : []).slice(-6).map((m) => ({ role: m && m.role === 'AI' ? 'assistant' : 'user', content: str(m && m.text).slice(0, 600) })).filter((m) => m.content);
   while (hist.reduce((a, m) => a + m.content.length, 0) > 2400) hist.shift();
