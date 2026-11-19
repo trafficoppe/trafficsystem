@@ -936,6 +936,7 @@
         { icon: 'car', label: V, value: num(t(V)), unit: 'เหตุ', scope: rangeText(), color: C.c1 },
         { icon: 'alert', label: G, value: num(t(G)), unit: 'เหตุ', scope: rangeText(), color: C.c2 },
         { icon: 'heart', label: P, value: num(t(P)), unit: 'ครั้ง', scope: rangeText(), color: C.c3 }]));
+      v.appendChild(srcStateNode('incidents'));
       var g = el('div', { class: 'grid2' });
       g.appendChild(figure('เหตุการณ์รายเดือน แยกประเภท', 'ที่มา: รายงานเหตุการณ์ · อัปเดต ' + dLabel(inc.updated), incidentChart()));
       g.appendChild(figure('สรุปตามประเภท (ทั้งช่วงข้อมูล)', dLabel(inc.range.from) + ' – ' + dLabel(inc.range.to), table(['ประเภทเหตุการณ์', 'จำนวนเหตุ', 'ผู้บาดเจ็บ/ป่วย (คน)'], inc.byType.map(function (r) { return [r.type, num(r.count), num(r.injuredOrIll)]; }), { num: [1, 2], foot: ['รวม', num(inc.total), num(inc.injuredTotal)] })));
@@ -1898,7 +1899,7 @@
     else if (dsCache[key] && dsMode(key) === 'api' && AUTH.on && AUTH.user && !authChk) {      /* รอบ 13: ใช้รายการที่อยู่ในหน่วยความจำ → ตรวจ session ฝั่งบริการเบื้องหลังทุกครั้ง (คำขอเดียวพร้อมกัน) หมดอายุ/ถูกถอน → กลับหน้า Login */
       var g0 = authGen; authChk = apiCall('/me').then(function (x) { authChk = null; if (g0 === authGen && x.s === 401) authLost(); });
     }
-    if (!dsCache[key]) { var m = dsMode(key); dsCache[key] = (m === 'off' ? Promise.reject({ code: 'off' }) : m === 'api' ? apiGet(key) : gviz(DS[key])).then(function (rows) { return { rows: rows, at: new Date() }; }); dsCache[key].catch(function () { delete dsCache[key]; }); dsCache[key].t0 = Date.now(); }
+    if (!dsCache[key]) { var m = dsMode(key); dsCache[key] = (m === 'off' ? Promise.reject({ code: 'off' }) : m === 'api' ? apiGet(key) : gviz(DS[key])).then(function (rows) { if (dsCache[key] === p0) p0.n = rows.length; return { rows: rows, at: new Date() }; }); var p0 = dsCache[key]; dsCache[key].catch(function () { delete dsCache[key]; }); dsCache[key].t0 = Date.now(); }
     return dsCache[key];
   }
   var DS_ERR = {
@@ -2365,7 +2366,7 @@
     if (!AUTH.started) { AUTH.started = true; AUTH.cb(); } else route(true);
     liveRefresh();
   }
-  function liveReset() { live.sig = {}; live.busy = null; live.at = null; live.readAt = {}; live.lastOk = {}; live.errors = null; live.ok = null; }
+  function liveReset() { live.sig = {}; live.busy = null; live.at = null; live.readAt = {}; live.lastOk = {}; live.stale = {}; live.errors = null; live.ok = null; }
   /* แพตช์ท้าย: ข้อความเวลาของแหล่ง k — อ่านสำเร็จรอบนี้ = เวลาอ่านจริง · รอบล่าสุดล้ม = เวลาอ่านสำเร็จครั้งก่อน + บอกว่าไม่สำเร็จ
    * ยังไม่เคยอ่านสด (ไม่ Login/ไฟล์สรุป) = “ไฟล์สรุป …” — ไม่ใช้เวลาตอบคำขอหรือเวลาของแหล่งอื่นแทน */
   function srcReadTxt(k, snapAt) {
@@ -2388,12 +2389,14 @@
     var st = $('stamp'); st.parentNode.insertBefore(box, st);
   }
   /* สถิติสด: อ่านต้นทางผ่านบริการ ณ เวลาที่เรียก — ส่วนที่อ่านไม่สำเร็จคงข้อมูลล่าสุดในไฟล์ไว้และบอกสถานะ (ไม่เติม 0 ไม่เปลี่ยนเวลาให้ดูสด) */
-  var live = { at: null, errors: null, timer: null, sig: {}, busy: null, readAt: {}, lastOk: {} }, authGen = 0;
+  var live = { at: null, errors: null, timer: null, sig: {}, busy: null, readAt: {}, lastOk: {}, stale: {} }, authGen = 0;
   function liveApply(j) {
     var M = DATA.stats.modules, X = DATA.extra;
+    if (M.incidents && !live.snapInc) live.snapInc = { updated: M.incidents.updated, total: M.incidents.total };      /* รอบ 14: จำวันที่ของไฟล์สรุปไว้ก่อนถูกแทนด้วยข้อมูลสด */
+    if (j.incidents && dsCache.incidents && dsCache.incidents.n != null && dsCache.incidents.n !== j.incidents.total) delete dsCache.incidents;      /* รอบ 14: รายการในหน่วยความจำคนละรุ่นกับยอดรวม → อ่านรายการใหม่ */
     ['incidents', 'lostfound', 'gate'].forEach(function (k) { if (j[k] && M[k]) { for (var f in j[k]) M[k][f] = j[k][f]; } });
     ['incidentsDaily', 'lostfoundDaily'].forEach(function (k) { if (j[k]) X[k] = j[k]; });
-    if (j.lostfoundStatus && X.lostfoundStatus) { for (var f2 in j.lostfoundStatus) X.lostfoundStatus[f2] = j.lostfoundStatus[f2]; if ((j.sourceReadAt || {}).lostfoundYear) X.lostfoundStatus.checkedAt = j.sourceReadAt.lostfoundYear; }      /* แพตช์ท้าย: เวลาตรวจสถานะ = เวลาอ่าน LF รายปี (เดิมค้างเวลาไฟล์สรุป) */
+    if (j.lostfoundStatus && X.lostfoundStatus) { for (var f2 in j.lostfoundStatus) X.lostfoundStatus[f2] = j.lostfoundStatus[f2]; if ((j.sourceReadAt || {}).lostfoundYear) X.lostfoundStatus.checkedAt = j.sourceReadAt.lostfoundYear; else if ((j.stale || {}).lostfoundYear) X.lostfoundStatus.checkedAt = j.stale.lostfoundYear.at; }      /* แพตช์ท้าย: เวลาตรวจสถานะ = เวลาอ่าน LF รายปี (เดิมค้างเวลาไฟล์สรุป) */
     applyLive10(j);
   }
   /* รอบ 12: ขอ 2 ชุดแยกกัน — ชุดหลัก (เหตุการณ์/L&F/รถเข้า) แสดงทันทีที่มา ไม่รอชุดไฟล์ส่วนตัว (นักศึกษา–จยย./เรือนไทย) ซึ่งผ่านตัวกลางและช้ากว่า
@@ -2403,7 +2406,7 @@
     clearTimeout(live.timer); live.timer = setTimeout(liveRefresh, 5 * 60000);
     if (document.hidden) { live.due = true; return; }
     if (live.busy && live.busy.gen === authGen && live.busy.n > 0) return;      /* รอบ 13: ตัวนับงานผูกกับรุ่น Login — คำตอบของรุ่นก่อนไม่ลดตัวนับของรุ่นใหม่ */
-    var gen = authGen, busy = live.busy = { gen: gen, n: 2 }; live.due = false; live.last = Date.now();
+    var gen = authGen, busy = live.busy = { gen: gen, n: 3 }; live.due = false; live.last = Date.now();
     var draw = function (sig, scope) {
       var dayCh = !!state.renderDay && state.renderDay !== todayStr();      /* รอบ 13 ต่อ: ข้าม 00:00 (เวลาไทย) → “วันนี้/เดือนนี้” เปลี่ยนความหมาย วาดใหม่แม้ข้อมูลเท่าเดิม */
       if (!dayCh) liveStampsUpdate(); liveNoteDraw();
@@ -2414,14 +2417,24 @@
       route(true);
     };
     var done = function () { busy.n = Math.max(0, busy.n - 1); };
-    apiCall('/stats?scope=core').then(function (x) {
-      done(); if (gen !== authGen) return;
-      if (x.s === 401) { authLost(); return; }
-      if (x.s !== 200 || !x.j.ok) { live.errors = { all: x.j.code || 'http ' + x.s }; liveNoteDraw(); return; }
-      var j = x.j; liveApply(j);
-      var core = {}; Object.keys(j.errors || {}).forEach(function (k) { core[k] = j.errors[k]; });
-      live.at = j.checkedAt; live.readAt = Object.assign({}, live.readAt, j.sourceReadAt || {}); live.lastOk = Object.assign({}, live.lastOk, j.sourceReadAt || {}); LIVE_CORE_PARTS.forEach(function (k) { if (!(j.sourceReadAt || {})[k]) delete live.readAt[k]; }); live.errors = Object.keys(core).length ? core : null; live.ok = ['incidents', 'lostfound', 'gate'].filter(function (k) { return j[k]; });
-      draw(liveSig(j, ['incidents', 'lostfound', 'lostfoundStatus', 'gate', 'incidentsDaily', 'lostfoundDaily']), 'core');
+    /* รอบ 14: เหตุการณ์ (inc) แยกจาก L&F/รถเข้า (rest) — หน้าเหตุการณ์ไม่ต้องรอแหล่งที่ไม่เกี่ยวข้อง
+     * ส่วนที่อ่านล้มแต่บริการมีผลสำเร็จล่าสุด: j.stale[k] = { at, error } → ใช้ตัวเลขนั้นพร้อมบอกว่าอ่านสำเร็จล่าสุดเมื่อใด (ไม่ถือว่าสด) */
+    [['inc', ['incidents'], ['incidents', 'incidentsDaily']], ['rest', ['lostfound', 'lostfoundYear', 'gate'], ['lostfound', 'lostfoundStatus', 'gate', 'lostfoundDaily']]].forEach(function (q) {
+      var parts = q[1];
+      apiCall('/stats?scope=' + q[0]).then(function (x) {
+        done(); if (gen !== authGen) return;
+        if (x.s === 401) { authLost(); return; }
+        var errs = Object.assign({}, live.errors || {}); delete errs.all; parts.forEach(function (k) { delete errs[k]; delete live.stale[k]; });
+        if (x.s !== 200 || !x.j.ok) { parts.forEach(function (k) { errs[k] = x.j.code || 'http ' + x.s; delete live.readAt[k]; }); live.errors = Object.keys(errs).length ? errs : null; liveStampsUpdate(); liveNoteDraw(); return; }
+        var j = x.j, rd = j.sourceReadAt || {}, stl = j.stale || {}; liveApply(j);
+        parts.forEach(function (k) {
+          if (rd[k]) { live.readAt[k] = rd[k]; live.lastOk[k] = rd[k]; } else delete live.readAt[k];
+          if (stl[k]) { live.stale[k] = stl[k]; if (!live.lastOk[k] || stl[k].at > live.lastOk[k]) live.lastOk[k] = stl[k].at; }
+          if ((j.errors || {})[k]) errs[k] = j.errors[k];
+        });
+        live.at = j.checkedAt; live.errors = Object.keys(errs).length ? errs : null; live.ok = LIVE_CORE_PARTS.filter(function (k) { return live.readAt[k]; });
+        draw(liveSig(j, q[2]), q[0]);
+      });
     });
     apiCall('/stats?scope=private').then(function (x) {
       done(); if (gen !== authGen) return;
@@ -2488,8 +2501,8 @@
       all = all.slice().sort(function (a, b) { return (a.date + (a.time || '')) < (b.date + (b.time || '')) ? 1 : -1; });
       var min = all.reduce(function (a, r) { return r.date < a ? r.date : a; }, '9999-12-31'), max = all.reduce(function (a, r) { return r.date > a ? r.date : a; }, '0000-01-01');
       var years = {}; all.forEach(function (r) { years[r.date.slice(0, 4)] = 1; }); var yl = Object.keys(years).sort();
-      var st = state.incB || (state.incB = { from: min, to: max, type: 'all', q: '', asc: false, page: 0, year: yl.indexOf(String(bkkNow().y)) >= 0 ? String(bkkNow().y) : yl[yl.length - 1] });
-      if (st.from < min || st.from > max) st.from = min; if (st.to > max || st.to < min) st.to = max;
+      var st = state.incB || (state.incB = { from: min, to: max, autoFrom: true, autoTo: true, type: 'all', q: '', asc: false, page: 0, year: yl.indexOf(String(bkkNow().y)) >= 0 ? String(bkkNow().y) : yl[yl.length - 1] });
+      if (st.autoFrom || st.from < min || st.from > max) st.from = min; if (st.autoTo || st.to > max || st.to < min) st.to = max;      /* รอบ 14: ค่าเริ่มต้น “ทั้งช่วงข้อมูล” ขยายตามรายการใหม่ · ผู้ใช้เลือกเองแล้วคงไว้ */
       var host = el('div', { class: 'incb' }), kp = el('div', { class: 'kstrips' }), yr = el('div'), list = el('div', { class: 'incb-list' }), mapBox = el('div');
       var inRangeRows = function () { return all.filter(function (r) { return r.date >= st.from && r.date <= st.to; }); };
       function open(r) { openIncident(r); }                       /* รายละเอียดแบบเดียวกับ “รายละเอียดเหตุการณ์วันนี้” บนหน้าแรก (incDetail) */
@@ -2547,8 +2560,8 @@
         }, 0); });
       }
       function redraw() { var rows = inRangeRows(); drawKpi(rows); var f = drawList(rows); drawMap(f || []); }
-      var ctl = el('div', { class: 'incb-ctl' }, [dateIn('ตั้งแต่วันที่', st.from, min, max, function (v) { if (v && v <= st.to) { st.from = v; st.page = 0; redraw(); } }), dateIn('ถึงวันที่', st.to, min, max, function (v) { if (v && v >= st.from) { st.to = v; st.page = 0; redraw(); } }),
-        el('button', { type: 'button', class: 'btn-ghost', text: 'ทั้งช่วงข้อมูล', onclick: function () { st.from = min; st.to = max; st.page = 0; var ins = ctl.querySelectorAll('input[type=date]'); ins[0].value = min; ins[1].value = max; redraw(); } }), el('span', { class: 'src', text: 'มีข้อมูล ' + fdate(min) + ' – ' + fdate(max) + ' · ช่วงวันที่นี้ใช้กับตัวเลข รายการ และแผนที่ของบล็อกนี้' })]);
+      var ctl = el('div', { class: 'incb-ctl' }, [dateIn('ตั้งแต่วันที่', st.from, min, max, function (v) { if (v && v <= st.to) { st.from = v; st.autoFrom = v === min; st.page = 0; redraw(); } }), dateIn('ถึงวันที่', st.to, min, max, function (v) { if (v && v >= st.from) { st.to = v; st.autoTo = v === max; st.page = 0; redraw(); } }),
+        el('button', { type: 'button', class: 'btn-ghost', text: 'ทั้งช่วงข้อมูล', onclick: function () { st.from = min; st.to = max; st.autoFrom = st.autoTo = true; st.page = 0; var ins = ctl.querySelectorAll('input[type=date]'); ins[0].value = min; ins[1].value = max; redraw(); } }), el('span', { class: 'src', text: 'มีข้อมูล ' + fdate(min) + ' – ' + fdate(max) + ' · ช่วงวันที่นี้ใช้กับตัวเลข รายการ และแผนที่ของบล็อกนี้' })]);
       host.appendChild(ctl); host.appendChild(kp); host.appendChild(yr); host.appendChild(el('h3', { class: 'incb-h', text: 'รายละเอียดเหตุการณ์' })); host.appendChild(list); host.appendChild(mapBox);
       drawYear(); redraw(); return host;
     })]);
@@ -2950,6 +2963,20 @@
   /* รอบ 13: เวลาอ่านต้นทางจริงรายแหล่ง (sourceReadAt) ≠ เวลาที่บริการตอบคำขอ (checkedAt) ≠ วันที่ของรายการล่าสุด
    * ถ้าแหล่งอ่านต่างเวลากัน แสดงเป็นช่วงและบอกว่าต่างเวลา (ไม่ยุบเป็นเวลาเดียว) */
   var LIVE_CORE_PARTS = ['incidents', 'lostfound', 'lostfoundYear', 'gate'];
+  /* รอบ 14: สถานะความสดของแหล่งเดียว (ใช้ใต้ KPI) — สด / ผลสำเร็จล่าสุด / ไฟล์สรุปที่ยังยืนยันยอดปัจจุบันไม่ได้ · อัปเดตเฉพาะจุดตามรอบอ่าน */
+  function srcStateTxt(k) {
+    var r = live.readAt[k], st = live.stale[k], e = live.errors && (live.errors[k] || live.errors.all), snap = live.snapInc && k === 'incidents' ? live.snapInc.updated : (mod(k) || {}).updated;
+    if (!AUTH.on || !AUTH.user) return 'สถิติรวมจากไฟล์สรุป (ข้อมูลถึง ' + dLabel(snap) + ')';
+    if (r) return 'ข้อมูลสด · อ่านจากต้นทางเมื่อ ' + dLabel(r);
+    if (st) return 'ใช้ข้อมูลที่อ่านสำเร็จล่าสุดเมื่อ ' + dLabel(st.at) + ' · รอบล่าสุดอ่านไม่สำเร็จ (' + srcWhy(st.error) + ') — ระบบจะลองใหม่อัตโนมัติ';
+    if (e) return 'แสดงไฟล์สรุป (ข้อมูลถึง ' + dLabel(snap) + ') — ยังยืนยันยอดปัจจุบันไม่ได้ เพราะอ่านต้นทางไม่สำเร็จ (' + srcWhy(e) + ')';
+    return 'ไฟล์สรุป (ข้อมูลถึง ' + dLabel(snap) + ') · กำลังอ่านข้อมูลสด…';
+  }
+  function srcStateNode(k) {
+    var p = el('p', { class: 'src-state', role: 'status', text: srcStateTxt(k) }); p.classList.add('live-ts'); p.__ts = function () { return srcStateTxt(k); };
+    var b = el('button', { type: 'button', class: 'btn-ghost src-retry', text: 'ลองอ่านใหม่', onclick: function () { live.busy = null; liveRefresh(); } });
+    var w = el('div', { class: 'src-state-wrap' }, [p, b]); b.hidden = !(live.errors && (live.errors[k] || live.errors.all)); return w;
+  }
   function liveReadText() {
     var t = LIVE_CORE_PARTS.map(function (k) { return live.readAt && live.readAt[k]; }).filter(Boolean).sort();
     if (!t.length) return '';
@@ -2971,6 +2998,7 @@
   function liveStampsUpdate() {                  /* อัปเดตป้ายเวลาโดยไม่วาดหน้าใหม่ (เวลาอ่านเปลี่ยนแต่ข้อมูลไม่เปลี่ยน) */
     renderStamp(); var c = document.querySelector('.dash-chk'); if (c) { c.textContent = dashChkText(); c.title = liveReadTitle(); }
     [].forEach.call(document.querySelectorAll('#view .live-ts'), function (n) { var t = n.__ts && n.__ts(); if (t != null && n.textContent !== t) n.textContent = t; });
+    [].forEach.call(document.querySelectorAll('#view .src-retry'), function (b) { b.hidden = !live.errors; });
     [].forEach.call(document.querySelectorAll('#view .live-blk'), function (n) {
       if (n.contains(document.activeElement) && isTyping()) return;
       var data = n.__blk(), k = blkKey(data); if (k === n.__key) return;

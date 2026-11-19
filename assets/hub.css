@@ -770,3 +770,8 @@ body.charts-stack .grid2,body.charts-stack .trends{grid-template-columns:1fr}
 @media print{.view{min-height:0}}
 .map-print{display:none}
 @media print{.dash-map .map-wait{display:none!important}.dash-map .map-print{display:block}}
+/* รอบ 14: สถานะความสดของแหล่ง */
+.src-state-wrap{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:-.25rem 0 .75rem}
+.src-state{margin:0;font-size:.85rem;color:var(--muted,#5b6b63)}
+.src-retry[hidden]{display:none}
+@media print{.src-retry{display:none}}

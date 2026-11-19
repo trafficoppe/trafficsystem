@@ -59,6 +59,7 @@ function applyLive(stats, extra, live) {
   if (!live) return L;
   const e = live.errors || {};
   L.errors = Object.assign({}, e);
+  L.stale = Object.assign({}, live.stale || {});
   const RD = live.sourceReadAt || {}, PART = { incidents: "incidents", lostfound: "lostfoundYear", gate: "gate" };
   ["incidents", "lostfound", "gate"].forEach((k) => {
     if (live[k] && M[k]) {
@@ -119,7 +120,7 @@ function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
   L.push("\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49 (\u0E40\u0E27\u0E25\u0E32\u0E44\u0E17\u0E22) \u0E04\u0E37\u0E2D " + dTh(today) + " \xB7 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49 = " + THF[+curM.slice(5, 7) - 1] + " " + (+curM.slice(0, 4) + 543) + " \xB7 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E01\u0E48\u0E2D\u0E19 = " + mTh(prevMonth(curM)) + " \xB7 \u0E1B\u0E35\u0E19\u0E35\u0E49 = \u0E1B\u0E35\u0E1B\u0E0F\u0E34\u0E17\u0E34\u0E19 \u0E1E.\u0E28. " + (+today.slice(0, 4) + 543) + (ctx && ctx.period === "today" ? " \xB7 \u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E01\u0E33\u0E25\u0E31\u0E07\u0E14\u0E39 \u201C\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49\u201D \u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A (\u0E16\u0E49\u0E32\u0E04\u0E33\u0E16\u0E32\u0E21\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E48\u0E27\u0E07 \u0E43\u0E2B\u0E49\u0E15\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49 \u0E41\u0E25\u0E30\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49)" : rLabel ? " \xB7 \u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E01\u0E33\u0E25\u0E31\u0E07\u0E14\u0E39\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A: " + rLabel + " (\u0E16\u0E49\u0E32\u0E04\u0E33\u0E16\u0E32\u0E21\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E48\u0E27\u0E07 \u0E43\u0E2B\u0E49\u0E15\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E0A\u0E48\u0E27\u0E07\u0E19\u0E35\u0E49 \u0E41\u0E25\u0E30\u0E1A\u0E2D\u0E01\u0E0A\u0E48\u0E27\u0E07\u0E19\u0E35\u0E49\u0E43\u0E19\u0E04\u0E33\u0E15\u0E2D\u0E1A)" : ""));
   L.push("\u0E1B\u0E35\u0E01\u0E32\u0E23\u0E28\u0E36\u0E01\u0E29\u0E32\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1B\u0E35\u0E1B\u0E0F\u0E34\u0E17\u0E34\u0E19: \u0E23\u0E30\u0E1A\u0E1A\u0E21\u0E35\u0E1C\u0E25\u0E23\u0E27\u0E21\u0E23\u0E32\u0E22\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E41\u0E25\u0E30\u0E23\u0E32\u0E22\u0E1B\u0E35\u0E1B\u0E0F\u0E34\u0E17\u0E34\u0E19\u0E40\u0E17\u0E48\u0E32\u0E19\u0E31\u0E49\u0E19 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1C\u0E25\u0E23\u0E27\u0E21\u0E15\u0E32\u0E21\u0E1B\u0E35\u0E01\u0E32\u0E23\u0E28\u0E36\u0E01\u0E29\u0E32\u0E17\u0E35\u0E48\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27 (\u0E22\u0E01\u0E40\u0E27\u0E49\u0E19\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E27\u0E48\u0E32 \u201C\u0E1B\u0E35\u0E01\u0E32\u0E23\u0E28\u0E36\u0E01\u0E29\u0E32\u201D \u0E44\u0E27\u0E49\u0E0A\u0E31\u0E14\u0E40\u0E08\u0E19)");
   const errK = Object.keys(LI.errors || {}).filter((k) => ({ incidents: 1, lostfound: 1, lostfoundYear: 1, gate: 1 })[k] && use.has(k === "lostfoundYear" ? "lostfound" : k));
-  if (errK.length) L.push("\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25: \u0E23\u0E2D\u0E1A\u0E19\u0E35\u0E49\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A " + errK.map((k) => ({ incidents: "\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C", lostfound: "Lost & Found \u0E23\u0E32\u0E22\u0E27\u0E31\u0E19", lostfoundYear: "Lost & Found \u0E23\u0E32\u0E22\u0E1B\u0E35", gate: "\u0E23\u0E16\u0E40\u0E02\u0E49\u0E32/\u0E2B\u0E21\u0E27\u0E01\u0E19\u0E34\u0E23\u0E20\u0E31\u0E22" })[k] + " (" + why(LI.errors[k]) + ")").join(", ") + " \u2014 \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E19\u0E31\u0E49\u0E19\u0E21\u0E32\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B\u0E15\u0E32\u0E21\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E17\u0E35\u0E48\u0E23\u0E30\u0E1A\u0E38 \u0E2B\u0E49\u0E32\u0E21\u0E40\u0E23\u0E35\u0E22\u0E01\u0E27\u0E48\u0E32\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2A\u0E14\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49");
+  if (errK.length) L.push("\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25: \u0E23\u0E2D\u0E1A\u0E19\u0E35\u0E49\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A " + errK.map((k) => ({ incidents: "\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C", lostfound: "Lost & Found \u0E23\u0E32\u0E22\u0E27\u0E31\u0E19", lostfoundYear: "Lost & Found \u0E23\u0E32\u0E22\u0E1B\u0E35", gate: "\u0E23\u0E16\u0E40\u0E02\u0E49\u0E32/\u0E2B\u0E21\u0E27\u0E01\u0E19\u0E34\u0E23\u0E20\u0E31\u0E22" })[k] + " (" + why(LI.errors[k]) + ")" + (LI.stale && LI.stale[k] ? " \u2014 \u0E43\u0E0A\u0E49\u0E1C\u0E25\u0E17\u0E35\u0E48\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E40\u0E21\u0E37\u0E48\u0E2D " + dTh(LI.stale[k].at) : " \u2014 \u0E43\u0E0A\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B")).join(", ") + " \u2014 \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E19\u0E31\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E1C\u0E25\u0E17\u0E35\u0E48\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B\u0E15\u0E32\u0E21\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E17\u0E35\u0E48\u0E23\u0E30\u0E1A\u0E38 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2A\u0E14\u0E02\u0E2D\u0E07\u0E23\u0E2D\u0E1A\u0E19\u0E35\u0E49 \u0E15\u0E49\u0E2D\u0E07\u0E1A\u0E2D\u0E01\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E15\u0E32\u0E21\u0E19\u0E31\u0E49\u0E19");
   const inc = M.incidents, incD = X.incidentsDaily;
   if (inc && inc.monthly && use.has("incidents")) {
     const asOf = dTh(incD && incD.complete === true ? incD.checkedAt : inc.updated);
@@ -578,7 +579,7 @@ var BUILD = {
     }, ["date", "type"]);
     const out = rows.map((r, i) => {
       const ll = /(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/.exec(r.ll), d = normDT(r.date).slice(0, 10);
-      const o = { ...r, id: r.id || "ROW-" + (i + 2), date: d, rec: normDT(r.rec), lat: ll ? +ll[1] : null, lng: ll ? +ll[2] : null, injured: /^\d+$/.test(r.injuredRaw) ? +r.injuredRaw : null, persons: persons(r.pd), images: images(r.img) };
+      const o = { ...r, id: r.id || "ROW-" + (i + 2), type: r.type || "\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17", date: d, rec: normDT(r.rec), lat: ll ? +ll[1] : null, lng: ll ? +ll[2] : null, injured: /^\d+$/.test(r.injuredRaw) ? +r.injuredRaw : null, persons: persons(r.pd), images: images(r.img) };
       delete o.ll;
       delete o.pd;
       delete o.img;
@@ -737,7 +738,23 @@ async function login(request, env, deps, net) {
   return json({ ok: true, user: { name: me.name, unit: me.unit, role } }, 200, { "set-cookie": setCookie(tok, hours * 3600) });
 }
 var mapSt = { "\u0E23\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E37\u0E19\u0E41\u0E25\u0E49\u0E27": "returned", "\u0E0A\u0E48\u0E27\u0E22\u0E2B\u0E32\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1E\u0E1A": "searching", "\u0E40\u0E08\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E32\u0E23\u0E31\u0E1A\u0E04\u0E37\u0E19": "unclaimed", "\u0E23\u0E2D\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23": "waiting" };
-var STATS_SCOPES = { all: ["incidents", "lostfound", "lostfoundYear", "gate", "studentMoto", "ruenthai"], core: ["incidents", "lostfound", "lostfoundYear", "gate"], private: ["studentMoto", "ruenthai"] };
+var STATS_SCOPES = { all: ["incidents", "lostfound", "lostfoundYear", "gate", "studentMoto", "ruenthai"], core: ["incidents", "lostfound", "lostfoundYear", "gate"], inc: ["incidents"], rest: ["lostfound", "lostfoundYear", "gate"], private: ["studentMoto", "ruenthai"] };
+var LKG_MAX = 7 * 864e5;
+var lkgCfg = async (env, k, deps) => STATS_SCHEMA + "-" + cacheEpoch + "|" + (await srcKey(env, PART_SRC[k], deps)).mk;
+async function lkgGet(env, k, cfg, now) {
+  try {
+    const r = await env.DB.prepare("SELECT at, frag FROM stats_lkg WHERE k = ? AND cfg = ?").bind(k, cfg).first();
+    return r && now - r.at >= 0 && now - r.at <= LKG_MAX ? { at: r.at, frag: JSON.parse(r.frag) } : null;
+  } catch (e) {
+    return null;
+  }
+}
+async function lkgPut(env, k, cfg, at, frag) {
+  try {
+    await env.DB.prepare("INSERT INTO stats_lkg(k, cfg, at, frag) VALUES(?, ?, ?, ?) ON CONFLICT(k) DO UPDATE SET cfg = excluded.cfg, at = excluded.at, frag = excluded.frag WHERE excluded.at >= stats_lkg.at OR excluded.cfg <> stats_lkg.cfg").bind(k, cfg, at, JSON.stringify(frag)).run();
+  } catch (e) {
+  }
+}
 var STATS_TTL = 12e4;
 var STATS_SCHEMA = "s12";
 var PART_SRC = { incidents: "incidents", lostfound: "lostfound", lostfoundYear: "lfYear", gate: "gate", studentMoto: "studentMoto", ruenthai: "ruenthai" };
@@ -855,6 +872,9 @@ async function liveStats(env, deps, scope) {
       const frag = {}, at = await P[k](frag);
       Object.assign(res, frag);
       res.sourceReadAt[k] = bkk(at);
+      const w = lkgPut(env, k, await lkgCfg(env, k, deps), at, frag);
+      if (deps.waitUntil) deps.waitUntil(w);
+      else await w;
       if (ck) {
         try {
           await deps.cache.put(ck, new Response(JSON.stringify({ at, frag }), { headers: { "content-type": "application/json", "cache-control": "max-age=" + Math.max(1, Math.round((STATS_TTL - (deps.now() - at)) / 1e3)) } }));
@@ -863,6 +883,11 @@ async function liveStats(env, deps, scope) {
       }
     } catch (e) {
       res.errors[k] = e instanceof Err ? e.code : "internal";
+      const l = await lkgGet(env, k, await lkgCfg(env, k, deps), deps.now());
+      if (l) {
+        Object.assign(res, l.frag);
+        (res.stale || (res.stale = {}))[k] = { at: bkk(l.at), error: res.errors[k] };
+      }
     }
   }));
   return res;
@@ -1456,12 +1481,15 @@ var SCHEMA = [
   "CREATE TABLE IF NOT EXISTS roster(id TEXT PRIMARY KEY, team TEXT NOT NULL, role TEXT NOT NULL, name TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, ord INTEGER NOT NULL DEFAULT 0, updated INTEGER NOT NULL)",
   "CREATE TABLE IF NOT EXISTS roster_log(seq INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, by TEXT NOT NULL, action TEXT NOT NULL, id TEXT, before TEXT, after TEXT)",
   "CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)",
-  "CREATE TABLE IF NOT EXISTS imgids(id TEXT PRIMARY KEY, at INTEGER NOT NULL)"
+  "CREATE TABLE IF NOT EXISTS imgids(id TEXT PRIMARY KEY, at INTEGER NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS stats_lkg(k TEXT PRIMARY KEY, cfg TEXT NOT NULL, at INTEGER NOT NULL, frag TEXT NOT NULL)"
+  // รอบ 14 (migration: worker/migrations/0002_stats_lkg.sql)
 ];
 var src_default = { fetch: (request, env, ctx) => handle(request, env, { fetch: (u, o) => fetch(u, o), now: () => Date.now(), cache: caches.default, waitUntil: ctx && ctx.waitUntil ? (p) => ctx.waitUntil(p) : null }) };
 export {
   Err,
   IMG_W,
+  LKG_MAX,
   PRIVATE_SRC,
   RELAY_COLS,
   RELAY_OK,

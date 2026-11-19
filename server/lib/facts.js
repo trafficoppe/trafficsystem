@@ -51,7 +51,7 @@ export const NAV_HINTS = [
 // ไม่ตั้ง “เวลาอ่าน” เป็นเวลาปัจจุบัน: แต่ละหัวข้อเก็บเวลาที่อ่านสำเร็จจริง (checkedAt) ของตัวเอง · หัวข้อที่อ่านสดไม่สำเร็จคงค่าไฟล์สรุปพร้อมวันที่ของไฟล์ และบันทึกสาเหตุ
 export function applyLive(stats, extra, live) {
   const M = (stats && stats.modules) || {}, X = extra || {}, L = { topics: {}, errors: {} };
-  if (!live) return L; const e = live.errors || {}; L.errors = Object.assign({}, e);
+  if (!live) return L; const e = live.errors || {}; L.errors = Object.assign({}, e); L.stale = Object.assign({}, live.stale || {});      // รอบ 14: ส่วนที่ใช้ผลอ่านสำเร็จล่าสุด (ไม่สด)
   const RD = live.sourceReadAt || {}, PART = { incidents: 'incidents', lostfound: 'lostfoundYear', gate: 'gate' };     // รอบ 13: เวลาอ่านต้นทางจริงของแต่ละหัวข้อ (ไม่ใช่เวลาตอบคำขอ checkedAt)
   ['incidents', 'lostfound', 'gate'].forEach((k) => { if (live[k] && M[k]) { Object.assign(M[k], live[k]); L.topics[k] = RD[PART[k]] || live[k].readAt || ''; } });
   ['incidentsDaily', 'lostfoundDaily'].forEach((k) => { if (live[k]) X[k] = Object.assign(X[k] || {}, live[k]); });
@@ -82,7 +82,7 @@ export function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
   L.push('ปีการศึกษาไม่ใช่ปีปฏิทิน: ระบบมีผลรวมรายเดือนและรายปีปฏิทินเท่านั้น ไม่มีผลรวมตามปีการศึกษาที่ยืนยันแล้ว (ยกเว้นหัวข้อที่ระบุว่า “ปีการศึกษา” ไว้ชัดเจน)');
 
   const errK = Object.keys(LI.errors || {}).filter((k) => ({ incidents: 1, lostfound: 1, lostfoundYear: 1, gate: 1 })[k] && use.has(k === 'lostfoundYear' ? 'lostfound' : k));
-  if (errK.length) L.push('หมายเหตุแหล่งข้อมูล: รอบนี้อ่านสดไม่สำเร็จสำหรับ ' + errK.map((k) => ({ incidents: 'เหตุการณ์', lostfound: 'Lost & Found รายวัน', lostfoundYear: 'Lost & Found รายปี', gate: 'รถเข้า/หมวกนิรภัย' })[k] + ' (' + why(LI.errors[k]) + ')').join(', ') + ' — ตัวเลขหัวข้อนั้นมาจากไฟล์สรุปตามวันที่ที่ระบุ ห้ามเรียกว่าข้อมูลสดของวันนี้');
+  if (errK.length) L.push('หมายเหตุแหล่งข้อมูล: รอบนี้อ่านสดไม่สำเร็จสำหรับ ' + errK.map((k) => ({ incidents: 'เหตุการณ์', lostfound: 'Lost & Found รายวัน', lostfoundYear: 'Lost & Found รายปี', gate: 'รถเข้า/หมวกนิรภัย' })[k] + ' (' + why(LI.errors[k]) + ')' + (LI.stale && LI.stale[k] ? ' — ใช้ผลที่อ่านสำเร็จล่าสุดเมื่อ ' + dTh(LI.stale[k].at) : ' — ใช้ไฟล์สรุป')).join(', ') + ' — ตัวเลขหัวข้อนั้นเป็นผลที่อ่านสำเร็จล่าสุดหรือไฟล์สรุปตามวันที่ที่ระบุ ไม่ใช่ข้อมูลสดของรอบนี้ ต้องบอกผู้ใช้ตามนั้น');
   const inc = M.incidents, incD = X.incidentsDaily;
   if (inc && inc.monthly && use.has('incidents')) {
     const asOf = dTh(incD && incD.complete === true ? incD.checkedAt : inc.updated); src.incidents = 'รายงานเหตุการณ์ (ฐานข้อมูลงานจราจร)';

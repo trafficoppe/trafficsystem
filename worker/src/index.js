@@ -180,7 +180,7 @@ const BUILD = {
       pd: 'รายละเอียดผู้บาดเจ็บ/ป่วยทั้งหมด', cause: 'สาเหตุของเหตุการณ์', transport: 'วิธีการเคลื่อนย้าย', hospital: 'ส่งต่อสถานพยาบาลปลายทาง', detail: 'รายละเอียดเหตุการณ์เพิ่มเติม', img: 'ลิงก์รูปภาพเหตุการณ์', kpi: 'ข้อมูลสรุป KPI', id: 'รหัสเหตุการณ์',
       reporterUnit: 'หน่วยงานที่แจ้ง', serviceArrived: 'เวลาที่รถบริการเข้าถึง', hospitalArrived: 'เวลาที่ส่งถึงสถานพยาบาล', summary: 'AI สรุปรายงาน' }, ['date', 'type']);   // summary แสดงในหน้าเว็บหลัง Login เท่านั้น ไม่ส่งให้ผู้ช่วย AI
     const out = rows.map((r, i) => { const ll = /(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/.exec(r.ll), d = normDT(r.date).slice(0, 10);
-      const o = { ...r, id: r.id || 'ROW-' + (i + 2), date: d, rec: normDT(r.rec), lat: ll ? +ll[1] : null, lng: ll ? +ll[2] : null, injured: /^\d+$/.test(r.injuredRaw) ? +r.injuredRaw : null, persons: persons(r.pd), images: images(r.img) };
+      const o = { ...r, id: r.id || 'ROW-' + (i + 2), type: r.type || 'ไม่ระบุประเภท', date: d, rec: normDT(r.rec), lat: ll ? +ll[1] : null, lng: ll ? +ll[2] : null, injured: /^\d+$/.test(r.injuredRaw) ? +r.injuredRaw : null, persons: persons(r.pd), images: images(r.img) };
       delete o.ll; delete o.pd; delete o.img; delete o.injuredRaw; return o; }).filter((r) => r.date);
     await remember(env, out.flatMap((r) => r.images));
     return out;
@@ -260,7 +260,14 @@ async function login(request, env, deps, net) {
 const mapSt = { 'รับของคืนแล้ว': 'returned', 'ช่วยหาแล้วยังไม่พบ': 'searching', 'เจ้าของยังไม่มารับคืน': 'unclaimed', 'รอดำเนินการ': 'waiting' };
 // รอบ 12: อ่านแต่ละชุดพร้อมกัน (ชุดช้าไม่หน่วงชุดอื่น) · เลือกชุดได้ด้วย scope (allowlist) · ผลรวมของแต่ละชุด (ไม่มีข้อมูลบุคคล) แคชข้ามเครื่องรับคำขอได้ไม่เกิน 2 นาที
 //   checkedAt = เวลาที่ตอบคำขอนี้ · sourceReadAt[ชุด] = เวลาที่อ่านต้นทางของชุดนั้นจริง (ไม่ใช้เวลาตอบแคชแทนเวลาอ่านต้นทาง)
-export const STATS_SCOPES = { all: ['incidents', 'lostfound', 'lostfoundYear', 'gate', 'studentMoto', 'ruenthai'], core: ['incidents', 'lostfound', 'lostfoundYear', 'gate'], private: ['studentMoto', 'ruenthai'] };
+// รอบ 14: inc = เหตุการณ์อย่างเดียว (หน้า traffic ไม่ต้องรอแหล่งอื่น) · rest = L&F + รถเข้า · core/all คงไว้เพื่อความเข้ากันได้
+export const STATS_SCOPES = { all: ['incidents', 'lostfound', 'lostfoundYear', 'gate', 'studentMoto', 'ruenthai'], core: ['incidents', 'lostfound', 'lostfoundYear', 'gate'], inc: ['incidents'], rest: ['lostfound', 'lostfoundYear', 'gate'], private: ['studentMoto', 'ruenthai'] };
+// รอบ 14: ผลรวมที่อ่านสำเร็จล่าสุดรายแหล่ง (last-known-good) เก็บใน D1 เดิม ตาราง stats_lkg (แยกจากข้อมูลธุรกิจ · เฉพาะผลรวม ไม่มีข้อมูลบุคคล)
+//   ใช้เมื่อรอบนี้อ่านต้นทางไม่สำเร็จเท่านั้น · อายุไม่เกิน 7 วัน · คีย์ผูกรุ่นค่าตั้งแหล่ง/ตัวกลาง (cfgKey) · ตอบเป็น stale[k] = { at, error } ไม่ใส่ใน sourceReadAt
+export const LKG_MAX = 7 * 86400e3;
+const lkgCfg = async (env, k, deps) => STATS_SCHEMA + '-' + cacheEpoch + '|' + (await srcKey(env, PART_SRC[k], deps)).mk;      // ผูกค่าตั้งของแหล่งนั้น (ไม่ขึ้นกับ scope ที่ขอ)
+async function lkgGet(env, k, cfg, now) { try { const r = await env.DB.prepare('SELECT at, frag FROM stats_lkg WHERE k = ? AND cfg = ?').bind(k, cfg).first(); return r && now - r.at >= 0 && now - r.at <= LKG_MAX ? { at: r.at, frag: JSON.parse(r.frag) } : null; } catch (e) { return null; } }
+async function lkgPut(env, k, cfg, at, frag) { try { await env.DB.prepare('INSERT INTO stats_lkg(k, cfg, at, frag) VALUES(?, ?, ?, ?) ON CONFLICT(k) DO UPDATE SET cfg = excluded.cfg, at = excluded.at, frag = excluded.frag WHERE excluded.at >= stats_lkg.at OR excluded.cfg <> stats_lkg.cfg').bind(k, cfg, at, JSON.stringify(frag)).run(); } catch (e) { /* เก็บไม่ได้ = ไม่มีผลสำรอง ไม่กระทบคำตอบ */ } }
 const STATS_TTL = 120e3, STATS_SCHEMA = 's12', PART_SRC = { incidents: 'incidents', lostfound: 'lostfound', lostfoundYear: 'lfYear', gate: 'gate', studentMoto: 'studentMoto', ruenthai: 'ruenthai' };
 let cacheEpoch = 0;
 const hashStr = (t) => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) >>> 0; return h.toString(36); };
@@ -320,8 +327,13 @@ async function liveStats(env, deps, scope) {
       }
       const frag = {}, at = await P[k](frag);
       Object.assign(res, frag); res.sourceReadAt[k] = bkk(at);
+      const w = lkgPut(env, k, await lkgCfg(env, k, deps), at, frag); if (deps.waitUntil) deps.waitUntil(w); else await w;      // งานอ่านที่จบช้าแต่เก่ากว่าไม่ทับ (เงื่อนไข at >= เดิม)
       if (ck) { try { await deps.cache.put(ck, new Response(JSON.stringify({ at, frag }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=' + Math.max(1, Math.round((STATS_TTL - (deps.now() - at)) / 1000)) } })); } catch (e) { /* แคชเป็นส่วนเสริม */ } }
-    } catch (e) { res.errors[k] = e instanceof Err ? e.code : 'internal'; }
+    } catch (e) {
+      res.errors[k] = e instanceof Err ? e.code : 'internal';
+      const l = await lkgGet(env, k, await lkgCfg(env, k, deps), deps.now());
+      if (l) { Object.assign(res, l.frag); (res.stale || (res.stale = {}))[k] = { at: bkk(l.at), error: res.errors[k] }; }
+    }
   }));
   return res;
 }
@@ -630,6 +642,7 @@ export const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS roster(id TEXT PRIMARY KEY, team TEXT NOT NULL, role TEXT NOT NULL, name TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, ord INTEGER NOT NULL DEFAULT 0, updated INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS roster_log(seq INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, by TEXT NOT NULL, action TEXT NOT NULL, id TEXT, before TEXT, after TEXT)',
   'CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)',
-  'CREATE TABLE IF NOT EXISTS imgids(id TEXT PRIMARY KEY, at INTEGER NOT NULL)'
+  'CREATE TABLE IF NOT EXISTS imgids(id TEXT PRIMARY KEY, at INTEGER NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS stats_lkg(k TEXT PRIMARY KEY, cfg TEXT NOT NULL, at INTEGER NOT NULL, frag TEXT NOT NULL)'      // รอบ 14 (migration: worker/migrations/0002_stats_lkg.sql)
 ];
 export default { fetch: (request, env, ctx) => handle(request, env, { fetch: (u, o) => fetch(u, o), now: () => Date.now(), cache: caches.default, waitUntil: ctx && ctx.waitUntil ? (p) => ctx.waitUntil(p) : null }) };

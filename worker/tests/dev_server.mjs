@@ -15,6 +15,7 @@ const P1 = (t) => '[คนที่ 1] ประเภท: ' + t + ' | ชื่
 // 10 เหตุ: บนถนน 4 (เจ็บ 1+2+0+0) · ทั่วไป 2 (เจ็บ 1+1) · รับส่งผู้ป่วย 2 · บังคับล้อ 1 · ลักทรัพย์ 1 — ต.ค. 4 เหตุ / พ.ย. 6 เหตุ
 const INC = [IH, inc(1, '2026-10-05', 'อุบัติเหตุจากยานพาหนะ', '13.7950, 100.3220', '1', P1('นักศึกษา')), inc(2, '2026-10-12', 'อุบัติเหตุจากยานพาหนะ', '13.7960, 100.3230', '2', P1('บุคลากร') + ' ' + P1('บุคคลภายนอก').replace('คนที่ 1', 'คนที่ 2')), inc(3, '2026-10-20', 'อุบัติเหตุทั่วไป', '13.7940, 100.3210', '1', P1('Outsource')), inc(4, '2026-10-28', 'รับส่งผู้ป่วย', '-', '1', P1('นักศึกษา')),
   inc(5, '2026-11-02', 'อุบัติเหตุจากยานพาหนะ', '13.7970, 100.3240', '0', '-'), inc(6, '2026-11-05', 'อุบัติเหตุจากยานพาหนะ', '-', '0', '-'), inc(7, '2026-11-09', 'อุบัติเหตุทั่วไป', '13.7930, 100.3200', '1', '-'), inc(8, '2026-11-10', 'รับส่งผู้ป่วย', '-', '1', P1('บุคลากร')), inc(9, '2026-11-11', 'บังคับล้อ', '13.79, 100.32', '-', '-'), inc(10, '2026-11-13', 'ลักทรัพย์', '-', '-', '-')];
+const INC0 = INC.length;
 const LFH = ['Timestamp', 'RefCode', 'ประเภท', 'ชื่อ-นามสกุล', 'ประเภทบุคคล', 'คณะ/หน่วยงาน', 'เบอร์โทร', 'วันที่เกิดเหตุ', 'เวลา', 'รายละเอียด', 'สถานที่', 'URL รูปภาพ', 'สถานะ', 'การดำเนินการ', 'วันที่อัปเดต', 'อัปเดตโดย'];
 const LF = [LFH]; for (let i = 1; i <= 15; i++) { const ty = i % 3 === 0 ? 'พบสิ่งของ' : i % 5 === 0 ? 'รับของคืน' : 'สิ่งของสูญหาย', stt = i % 4 === 0 ? 'รับของคืนแล้ว' : i % 3 === 0 ? 'เจ้าของยังไม่มารับคืน' : 'รอดำเนินการ'; LF.push(['2026-11-' + String(i).padStart(2, '0') + ' 10:00:00', 'REF-MOCK-' + i, ty, 'ผู้แจ้งสมมติ ' + i, 'นักศึกษา', 'คณะสมมติ', '000-MOCK-' + i, '2026-11-' + String(i).padStart(2, '0'), '09:00', 'ของสมมติชิ้นที่ ' + i, i % 2 ? 'อาคารสมมติ A' : 'อาคารสมมติ B', i <= 3 ? D(ID(100 + i)) : '', stt, '', '', '']); }
 const SHEETS = {
@@ -33,7 +34,7 @@ const SHEETS = {
 };
 const csv = (rows) => rows.map((r) => r.map((c) => (/[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c)).join(',')).join('\n');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFklEQVR4XmOsmNbOgA0wYRVlYKCLBADuLwGhta8zygAAAABJRU5ErkJggg==', 'base64');
-export const control = { sourceDown: false, clock: 0, downGid: {} };      // clock = เลื่อนนาฬิกาของบริการ (ms) เพื่อทดสอบ TTL โดยไม่ต้องรอจริง
+export const control = { sourceDown: false, clock: 0, downGid: {}, gidDelay: {} };      // clock = เลื่อนนาฬิกาของบริการ (ms) เพื่อทดสอบ TTL โดยไม่ต้องรอจริง
 // รอบ 10: ตัวกลางอ่านไฟล์ส่วนตัว (MOCK) — เปิดไว้เป็นค่าเริ่มต้น (/__test/relay/off = ยังไม่ได้ติดตั้ง) · ภาพ GPS เป็นไฟล์ส่วนตัว อ่านได้เฉพาะผ่านตัวกลาง
 const REL = 'https://script.google.com/macros/s/MOCKRELAYDEVSERVER0000000000001/exec', RSEC = 'f'.repeat(64), PRIVATE_IMG = new Set([ID(51)]);
 const RT = {
@@ -53,6 +54,7 @@ const fetchMock = async (u, o) => { u = String(u); let m = /export\?format=csv&g
     if (b.action === 'table') { const T = RT[b.source], want = b.cols.concat(b.present), ix = want.map((c) => T[0].indexOf(c)); return Response.json({ ok: true, rows: [want].concat(T.slice(1).map((r) => ix.map((i, k) => (k < b.cols.length ? r[i] : (r[i] ? '1' : ''))))) }); }
     if (b.action === 'img') return PRIVATE_IMG.has(b.id) ? Response.json({ ok: true, mime: 'image/png', b64: PNG.toString('base64') }) : Response.json({ ok: false, code: 'not-allowed' });
     return Response.json({ ok: false, code: 'unknown-action' }); }
+  if (m && control.gidDelay[m[1]]) await new Promise((r) => setTimeout(r, control.gidDelay[m[1]]));      // รอบ 14: แหล่งเดียวช้า
   if (m && control.downGid[m[1]]) return new Response('<html>', { headers: { 'content-type': 'text/html' } });      // แพตช์ท้าย: แหล่งเดียวล้ม (แหล่งอื่นอ่านได้)
   if (m) return control.sourceDown ? new Response('<html>', { headers: { 'content-type': 'text/html' } }) : SHEETS[m[1]] ? new Response(csv(SHEETS[m[1]]), { headers: { 'content-type': 'text/csv' } }) : new Response('', { status: 404 });
   m = /drive\.google\.com\/thumbnail\?id=([-\w]+)/.exec(u); if (m) return PRIVATE_IMG.has(m[1]) ? new Response('<html>Sign in</html>', { headers: { 'content-type': 'text/html' } }) : new Response(PNG, { headers: { 'content-type': 'image/png' } });
@@ -71,6 +73,10 @@ export function start(port, opt = {}) {
         a[10] = 'รถจักรยานยนต์'; a[11] = 'นักศึกษา'; a[12] = 'รถยนต์'; a[13] = 'บุคลากร'; a[4] = '11:25'; a[23] = D(ID(61)) + ', ' + D(ID(62)); b[4] = '8:10'; INC.push(a, b); }
       _reset(); rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/relay/')) { relayOn(rq.url.endsWith('on')); _reset(); rs.end('ok'); return; }
+    if (rq.url.startsWith('/__test/gidDelay/')) { const [, , , g, ms] = rq.url.split('/'); control.gidDelay[g] = +ms || 0; rs.end('ok'); return; }      // รอบ 14
+    if (rq.url === '/__test/lkg/clear') { db.exec('DELETE FROM stats_lkg'); rs.end('ok'); return; }
+    if (rq.url === '/__test/inc/add') { INC.push(inc(11, '2026-11-17', 'อุบัติเหตุทั่วไป', '-', '0', '-')); rs.end('ok'); return; }
+    if (rq.url === '/__test/inc/reset') { INC.length = INC0; rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/gid/')) { const [, , , g, st] = rq.url.split('/'); control.downGid[g] = st === 'down'; rs.end('ok'); return; }
     if (rq.url.startsWith('/__test/clock/')) { control.clock += +rq.url.slice(14) * 1000 || 0; rs.end('ok'); return; }      // รอบ 13
     if (rq.url.startsWith('/__test/moto/')) { RT.studentMoto[3][2] = rq.url.endsWith('shift') ? 'วิทยาเขตพญาไท' : 'วิทยาเขตศาลายา'; rs.end('ok'); return; }   // รอบ 13: ยอดรวมเท่าเดิม แต่การแยกตามวิทยาเขตเปลี่ยน

@@ -357,6 +357,33 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
     ok('[แพตช์ 19 พ.ย.] ชุดส่วนตัวอ่านล้ม → แถวนักศึกษา–จยย. บอกเหตุผลจริงของการอ่าน (ไม่ใช่ข้อความรวม “ยังเชื่อมต่อไม่ได้”)', !/ยังเชื่อมต่อไม่ได้/.test(w3) && /นักศึกษา – รถจักรยานยนต์ \S/.test(w3) && !/นักศึกษา – รถจักรยานยนต์ \d/.test(w3), w3.slice(-120));
     await M2.ctx.close();
   }
+  { // ===== รอบ 14 · P0 (local-mock): ยอดเหตุการณ์ไม่ย้อนไปไฟล์สรุป 68 เมื่อต้นทางล้ม · ไม่ถูกหน่วงด้วยแหล่งอื่น · รายการตามรุ่นยอดรวม =====
+    const G = '480256005', LFG = '2074352966', kpiTot = (pg) => pg.evaluate(() => { const k = [...document.querySelectorAll('#view .kpi')].find((x) => /เหตุการณ์ทั้งหมด/.test(x.textContent)); return k ? k.innerText.replace(/\s+/g, ' ') : ''; });
+    const fresh = async () => { const M = await mk(); await M.page.goto(BASE + '/#traffic'); await M.page.waitForSelector('#loginView'); await login(M.page, '0123'); await M.page.waitForSelector('#userBox'); return M; };
+    // (ก) แหล่งอื่นช้า 6 วินาที → ยอดเหตุการณ์สดขึ้นก่อน (ไม่รอ Promise.all ของทุกแหล่ง)
+    await page.request.get(BASE + '/__test/clock/200'); await page.request.get(BASE + '/__test/gidDelay/' + LFG + '/6000');
+    const A = await fresh(); const t0 = Date.now(); let seen = 0; for (let i = 0; i < 60; i++) { if (/^เหตุการณ์ทั้งหมด 10\s*เหตุ/.test(await kpiTot(A.page))) { seen = Date.now() - t0; break; } await A.page.waitForTimeout(100); }
+    await page.request.get(BASE + '/__test/gidDelay/' + LFG + '/0'); await A.ctx.close();
+    ok('[รอบ 14·P0] L&F ช้า 6 วินาที → หน้า traffic แสดงยอดเหตุการณ์สด (10) ภายใน ~3 วินาทีหลัง Login (ไม่ถูกหน่วงด้วยแหล่งที่ไม่เกี่ยวข้อง)', seen > 0 && seen < 3500, 'แสดงยอดสดที่ ' + seen + ' ms');
+    // (ข) เคยอ่านสำเร็จแล้ว → ต้นทางเหตุการณ์ล้ม → tab ใหม่ ยังเห็นยอดสำเร็จล่าสุด (10) + ป้าย “อ่านสำเร็จล่าสุด… รอบล่าสุดอ่านไม่สำเร็จ” ไม่กลับไป 68
+    await page.request.get(BASE + '/__test/clock/200'); await page.request.get(BASE + '/__test/gid/' + G + '/down');
+    const B = await fresh(); await B.page.waitForTimeout(3500); const kb = await kpiTot(B.page), nb = await B.page.evaluate(() => (document.querySelector('#view .src-state') || {}).textContent || '');
+    ok('[รอบ 14·P0] tab ใหม่ + ต้นทางเหตุการณ์ล้ม → KPI = ผลสำเร็จล่าสุด 10 (ไม่ใช่ไฟล์สรุป 68) และบอกว่าเป็นข้อมูลที่อ่านสำเร็จล่าสุด/รอบล่าสุดอ่านไม่สำเร็จ', /^เหตุการณ์ทั้งหมด 10\s*เหตุ/.test(kb) && /อ่านสำเร็จล่าสุด/.test(nb) && /ไม่สำเร็จ/.test(nb), kb + ' | ' + nb);
+    await B.ctx.close();
+    // (ค) ไม่มีผลสำเร็จที่ใช้ได้ + ต้นทางล้ม → แสดงไฟล์สรุปพร้อมบอกชัดว่ายังยืนยันยอดปัจจุบันไม่ได้ (ไม่เรียกว่าสด)
+    await page.request.get(BASE + '/__test/lkg/clear'); await page.request.get(BASE + '/__test/clock/200');
+    const C2 = await fresh(); await C2.page.waitForTimeout(3500); const kc = await kpiTot(C2.page), ncs = await C2.page.evaluate(() => (document.querySelector('#view .src-state') || {}).textContent || '');
+    ok('[รอบ 14·P0] ไม่มีผลสำเร็จ + ต้นทางล้ม → แสดงยอดไฟล์สรุป (68) พร้อมป้าย “ไฟล์สรุปถึง … ยังยืนยันยอดปัจจุบันไม่ได้”', /^เหตุการณ์ทั้งหมด 68\s*เหตุ/.test(kc) && /ไฟล์สรุป/.test(ncs) && /ยังยืนยันยอดปัจจุบันไม่ได้/.test(ncs), kc + ' | ' + ncs);
+    await C2.ctx.close(); await page.request.get(BASE + '/__test/gid/' + G + '/up');
+    // (ง) ต้นทางมีแถวใหม่ (วันที่ใหม่กว่า) → ยอดรวม 11 และรายการรายละเอียดตามรุ่นเดียวกัน (ช่วงวันที่ค่าเริ่มต้นขยายตาม) โดยไม่ต้องรอ 5 นาที
+    const D = await fresh(); await D.page.waitForTimeout(2500); await D.page.evaluate(() => { const b = document.querySelector('.incb'); if (b) b.scrollIntoView(); }); await D.page.waitForSelector('.incb-list', { timeout: 15000 }).catch(() => {});
+    const listN = () => D.page.evaluate(() => { const t = (document.querySelector('.incb .lu-count') || {}).textContent || ''; const m = /^([\d,]+) เหตุการณ์/.exec(t); return m ? +m[1].replace(/,/g, '') : -1; });
+    const l0 = await listN(); await page.request.get(BASE + '/__test/inc/add'); await page.request.get(BASE + '/__test/clock/200');
+    let n0 = 0; D.page.on('request', (q) => { if (/\/api\/stats\?/.test(q.url())) n0++; }); await D.page.evaluate(() => window.__hub.live()); for (let i = 0; i < 50 && n0 < 3; i++) await D.page.waitForTimeout(100); await D.page.waitForTimeout(2500);
+    const k1 = await kpiTot(D.page), l1 = await listN();
+    ok('[รอบ 14·P0] ต้นทางเพิ่ม 1 เหตุ (วันที่ใหม่กว่า) → KPI 11 และรายการรายละเอียด/ช่วงวันที่ค่าเริ่มต้นตามรุ่นเดียวกัน (ไม่ค้างรายการเก่าในหน่วยความจำ)', /^เหตุการณ์ทั้งหมด 11\s*เหตุ/.test(k1) && l1 === l0 + 1, k1 + ' | list ' + l0 + '→' + l1);
+    await page.request.get(BASE + '/__test/inc/reset'); await page.request.get(BASE + '/__test/clock/200'); await D.ctx.close();
+  }
   { // รอบ 13 ต่อ: เปิด Dashboard ค้างข้าม 00:00 (เวลาไทย) โดยข้อมูลไม่เปลี่ยน → “วันนี้” และยอดของวันนี้ต้องเปลี่ยนตามวันจริง
     const M = await mk(); const p2 = M.page; await p2.goto(BASE + '/#dashboard'); await p2.waitForSelector('#loginView'); await login(p2, '0123'); await p2.waitForSelector('.nows .now'); await p2.waitForTimeout(1200);
     const bk = new Date(Date.now() + 7 * 3600e3), nd = new Date(Date.UTC(bk.getUTCFullYear(), bk.getUTCMonth(), bk.getUTCDate() + 1, 0, 5) - 7 * 3600e3);
@@ -411,7 +438,7 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
     const wait = 3000 + 250 - (Date.now() - t0); if (wait > 0) await page.waitForTimeout(wait);                           // คำตอบรุ่น 1 กลับมาแล้ว แต่รุ่น 3 ยังรอ
     const mid = statsN(); await page.evaluate(() => window.__hub.live()); await page.waitForTimeout(200); const after = statsN();
     await page.unroute('**/api/stats?*'); await page.waitForTimeout(3500);
-    ok('[รอบ 13·race] คำตอบรุ่น Login ก่อนมาช้า → ไม่ลดตัวนับงานของรุ่นใหม่ (เรียกซ้ำระหว่างรุ่นใหม่ยังรอ = ไม่ยิงคำขอเพิ่ม) · รุ่นใหม่เริ่มอ่านได้ทันที', mid - n0 === 4 && after === mid, 'issued ' + (mid - n0) + ' then +' + (after - mid));
+    ok('[รอบ 13·race] คำตอบรุ่น Login ก่อนมาช้า → ไม่ลดตัวนับงานของรุ่นใหม่ (เรียกซ้ำระหว่างรุ่นใหม่ยังรอ = ไม่ยิงคำขอเพิ่ม) · รุ่นใหม่เริ่มอ่านได้ทันที', mid - n0 === 6 && after === mid, 'issued ' + (mid - n0) + ' then +' + (after - mid));
     ok('[รอบ 13·race] หลัง Login ใหม่ หน้าแสดงข้อมูลของ session ปัจจุบัน (ไม่ค้างหน้า Login / ไม่มี error)', await T(page, '#loginView').count() === 0 && /อ่านจากต้นทาง/.test(await txt(page, '#stamp')), await txt(page, '#stamp'));
     page.off('request', onReq);
   }

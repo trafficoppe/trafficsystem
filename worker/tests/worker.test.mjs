@@ -362,5 +362,33 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
     const sc = await Promise.all(['constructor', '__proto__', 'toString', 'hasOwnProperty'].map((x) => runC('/api/stats?scope=' + x, { cookie: U10 })));
     ok('[รอบ 13·race] scope=constructor/__proto__/toString/hasOwnProperty → 400 bad-scope (ไม่ใช่ 500)', sc.every((x) => x.s === 400 && x.j.code === 'bad-scope'), sc.map((x) => x.s + ':' + (x.j && x.j.code)).join(','));
   }
+  // ================= รอบ 14 · P0: ผลอ่านสำเร็จล่าสุด (last-known-good) รายแหล่ง =================
+  { _reset(); const mkDeps = () => { const cache = new Map(); return { fetch: fetchMock, now: () => NOW, cache: { match: async (k) => { const v = cache.get(k.url || String(k)); return v ? v.clone() : undefined; }, put: async (k, v) => { cache.set(k.url || String(k), v.clone()); } } }; };
+    let depsC = mkDeps(); const runC = async (p, o = {}, env = E) => { const x = await handle(req(p, o), env, depsC); return { s: x.status, j: await x.json() }; };
+    const INC = SOURCES(E).incidents[1], rowsInc = SHEETS[INC];
+    const tIdx = rowsInc[0].indexOf('ประเภทเหตุการณ์'), extra = rowsInc[2].slice(); extra[tIdx] = ''; rowsInc.push(extra);      // แถวประเภทว่าง (เฉพาะชุดนี้ · ถอดออกท้ายชุด)
+    const a = await runC('/api/stats?scope=core', { cookie: U10 }); const N = a.j.incidents.total, readOk = a.j.sourceReadAt.incidents;
+    ok('[รอบ 14·P0] แถวที่ “ประเภทเหตุการณ์” ว่าง นับเป็น “ไม่ระบุประเภท” (ไม่ตัดทิ้ง ไม่ปล่อยชื่อว่าง)', a.j.incidents.byType.some((b) => b.type === 'ไม่ระบุประเภท') && a.j.incidents.byType.every((b) => b.type) && a.j.incidents.byType.reduce((s, b) => s + b.count, 0) === N, a.j.incidents.byType.map((b) => (b.type || '(ว่าง)') + ':' + b.count).join(','));
+    NOW += 130e3; downGid = INC; const b = await runC('/api/stats?scope=core', { cookie: U10 });
+    ok('[รอบ 14·P0] อ่านสำเร็จ N → หลัง TTL ต้นทางล้ม → ยังได้ยอด N จากผลสำเร็จล่าสุด พร้อม errors + stale.at = เวลาอ่านสำเร็จเดิม (ไม่ใส่ใน sourceReadAt ว่าสด)', b.j.incidents && b.j.incidents.total === N && !!b.j.errors.incidents && b.j.stale && b.j.stale.incidents && b.j.stale.incidents.at === readOk && !b.j.sourceReadAt.incidents && b.j.incidentsDaily && b.j.incidentsDaily.rows.length > 0, JSON.stringify({ t: b.j.incidents && b.j.incidents.total, e: b.j.errors, st: b.j.stale, rd: b.j.sourceReadAt.incidents }));
+    _coldIsolate(); depsC = mkDeps(); NOW += 10e3; const c = await runC('/api/stats?scope=core', { cookie: U10 });
+    { const n0 = aiCalls.length; await handle(req('/api/chat', { method: 'POST', cookie: U10, body: Object.assign({}, Q, { userMessage: 'เดือนนี้มีเหตุการณ์กี่เรื่อง', chatHistory: [] }) }), E, depsC); const sys = ((aiCalls[n0] || {}).input || { messages: [{ content: '' }] }).messages[0].content;
+      const dT = (d) => +d.slice(8, 10) + ' พ.ย. ' + (+d.slice(0, 4) + 543) + ' ' + d.slice(11, 16) + ' น.';
+      ok('[รอบ 14·P0] AI ใช้ผลสำเร็จล่าสุดเดียวกับหน้าเว็บ: ระบุ “ใช้ผลที่อ่านสำเร็จล่าสุดเมื่อ …” และ “ข้อมูล ณ” = เวลาอ่านสำเร็จเดิม (ไม่เรียกว่าสด ไม่ใช้ยอดไฟล์สรุป)', /ใช้ผลที่อ่านสำเร็จล่าสุดเมื่อ/.test(sys) && sys.includes('ข้อมูล ณ ' + dT(readOk)) && /ไม่ใช่ข้อมูลสดของรอบนี้/.test(sys), sys.split('\n').filter((l) => /หมายเหตุแหล่งข้อมูล|เหตุการณ์และอุบัติเหตุ/.test(l)).slice(0, 2).join(' / ').slice(0, 300)); }
+
+    ok('[รอบ 14·P0] เครื่อง (isolate) ใหม่ + แคชบริการว่าง + ต้นทางล้ม → ยังได้ผลสำเร็จล่าสุดจาก D1 (ไม่กลับไปยอดไฟล์สรุป)', c.j.incidents && c.j.incidents.total === N && c.j.stale && c.j.stale.incidents.at === readOk, JSON.stringify({ t: c.j.incidents && c.j.incidents.total, st: c.j.stale }));
+    const d = await runC('/api/stats?scope=inc', { cookie: U10 });
+    ok('[รอบ 14·P0] scope=inc อ่านเฉพาะเหตุการณ์ (ไม่รอ/ไม่ได้รับผลจาก L&F หรือรถเข้า)', d.s === 200 && !!d.j.incidents && !d.j.lostfound && !d.j.gate && Object.keys(d.j.sourceReadAt).concat(Object.keys(d.j.errors)).every((k) => k === 'incidents'), JSON.stringify(Object.keys(d.j)));
+    downGid = SOURCES(E).lostfound[1]; NOW += 130e3; const lf0 = csvCalls.length; const e2 = await runC('/api/stats?scope=core', { cookie: U10 });
+    ok('[รอบ 14·P0] แหล่งอื่น (L&F) ล้ม → เหตุการณ์อ่านสดได้ตามปกติ ไม่ถูกย้อน และ error ระบุเฉพาะแหล่งที่ล้ม', e2.j.incidents.total === N && !!e2.j.sourceReadAt.incidents && !e2.j.errors.incidents && !!e2.j.errors.lostfound, JSON.stringify(e2.j.errors));
+    downGid = ''; const keep = rowsInc.pop(); NOW += 130e3; const f = await runC('/api/stats?scope=core', { cookie: U10 }); rowsInc.push(keep);
+    ok('[รอบ 14·P0] ต้นทางครบถ้วนและมีการลบจริง N → N−1 → ยอมรับยอดใหม่ (ไม่ล็อกยอดเดิม/ไม่ใช้ค่ามากสุด)', f.j.incidents.total === N - 1 && !f.j.stale, String(f.j.incidents.total));
+    NOW += 130e3; downGid = INC; const g = await runC('/api/stats?scope=core', { cookie: U10 }); downGid = '';
+    ok('[รอบ 14·P0] หลังยอมรับ N−1 แล้วต้นทางล้ม → ผลสำเร็จล่าสุดคือ N−1 (รุ่นล่าสุด ไม่ใช่รุ่นเก่ากว่า)', g.j.incidents && g.j.incidents.total === N - 1 && !!g.j.stale, String(g.j.incidents && g.j.incidents.total));
+    const db0 = db._db; db0.exec("UPDATE stats_lkg SET at = at - 8*86400000"); NOW += 130e3; downGid = INC; _coldIsolate(); depsC = mkDeps(); const h = await runC('/api/stats?scope=core', { cookie: U10 }); downGid = '';
+    ok('[รอบ 14·P0] ผลสำเร็จเก่าเกินระยะเก็บ (7 วัน) → ไม่ใช้ · ไม่มี fragment เหตุการณ์ · errors ระบุชัด (ไม่เติม 0)', !h.j.incidents && !!h.j.errors.incidents && !(h.j.stale && h.j.stale.incidents), JSON.stringify({ i: h.j.incidents, e: h.j.errors }));
+    const cols = db0.prepare("SELECT k, cfg, at, length(frag) AS n FROM stats_lkg").all();
+    ok('[รอบ 14·P0] ตาราง stats_lkg เก็บเฉพาะผลรวม (ไม่มีชื่อ/เบอร์/พิกัด/ภาพ)', cols.length > 0 && db0.prepare("SELECT frag FROM stats_lkg").all().every((r) => !/ผู้รายงานสมมติ|"name"|"phone"|"lat"|"images"/.test(r.frag)), cols.map((r) => r.k + ':' + r.n).join(','));
+  }
   _reset(); }
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ทั้งหมดเป็นการทดสอบ local ด้วยของจำลอง)'); process.exit(fails ? 1 : 0);
