@@ -3,7 +3,7 @@
 // ผลที่ผ่านพิสูจน์ตรรกะของโค้ดเท่านั้น ไม่ได้พิสูจน์ว่าบริการที่ Deploy แล้วทำงานกับแหล่งจริง
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
-import { handle, SCHEMA, _reset, parseCsv, parseCidrs, ipNum, normDT, persons, SOURCES, _stat, _coldIsolate } from '../src/index.js';
+import { handle, SCHEMA, _reset, parseCsv, parseCidrs, ipNum, normDT, persons, SOURCES, _stat, _coldIsolate, _coldImg } from '../src/index.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 let fails = 0, n = 0; const ok = (name, cond, info) => { n++; if (!cond) fails++; console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond || info === undefined ? '' : ' — ' + info)); };
 
@@ -68,7 +68,7 @@ const fetchMock = async (u, o) => { u = String(u);
     return Response.json({ ok: false, code: 'unknown-action' }); }
   m = /drive\.google\.com\/thumbnail\?id=([\w-]+)&sz=w(\d+)/.exec(u);
   if (m) thumbCalls.push(m[1]);
-  if (m) return m[1] === IMG1 || m[1] === IMG2 ? new Response(new Uint8Array([137, 80, 78, 71]), { headers: { 'content-type': 'image/png' } }) : new Response('<html>', { headers: { 'content-type': 'text/html' } });
+  if (m) return m[1] === IMG1 || m[1] === IMG2 || /^MOCKAREA/.test(m[1]) ? new Response(new Uint8Array([137, 80, 78, 71]), { headers: { 'content-type': 'image/png' } }) : new Response('<html>', { headers: { 'content-type': 'text/html' } });
   return new Response('', { status: 404 }); };
 let NOW = Date.parse('2026-11-15T19:00:00+07:00');
 const deps = { fetch: fetchMock, now: () => NOW };
@@ -390,5 +390,31 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
     const cols = db0.prepare("SELECT k, cfg, at, length(frag) AS n FROM stats_lkg").all();
     ok('[รอบ 14·P0] ตาราง stats_lkg เก็บเฉพาะผลรวม (ไม่มีชื่อ/เบอร์/พิกัด/ภาพ)', cols.length > 0 && db0.prepare("SELECT frag FROM stats_lkg").all().every((r) => !/ผู้รายงานสมมติ|"name"|"phone"|"lat"|"images"/.test(r.frag)), cols.map((r) => r.k + ':' + r.n).join(','));
   }
+    // ================= รอบ 14 · P1: ภาพตรวจพื้นที่/จราจร/ช่วยเหลือ เปิดครั้งแรกช้า =================
+    { const mkDeps = () => { const cache = new Map(); return { fetch: fetchMock, now: () => NOW, cache: { match: async (k) => { const v = cache.get(k.url || String(k)); return v ? v.clone() : undefined; }, put: async (k, v) => { cache.set(k.url || String(k), v.clone()); } } }; }; let depsC = mkDeps();
+      const AREA = SOURCES(E).areaPhotos[1], keepA = SHEETS[AREA], NIMG = 3231, ids = Array.from({ length: NIMG }, (_, i) => 'MOCKAREAPHOTO' + String(i).padStart(15, '0'));
+      SHEETS[AREA] = [keepA[0]].concat(ids.map((id, i) => ['15/11/2026 7:' + String(i % 60).padStart(2, '0') + ':00', 'p' + i + '.jpg', 'https://drive.google.com/file/d/' + id + '/view', ['ตรวจพื้นที่', 'จราจร', 'ช่วยเหลือ'][i % 3]]));
+      const realBatch = db.batch, realPrep = db.prepare; let calls = 0, stmts = 0, imgSel = 0, failW = false;
+      db.batch = async (l) => { calls++; stmts += l.length; if (failW) throw new Error('D1 down (mock)'); return realBatch(l); };
+      db.prepare = (sql) => { if (/FROM imgids WHERE id = \?/.test(sql)) imgSel++; return realPrep(sql); };
+      const runH = async (p, o = {}) => { const x = await handle(req(p, o), E, depsC); return { s: x.status, j: /json/.test(x.headers.get('content-type') || '') ? await x.json() : null, h: x.headers }; };
+      _coldIsolate(); _coldImg(); NOW += 130e3; depsC = mkDeps();
+      const p1 = await runH('/api/data?dataset=areaPhotos', { cookie: U10 }), inDb = db._db.prepare("SELECT COUNT(*) AS n FROM imgids WHERE id LIKE 'MOCKAREAPHOTO%'").get().n, st = p1.h.get('server-timing') || '';
+      ok('[รอบ 14·P1] ภาพ ' + NIMG + ' รหัส (เครื่องใหม่): ลงทะเบียนครบด้วย batch 1 ครั้ง (เดิม 65 ครั้งเรียงกัน) · คำสั่งไม่เกิน 100 ค่าต่อคำสั่ง', p1.s === 200 && p1.j.rows.length === NIMG && inDb === NIMG && calls === 1 && stmts === Math.ceil(NIMG / 100), JSON.stringify({ s: p1.s, rows: p1.j && p1.j.rows.length, inDb, calls, stmts }));
+      ok('[รอบ 14·P1] Server-Timing แยก auth/src/d1/build/ser (ไม่มีรหัสภาพ/ข้อมูลบุคคล)', /auth;dur=\d+/.test(st) && /src;dur=\d+;desc="read"/.test(st) && /d1;dur=\d+;desc="batch=1 stmts=33"/.test(st) && /ser;dur=/.test(st) && !/MOCKAREA|0123/.test(st), st);
+      calls = 0; const p2 = await runH('/api/data?dataset=areaPhotos', { cookie: U10 });
+      ok('[รอบ 14·P1] เปิดซ้ำบนเครื่องเดิม (แคชบริการยังสด) → ไม่อ่านแหล่งซ้ำ ไม่เขียน D1', p2.s === 200 && calls === 0 && /src;dur=\d+;desc="memo"/.test(p2.h.get('server-timing')), p2.h.get('server-timing'));
+      // ภาพจากเครื่องใหม่ที่ยังไม่เคยสร้างรายการ: ถาม D1 ครั้งเดียวแล้วจำ (ไม่ถามซ้ำทุกภาพ) · ยังตรวจ session ทุกครั้ง
+      _coldImg(); imgSel = 0; const i1 = await runH('/api/img?id=' + ids[5], { cookie: U10 }), i2 = await runH('/api/img?id=' + ids[5], { cookie: U10 }), i3 = await runH('/api/img?id=' + ids[5]);
+      ok('[รอบ 14·P1] เครื่องใหม่เปิดภาพที่ลงทะเบียนแล้ว → ได้ภาพ · ถาม D1 ครั้งเดียว · ไม่มี session → 401', i1.s === 200 && i2.s === 200 && imgSel === 1 && i3.s === 401, JSON.stringify({ a: i1.s, b: i2.s, sel: imgSel, c: i3.s }));
+      // เขียนทะเบียนล้ม: รายการยังเปิดได้ · เครื่องเดียวกันเปิดภาพได้ · ไม่ลองเขียนทุกคำขอ · หลัง 60 วินาทีลองใหม่และสำเร็จ → เครื่องอื่นเปิดภาพได้
+      const ids2 = ids.map((x) => x.replace('MOCKAREAPHOTO', 'MOCKAREANEW00X')); SHEETS[AREA] = [keepA[0]].concat(ids2.map((id) => ['16/11/2026 7:00:00', 'q.jpg', 'https://drive.google.com/file/d/' + id + '/view', 'จราจร']));
+      _coldIsolate(); _coldImg(); NOW += 130e3; failW = true; calls = 0;
+      const f1 = await runH('/api/data?dataset=areaPhotos', { cookie: U10 }), fi = await runH('/api/img?id=' + ids2[7], { cookie: U10 }); const cF = calls;
+      NOW += 10e3; const f2 = await runH('/api/data?dataset=areaPhotos', { cookie: U10 }); const cF2 = calls;
+      failW = false; NOW += 61e3; const f3 = await runH('/api/data?dataset=areaPhotos', { cookie: U10 }); const nNew = db._db.prepare("SELECT COUNT(*) AS n FROM imgids WHERE id LIKE 'MOCKAREANEW00X%'").get().n;
+      _coldImg(); const fo = await runH('/api/img?id=' + ids2[7], { cookie: U10 });
+      ok('[รอบ 14·P1] D1 เขียนล้ม → รายการยังได้ 200 ครบ + ภาพในเครื่องเดิมเปิดได้ · ไม่ลองเขียนซ้ำภายใน 60 วินาที · หลังนั้นลองใหม่สำเร็จ → เครื่องอื่นเปิดภาพได้', f1.s === 200 && f1.j.rows.length === NIMG && /err/.test(f1.h.get('server-timing')) && fi.s === 200 && cF === 1 && f2.s === 200 && cF2 === 1 && f3.s === 200 && nNew === NIMG && fo.s === 200, JSON.stringify({ f1: f1.s, fi: fi.s, cF, cF2, f3: f3.s, nNew, fo: fo.s }));
+      db.batch = realBatch; db.prepare = realPrep; SHEETS[AREA] = keepA; db._db.exec("DELETE FROM imgids WHERE id LIKE 'MOCKAREA%'"); }
   _reset(); }
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ทั้งหมดเป็นการทดสอบ local ด้วยของจำลอง)'); process.exit(fails ? 1 : 0);

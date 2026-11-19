@@ -450,15 +450,22 @@ async function memoOf(env, key, deps) {
 async function table(env, key, deps, maxAge = 12e4) {
   const { mk, cfg } = await srcKey(env, key, deps), now = deps.now();
   for (const k of memo.keys()) if (k !== mk && k.startsWith(key + "|")) memo.delete(k);
+  const tm = deps.tm, t0 = Date.now(), lap = (how) => (v) => {
+    if (tm) {
+      tm.src += Date.now() - t0;
+      tm.how = tm.how ? tm.how + "+" + how : how;
+    }
+    return v;
+  };
   const hit2 = memo.get(mk);
-  if (hit2 && now - hit2.at >= 0 && now - hit2.at < maxAge) return hit2;
+  if (hit2 && now - hit2.at >= 0 && now - hit2.at < maxAge) return lap("memo")(hit2);
   const cur = inflight.get(mk);
-  if (cur) return cur;
+  if (cur) return cur.then(lap("wait"));
   const p = readTable(env, key, deps, mk, cfg).finally(() => {
     if (inflight.get(mk) === p) inflight.delete(mk);
   });
   inflight.set(mk, p);
-  return p;
+  return p.then(lap("read"));
 }
 async function readTable(env, key, deps, mk, cfg) {
   const src = SOURCES(env)[key];
@@ -519,13 +526,38 @@ var images = (v) => str(v).split(/[\s,]+/).map((u) => driveId(u) || (/^https:\/\
 var knownImg = /* @__PURE__ */ new Set();
 var privImg = /* @__PURE__ */ new Set();
 var imgInflight = /* @__PURE__ */ new Map();
-async function remember(env, ids) {
-  const fresh = [...new Set(ids)].filter((i) => /^[-\w]{20,60}$/.test(i) && !knownImg.has(i));
+var savedImg = /* @__PURE__ */ new Set();
+var imgSaveFailAt = -Infinity;
+var IMG_ROWS_PER_STMT = 100;
+var IMG_STMTS_PER_BATCH = 50;
+async function remember(env, ids, deps) {
+  const uniq = [...new Set(ids)].filter((i) => /^[-\w]{20,60}$/.test(i));
+  uniq.forEach((i) => knownImg.add(i));
+  const fresh = uniq.filter((i) => !savedImg.has(i));
   if (!fresh.length) return;
-  fresh.forEach((i) => knownImg.add(i));
+  const now = deps && deps.now ? deps.now() : Date.now();
+  if (now - imgSaveFailAt >= 0 && now - imgSaveFailAt < 6e4) return;
+  const tm = deps && deps.tm, t0 = Date.now(), at = Math.floor(Date.now()), stmts = [];
+  for (let i = 0; i < fresh.length; i += IMG_ROWS_PER_STMT) {
+    const part = fresh.slice(i, i + IMG_ROWS_PER_STMT);
+    stmts.push(env.DB.prepare("INSERT OR IGNORE INTO imgids(id, at) VALUES " + part.map(() => "(?, " + at + ")").join(", ")).bind(...part));
+  }
+  let calls = 0;
   try {
-    for (let i = 0; i < fresh.length; i += 50) await env.DB.batch(fresh.slice(i, i + 50).map((id) => env.DB.prepare("INSERT OR IGNORE INTO imgids(id, at) VALUES(?, ?)").bind(id, Date.now())));
+    for (let i = 0; i < stmts.length; i += IMG_STMTS_PER_BATCH) {
+      calls++;
+      await env.DB.batch(stmts.slice(i, i + IMG_STMTS_PER_BATCH));
+    }
+    fresh.forEach((i) => savedImg.add(i));
+    imgSaveFailAt = -Infinity;
   } catch (e) {
+    imgSaveFailAt = now;
+    if (tm) tm.d1err = 1;
+  }
+  if (tm) {
+    tm.d1 += Date.now() - t0;
+    tm.d1b += calls;
+    tm.d1s += stmts.length;
   }
 }
 function persons(detail) {
@@ -586,7 +618,7 @@ var BUILD = {
       delete o.injuredRaw;
       return o;
     }).filter((r) => r.date);
-    await remember(env, out.flatMap((r) => r.images));
+    await remember(env, out.flatMap((r) => r.images), deps);
     return out;
   },
   async lostfound(env, deps) {
@@ -596,12 +628,12 @@ var BUILD = {
       delete o.img;
       return o;
     }).filter((r) => r.at);
-    await remember(env, out.flatMap((r) => r.images));
+    await remember(env, out.flatMap((r) => r.images), deps);
     return out;
   },
   async areaPhotos(env, deps) {
     const out = pick(await table(env, "areaPhotos", deps), { date: "\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48/\u0E40\u0E27\u0E25\u0E32", file: "\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C", url: "\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E20\u0E32\u0E1E", category: "\u0E2B\u0E21\u0E27\u0E14\u0E2B\u0E21\u0E39\u0E48" }, ["date", "url", "category"]).map((r) => ({ date: normDT(r.date) || r.date, file: r.file, category: r.category, images: images(r.url) })).filter((r) => r.images.length);
-    await remember(env, out.flatMap((r) => r.images));
+    await remember(env, out.flatMap((r) => r.images), deps);
     return out;
   },
   async radio(env, deps) {
@@ -611,7 +643,7 @@ var BUILD = {
     const t = await table(env, "events", deps);
     if (t.head[4] !== "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C" || t.head[6] !== "\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E40\u0E01\u0E34\u0E14\u0E40\u0E2B\u0E15\u0E38") throw new Err(502, "source-schema");
     const out = pick(t, { at: 0, unit: 3, type: 4, level: 5, place: 6, detail: 7, i1: 8, i2: 9, i3: 10 }, []).map((r) => ({ at: normDT(r.at, true) || r.at, unit: r.unit, type: r.type, level: r.level, place: r.place, detail: r.detail, images: images([r.i1, r.i2, r.i3].join(" ")) }));
-    await remember(env, out.flatMap((r) => r.images));
+    await remember(env, out.flatMap((r) => r.images), deps);
     return out;
   },
   async ruenthai(env, deps) {
@@ -666,7 +698,7 @@ var BUILD = {
       photo: "Photo_File_ID"
     }, ["date", "record", "geo"]).map((r) => ({ ...r, date: normDT(r.date).slice(0, 10) || r.date, lat: r.lat === "" ? null : +r.lat, lng: r.lng === "" ? null : +r.lng, images: images(r.photo) }));
     out.forEach((r) => delete r.photo);
-    await remember(env, out.flatMap((r) => r.images));
+    await remember(env, out.flatMap((r) => r.images), deps);
     return out;
   }
 };
@@ -1143,7 +1175,11 @@ var IMG_W = [400, 800, 1600];
 async function img(request, env, deps) {
   const u = new URL(request.url), id = u.searchParams.get("id") || "", w = IMG_W.includes(+u.searchParams.get("w")) ? +u.searchParams.get("w") : 400;
   if (!/^[-\w]{20,60}$/.test(id)) throw new Err(400, "bad-id");
-  if (!knownImg.has(id) && !await env.DB.prepare("SELECT 1 AS x FROM imgids WHERE id = ?").bind(id).first()) throw new Err(404, "unknown-image");
+  if (!knownImg.has(id)) {
+    if (!await env.DB.prepare("SELECT 1 AS x FROM imgids WHERE id = ?").bind(id).first()) throw new Err(404, "unknown-image");
+    knownImg.add(id);
+    savedImg.add(id);
+  }
   const rc = await relayCfg(env, deps), ver = rc && rc.imgVer || (await metaGet(env, ["img_cache_ver"])).img_cache_ver || "1", etag = '"' + id + "-" + w + "-v" + ver + '"';
   const H = (ct, via) => ({ "content-type": ct, "cache-control": "private, no-cache", etag, "x-img-via": via, ...SEC });
   if (request.headers.get("If-None-Match") === etag) return new Response(null, { status: 304, headers: { "cache-control": "private, no-cache", etag, ...SEC } });
@@ -1429,11 +1465,16 @@ async function handle(request, env, deps) {
       return json({ ok: true }, 200, { "set-cookie": setCookie("x", 0) });
     }
     if (path === "/api/data" && m === "GET") {
-      const s = await need(request, env, deps), k = url.searchParams.get("dataset") || "";
+      const t0 = Date.now(), s = await need(request, env, deps), k = url.searchParams.get("dataset") || "";
       if (!Object.prototype.hasOwnProperty.call(BUILD, k)) throw new Err(400, "unknown-dataset");
+      const t1 = Date.now();
+      deps.tm = { src: 0, how: "", d1: 0, d1b: 0, d1s: 0, d1err: 0 };
       let rows = await BUILD[k](env, deps);
       if (k === "staff") rows = rows.map(PUBLIC_STAFF(env));
-      return json({ ok: true, dataset: k, rows, asOf: bkk((await memoOf(env, k, deps) || { at: deps.now() }).at), role: s.role });
+      const t2 = Date.now();
+      const asOf = bkk((await memoOf(env, k, deps) || { at: deps.now() }).at), body = JSON.stringify({ ok: true, dataset: k, rows, asOf, role: s.role }), t3 = Date.now(), tm = deps.tm;
+      const st = "auth;dur=" + (t1 - t0) + ", src;dur=" + tm.src + ';desc="' + (tm.how || "-") + '", d1;dur=' + tm.d1 + ';desc="batch=' + tm.d1b + " stmts=" + tm.d1s + (tm.d1err ? " err" : "") + '", build;dur=' + Math.max(0, t2 - t1 - tm.src - tm.d1) + ", ser;dur=" + (t3 - t2);
+      return new Response(body, { status: 200, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...SEC, "server-timing": st } });
     }
     if (path === "/api/sources" && m === "GET") {
       await need(request, env, deps);
@@ -1464,10 +1505,17 @@ var _coldIsolate = () => {
   memo.clear();
   inflight.clear();
 };
+var _coldImg = () => {
+  knownImg.clear();
+  savedImg.clear();
+  imgSaveFailAt = -Infinity;
+};
 var _reset = () => {
   memo.clear();
   inflight.clear();
   knownImg.clear();
+  savedImg.clear();
+  imgSaveFailAt = -Infinity;
   privImg.clear();
   imgInflight.clear();
   relayMemo = null;
@@ -1488,6 +1536,8 @@ var SCHEMA = [
 var src_default = { fetch: (request, env, ctx) => handle(request, env, { fetch: (u, o) => fetch(u, o), now: () => Date.now(), cache: caches.default, waitUntil: ctx && ctx.waitUntil ? (p) => ctx.waitUntil(p) : null }) };
 export {
   Err,
+  IMG_ROWS_PER_STMT,
+  IMG_STMTS_PER_BATCH,
   IMG_W,
   LKG_MAX,
   PRIVATE_SRC,
@@ -1497,6 +1547,7 @@ export {
   SCHEMA,
   SOURCES,
   STATS_SCOPES,
+  _coldImg,
   _coldIsolate,
   _reset,
   _stat,

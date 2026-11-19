@@ -1889,6 +1889,7 @@
         if (!r.ok) throw { code: j && DS_ERR[j.code] ? j.code : 'http', status: r.status };
         if (!j || j.ok !== true || !Array.isArray(j.rows)) throw { code: 'schema' };
         j.rows.forEach(function (row) { if (Array.isArray(row.images)) { row.images = row.images.map(function (x) { return /^https:/.test(x) ? x : 'hubimg:' + x + (key === 'gps' ? ':p' : ''); }); if (!row.url && row.images.length) row.url = row.images[0]; } });
+        if (typeof j.asOf === 'string') j.rows.asOf = j.asOf;        /* รอบ 14·P1: เวลาที่บริการอ่านแหล่งจริง (ไม่ใช่เวลาที่เบราว์เซอร์ได้รับ) */
         return j.rows;
       });
     }, function () { throw { code: 'network' }; });
@@ -1899,7 +1900,7 @@
     else if (dsCache[key] && dsMode(key) === 'api' && AUTH.on && AUTH.user && !authChk) {      /* รอบ 13: ใช้รายการที่อยู่ในหน่วยความจำ → ตรวจ session ฝั่งบริการเบื้องหลังทุกครั้ง (คำขอเดียวพร้อมกัน) หมดอายุ/ถูกถอน → กลับหน้า Login */
       var g0 = authGen; authChk = apiCall('/me').then(function (x) { authChk = null; if (g0 === authGen && x.s === 401) authLost(); });
     }
-    if (!dsCache[key]) { var m = dsMode(key); dsCache[key] = (m === 'off' ? Promise.reject({ code: 'off' }) : m === 'api' ? apiGet(key) : gviz(DS[key])).then(function (rows) { if (dsCache[key] === p0) p0.n = rows.length; return { rows: rows, at: new Date() }; }); var p0 = dsCache[key]; dsCache[key].catch(function () { delete dsCache[key]; }); dsCache[key].t0 = Date.now(); }
+    if (!dsCache[key]) { var m = dsMode(key); dsCache[key] = (m === 'off' ? Promise.reject({ code: 'off' }) : m === 'api' ? apiGet(key) : gviz(DS[key])).then(function (rows) { if (dsCache[key] === p0) p0.n = rows.length; var sa = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(rows.asOf || '') ? new Date(rows.asOf.replace(' ', 'T') + ':00+07:00') : null; return { rows: rows, at: sa && !isNaN(sa) ? sa : new Date(), srcAt: !!sa }; }); var p0 = dsCache[key]; dsCache[key].catch(function () { delete dsCache[key]; }); dsCache[key].t0 = Date.now(); }
     return dsCache[key];
   }
   var DS_ERR = {

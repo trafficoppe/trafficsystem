@@ -118,10 +118,11 @@ async function memoOf(env, key, deps) { return memo.get((await srcKey(env, key, 
 async function table(env, key, deps, maxAge = 120e3) {
   const { mk, cfg } = await srcKey(env, key, deps), now = deps.now();
   for (const k of memo.keys()) if (k !== mk && k.startsWith(key + '|')) memo.delete(k);      // ค่าตั้งเดิมของแหล่งนี้ ไม่ใช้แล้ว
-  const hit = memo.get(mk); if (hit && now - hit.at >= 0 && now - hit.at < maxAge) return hit;
-  const cur = inflight.get(mk); if (cur) return cur;
+  const tm = deps.tm, t0 = Date.now(), lap = (how) => (v) => { if (tm) { tm.src += Date.now() - t0; tm.how = tm.how ? tm.how + '+' + how : how; } return v; };      // รอบ 14·P1: เวลาอ่านแหล่ง (Server-Timing)
+  const hit = memo.get(mk); if (hit && now - hit.at >= 0 && now - hit.at < maxAge) return lap('memo')(hit);
+  const cur = inflight.get(mk); if (cur) return cur.then(lap('wait'));
   const p = readTable(env, key, deps, mk, cfg).finally(() => { if (inflight.get(mk) === p) inflight.delete(mk); });
-  inflight.set(mk, p); return p;
+  inflight.set(mk, p); return p.then(lap('read'));
 }
 async function readTable(env, key, deps, mk, cfg) {
   const src = SOURCES(env)[key]; if (!src || !src[0]) throw new Err(503, 'source-not-configured');
@@ -156,10 +157,21 @@ export function normDT(s, mdy) {
 const driveId = (u) => { const m = /(?:\/d\/|[?&]id=)([-\w]{20,})/.exec(str(u)); return m ? m[1] : /^[-\w]{25,60}$/.test(str(u)) ? str(u) : ''; };
 const images = (v) => str(v).split(/[\s,]+/).map((u) => driveId(u) || (/^https:\/\/(github\.com\/user-attachments\/assets\/|op\.mahidol\.ac\.th\/)[^\s"'<>]+$/.test(u) ? u : '')).filter(Boolean);
 const knownImg = new Set(), privImg = new Set(), imgInflight = new Map();
-async function remember(env, ids) {
-  const fresh = [...new Set(ids)].filter((i) => /^[-\w]{20,60}$/.test(i) && !knownImg.has(i)); if (!fresh.length) return;
-  fresh.forEach((i) => knownImg.add(i));
-  try { for (let i = 0; i < fresh.length; i += 50) await env.DB.batch(fresh.slice(i, i + 50).map((id) => env.DB.prepare('INSERT OR IGNORE INTO imgids(id, at) VALUES(?, ?)').bind(id, Date.now()))); } catch (e) { /* แคชรูปเป็นส่วนเสริม */ }
+// รอบ 14·P1: ทะเบียนรหัสภาพ (imgids) — เดิมเขียนทีละ 50 แถวต่อ batch และรอทีละรอบ → ภาพตรวจพื้นที่ ~3,250 รหัส = ~66 รอบไป-กลับ D1 (ฐานหลักอยู่สหรัฐฯ) บนเครื่องใหม่ทุกเครื่อง
+//   ตอนนี้: INSERT หลายแถวต่อคำสั่ง (ไม่เกิน 100 ค่าต่อคำสั่งตามขีดจำกัด D1) และส่งรวมใน batch เดียว (≤ 50 คำสั่งต่อ batch) → ~1 รอบไป-กลับ · ยังรอให้เขียนเสร็จก่อนตอบ (ทะเบียนพร้อมก่อนเปิดภาพจากเครื่องอื่น)
+//   knownImg = รหัสที่เครื่องนี้อนุญาต (มาจากการอ่านแหล่งที่ผ่านสิทธิ์แล้ว) · savedImg = รหัสที่ยืนยันว่าอยู่ใน D1 แล้ว · เขียนล้ม → เครื่องนี้ยังเปิดภาพได้ และลองเขียนใหม่หลัง 60 วินาที (ไม่ลองทุกคำขอ)
+const savedImg = new Set(); let imgSaveFailAt = -Infinity;
+export const IMG_ROWS_PER_STMT = 100, IMG_STMTS_PER_BATCH = 50;
+async function remember(env, ids, deps) {
+  const uniq = [...new Set(ids)].filter((i) => /^[-\w]{20,60}$/.test(i)); uniq.forEach((i) => knownImg.add(i));
+  const fresh = uniq.filter((i) => !savedImg.has(i)); if (!fresh.length) return;
+  const now = deps && deps.now ? deps.now() : Date.now(); if (now - imgSaveFailAt >= 0 && now - imgSaveFailAt < 60e3) return;
+  const tm = deps && deps.tm, t0 = Date.now(), at = Math.floor(Date.now()), stmts = [];
+  for (let i = 0; i < fresh.length; i += IMG_ROWS_PER_STMT) { const part = fresh.slice(i, i + IMG_ROWS_PER_STMT); stmts.push(env.DB.prepare('INSERT OR IGNORE INTO imgids(id, at) VALUES ' + part.map(() => '(?, ' + at + ')').join(', ')).bind(...part)); }
+  let calls = 0;
+  try { for (let i = 0; i < stmts.length; i += IMG_STMTS_PER_BATCH) { calls++; await env.DB.batch(stmts.slice(i, i + IMG_STMTS_PER_BATCH)); } fresh.forEach((i) => savedImg.add(i)); imgSaveFailAt = -Infinity; }
+  catch (e) { imgSaveFailAt = now; if (tm) tm.d1err = 1; }      // แคชรูปเป็นส่วนเสริม: ไม่ทำให้รายการล้ม
+  if (tm) { tm.d1 += Date.now() - t0; tm.d1b += calls; tm.d1s += stmts.length; }
 }
 // บุคคลในเหตุการณ์: “[คนที่ 1] ประเภท: … | ชื่อ: … | โทร: … | อาการ: …” → ไม่ส่งเบอร์โทรและรหัสนักศึกษา
 export function persons(detail) {
@@ -182,19 +194,19 @@ const BUILD = {
     const out = rows.map((r, i) => { const ll = /(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/.exec(r.ll), d = normDT(r.date).slice(0, 10);
       const o = { ...r, id: r.id || 'ROW-' + (i + 2), type: r.type || 'ไม่ระบุประเภท', date: d, rec: normDT(r.rec), lat: ll ? +ll[1] : null, lng: ll ? +ll[2] : null, injured: /^\d+$/.test(r.injuredRaw) ? +r.injuredRaw : null, persons: persons(r.pd), images: images(r.img) };
       delete o.ll; delete o.pd; delete o.img; delete o.injuredRaw; return o; }).filter((r) => r.date);
-    await remember(env, out.flatMap((r) => r.images));
+    await remember(env, out.flatMap((r) => r.images), deps);
     return out;
   },
   async lostfound(env, deps) {
     const t = await table(env, 'lostfound', deps);
     const out = pick(t, { at: 'Timestamp', ref: 'RefCode', type: 'ประเภท', name: 'ชื่อ-นามสกุล', personType: 'ประเภทบุคคล', unit: 'คณะ/หน่วยงาน', phone: 'เบอร์โทร', date: 'วันที่เกิดเหตุ', time: 'เวลา', detail: 'รายละเอียด', place: 'สถานที่', img: 'URL รูปภาพ', status: 'สถานะ', action: 'การดำเนินการ', updatedAt: 'วันที่อัปเดต' }, ['at', 'ref', 'type'])
       .map((r) => { const o = { ...r, at: normDT(r.at), date: normDT(r.date).slice(0, 10) || r.date, updatedAt: normDT(r.updatedAt) || r.updatedAt, images: images(r.img) }; delete o.img; return o; }).filter((r) => r.at);
-    await remember(env, out.flatMap((r) => r.images));
+    await remember(env, out.flatMap((r) => r.images), deps);
     return out;
   },
   async areaPhotos(env, deps) {
     const out = pick(await table(env, 'areaPhotos', deps), { date: 'วันที่/เวลา', file: 'ชื่อไฟล์', url: 'ลิงก์ภาพ', category: 'หมวดหมู่' }, ['date', 'url', 'category']).map((r) => ({ date: normDT(r.date) || r.date, file: r.file, category: r.category, images: images(r.url) })).filter((r) => r.images.length);
-    await remember(env, out.flatMap((r) => r.images)); return out;
+    await remember(env, out.flatMap((r) => r.images), deps); return out;
   },
   async radio(env, deps) {
     return pick(await table(env, 'radio', deps), { at: 'วันเวลาที่บันทึก', operator: 'เจ้าหน้าที่ศูนย์วิทยุ', unit: 'หน่วยงานที่แจ้ง', reporter: 'ชื่อ รปภ./ผู้แจ้ง', type: 'ประเภทเหตุการณ์', place: 'สถานที่เกิดเหตุ', detail: 'รายละเอียด/ข้อความ', action: 'การดำเนินการของศูนย์', status: 'สถานะ' }, ['at', 'type']).filter((r) => r.at).map((r) => ({ ...r, at: normDT(r.at) || r.at }));
@@ -202,7 +214,7 @@ const BUILD = {
   async events(env, deps) {                     // กิจกรรมพิเศษ: หัวคอลัมน์ A ของต้นทางไม่สื่อความ จึงอ่านตามตำแหน่ง A–K ที่ตรวจแล้ว และไม่ส่งชื่อ/ตำแหน่งผู้รายงาน
     const t = await table(env, 'events', deps); if (t.head[4] !== 'ประเภทเหตุการณ์' || t.head[6] !== 'สถานที่เกิดเหตุ') throw new Err(502, 'source-schema');
     const out = pick(t, { at: 0, unit: 3, type: 4, level: 5, place: 6, detail: 7, i1: 8, i2: 9, i3: 10 }, []).map((r) => ({ at: normDT(r.at, true) || r.at, unit: r.unit, type: r.type, level: r.level, place: r.place, detail: r.detail, images: images([r.i1, r.i2, r.i3].join(' ')) }));
-    await remember(env, out.flatMap((r) => r.images)); return out;
+    await remember(env, out.flatMap((r) => r.images), deps); return out;
   },
   async ruenthai(env, deps) {                   // เรือนไทย: รายการหลัง Login — ไม่มีชื่อ เบอร์ อีเมล ทะเบียนรถ Token หรือ Hash
     return pick(await table(env, 'ruenthai', deps), { at: 'Timestamp', ref: 'Ref_Code', groupType: 'Group_Type', group: 'Group_Label', subType: 'User_SubType', faculty: 'Faculty_Dept', subUnit: 'Sub_Unit_Project',
@@ -214,7 +226,7 @@ const BUILD = {
     const out = pick(await table(env, 'gps', deps), { id: 'Report_Code', date: 'Report_Date', time: 'Report_Time', kind: 'Report_Type', company: 'Guard_Company', post: 'Duty_Post', zone: 'Zone', duty: 'Duty', eventType: 'Event_Type', severity: 'Event_Severity', detail: 'Report_Detail',
       lat: 'Latitude', lng: 'Longitude', accuracy: 'GPS_Accuracy_M', distance: 'Distance_From_Post_M', geo: 'Geo_Status', gpsStatus: 'GPS_Status', record: 'Record_Status', photo: 'Photo_File_ID' }, ['date', 'record', 'geo'])
       .map((r) => ({ ...r, date: normDT(r.date).slice(0, 10) || r.date, lat: r.lat === '' ? null : +r.lat, lng: r.lng === '' ? null : +r.lng, images: images(r.photo) }));
-    out.forEach((r) => delete r.photo); await remember(env, out.flatMap((r) => r.images)); return out;
+    out.forEach((r) => delete r.photo); await remember(env, out.flatMap((r) => r.images), deps); return out;
   }
 };
 const PUBLIC_STAFF = (env) => (r) => ({ name: r.name, position: r.position, phone: env.STAFF_INCLUDE_PHONE === 'true' ? r.phone : '', photo: r.photo, unit: r.unit, isHead: r.head !== '' });
@@ -469,7 +481,7 @@ export const IMG_W = [400, 800, 1600];
 async function img(request, env, deps) {
   const u = new URL(request.url), id = u.searchParams.get('id') || '', w = IMG_W.includes(+u.searchParams.get('w')) ? +u.searchParams.get('w') : 400;
   if (!/^[-\w]{20,60}$/.test(id)) throw new Err(400, 'bad-id');
-  if (!knownImg.has(id) && !(await env.DB.prepare('SELECT 1 AS x FROM imgids WHERE id = ?').bind(id).first())) throw new Err(404, 'unknown-image');
+  if (!knownImg.has(id)) { if (!(await env.DB.prepare('SELECT 1 AS x FROM imgids WHERE id = ?').bind(id).first())) throw new Err(404, 'unknown-image'); knownImg.add(id); savedImg.add(id); }      // รอบ 14·P1: พบใน D1 แล้วจำไว้ในเครื่อง (ไม่ถาม D1 ซ้ำทุกภาพ) · สิทธิ์ผู้ใช้ยังตรวจทุกคำขอใน need()
   const rc = await relayCfg(env, deps), ver = (rc && rc.imgVer) || (await metaGet(env, ['img_cache_ver'])).img_cache_ver || '1', etag = '"' + id + '-' + w + '-v' + ver + '"';
   const H = (ct, via) => ({ 'content-type': ct, 'cache-control': 'private, no-cache', etag, 'x-img-via': via, ...SEC });
   if (request.headers.get('If-None-Match') === etag) return new Response(null, { status: 304, headers: { 'cache-control': 'private, no-cache', etag, ...SEC } });
@@ -619,8 +631,14 @@ export async function handle(request, env, deps) {
     const m = request.method;
     if (path === '/api/login' && m === 'POST') return await login(request, env, deps, net);
     if (path === '/api/logout' && m === 'POST') { sameOrigin(request); const tok = cookieOf(request); if (tok) await env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(await sha(tok)).run(); return json({ ok: true }, 200, { 'set-cookie': setCookie('x', 0) }); }
-    if (path === '/api/data' && m === 'GET') { const s = await need(request, env, deps), k = url.searchParams.get('dataset') || ''; if (!Object.prototype.hasOwnProperty.call(BUILD, k)) throw new Err(400, 'unknown-dataset');
-      let rows = await BUILD[k](env, deps); if (k === 'staff') rows = rows.map(PUBLIC_STAFF(env)); return json({ ok: true, dataset: k, rows, asOf: bkk((await memoOf(env, k, deps) || { at: deps.now() }).at), role: s.role }); }
+    if (path === '/api/data' && m === 'GET') { const t0 = Date.now(), s = await need(request, env, deps), k = url.searchParams.get('dataset') || ''; if (!Object.prototype.hasOwnProperty.call(BUILD, k)) throw new Err(400, 'unknown-dataset');
+      // รอบ 14·P1: Server-Timing (มิลลิวินาที · ไม่มีข้อมูลบุคคล/รหัสไฟล์): auth = ตรวจ session · src = อ่านแหล่ง (memo/wait/read) · d1 = ทะเบียนภาพ (จำนวน batch/คำสั่ง) · build = แปลงแถว · ser = JSON
+      //   หมายเหตุ: บน Workers นาฬิกาเดินเฉพาะเมื่อมี I/O งาน CPU ล้วน (build/ser) อาจแสดงเป็น 0
+      const t1 = Date.now(); deps.tm = { src: 0, how: '', d1: 0, d1b: 0, d1s: 0, d1err: 0 };
+      let rows = await BUILD[k](env, deps); if (k === 'staff') rows = rows.map(PUBLIC_STAFF(env)); const t2 = Date.now();
+      const asOf = bkk((await memoOf(env, k, deps) || { at: deps.now() }).at), body = JSON.stringify({ ok: true, dataset: k, rows, asOf, role: s.role }), t3 = Date.now(), tm = deps.tm;
+      const st = 'auth;dur=' + (t1 - t0) + ', src;dur=' + tm.src + ';desc="' + (tm.how || '-') + '", d1;dur=' + tm.d1 + ';desc="batch=' + tm.d1b + ' stmts=' + tm.d1s + (tm.d1err ? ' err' : '') + '", build;dur=' + Math.max(0, t2 - t1 - tm.src - tm.d1) + ', ser;dur=' + (t3 - t2);
+      return new Response(body, { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...SEC, 'server-timing': st } }); }
     if (path === '/api/sources' && m === 'GET') { await need(request, env, deps); return json(await sourcesStatus(env, deps, url.searchParams.get('deep') === '1')); }
     if (path === '/api/stats' && m === 'GET') { await need(request, env, deps); return json(await liveStats(env, deps, url.searchParams.get('scope') || 'all')); }
     if (path === '/api/img' && m === 'GET') { await need(request, env, deps); return await img(request, env, deps); }
@@ -634,8 +652,9 @@ export async function handle(request, env, deps) {
     return api ? json(path === '/api/chat' ? { status: 'error', code } : { ok: false, code, ...(e instanceof Err && e.extra ? e.extra : {}) }, status) : new Response('Error', { status, headers: SEC });
   }
 }
-export const _coldIsolate = () => { memo.clear(); inflight.clear(); };      // จำลองเครื่องรับคำขอใหม่ (ชุดทดสอบ)
-export const _reset = () => { memo.clear(); inflight.clear(); knownImg.clear(); privImg.clear(); imgInflight.clear(); relayMemo = null; lastDeep = null; cacheEpoch++; _stat.reads = {}; };
+export const _coldIsolate = () => { memo.clear(); inflight.clear(); };
+export const _coldImg = () => { knownImg.clear(); savedImg.clear(); imgSaveFailAt = -Infinity; };      // รอบ 14·P1: จำลองเครื่องใหม่ที่ยังไม่รู้จักรหัสภาพ      // จำลองเครื่องรับคำขอใหม่ (ชุดทดสอบ)
+export const _reset = () => { memo.clear(); inflight.clear(); knownImg.clear(); savedImg.clear(); imgSaveFailAt = -Infinity; privImg.clear(); imgInflight.clear(); relayMemo = null; lastDeep = null; cacheEpoch++; _stat.reads = {}; };
 export const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, staff TEXT NOT NULL, name TEXT, unit TEXT, role TEXT NOT NULL, created INTEGER NOT NULL, exp INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS attempts(k TEXT PRIMARY KEY, n INTEGER NOT NULL, exp INTEGER NOT NULL)',
