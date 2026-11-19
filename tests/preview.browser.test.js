@@ -338,6 +338,13 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   for (const h of ['report-monthly', 'safety', 'vehicle-fleet', 'form-clean']) { await page.goto(URL0 + '#' + h); await page.waitForTimeout(900); ok('มือถือ ' + h + ': ไม่ล้นจอ', (await overflow()) === '' && await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1), await overflow()); if (h === 'safety') await page.screenshot({ path: OUT + '/19_mobile_fire_MOCKDATA.png' }); if (h === 'report-monthly') await page.screenshot({ path: OUT + '/20_mobile_report_monthly.png' }); }
   ok('ไม่มี Console/Page error (มือถือ)', sysErrors(log).length === 0, sysErrors(log).slice(0, 2).join(' || ')); await ctx.close();
 
+  // ===== รอบ 14 · P1b: แบบทดสอบหมวกนิรภัยเป็น “ลิงก์ระบบ” — ไม่ขึ้น “ไม่มีข้อมูลยืนยัน” และไม่ถูกนับเป็นระบบที่เชื่อมต่อไม่ได้ =====
+  ({ ctx, page, log } = await newPage(browser)); await page.goto(URL0 + '#gate'); await page.waitForSelector('.sys-fold', { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(500);
+  { const r = await page.evaluate(() => { const card = Array.from(document.querySelectorAll('.card.sys')).find((c) => /แบบทดสอบโครงการรณรงค์สวมหมวกนิรภัย/.test(c.textContent)); const fold = card && card.closest('.sys-fold');
+      return card ? { pill: card.querySelector('.pill').textContent, na: !!card.querySelector('.kpi-na'), link: !!card.querySelector('a.btn'), foldPill: fold && fold.querySelector('.fold-h .pill') ? fold.querySelector('.fold-h .pill').textContent : '' } : null; });
+    ok('[รอบ 14·P1b] แบบทดสอบหมวกนิรภัย: ป้าย “ลิงก์ระบบ” + ปุ่มเปิดแบบทดสอบ · ไม่ขึ้น “ไม่มีข้อมูลยืนยัน” · หัวกลุ่มไม่นับเป็นระบบที่เชื่อมต่อไม่ได้', r && /ลิงก์ระบบ/.test(r.pill) && !r.na && r.link && !/เชื่อมต่อไม่ได้/.test(r.foldPill), JSON.stringify(r)); }
+  await ctx.close();
+
   // ===== L) index.html (ไฟล์แยก) =====
   ({ ctx, page, log } = await newPage(browser)); await page.goto(BASE + '/index.html'); await page.waitForSelector('.now'); await T(page, '.trend .dash-map').scrollIntoViewIfNeeded(); await page.waitForSelector('.trend .leaflet-tile', { timeout: 8000 }).catch(() => {});
   ok('[MOCK ไทล์] index.html (ไฟล์แยก โหลด Leaflet จาก assets/vendor) ทำงาน', await T(page, '.now').count() === 8 && await T(page, '.trend .leaflet-tile').count() > 0); await ctx.close();

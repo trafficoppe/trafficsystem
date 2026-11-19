@@ -1055,10 +1055,10 @@
    ]
   },
   "helmetQuiz": {
-   "status": "unverified",
-   "source": "Apps Script ที่ฝังใน -helmet/script.js (ไม่พบ Sheet ปลายทางในสิทธิ์ที่มี)",
+   "status": "link",
+   "source": "ลิงก์แบบทดสอบ (-helmet/) · ผลส่งไปยัง Apps Script ของโครงการ",
    "notes": [
-    "ยังระบุ Sheet ที่บันทึกไม่ได้"
+    "เป็นลิงก์เปิดแบบทดสอบ ไม่ใช่แหล่งสถิติของหน้ารวม — หน้ารวมไม่ได้อ่านผลคะแนน จึงไม่นับเป็นระบบที่เชื่อมต่อไม่ได้"
    ]
   },
   "guardSatisfaction": {
