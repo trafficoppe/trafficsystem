@@ -3,7 +3,8 @@
 // ผลที่ผ่านพิสูจน์ตรรกะของโค้ดเท่านั้น ไม่ได้พิสูจน์ว่าบริการที่ Deploy แล้วทำงานกับแหล่งจริง
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
-import { handle, SCHEMA, _reset, parseCsv, parseCidrs, ipNum, normDT, persons, SOURCES, _stat, _coldIsolate, _coldImg } from '../src/index.js';
+import { handle, SCHEMA, _reset, parseCsv, parseCidrs, ipNum, normDT, persons, SOURCES, _stat, _coldIsolate, _coldImg, awAggregate, awNotes, WORKER_REV } from '../src/index.js';
+import { awRowsBase, gvizBody, AW_HEAD } from './aw_fixture.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 let fails = 0, n = 0; const ok = (name, cond, info) => { n++; if (!cond) fails++; console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond || info === undefined ? '' : ' — ' + info)); };
 
@@ -47,7 +48,7 @@ const RELAY_TABLES = {
     ['2026-11-03 9:00:00', 'RT-1', 'TOKEN-SECRET-1', 'B', 'กลุ่มที่ 2: บุคลากรส่วนงานอื่น', 'จอดประจำ', 'ส่วนงานสมมติ', 'หน่วยสมมติ', '', '', '', '1', 'รถยนต์ทั่วไป', 'ทบ1111', '', '', 'รออัปเดตเข้ากล้อง', 'HASH1'],
     ['2026-11-04 9:00:00', 'RT-3', 'TOKEN-SECRET-3', 'C', 'กลุ่มที่ 3: อื่น ๆ', 'อื่น ๆ', '', '', '', '', '', '2', 'รถยนต์ทั่วไป', 'ทบ4444', '', '', 'อัปเดตแล้ว', 'HASH3']]
 };
-let csvDelay = 0, downGid = '', bodyFailGid = ''; const csvCalls = [], thumbCalls = [];
+let csvDelay = 0, downGid = '', bodyFailGid = '', AW_ROWS = awRowsBase(), awDown = false, awCalls = 0; const csvCalls = [], thumbCalls = [];
 const fetchMock = async (u, o) => { u = String(u);
   let m = /docs\.google\.com\/spreadsheets\/d\/([\w-]+)\/export\?format=csv&gid=(\d+)/.exec(u);
   // รอบ 13: Sheet อีกชุด (MOCKLF2 = ตั้งค่าใหม่) มีข้อมูลต่างจากชุดเดิม 1 แถว
@@ -67,13 +68,14 @@ const fetchMock = async (u, o) => { u = String(u);
       return Response.json({ ok: true, rows: [want].concat(T.slice(1).map((r) => ix.map((i, k) => (k < b.cols.length ? r[i] : (r[i] ? '1' : ''))))) }); }
     if (b.action === 'img') return b.id === PRIV || b.id === IMG2 ? Response.json({ ok: true, mime: 'image/jpeg', b64: 'AAEC' }) : Response.json({ ok: false, code: 'not-allowed' });
     return Response.json({ ok: false, code: 'unknown-action' }); }
+  if (/docs\.google\.com\/spreadsheets\/d\/MOCKAW\/gviz\/tq\?tqx=out:json&headers=1&gid=0&tq=/.test(u)) { awCalls++; if (awDown) throw new TypeError('fetch failed'); return new Response(gvizBody(AW_ROWS), { headers: { 'content-type': 'application/javascript; charset=utf-8' } }); }      // รอบ 14.3
   m = /drive\.google\.com\/thumbnail\?id=([\w-]+)&sz=w(\d+)/.exec(u);
   if (m) thumbCalls.push(m[1]);
   if (m) return m[1] === IMG1 || m[1] === IMG2 || /^MOCKAREA/.test(m[1]) ? new Response(new Uint8Array([137, 80, 78, 71]), { headers: { 'content-type': 'image/png' } }) : new Response('<html>', { headers: { 'content-type': 'text/html' } });
   return new Response('', { status: 404 }); };
 let NOW = Date.parse('2026-11-15T19:00:00+07:00');
 const deps = { fetch: fetchMock, now: () => NOW };
-const ENV = (o = {}) => Object.assign({ DB: db, ASSET_REF: '7c183a7', ADMIN_CODES: '4567', SHEET_MAIN: 'MOCKMAIN', SHEET_LF: 'MOCKLF', SHEET_OPS: 'MOCKOPS', SHEET_EVENTS: 'MOCKEV', SHEET_GPS: 'MOCKGPS', AI_MODEL: '@cf/mock/model',
+const ENV = (o = {}) => Object.assign({ DB: db, ASSET_REF: '7c183a7', ADMIN_CODES: '4567', SHEET_MAIN: 'MOCKMAIN', SHEET_LF: 'MOCKLF', SHEET_OPS: 'MOCKOPS', SHEET_EVENTS: 'MOCKEV', SHEET_GPS: 'MOCKGPS', SHEET_ANYWHEEL: 'MOCKAW', AI_MODEL: '@cf/mock/model',
   AI: { run: async (model, input) => { aiCalls.push({ model, input }); if (ENV.aiThrow) throw new Error(ENV.aiThrow); return { response: ENV.aiReply || 'เดือน พ.ย. 2569 มีเหตุการณ์รวม 3 เหตุการณ์ (ข้อมูล ณ 15 พ.ย. 2569 19:00 น.)' }; } } }, o);
 let db = d1();
 const req = (p, o = {}) => new Request('https://hub.example.test' + p, { method: o.method || 'GET', headers: Object.assign({ 'CF-Connecting-IP': o.ip || '10.20.5.9' }, o.cookie ? { Cookie: o.cookie } : {}, o.origin ? { Origin: o.origin } : {}, o.inm ? { 'If-None-Match': o.inm } : {}, o.ray ? { 'cf-ray': o.ray } : {}, o.body ? { 'content-type': 'application/json' } : {}), body: o.body ? JSON.stringify(o.body) : undefined });
@@ -336,7 +338,7 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
     // A: เวลาอ่านต้นทางจริงต้องเหมือนกันในทุก field (ไม่ใช่เวลาตอบคำขอ) ทั้งเมื่อใช้ตารางในหน่วยความจำ (เครื่องเดิม) และแคชผลรวม
     const a1 = await runC('/api/stats', { cookie: U10 }); NOW += 70e3; const a2 = await runC('/api/stats', { cookie: U10 });
     const rd = a1.j.sourceReadAt;
-    ok('[รอบ 13·A] เครื่องเดิม ภายใน TTL: checkedAt (เวลาตอบ) เปลี่ยน แต่ sourceReadAt คงเดิม', a2.j.checkedAt !== a1.j.checkedAt && Object.keys(rd).length === 6 && Object.keys(rd).every((k) => a2.j.sourceReadAt[k] === rd[k]), a1.j.checkedAt + ' → ' + a2.j.checkedAt + ' ' + JSON.stringify(a2.j.sourceReadAt));
+    ok('[รอบ 13·A] เครื่องเดิม ภายใน TTL: checkedAt (เวลาตอบ) เปลี่ยน แต่ sourceReadAt คงเดิม', a2.j.checkedAt !== a1.j.checkedAt && Object.keys(rd).length === 7 && Object.keys(rd).every((k) => a2.j.sourceReadAt[k] === rd[k]), a1.j.checkedAt + ' → ' + a2.j.checkedAt + ' ' + JSON.stringify(a2.j.sourceReadAt));
     ok('[รอบ 13·A] เวลาในชุดข้อมูลแต่ละส่วน = เวลาอ่านต้นทางของส่วนนั้น (ไม่ใช่เวลาตอบ) แม้คำขอที่ 2 มาจากหน่วยความจำ', a2.j.incidentsDaily.checkedAt === rd.incidents && a2.j.lostfoundDaily.checkedAt === rd.lostfound && a2.j.lostfound.readAt === rd.lostfoundYear && a2.j.gate.readAt === rd.gate && a2.j.studentMoto.checkedAt === rd.studentMoto && a2.j.ruenthai.checkedAt === rd.ruenthai, JSON.stringify([a2.j.incidentsDaily.checkedAt, a2.j.lostfoundDaily.checkedAt, a2.j.lostfound.readAt, a2.j.gate.readAt, a2.j.checkedAt]));
     { const dT = (d) => +d.slice(8, 10) + ' พ.ย. ' + (+d.slice(0, 4) + 543) + ' ' + d.slice(11, 16) + ' น.'; const n0 = aiCalls.length; await runC('/api/chat', { method: 'POST', cookie: U10, body: Q }); const sys = (aiCalls[n0] || { input: { messages: [{ content: '' }] } }).input.messages[0].content;
       ok('[รอบ 13·A] ข้อเท็จจริงที่ส่ง AI: “ข้อมูล ณ” = เวลาอ่านต้นทางจริง ไม่ใช่เวลาตอบคำขอ (คำขอนี้ตอบ ' + a2.j.checkedAt.slice(11) + ' แต่อ่านต้นทาง ' + rd.incidents.slice(11) + ')', a2.j.checkedAt !== rd.incidents && sys.includes(dT(rd.incidents)) && !sys.includes(dT(a2.j.checkedAt)), sys.split('\n').filter((l) => /เหตุการณ์/.test(l)).join(' / ').slice(0, 300)); }
@@ -447,10 +449,10 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
       const c1 = await chatK('เหตุการณ์เดือนนี้รวมเท่าไร'), c2 = await chatK('เหตุการณ์เดือนนี้รวมเท่าไร');
       NOW += 125e3; const c3 = await chatK('เหตุการณ์เดือนนี้รวมเท่าไร');
       ok('[รอบ 14·P2] คำถามเดิม + ข้อมูลรุ่นเดิม (เวลาอ่านเดียวกัน) + prompt/โมเดลเดิม → ใช้คำตอบจากแคช · อ่านต้นทางรอบใหม่ → ถามโมเดลใหม่ (ไม่ใช้คำตอบของข้อมูลรุ่นเก่า)', c1.j.mode === 'llm' && c2.j.mode === 'cached' && c2.j.reply === c1.j.reply && c3.j.mode === 'llm' && aiCalls.length - a0 === 2, JSON.stringify([c1.j.mode, c2.j.mode, c3.j.mode, aiCalls.length - a0]));
-      r0 = reads(); ENV.aiReply = 'ยังไม่มีข้อมูล Anywheel ของเดือนนี้ครับ'; const aw = await chatQ('Anywheel เดือนนี้ใช้งานกี่ครั้ง');
-      ok('[รอบ 14·P2] Anywheel เดือนปัจจุบัน (มีแต่ไฟล์สรุปถึง มิ.ย.) → ไม่อ่านแหล่งสด · ข้อเท็จจริงบอกว่า “ยังไม่มีข้อมูลของเดือนนี้” · หลักฐาน = ไฟล์สรุป', aw.j.reads.length === 0 && reads() === r0 && /จักรยาน Anywheel \| เดือนนี้[^\]]*\] ยังไม่มีข้อมูลของเดือนนี้/.test(aw.sys) && aw.j.verified === true, aw.sys.split('\n').filter((l) => /Anywheel/.test(l)).slice(-1)[0]);
-      ENV.aiReply = 'Anywheel เดือน มิ.ย. 2569 ใช้งาน ' + JSON.parse(fs.readFileSync(path.join(ROOT, 'data/extra.json'), 'utf8')).anywheel.monthly.slice(-1)[0].trips + ' ครั้ง'; const aw2 = await chatQ('Anywheel เดือนมิถุนายนใช้กี่ครั้ง');
-      ok('[รอบ 14·P2] Anywheel มีตัวเลข → หลักฐาน “ไฟล์สรุป (ข้อมูลถึง …)” ไม่เรียกว่าสด', aw2.j.verified === true && aw2.j.evidence.length === 1 && aw2.j.evidence[0].freshness === 'snapshot' && /ไฟล์สรุป/.test(aw2.j.evidence[0].text), JSON.stringify(aw2.j.evidence));
+      r0 = reads(); const awR0 = _stat.reads.anywheel || 0; ENV.aiReply = 'ยังไม่มีข้อมูล Anywheel ของเดือนนี้ครับ'; const aw = await chatQ('Anywheel เดือนนี้ใช้งานกี่ครั้ง');
+      ok('[รอบ 14·P2→14.3] Anywheel เดือนปัจจุบัน → อ่านเฉพาะแหล่ง Anywheel · ข้อเท็จจริงบอกว่า “ยังไม่มีข้อมูลของเดือนนี้” (ล่าสุด ต.ค.) · ไม่สวมยอดเดือนอื่น', JSON.stringify(aw.j.reads) === '["anywheel"]' && reads() - r0 <= 1 && /จักรยาน Anywheel \| เดือนนี้[^\]]*\] ยังไม่มีข้อมูลของเดือนนี้[^—]*— เดือนล่าสุดที่มีคือ ต\.ค\. 2569/.test(aw.sys) && aw.j.verified === true, aw.sys.split('\n').filter((l) => /Anywheel/.test(l)).slice(-2).join(' / '));
+      ENV.aiReply = 'Anywheel ต.ค. 2569 ใช้งาน 2,000 ครั้ง ระยะทาง 2,500 กม.'; const aw2 = await chatQ('Anywheel ตุลาคม 2569 กี่ครั้ง ระยะทางเท่าไร');
+      ok('[รอบ 14·P2→14.3] Anywheel ต.ค. (จากต้นทางจำลอง) → ตัวเลขผ่านการตรวจ · หลักฐาน “ข้อมูลสด” พร้อมเวลาอ่าน', aw2.j.verified === true && aw2.j.evidence.length === 1 && aw2.j.evidence[0].freshness === 'live' && /อ่านจากต้นทางเมื่อ/.test(aw2.j.evidence[0].text) && /ต\.ค\. 2569 \| ข้อมูล ณ [^\]]*\] 2,000 ครั้ง, 2,500 กม\./.test(aw2.sys), JSON.stringify(aw2.j.evidence) + ' ' + aw2.sys.split('\n').filter((l) => /Anywheel \| ต\.ค\. 2569/.test(l)).join(''));
       const INC = SOURCES(E).incidents[1]; downGid = INC; _coldIsolate(); NOW += 130e3; ENV.aiReply = 'เดือนนี้มี ' + N + ' เหตุการณ์ (ผลที่อ่านสำเร็จล่าสุด)'; const lk = await chatQ('อุบัติเหตุเดือนนี้'); downGid = '';
       ok('[รอบ 14·P2] ต้นทางเหตุการณ์ล้ม → AI ใช้ผลอ่านสำเร็จล่าสุดชุดเดียวกับหน้าเว็บ · หลักฐาน “ผลที่อ่านสำเร็จล่าสุด … รอบล่าสุดอ่านไม่สำเร็จ”', lk.j.verified === true && lk.j.evidence[0] && lk.j.evidence[0].freshness === 'stale' && /รอบล่าสุดอ่านไม่สำเร็จ/.test(lk.j.evidence[0].text) && /ใช้ผลที่อ่านสำเร็จล่าสุดเมื่อ/.test(lk.sys), JSON.stringify(lk.j.evidence));
       a0 = aiCalls.length; NOW += 61e3; const sm = await run('/api/chat', { method: 'POST', cookie: U14, body: { action: 'summary', context: { from: curM, to: curM } } }, E);
@@ -485,7 +487,7 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
         // 4) ตรวจ session ใน D1 ล้มชั่วคราว → 503 auth-unavailable (ไม่ใช่ internal) และไม่มีข้อมูล · ไม่มี session → 401 · หัว x-hub-rev บอกรุ่นบริการ
         db.prepare = (sql) => { if (/FROM sessions WHERE id/.test(sql)) throw new Error('D1_ERROR: Network connection lost.'); return realPrep(sql); }; logs.length = 0; const a1 = await call('/api/stats?scope=inc', mk()); db.prepare = realPrep;
         const a2 = await call('/api/stats?scope=inc', mk(), '');
-        ok('[รอบ 14.1] D1 ตรวจ session ล้ม → 503 auth-unavailable ไม่มีข้อมูล (เดิม 500 internal) · ไม่มี session → 401 · ทุกคำตอบมี x-hub-rev', a1.s === 503 && a1.j.code === 'auth-unavailable' && !a1.j.incidents && logs.some((l) => /"ev":"auth-d1-error"/.test(l)) && a2.s === 401 && !a2.j.incidents && a1.rev === 'r14.2' && a2.rev === 'r14.2', JSON.stringify({ a1: a1.s + ' ' + a1.j.code, a2: a2.s, rev: a1.rev }));
+        ok('[รอบ 14.1] D1 ตรวจ session ล้ม → 503 auth-unavailable ไม่มีข้อมูล (เดิม 500 internal) · ไม่มี session → 401 · ทุกคำตอบมี x-hub-rev', a1.s === 503 && a1.j.code === 'auth-unavailable' && !a1.j.incidents && logs.some((l) => /"ev":"auth-d1-error"/.test(l)) && a2.s === 401 && !a2.j.incidents && a1.rev === WORKER_REV && a2.rev === WORKER_REV, JSON.stringify({ a1: a1.s + ' ' + a1.j.code, a2: a2.s, rev: a1.rev }));
         ok('[รอบ 14.1] log ไม่มี cookie/รหัสพนักงาน/URL/รหัสไฟล์', logs.every((l) => !/0123|sid=|https?:\/\/|MOCK[A-Z]{3,}\d|[A-Za-z0-9_-]{30,}/.test(l)), logs.find((l) => /0123|sid=|https?:\/\/|[A-Za-z0-9_-]{30,}/.test(l)) || '');
       } finally { console.error = ce; bodyFailGid = ''; downGid = ''; } }
     // ================= รอบ 14.2: บันทึกข้อผิดพลาดย้อนหลังใน D1 (diag_log) — ฐาน SQLite จริงในเครื่อง ไม่ใช่ Map =================
@@ -499,7 +501,7 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
         ok('[รอบ 14.2] คำขอที่สำเร็จไม่เขียน diag_log', nLog() === n0);
         _coldIsolate(); NOW += 130e3; bodyFailGid = INC; const r1 = await call('/api/stats?scope=inc', 'RAYBODY1'); bodyFailGid = '';
         _coldIsolate(); _coldImg(); const rows1 = byRef('RAYBODY1');      // อ่านคืนหลังจำลองเครื่องใหม่ (หน่วยความจำในเครื่องล้างแล้ว)
-        ok('[รอบ 14.2] เนื้อหาต้นทางขาด → บันทึก stats-part-error ลง D1 (part/stage/code/ชนิดสาเหตุเดิม/รุ่น) ค้นคืนด้วย ref ได้หลังเปลี่ยนเครื่อง', r1.j.errors.incidents === 'source-timeout' && rows1.length >= 1 && rows1.some((r) => r.ev === 'stats-part-error' && r.part === 'incidents' && r.stage === 'source' && r.code === 'source-timeout' && r.cause === 'TimeoutError' && r.rev === 'r14.2'), JSON.stringify(rows1));
+        ok('[รอบ 14.2] เนื้อหาต้นทางขาด → บันทึก stats-part-error ลง D1 (part/stage/code/ชนิดสาเหตุเดิม/รุ่น) ค้นคืนด้วย ref ได้หลังเปลี่ยนเครื่อง', r1.j.errors.incidents === 'source-timeout' && rows1.length >= 1 && rows1.some((r) => r.ev === 'stats-part-error' && r.part === 'incidents' && r.stage === 'source' && r.code === 'source-timeout' && r.cause === 'TimeoutError' && r.rev === WORKER_REV), JSON.stringify(rows1));
         const realPrep = db.prepare; db.prepare = (sql) => { if (/FROM sessions WHERE id/.test(sql)) throw new Error('D1_ERROR: Network connection lost.'); return realPrep(sql); };
         const a1 = await call('/api/stats?scope=inc', 'RAYAUTH1'); db.prepare = realPrep; const rows2 = byRef('RAYAUTH1');
         ok('[รอบ 14.2] D1 ตรวจ session ล้ม → 503 ไม่มีข้อมูล + ref ในคำตอบตรงกับ log · auth-d1-error และ route-error ผูก ref เดียวกัน (route = /api/stats ไม่มี query)', a1.s === 503 && !a1.j.incidents && a1.j.ref === 'RAYAUTH1' && rows2.some((r) => r.ev === 'auth-d1-error' && r.cause === null && r.type === 'Error') && rows2.some((r) => r.ev === 'route-error' && r.route === '/api/stats' && r.status === 503 && r.code === 'auth-unavailable' && r.cause === 'Error'), JSON.stringify(rows2));
@@ -526,5 +528,34 @@ r = await run('/server/README.md'); const r5 = await run('/../x'); ok('ไฟล
         const f2 = await call('/api/stats?scope=inc', 'RAYDIAGDOWN2'); db.prepare = realPrep;
         ok('[รอบ 14.2] diag_log เขียนไม่ได้ → คำตอบเหมือนเดิม (200 + ผลสำรอง) · แจ้ง console ครั้งเดียวต่อเหตุการณ์ ไม่วน · session ตรวจไม่ได้ยัง 503 ไม่มีข้อมูล', f1.s === 200 && f1.j.errors.incidents && dwe >= 1 && dwe <= 3 && f2.s === 503 && !f2.j.incidents, JSON.stringify({ f1: f1.s, dwe, f2: f2.s }));
       } finally { console.error = ce; bodyFailGid = ''; downGid = ''; } }
+    // ================= รอบ 14.3: Anywheel อ่านสดจากชีท (GViz ค่าดิบ) — ข้อมูลจำลองย่อจากโครงสร้างจริง =================
+    { NOW += 86400e3; _reset(); AW_ROWS = awRowsBase(); awDown = false; const U = (await loginAs('0123')).cookie;
+      const a = awAggregate({ head: AW_HEAD.map((h) => h.replace(/\s+/g, '')), rows: awRowsBase() }), mo = (m) => a.monthly.find((r) => r.month === m) || {};
+      const feb = mo('2026-02');
+      ok('[รอบ 14.3] รวมรายเดือนด้วยคอลัมน์ “เดือน” (serial ต่างวันในเดือนเดียวกันรวมกัน · ก.พ. หลายแถว) · ทศนิยมรวมก่อนปัด · จุลภาคอ่านถูก · กม. ว่างใช้เมตร/1000', a.monthly.map((r) => r.month).join(',') === '2025-12,2026-02,2026-10' && feb.rows === 5 && feb.trips === 1784 && feb.km === 35.25 && mo('2025-12').km === 1000.5 && mo('2026-10').km === 2500.123, JSON.stringify(a.monthly));
+      ok('[รอบ 14.3] ค่าผิดรูปแบบไม่กลายเป็น 0 เงียบ ๆ (รายงาน badTrips) · แถวผลรวม/เดือนอ่านไม่ได้ไม่ถูกบวก (unassigned) · เมตรขัดกับ กม. รายงาน kmConflicts', a.quality.rowsTotal === 8 && a.quality.badTrips === 1 && a.quality.unassigned === 1 && a.quality.kmFromMeters === 1 && a.quality.kmConflicts === 1, JSON.stringify(a.quality));
+      ok('[รอบ 14.3] วันที่: แปลงเฉพาะที่พิสูจน์ได้จากคอลัมน์เดือน (วัน/เดือนสลับ) · วันที่มีข้อมูลนับจากวันไม่ซ้ำ · เวลาการใช้งานไม่ครบเดือน → null + บอกจำนวนแถวที่มี · วันที่ล่าสุด 31 ต.ค.', feb.verifiedDays === 5 && feb.dateAmbiguous === 0 && feb.days === 5 && feb.minutes === null && feb.minutesPartial && feb.minutesPartial.minutes === 75 && feb.minutesPartial.rows === 3 && mo('2025-12').minutes === 10 && a.lastDate === '2026-10-31', JSON.stringify(feb));
+      const st = async (sc, cookie) => { const x = await handle(req('/api/stats?scope=' + sc, { cookie: cookie === undefined ? U : cookie }), E, { fetch: fetchMock, now: () => NOW }); return { s: x.status, j: await x.json() }; };
+      let c0 = awCalls; const i1 = await st('inc'), r1 = await st('rest');
+      ok('[รอบ 14.3] คำขอชุดหลัก (inc/rest) ไม่อ่าน Anywheel', i1.s === 200 && r1.s === 200 && awCalls === c0, 'awCalls +' + (awCalls - c0));
+      c0 = awCalls; const w1 = await st('aw'), aw1 = w1.j.anywheel || {};
+      ok('[รอบ 14.3] /api/stats?scope=aw → ยอดรายเดือน + เวลาอ่านต้นทาง (readAt) แยกจากวันที่ข้อมูลล่าสุด (lastDate) · ไม่ส่งแถวรายวันออกไป', w1.s === 200 && awCalls === c0 + 1 && aw1.monthly.length === 3 && aw1.readAt && w1.j.sourceReadAt.anywheel === aw1.readAt && aw1.lastDate === '2026-10-31' && !JSON.stringify(w1.j).includes('31/10/2026'), JSON.stringify({ s: w1.s, n: (aw1.monthly || []).length, readAt: aw1.readAt, last: aw1.lastDate }));
+      // เพิ่มแถว พ.ย. ในต้นทางจำลอง → ภายใน 2 นาทีใช้ผลเดิม · หลังหมดอายุเห็นข้อมูลใหม่เอง (ไม่ Deploy ไม่แก้ไฟล์)
+      AW_ROWS.splice(8, 0, ['15/11/2026', 'Date(2026,10,1)', 777, null, 7.5, null]); NOW += 60e3; const w2 = await st('aw'); NOW += 70e3; const w3 = await st('aw'), nov = (w3.j.anywheel.monthly || []).find((r) => r.month === '2026-11');
+      ok('[รอบ 14.3] ต้นทางเพิ่มแถว พ.ย. → ภายใน TTL ยังเป็นผลเดิม · หลังหมดอายุ API เห็น พ.ย. 777 ครั้งเอง และ lastDate = 15 พ.ย.', !(w2.j.anywheel.monthly || []).some((r) => r.month === '2026-11') && nov && nov.trips === 777 && w3.j.anywheel.lastDate === '2026-11-15', JSON.stringify(nov));
+      NOW += 61e3; ENV.aiReply = 'Anywheel พ.ย. 2569 ใช้งาน 777 ครั้ง'; let x = await handle(req('/api/chat', { method: 'POST', cookie: U, body: { action: 'chat', userMessage: 'Anywheel พฤศจิกายน 2569 กี่ครั้ง', chatHistory: [], context: {} } }), E, { fetch: fetchMock, now: () => NOW }); const c1 = await x.json(), sys = (aiCalls[aiCalls.length - 1] || { input: { messages: [{}] } }).input.messages[0].content || '';
+      ok('[รอบ 14.3] AI ใช้ยอดชุดเดียวกัน: อ่านเฉพาะ Anywheel · ข้อเท็จจริงมี พ.ย. 777 ครั้ง และปี 2569 รวมเฉพาะเดือนของปีนั้น (ไม่รวม ธ.ค. 2568)', c1.verified === true && JSON.stringify(c1.reads) === '["anywheel"]' && /พ\.ย\. 2569 \| ข้อมูล ณ [^\]]*\] 777 ครั้ง/.test(sys) && /ปีปฏิทิน พ\.ศ\. 2569 \(เฉพาะ ก\.พ\. 2569 – พ\.ย\. 2569\) \| ข้อมูล ณ [^\]]*\] รวม 4,561 ครั้ง/.test(sys), sys.split('\n').filter((l) => /Anywheel \| (ปีปฏิทิน|พ\.ย)/.test(l)).join(' / ').slice(0, 600));
+      NOW += 61e3; x = await handle(req('/api/chat', { method: 'POST', cookie: U, body: { action: 'summary', context: { from: '2026-11', to: '2026-11' } } }), E, { fetch: fetchMock, now: () => NOW }); const sm = await x.json(), awp = (sm.points || []).find((p) => p.topic === 'anywheel');
+      ok('[รอบ 14.3] “สรุปช่วงที่กำลังดู” มี Anywheel จากยอดชุดเดียวกัน', awp && /777 ครั้ง/.test(awp.text), JSON.stringify(awp));
+      // ต้นทางล้มหลังเคยสำเร็จ → ใช้ LKG พร้อมเวลาเดิม · แหล่งอื่นไม่เตือน · ไม่มี session → 401
+      const readOk = w3.j.anywheel.readAt; NOW += 130e3; _coldIsolate(); awDown = true; const w4 = await st('aw'), i4 = await st('inc'), n4 = await st('aw', ''); awDown = false;
+      ok('[รอบ 14.3] Anywheel อ่านล้ม → errors.anywheel + ใช้ผลอ่านสำเร็จล่าสุด (stale.at = เวลาอ่านสำเร็จครั้งล่าสุด) ไม่เติม 0 · เหตุการณ์ไม่ได้รับผล · ไม่มี session → 401 ไม่มีข้อมูล', w4.s === 200 && w4.j.errors.anywheel === 'source-unreachable' && w4.j.stale && w4.j.stale.anywheel && w4.j.stale.anywheel.at >= readOk && (w4.j.anywheel.monthly || []).some((r) => r.month === '2026-11') && !w4.j.sourceReadAt.anywheel && Object.keys(i4.j.errors).length === 0 && n4.s === 401 && !n4.j.anywheel, JSON.stringify({ e: w4.j.errors, st: w4.j.stale, i4: i4.j.errors, n4: n4.s }));
+      // หัวคอลัมน์ต้นทางเปลี่ยน → source-schema (ไม่เดาคอลัมน์)
+      const keep = AW_ROWS; AW_ROWS = keep.map((r) => r.slice()); const gb = gvizBody; NOW += 130e3; _coldIsolate(); db._db.exec("DELETE FROM stats_lkg WHERE k = 'anywheel'");
+      let sch; try { sch = awAggregate({ head: ['วันที่', 'month', 'จำนวนครั้ง', 'x', 'y', 'z'], rows: [] }); } catch (e) { sch = e.code; }
+      ok('[รอบ 14.3] หัวคอลัมน์ไม่ตรง (ไม่มี “เดือน”/“ระยะทาง”) → source-schema', sch === 'source-schema', String(sch)); void gb; AW_ROWS = awRowsBase();
+      // ข้อสังเกตสร้างจากผลอ่าน: เดือนล่าสุด/วันไม่ครบ/นาทีว่าง/คุณภาพ — ไม่มีข้อความเดิม “30 มิ.ย.”/“ตั้งแต่ ก.ค.”
+      const an = awNotes(awAggregate({ head: AW_HEAD.map((h) => h.replace(/\s+/g, '')), rows: awRowsBase() })).join(' | ');
+      ok('[รอบ 14.3] ข้อสังเกต Anywheel สร้างจากข้อมูลจริง (วันที่ล่าสุด · วันไม่ครบ · คุณภาพแถว) ไม่ฝังเดือน', /ข้อมูลการใช้งานล่าสุดคือ 31 ต\.ค\. 2569/.test(an) && /ไม่ครบทุกวัน/.test(an) && /แถวที่อ่านเดือนไม่ได้ 1/.test(an) && !/30 มิ\.ย\.|ตั้งแต่ ก\.ค\./.test(an), an); }
   _reset(); }
 console.log('รวม ' + n + ' ข้อ · ไม่ผ่าน ' + fails + ' (ทั้งหมดเป็นการทดสอบ local ด้วยของจำลอง)'); process.exit(fails ? 1 : 0);

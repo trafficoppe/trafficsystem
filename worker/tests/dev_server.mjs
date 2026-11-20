@@ -3,6 +3,8 @@
 // ใช้: node worker/tests/dev_server.mjs [port]   (ต้องรัน sh tools/build_site.sh ก่อน)
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url'; import { DatabaseSync } from 'node:sqlite';
 import { handle, SCHEMA, _reset } from '../src/index.js';
+import { awRowsBase, gvizBody } from './aw_fixture.mjs';
+let AW_ROWS = awRowsBase(), awDown = false;      // รอบ 14.3: Anywheel จำลอง (GViz) — /__test/aw/addnov|reset|down|up
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..'), SITE = path.join(ROOT, 'site');
 const db = new DatabaseSync(':memory:'); SCHEMA.forEach((s) => db.exec(s));
 const st = (sql, a = []) => ({ bind: (...x) => st(sql, x), first: async () => db.prepare(sql).get(...a) || null, all: async () => ({ results: db.prepare(sql).all(...a) }), run: async () => { db.prepare(sql).run(...a); return {}; }, _x: () => (/^\s*select/i.test(sql) ? { results: db.prepare(sql).all(...a) } : (db.prepare(sql).run(...a), { results: [] })) });
@@ -49,6 +51,7 @@ const RT = {
 const relayOn = (on) => { db.exec("DELETE FROM meta WHERE k IN ('relay_url', 'relay_secret')"); if (on) { db.prepare("INSERT INTO meta(k, v) VALUES('relay_url', ?)").run(REL); db.prepare("INSERT INTO meta(k, v) VALUES('relay_secret', ?)").run(RSEC); } };
 relayOn(true);
 const fetchMock = async (u, o) => { u = String(u); let m = /export\?format=csv&gid=(\d+)/.exec(u);
+  if (/\/gviz\/tq\?/.test(u)) { if (awDown) throw new TypeError('fetch failed'); return new Response(gvizBody(AW_ROWS), { headers: { 'content-type': 'application/javascript' } }); }
   if (u === REL) { const b = JSON.parse(o.body); if (b.secret !== RSEC) return Response.json({ ok: false, code: 'forbidden' });
     if (b.action === 'ping') return Response.json({ ok: true, v: 'r13' });
     if (b.action === 'table') { const T = RT[b.source], want = b.cols.concat(b.present), ix = want.map((c) => T[0].indexOf(c)); return Response.json({ ok: true, rows: [want].concat(T.slice(1).map((r) => ix.map((i, k) => (k < b.cols.length ? r[i] : (r[i] ? '1' : ''))))) }); }
@@ -61,7 +64,7 @@ const fetchMock = async (u, o) => { u = String(u); let m = /export\?format=csv&g
   m = /drive\.google\.com\/thumbnail\?id=([-\w]+)/.exec(u); if (m) return PRIVATE_IMG.has(m[1]) ? new Response('<html>Sign in</html>', { headers: { 'content-type': 'text/html' } }) : new Response(PNG, { headers: { 'content-type': 'image/png' } });
   return new Response('', { status: 404 }); };
 const TYPES = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json; charset=utf-8', png: 'image/png', svg: 'image/svg+xml' };
-const env = { DB, ADMIN_CODES: '4567', SHEET_MAIN: 'M', SHEET_LF: 'L', SHEET_OPS: 'O', SHEET_EVENTS: 'E', SHEET_GPS: 'G', SHEET_VEH_STUDENT: 'V', SHEET_RUENTHAI: 'R', AI_MODEL: '@cf/mock/model',
+const env = { DB, ADMIN_CODES: '4567', SHEET_MAIN: 'M', SHEET_LF: 'L', SHEET_OPS: 'O', SHEET_EVENTS: 'E', SHEET_GPS: 'G', SHEET_VEH_STUDENT: 'V', SHEET_RUENTHAI: 'R', SHEET_ANYWHEEL: 'AW', AI_MODEL: '@cf/mock/model',
   AI: { run: async () => ({ response: '[คำตอบจากบริการ AI จำลอง] เดือน พ.ย. 2569 มีเหตุการณ์รวม 6 เหตุการณ์ (ข้อมูลตามช่วงที่ระบุ)' }) },
   ASSETS: { fetch: async (req) => { let p = new URL(req.url).pathname; if (p === '/') p = '/index.html'; const f = path.join(SITE, p); return f.startsWith(SITE) && fs.existsSync(f) && fs.statSync(f).isFile() ? new Response(fs.readFileSync(f), { headers: { 'content-type': TYPES[p.split('.').pop()] || 'application/octet-stream' } }) : new Response('Not found', { status: 404 }); } } };
 export function start(port, opt = {}) {
@@ -80,6 +83,7 @@ export function start(port, opt = {}) {
     if (rq.url.startsWith('/__test/bodyfail/')) { const [, , , g, st] = rq.url.split('/'); control.bodyFail[g] = st === 'on'; rs.end('ok'); return; }
     { const m5 = /^\/api\/stats\?scope=(\w+)/.exec(rq.url); if (m5 && control.scope500[m5[1]] === 'html') { rs.writeHead(502, { 'content-type': 'text/html', 'cf-ray': 'testray502' + m5[1] + '-LOC' }); rs.end('<html><body>Bad gateway</body></html>'); return; }
       if (m5 && control.scope500[m5[1]]) { rs.writeHead(500, { 'content-type': 'application/json; charset=utf-8', 'cf-ray': 'TESTREF500-' + m5[1] }); rs.end(JSON.stringify({ ok: false, code: 'internal', ref: 'TESTREF500-' + m5[1] })); return; } }
+    if (rq.url.startsWith('/__test/aw/')) { const a = rq.url.slice(11); if (a === 'addnov') AW_ROWS.push(['15/11/2026', 'Date(2026,10,1)', 777, 1500, 1.5, 9]); if (a === 'reset') AW_ROWS = awRowsBase(); if (a === 'down' || a === 'up') awDown = a === 'down'; rs.end('ok'); return; }
     if (rq.url === '/__test/lkg/clear') { db.exec('DELETE FROM stats_lkg'); rs.end('ok'); return; }
     if (rq.url === '/__test/inc/add') { INC.push(inc(11, '2026-11-17', 'อุบัติเหตุทั่วไป', '-', '0', '-')); rs.end('ok'); return; }
     if (rq.url === '/__test/inc/reset') { INC.length = INC0; rs.end('ok'); return; }

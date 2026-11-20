@@ -695,13 +695,13 @@
     /* 5 — Anywheel */
     if (aw) {
       var awm = aw.monthly.filter(function (r) { return inRange(r.month); }), asum = function (k2) { return awm.reduce(function (a, r) { return a + (r[k2] || 0); }, 0); }, withMin = awm.filter(function (r) { return r.minutes != null; });
-      ov.push(awm.length ? { to: 'anywheel', icon: 'pin', l: 'จักรยาน Anywheel', v: num(asum('trips')), u: 'ครั้ง', s: num(asum('km')) + ' กม. · ข้อมูลถึง ' + mLabel(aw.monthly[aw.monthly.length - 1].month), color: C.c1 } : { to: 'anywheel', icon: 'pin', l: 'จักรยาน Anywheel', na: 'ไม่มีข้อมูลในช่วงที่เลือก', color: C.c1 });
-      add('anywheel', 'Anywheel', repSec('anywheel', 'pin', 'สรุปการใช้จักรยาน Anywheel', { more: 'tram', note: 'ข้อมูลถึง ' + dLabel(aw.updated), tag: awm.length ? null : 'ต้นทางยังไม่มีข้อมูลของช่วงที่เลือก', color: C.c1 }, [
-        tiles(awm.length ? [{ l: 'จำนวนครั้งการใช้งาน', v: num(asum('trips')), u: 'ครั้ง', color: C.c1 }, { l: 'ระยะทางรวม', v: num(asum('km')), u: 'กม.', color: C.c4 },
-          withMin.length ? { l: 'เวลาการใช้งาน', v: num(Math.round(withMin.reduce(function (a, r) { return a + r.minutes; }, 0) / 60)), u: 'ชม.', s: withMin.length < awm.length ? 'เฉพาะ ' + withMin.length + ' จาก ' + awm.length + ' เดือนที่ต้นทางมีข้อมูล' : null, color: C.c5 } : { l: 'เวลาการใช้งาน', na: 'ไม่มีข้อมูล' },
-          { l: 'เฉลี่ยต่อวัน', v: num(Math.round(asum('trips') / asum('days'))), u: 'ครั้ง/วัน', color: C.c3 }] : [{ l: 'การใช้งาน Anywheel', na: 'ไม่มีข้อมูลในช่วงที่เลือก', s: 'ต้นทางมีข้อมูล ' + mLabel(aw.monthly[0].month) + ' – ' + mLabel(aw.monthly[aw.monthly.length - 1].month) }]),
+      ov.push(awm.length ? { to: 'anywheel', icon: 'pin', l: 'จักรยาน Anywheel', v: num(asum('trips')), u: 'ครั้ง', s: num(Math.round(asum('km'))) + ' กม. · ข้อมูลถึง ' + mLabel(aw.monthly[aw.monthly.length - 1].month), color: C.c1 } : { to: 'anywheel', icon: 'pin', l: 'จักรยาน Anywheel', na: 'ไม่มีข้อมูลในช่วงที่เลือก', color: C.c1 });
+      add('anywheel', 'Anywheel', repSec('anywheel', 'pin', 'สรุปการใช้จักรยาน Anywheel', { more: 'tram', note: awDataTxt(), tag: awm.length ? null : 'ต้นทางยังไม่มีข้อมูลของช่วงที่เลือก', color: C.c1 }, [
+        tiles(awm.length ? [{ l: 'จำนวนครั้งการใช้งาน', v: num(asum('trips')), u: 'ครั้ง', color: C.c1 }, { l: 'ระยะทางรวม', v: num(Math.round(asum('km'))), u: 'กม.', color: C.c4 },
+          withMin.length ? { l: 'เวลาการใช้งาน', v: num(Math.round(withMin.reduce(function (a, r) { return a + r.minutes; }, 0) / 60)), u: 'ชม.', s: withMin.length < awm.length ? 'เฉพาะ ' + withMin.length + ' จาก ' + awm.length + ' เดือนที่ต้นทางมีข้อมูลครบเดือน' : null, color: C.c5 } : { l: 'เวลาการใช้งาน', na: 'ไม่มีข้อมูล' },
+          { l: 'เฉลี่ยต่อวันที่มีข้อมูล', v: num(Math.round(asum('trips') / asum('days'))), u: 'ครั้ง/วัน', color: C.c3 }] : [{ l: 'การใช้งาน Anywheel', na: 'ไม่มีข้อมูลในช่วงที่เลือก', s: 'ต้นทางมีข้อมูล ' + mLabel(aw.monthly[0].month) + ' – ' + mLabel(aw.monthly[aw.monthly.length - 1].month) }]),
         el('div', { class: 'grid2' }, [figure('จำนวนครั้งการใช้งานรายเดือน', 'หน่วย: ครั้ง', bars(mCols(awm), [{ name: 'จำนวนครั้งการใช้งาน', color: C.c1, values: awm.map(function (r) { return r.trips; }) }], { unit: 'ครั้ง', int: true, h: 230, aria: 'การใช้ Anywheel รายเดือน' })),
-          figure('ตารางรายเดือน', 'หน่วย: ครั้ง · กม. · ชม.', rtable(['เดือน', 'วัน', 'จำนวนครั้ง', 'ระยะทาง (กม.)', 'เวลาใช้งาน (ชม.)'], awm.map(function (r) { return [mFull(r.month), r.days, num(r.trips), num(r.km), r.minutes == null ? 'ไม่มีข้อมูล' : num(Math.round(r.minutes / 60))]; }), { num: [1, 2, 3, 4] }))])]));
+          figure('ตารางรายเดือน', 'หน่วย: ครั้ง · กม. · ชม.', rtable(['เดือน', 'วันที่มีข้อมูล', 'จำนวนครั้ง', 'ระยะทาง (กม.)', 'เวลาใช้งาน (ชม.)'], awm.map(function (r) { return [mFull(r.month), awDaysTxt(r), num(r.trips), num(Math.round(r.km)), awMinTxt(r)]; }), { num: [1, 2, 3, 4] }))]), awStateNode()]));
     }
 
     /* 6–7 — รถราง และรถรางแยกส่วนงาน */
@@ -1540,12 +1540,12 @@
         figure('ระยะทางรายเดือน', 'หน่วย: กิโลเมตร', tramChart('km', 'ระยะทาง', 'กม.', C.c4)), figure('แยกตามส่วนงาน — ' + mFull(t.byDept.month), 'หน่วย: งาน · ท้ายแท่ง = จำนวนรอบ', tramDeptChart())]));
       v.appendChild(section('ตารางรายเดือน', {}, [table(['เดือน', 'งาน', 'รอบ', 'ระยะทาง (กม.)', 'รถ (คัน-ครั้ง)', 'เวลา (ชม.)'], tr.map(function (r) { return [mFull(r.month), r.jobs, r.rounds, r.km, r.trams, num(r.minutes / 60, 1)]; }), { num: [1, 2, 3, 4, 5] })])); }
     if (aw) { var awm = aw.monthly.filter(function (r) { return inRange(r.month); }), as = function (k2) { return awm.reduce(function (a, r) { return a + (r[k2] || 0); }, 0); };
-      v.appendChild(section('สรุปการใช้จักรยาน Anywheel', { note: 'ข้อมูลถึง ' + dLabel(aw.updated) }, awm.length ? [kpiGrid([
-        { icon: 'chart', label: 'จำนวนครั้งการใช้งาน', value: num(as('trips')), unit: 'ครั้ง', scope: rangeText(), color: C.c1 }, { icon: 'map', label: 'ระยะทางรวม', value: num(as('km')), unit: 'กม.', color: C.c4 },
-        { icon: 'calendar', label: 'เฉลี่ยต่อวัน', value: num(Math.round(as('trips') / as('days'))), unit: 'ครั้ง/วัน', color: C.c3 }]),
+      v.appendChild(section('สรุปการใช้จักรยาน Anywheel', { note: rangeText() + ' · ' + awDataTxt() }, [awStateNode()].concat(awm.length ? [kpiGrid([
+        { icon: 'chart', label: 'จำนวนครั้งการใช้งาน', value: num(as('trips')), unit: 'ครั้ง', scope: rangeText(), color: C.c1 }, { icon: 'map', label: 'ระยะทางรวม', value: num(Math.round(as('km'))), unit: 'กม.', color: C.c4 },
+        { icon: 'calendar', label: 'เฉลี่ยต่อวันที่มีข้อมูล', value: num(Math.round(as('trips') / as('days'))), unit: 'ครั้ง/วัน', color: C.c3 }]),
         el('div', { class: 'grid2', style: 'margin-top:14px' }, [figure('จำนวนครั้งการใช้งานรายเดือน', 'หน่วย: ครั้ง', bars(mCols(awm), [{ name: 'จำนวนครั้งการใช้งาน', color: C.c1, values: awm.map(function (r) { return r.trips; }) }], { unit: 'ครั้ง', int: true, h: 230 })),
-          figure('ตารางรายเดือน', 'หน่วย: ครั้ง · กม. · ชม.', table(['เดือน', 'วัน', 'จำนวนครั้ง', 'ระยะทาง (กม.)', 'เวลาใช้งาน (ชม.)'], awm.map(function (r) { return [mFull(r.month), r.days, num(r.trips), num(r.km), r.minutes == null ? 'ไม่มีข้อมูล' : num(Math.round(r.minutes / 60))]; }), { num: [1, 2, 3, 4] }))])]
-        : [el('div', { class: 'card box' }, [el('p', { class: 'kpi-na', text: 'ไม่มีข้อมูลในช่วงที่เลือก' }), el('p', { class: 'src', text: 'ต้นทางมีข้อมูล ' + mLabel(aw.monthly[0].month) + ' – ' + mLabel(aw.monthly[aw.monthly.length - 1].month) })])])); }
+          figure('ตารางรายเดือน', 'หน่วย: ครั้ง · กม. · ชม.', table(['เดือน', 'วันที่มีข้อมูล', 'จำนวนครั้ง', 'ระยะทาง (กม.)', 'เวลาใช้งาน (ชม.)'], awm.map(function (r) { return [mFull(r.month), awDaysTxt(r), num(r.trips), num(Math.round(r.km)), awMinTxt(r)]; }), { num: [1, 2, 3, 4] }))])]
+        : [el('div', { class: 'card box' }, [el('p', { class: 'kpi-na', text: 'ยังไม่มีข้อมูลในช่วงที่เลือก (ไม่ใช่ยอด 0)' }), el('p', { class: 'src', text: 'ต้นทางมีข้อมูล ' + mLabel(aw.monthly[0].month) + ' – ' + mLabel(aw.monthly[aw.monthly.length - 1].month) })])]))); }
   };
   PAGE_TITLE.tram = 'รถรางและจักรยาน Anywheel';
 
@@ -1664,7 +1664,7 @@
       'รถเข้า: ผู้ไม่สวมหมวกบางวันมากกว่าจำนวนรถจักรยานยนต์ที่นับได้ (อัตรารวมสูงผิดสังเกต) ควรตรวจการกรอกที่ต้นทาง',
       'เหตุการณ์: ต้นทางไม่มีคอลัมน์ผู้เสียชีวิต และคอลัมน์สาเหตุเป็นข้อความอิสระ จึงไม่แสดงจำนวนผู้เสียชีวิตและสัดส่วนสาเหตุ',
       'ผู้ช่วย AI: ยังเชื่อมต่อไม่ได้ เพราะ Endpoint เดิมไม่มีการยืนยันตัวตนและตอบจากข้อมูลรายแถว',
-      'Anywheel: ต้นทางมีข้อมูลถึง 30 มิ.ย. 2569 · เวลาการใช้งานเว้นว่าง มี.ค.–พ.ค. 2569'])])]));
+      ex.anywheel ? 'Anywheel: ' + awStateTxt() + (ex.anywheel.monthly.some(function (r) { return r.minutes == null; }) ? ' · เวลาการใช้งานไม่มี/ไม่ครบใน ' + ex.anywheel.monthly.filter(function (r) { return r.minutes == null && r.month >= '2026-01'; }).map(function (r) { return mLabel(r.month); }).join(', ') : '') : null].filter(Boolean))])]));      /* รอบ 14.3: สถานะจากข้อมูลจริง ไม่ฝังเดือน */
   };
   PAGE_TITLE['admin-info'] = 'ข้อมูลระบบเพิ่มเติม';
 
@@ -1776,7 +1776,7 @@
     var last = rows[rows.length - 1], pick;
     if (Q.kind === 'today' || Q.kind === 'month') {
       pick = rows.filter(function (r) { return r.month === Q.cm; })[0];
-      if (pick) { fill([pick]); base.badge = mLabel(Q.cm) + (Q.kind === 'today' ? ' (ทั้งเดือน)' : ''); if (Q.kind === 'today') base.note = 'ข้อมูลรายวันยังไม่รองรับ — แสดงยอดสะสมของเดือนนี้'; }
+      if (pick) { fill([pick]); base.badge = mLabel(Q.cm) + (Q.kind === 'today' ? ' (ทั้งเดือน)' : ''); if (Q.kind === 'today') base.note = 'ข้อมูลรายวันยังไม่รองรับ — แสดงยอดสะสมของเดือนนี้'; if (lastTxt) base.note = (base.note ? base.note + ' · ' : '') + lastTxt; }      /* รอบ 14.3: เดือนนี้มีข้อมูลบางวัน → บอกว่าถึงวันที่เท่าใด */
       else { fill([last]); base.badge = 'ล่าสุด ' + mLabel(last.month); base.stale = true; base.note = (Q.kind === 'today' ? 'ยังไม่มีข้อมูลวันนี้' : 'ยังไม่มีข้อมูลเดือนนี้') + (lastTxt ? ' · ' + lastTxt : ''); }
       return base;
     }
@@ -1787,8 +1787,8 @@
   }
   function sumK(rows, k) { return rows.reduce(function (a, r) { return a + (r[k] || 0); }, 0); }
   function nowAnywheel(Q) { var aw = extra('anywheel'); if (!aw) return null; var base = { icon: 'pin', title: 'จักรยาน Anywheel', color: C.c1, page: 'tram' };
-    base.spark = { vals: aw.monthly.map(function (r) { return r.trips; }), aria: 'การใช้ Anywheel รายเดือน', cap: mLabel(aw.monthly[0].month) + ' – ' + mLabel(aw.monthly[aw.monthly.length - 1].month) };
-    return nowMonthly(Q, base, aw.monthly, function (rows) { base.main = { v: num(sumK(rows, 'trips')), u: 'ครั้ง' }; base.subs = [{ l: 'ระยะทาง', v: num(sumK(rows, 'km')) + ' กม.' }, { l: 'เฉลี่ย/วัน', v: num(Math.round(sumK(rows, 'trips') / sumK(rows, 'days'))) + ' ครั้ง' }]; }, 'ต้นทางมีข้อมูลถึง ' + dLabel(aw.updated)); }
+    var sm = aw.monthly.slice(-12); base.spark = { vals: sm.map(function (r) { return r.trips; }), aria: 'การใช้ Anywheel รายเดือน', cap: mLabel(sm[0].month) + ' – ' + mLabel(sm[sm.length - 1].month) };      /* รอบ 14.3: 12 เดือนล่าสุด */
+    return nowMonthly(Q, base, aw.monthly, function (rows) { base.main = { v: num(sumK(rows, 'trips')), u: 'ครั้ง' }; base.subs = [{ l: 'ระยะทาง', v: num(Math.round(sumK(rows, 'km'))) + ' กม.' }, { l: 'เฉลี่ย/วันที่มีข้อมูล', v: num(Math.round(sumK(rows, 'trips') / sumK(rows, 'days'))) + ' ครั้ง' }]; }, awDataTxt()); }
   function nowTram(Q) { var t = extra('tram'); if (!t) return null; var base = { icon: 'car', title: 'รถรางบริการพิเศษ', color: C.c2, page: 'tram' }, ms = t.monthly.slice(-8);
     base.spark = { vals: ms.map(function (r) { return r.rounds; }), aria: 'จำนวนรอบรถรางรายเดือน', cap: 'รอบ · ' + mLabel(ms[0].month) + ' – ' + mLabel(ms[ms.length - 1].month) };
     return nowMonthly(Q, base, t.monthly, function (rows) { base.main = { v: num(sumK(rows, 'jobs')), u: 'งาน' }; base.subs = [{ l: 'รอบ', v: num(sumK(rows, 'rounds')) }, { l: 'ระยะทาง', v: num(sumK(rows, 'km')) + ' กม.' }]; }, 'ต้นทางมีข้อมูลถึง ' + dLabel(t.updated)); }
@@ -1808,7 +1808,7 @@
     return base; }
   function trendCard(o) {
     return el('article', { class: 'card trend', style: '--accent:' + o.color }, [el('div', { class: 'trend-h' }, [el('h3', { text: o.title }), el('span', { class: 'note', text: o.unit }), el('a', { class: 'more', href: '#' + o.page, 'aria-label': 'ดูรายละเอียด ' + o.title, text: 'รายละเอียด →' })]),
-      o.kpis && o.kpis.length ? el('div', { class: 'trend-k' }, o.kpis.filter(Boolean).map(function (k2) { return el('span', {}, [el('b', { text: k2.v }), ' ' + k2.l]); })) : null, o.chart]);
+      o.kpis && o.kpis.length ? el('div', { class: 'trend-k' }, o.kpis.filter(Boolean).map(function (k2) { return el('span', {}, [el('b', { text: k2.v }), ' ' + k2.l]); })) : null, o.chart, o.foot ? el('p', { class: 'src', text: o.foot }) : null]);
   }
   PAGES.dashboard = function (v) {
     scopeRange('dash', yearRange());
@@ -1831,8 +1831,8 @@
       tc.push(trendCard({ title: 'Lost & Found', unit: 'รายการ/เดือน', page: 'lostfound', color: C.c4, kpis: [{ v: num(ls('สิ่งของสูญหาย')), l: 'แจ้งหาย' }, { v: num(ls('พบสิ่งของ')), l: 'เก็บได้' }], chart: lfChart(pickMonth('lostfound')) })); }
     if (gate) { var gr2 = gate.monthly.filter(inR);
       tc.push(trendCard({ title: 'รถเข้ามหาวิทยาลัย', unit: 'คัน/เดือน · เฉพาะรถเข้า', page: 'gate', color: C.c3, kpis: [{ v: num(sumK(gr2, 'cars')), l: 'รถยนต์' }, { v: num(sumK(gr2, 'motorcycles')), l: 'จักรยานยนต์' }, { v: num(sumK(gr2, 'noHelmet')), l: 'ไม่สวมหมวก (ราย)' }], chart: gateMonthChart(pickMonth('gate')) })); }
-    if (aw) { var ar = aw.monthly.filter(inR);
-      tc.push(trendCard({ title: 'จักรยาน Anywheel', unit: 'ครั้ง/เดือน', page: 'tram', color: C.c1, kpis: [{ v: num(sumK(ar, 'trips')), l: 'ครั้ง' }, { v: num(sumK(ar, 'km')), l: 'กม.' }], chart: bars(mCols(ar), [{ name: 'จำนวนครั้งการใช้งาน', color: C.c1, values: ar.map(function (r) { return r.trips; }) }], { unit: 'ครั้ง', int: true, h: 210, aria: 'การใช้ Anywheel รายเดือน', onPick: function () { go('tram'); } }) })); }
+    if (aw) { var ar = aw.monthly.filter(inR), arEnd = state.to || MONTHS[MONTHS.length - 1] || '';
+      tc.push(trendCard({ title: 'จักรยาน Anywheel', unit: 'ครั้ง/เดือน', page: 'tram', color: C.c1, foot: !ar.length ? 'ยังไม่มีข้อมูลในช่วงที่เลือก · ' + awDataTxt() : ar[ar.length - 1].month < arEnd ? awDataTxt() + ' (ยังไม่มีข้อมูล ' + mLabel(arEnd) + ')' : null, kpis: [{ v: num(sumK(ar, 'trips')), l: 'ครั้ง' }, { v: num(Math.round(sumK(ar, 'km'))), l: 'กม.' }], chart: bars(mCols(ar), [{ name: 'จำนวนครั้งการใช้งาน', color: C.c1, values: ar.map(function (r) { return r.trips; }) }], { unit: 'ครั้ง', int: true, h: 210, aria: 'การใช้ Anywheel รายเดือน', onPick: function () { go('tram'); } }) })); }
     if (tram) { var tr = tramRows();
       tc.push(trendCard({ title: 'รถรางบริการพิเศษ', unit: 'รอบ/เดือน', page: 'tram', color: C.c2, kpis: [{ v: num(sumK(tr, 'jobs')), l: 'งาน' }, { v: num(sumK(tr, 'rounds')), l: 'รอบ' }, { v: num(sumK(tr, 'km')), l: 'กม.' }], chart: bars(mCols(tr), [{ name: 'จำนวนรอบ', color: C.c2, values: tr.map(function (r) { return r.rounds; }) }], { unit: 'รอบ', int: true, h: 210, aria: 'จำนวนรอบรถรางรายเดือน', onPick: function () { go('tram'); } }) })); }
     if (cctv) tc.push(trendCard({ title: 'คำขอดูกล้อง CCTV', unit: 'คำขอ/เดือน', page: 'cctv', color: C.c2, kpis: [{ v: num(sumMonthly(cctv.monthly, function (r) { return r.count; })), l: 'คำขอ' }], chart: cctvMonthChart(pickMonth('cctv')) }));
@@ -2412,7 +2412,7 @@
     if (!AUTH.started) { AUTH.started = true; AUTH.cb(); } else route(true);
     liveRefresh();
   }
-  function liveReset() { live.sig = {}; live.busy = null; live.at = null; live.readAt = {}; live.lastOk = {}; live.stale = {}; live.errors = null; live.ok = null; live.errInfo = {}; live.retryN = 0; }
+  function liveReset() { if (live.awSnap && DATA.extra) { DATA.extra.anywheel = live.awSnap; live.awSnap = null; } live.aw = null; live.sig = {}; live.busy = null; live.at = null; live.readAt = {}; live.lastOk = {}; live.stale = {}; live.errors = null; live.ok = null; live.errInfo = {}; live.retryN = 0; }
   /* แพตช์ท้าย: ข้อความเวลาของแหล่ง k — อ่านสำเร็จรอบนี้ = เวลาอ่านจริง · รอบล่าสุดล้ม = เวลาอ่านสำเร็จครั้งก่อน + บอกว่าไม่สำเร็จ
    * ยังไม่เคยอ่านสด (ไม่ Login/ไฟล์สรุป) = “ไฟล์สรุป …” — ไม่ใช้เวลาตอบคำขอหรือเวลาของแหล่งอื่นแทน */
   function srcReadTxt(k, snapAt) {
@@ -2466,14 +2466,15 @@
     clearTimeout(live.timer); live.timer = setTimeout(liveRefresh, 5 * 60000);
     if (document.hidden) { live.due = true; return; }
     if (live.busy && live.busy.gen === authGen && live.busy.n > 0) return;      /* รอบ 13: ตัวนับงานผูกกับรุ่น Login — คำตอบของรุ่นก่อนไม่ลดตัวนับของรุ่นใหม่ */
-    var gen = authGen, busy = live.busy = { gen: gen, n: 3 }; live.due = false; live.last = Date.now();
+    var gen = authGen, busy = live.busy = { gen: gen, n: 4 }; live.due = false; live.last = Date.now();
     var draw = function (sig, scope) {
       var dayCh = !!state.renderDay && state.renderDay !== todayStr();      /* รอบ 13 ต่อ: ข้าม 00:00 (เวลาไทย) → “วันนี้/เดือนนี้” เปลี่ยนความหมาย วาดใหม่แม้ข้อมูลเท่าเดิม */
       if (!dayCh) liveStampsUpdate(); liveNoteDraw();
       if (live.sig[scope] === sig && !dayCh) return; var firstTime = live.sig[scope] == null; live.sig[scope] = sig;
-      collectMonths();
+      if (scope !== 'aw') collectMonths();      /* รอบ 14.3: Anywheel ไม่กำหนดช่วงเดือนของหน้า (ไม่รีเซ็ตช่วงที่ผู้ใช้เลือก) */
       if (uiBusy()) { live.pending = true; return; }
-      if (scope === 'private' && !firstTime && !dayCh && !LIVE_PRIVATE_PAGES[state.curPage]) return;        /* ชุดส่วนตัวเปลี่ยน: วาดใหม่เฉพาะหน้าที่ใช้ */
+      if (scope === 'private' && !firstTime && !dayCh && !LIVE_PRIVATE_PAGES[state.curPage]) return;
+      if (scope === 'aw' && !dayCh && !LIVE_AW_PAGES[state.curPage]) return;      /* รอบ 14.3: วาดใหม่เฉพาะหน้าที่แสดง Anywheel */        /* ชุดส่วนตัวเปลี่ยน: วาดใหม่เฉพาะหน้าที่ใช้ */
       route(true);
     };
     var done = function () { busy.n = Math.max(0, busy.n - 1); };
@@ -2504,6 +2505,17 @@
       applyLive10(x.j); live.readAt = Object.assign({}, live.readAt, x.j.sourceReadAt || {}); var a = x.j.studentMoto, r = x.j.ruenthai;
       draw(liveSig(x.j, ['studentMoto', 'ruenthai']), 'private');
     });
+    /* รอบ 14.3: Anywheel อ่านสดจากชีท “ข้อมูล Anywheel new” — คำขอแยก (ชุดหลักไม่ต้องรอ) · ล้มแล้วไม่ขึ้นแถบเตือนของแหล่งอื่น (สถานะอยู่ที่ส่วน Anywheel เอง) */
+    apiCall('/stats?scope=aw').then(function (x) {
+      done(); if (gen !== authGen) return;
+      if (x.s === 401) { authLost(); return; }
+      var prev = live.aw || {}, tAt = nowStamp();
+      if (x.s !== 200 || !x.j.ok) { live.aw = { err: x.j.code || 'http ' + x.s, ref: x.j.ref || x.ref || '', at: tAt, lastOk: prev.lastOk || '', http: x.s }; liveStampsUpdate(); return; }
+      var j = x.j, rd = (j.sourceReadAt || {}).anywheel || '', st = (j.stale || {}).anywheel || null;
+      if (j.anywheel) { if (!live.awSnap) live.awSnap = DATA.extra.anywheel || null; DATA.extra.anywheel = Object.assign({}, live.awSnap || {}, j.anywheel, { snapshot: false }); }
+      live.aw = { readAt: rd, stale: st, err: (j.errors || {}).anywheel || '', ref: x.ref || '', at: tAt, http: 200, lastOk: rd || (st && st.at > (prev.lastOk || '') ? st.at : prev.lastOk) || '' };
+      liveStampsUpdate(); draw(liveSig(j, ['anywheel']), 'aw');
+    });
   }
   /* รอบ 13: ลายเซ็นตามความหมาย = ข้อมูลทุกส่วนที่หน้าเว็บแสดง (ยอด การแยกตามวิทยาเขต/คณะ/เครื่องยนต์/กลุ่ม รายเดือน รายวัน ค่าไม่ตรง ข้อผิดพลาด)
    * ไม่รวมเวลา (checkedAt/readAt) — เวลาอ่านเปลี่ยนอย่างเดียวอัปเดตเฉพาะป้ายเวลา ไม่วาดหน้าใหม่ (คงตัวกรอง/หน้า/ตำแหน่งเลื่อน/โฟกัส/ส่วนที่พับ) */
@@ -2511,6 +2523,21 @@
     return JSON.stringify(keys.map(function (k) { return j[k] === undefined ? null : j[k]; }).concat([j.errors || {}]), function (k, v) { return k === 'checkedAt' || k === 'readAt' || (k === 'updated' && this === j.lostfound) ? undefined : v; });
   }
   var LIVE_PRIVATE_PAGES = { dashboard: 1, vehicle: 1, parking: 1, settings: 1, 'vehicle-all': 1 };
+  var LIVE_AW_PAGES = { dashboard: 1, tram: 1, 'report-monthly': 1, settings: 1, 'admin-info': 1 };
+  /* รอบ 14.3: สถานะ Anywheel — แยก “อ่านต้นทางเมื่อ” ออกจาก “ข้อมูลการใช้งานถึงวันที่” (อ่านชีทวันนี้ ≠ มีข้อมูลเดือนนี้) */
+  function awDataTxt() { var aw = extra('anywheel'); return aw ? 'ข้อมูลการใช้งานถึง ' + (aw.lastDate ? dLabel(aw.lastDate) : aw.updated ? dLabel(aw.updated) : mLabel(aw.lastMonth || '')) : ''; }
+  function awStateTxt() {
+    var aw = extra('anywheel'), L = live.aw, d = awDataTxt(); if (!aw) return '';
+    if (!(AUTH.on && AUTH.user)) return 'ไฟล์สรุป ณ ' + dLabel(aw.checkedAt || '') + ' · ' + d;
+    if (!L) return 'ไฟล์สรุป ณ ' + dLabel((live.awSnap || aw).checkedAt || '') + ' · ' + d + ' · กำลังอ่านข้อมูลสด…';
+    if (L.readAt && !L.err) return 'ข้อมูลสด · อ่านจากต้นทางเมื่อ ' + dLabel(L.readAt) + ' · ' + d;
+    var last = L.stale ? L.stale.at : L.lastOk;
+    if (last) return 'ใช้ข้อมูลที่อ่านสำเร็จล่าสุดเมื่อ ' + dLabel(last) + ' · รอบล่าสุดอ่านไม่สำเร็จ (' + srcWhy(L.err) + (L.ref ? ' · รหัสอ้างอิง ' + L.ref : '') + ') · ' + d;
+    return 'แสดงไฟล์สรุป ณ ' + dLabel((live.awSnap || aw).checkedAt || '') + ' · ' + d + ' — อ่านต้นทางไม่สำเร็จ (' + srcWhy(L.err) + (L.ref ? ' · รหัสอ้างอิง ' + L.ref : '') + ')';
+  }
+  function awStateNode() { var p = el('p', { class: 'src-state', role: 'status', text: awStateTxt() }); p.classList.add('live-ts'); p.__ts = awStateTxt; return p; }
+  function awMinTxt(r) { return r.minutes != null ? num(Math.round(r.minutes / 60)) : r.minutesPartial ? 'ไม่ครบ (' + r.minutesPartial.rows + '/' + r.rows + ' วัน)' : 'ไม่มีข้อมูล'; }
+  function awDaysTxt(r) { return r.daysInMonth && r.days < r.daysInMonth ? r.days + ' / ' + r.daysInMonth : String(r.days); }
   document.addEventListener('visibilitychange', function () { if (!document.hidden && AUTH.user && (live.due || (live.last && Date.now() - live.last > 5 * 60000))) liveRefresh(); });
   /* รอบ 13 ต่อ: แผงแชทใช้ attribute hidden (ไม่มี class open) — เดิมตรวจ .chat-panel.open จึงไม่เคยเลื่อนการวาดขณะแชทเปิด
    * และการอัปเดตที่เลื่อนไว้ปล่อยได้เฉพาะตอน focusout → ปิดด้วย Esc/ปุ่มแล้วค้าง · ตรวจปล่อยหลังคลิก/กดปุ่ม/focusout ด้วย */
@@ -3106,7 +3133,7 @@
     var rt = AUTH.on && AUTH.user ? liveReadText() : '';
     if (rt) {        /* แยกความหมาย: เวลาที่อ่านข้อมูลสดสำเร็จ (เหตุการณ์/L&F/รถเข้า) ≠ เวลาสร้างไฟล์สรุปของหมวดอื่น */
       s.appendChild(el('b', { text: rt })); s.appendChild(el('br'));
-      s.appendChild(document.createTextNode('เหตุการณ์ · L&F · รถเข้า · หมวดอื่นจากไฟล์สรุป ' + dShort(g.slice(0, 10)) + ' ' + g.slice(11, 16) + ' น.'));
+      s.appendChild(document.createTextNode('เหตุการณ์ · L&F · รถเข้า' + (live.aw && live.aw.readAt && !live.aw.err ? ' · Anywheel (เวลาอ่านแสดงในส่วน Anywheel)' : '') + ' · หมวดอื่นจากไฟล์สรุป ' + dShort(g.slice(0, 10)) + ' ' + g.slice(11, 16) + ' น.'));
       s.title = liveReadTitle() + ' · ข้อมูลสด: ' + (live.ok || []).join(', ') + ' · ไฟล์สรุป (snapshot) สร้างเมื่อ ' + dLabel(g.slice(0, 10) + ' ' + g.slice(11, 16)) + ' · วันที่ข้อมูลล่าสุดของแต่ละเรื่องดูที่ป้ายบนการ์ด';
       return;
     }

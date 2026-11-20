@@ -1324,60 +1324,253 @@
   ]
  },
  "anywheel": {
-  "status": "partial",
-  "source": "Sheet สถิติ Anywheel ของระบบเดิม → แท็บ ข้อมูลรายวัน (คอลัมน์ เดือน, จำนวนครั้ง, ระยะทาง (กม.), เวลาการใช้งาน(นาที))",
-  "checkedAt": "2026-11-15 11:45",
-  "updated": "2026-06-30",
-  "rowsTotal": 576,
+  "status": "connected",
+  "source": "Sheet “ข้อมูล Anywheel new” → แท็บ ข้อมูลรายวัน (คอลัมน์ เดือน · จำนวนครั้ง · ระยะทาง (กม.) · เวลาการใช้งาน(นาที))",
+  "checkedAt": "2026-11-20 09:32",
+  "updated": "2026-10-31",
+  "lastDate": "2026-10-31",
+  "firstMonth": "2024-12",
+  "lastMonth": "2026-10",
+  "rowsTotal": 698,
+  "snapshot": true,
   "monthly": [
    {
-    "month": "2026-01",
+    "month": "2024-12",
+    "rows": 31,
     "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
+    "trips": 13767,
+    "km": 35060.811,
+    "minutes": null
+   },
+   {
+    "month": "2025-01",
+    "rows": 30,
+    "days": 30,
+    "verifiedDays": 30,
+    "daysInMonth": 31,
+    "trips": 33246,
+    "km": 64989.951,
+    "minutes": null
+   },
+   {
+    "month": "2025-02",
+    "rows": 28,
+    "days": 28,
+    "verifiedDays": 28,
+    "daysInMonth": 28,
+    "trips": 39598,
+    "km": 60181.719,
+    "minutes": null
+   },
+   {
+    "month": "2025-03",
+    "rows": 31,
+    "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
+    "trips": 45265,
+    "km": 65699.365,
+    "minutes": null
+   },
+   {
+    "month": "2025-04",
+    "rows": 30,
+    "days": 30,
+    "verifiedDays": 30,
+    "daysInMonth": 30,
+    "trips": 35546,
+    "km": 49634.028,
+    "minutes": null
+   },
+   {
+    "month": "2025-05",
+    "rows": 31,
+    "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
+    "trips": 25738,
+    "km": 40850.739,
+    "minutes": null
+   },
+   {
+    "month": "2025-06",
+    "rows": 30,
+    "days": 30,
+    "verifiedDays": 30,
+    "daysInMonth": 30,
+    "trips": 20853,
+    "km": 38376.904,
+    "minutes": null
+   },
+   {
+    "month": "2025-07",
+    "rows": 31,
+    "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
+    "trips": 43355,
+    "km": 70166.676,
+    "minutes": null
+   },
+   {
+    "month": "2025-08",
+    "rows": 31,
+    "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
+    "trips": 101024,
+    "km": 132965.283,
+    "minutes": null
+   },
+   {
+    "month": "2025-09",
+    "rows": 30,
+    "days": 30,
+    "verifiedDays": 30,
+    "daysInMonth": 30,
+    "trips": 107921,
+    "km": 126253.233,
+    "minutes": null
+   },
+   {
+    "month": "2025-10",
+    "rows": 31,
+    "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
+    "trips": 74275,
+    "km": 92001.557,
+    "minutes": null
+   },
+   {
+    "month": "2025-11",
+    "rows": 30,
+    "days": 30,
+    "verifiedDays": 30,
+    "daysInMonth": 30,
+    "trips": 93395,
+    "km": 122310.08,
+    "minutes": 1138088
+   },
+   {
+    "month": "2025-12",
+    "rows": 31,
+    "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
+    "trips": 44462,
+    "km": 68993.755,
+    "minutes": 642996
+   },
+   {
+    "month": "2026-01",
+    "rows": 31,
+    "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
     "trips": 74410,
-    "km": 100910,
-    "minutes": 1010993
+    "km": 100909.958,
+    "minutes": 1010992.74
    },
    {
     "month": "2026-02",
+    "rows": 28,
     "days": 28,
+    "verifiedDays": 28,
+    "daysInMonth": 28,
     "trips": 70994,
     "km": 85508,
     "minutes": 814195
    },
    {
     "month": "2026-03",
+    "rows": 31,
     "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
     "trips": 68902,
-    "km": 91327,
+    "km": 91326.672,
     "minutes": null
    },
    {
     "month": "2026-04",
+    "rows": 30,
     "days": 30,
+    "verifiedDays": 30,
+    "daysInMonth": 30,
     "trips": 48780,
-    "km": 64227,
+    "km": 64227.458,
     "minutes": null
    },
    {
     "month": "2026-05",
+    "rows": 31,
     "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
     "trips": 33322,
-    "km": 55297,
+    "km": 55297.01,
     "minutes": null
    },
    {
     "month": "2026-06",
+    "rows": 30,
     "days": 30,
+    "verifiedDays": 30,
+    "daysInMonth": 30,
     "trips": 24510,
     "km": 44046,
     "minutes": 472834
+   },
+   {
+    "month": "2026-07",
+    "rows": 30,
+    "days": 30,
+    "verifiedDays": 30,
+    "daysInMonth": 31,
+    "trips": 41822,
+    "km": 67312,
+    "minutes": 742922
+   },
+   {
+    "month": "2026-08",
+    "rows": 31,
+    "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
+    "trips": 100286,
+    "km": 135758.297,
+    "minutes": 1408438.97
+   },
+   {
+    "month": "2026-09",
+    "rows": 30,
+    "days": 30,
+    "verifiedDays": 30,
+    "daysInMonth": 30,
+    "trips": 94742,
+    "km": 123947,
+    "minutes": 1615815
+   },
+   {
+    "month": "2026-10",
+    "rows": 31,
+    "days": 31,
+    "verifiedDays": 31,
+    "daysInMonth": 31,
+    "trips": 70257,
+    "km": 103309,
+    "minutes": 1016107
    }
   ],
   "notes": [
-   "ต้นทางเป็นข้อมูลรายวัน เริ่ม 1 ธ.ค. 2567 — ข้อมูลล่าสุดคือ 30 มิ.ย. 2569 ยังไม่มีข้อมูลตั้งแต่ ก.ค. 2569",
-   "ยอดรายเดือนจัดกลุ่มตามคอลัมน์ “เดือน” ของต้นทาง (ทุกเดือน ม.ค.–มิ.ย. 2569 มีแถวครบทุกวัน) ไม่ใช้คอลัมน์ “วันที่” ซึ่งมีรูปแบบ วัน/เดือน สลับกันในบางเดือน",
-   "เวลาการใช้งาน: ต้นทางเว้นว่างทั้งเดือน มี.ค.–พ.ค. 2569 จึงแสดงว่าไม่มีข้อมูล",
-   "รอบก่อน (15 พ.ย. 01:20) ยืนยันได้เฉพาะ มี.ค.–มิ.ย. — รอบนี้ยืนยัน ม.ค.–ก.พ. เพิ่มได้เพราะคอลัมน์ “เดือน” ของสองเดือนนี้เป็นค่าวันที่ในเดือนเดียวกันครบทุกแถว"
+   "ไฟล์สรุป (snapshot) อ่านจากต้นทาง ณ 20 พ.ย. 2569 09:32 น. — ข้อมูลการใช้งานล่าสุดคือ 31 ต.ค. 2569 · เมื่อเข้าสู่ระบบ หน้าเว็บอ่านสดจากต้นทางทุกรอบอัปเดต",
+   "ต้นทางเป็นข้อมูลรายวัน (1 แถว = 1 วัน) ตั้งแต่ ธ.ค. 2567 · เดือนที่ไม่มีแถว = ยังไม่มีข้อมูล (ไม่ใช่ 0)",
+   "ยอดรายเดือนจัดกลุ่มตามคอลัมน์ “เดือน” · ระยะทางใช้คอลัมน์ ระยะทาง (กม.) (ถ้าว่างใช้ เมตร ÷ 1,000) · รวมทศนิยมก่อนปัด",
+   "เฉลี่ยต่อวันที่มีข้อมูล = จำนวนครั้ง ÷ จำนวนวันที่มีแถวข้อมูล · เดือนที่มีข้อมูลไม่ครบทุกวัน: ม.ค. 2568 (30/31 วัน), ก.ค. 2569 (30/31 วัน)",
+   "เวลาการใช้งาน: ต้นทางเว้นว่างใน 14 เดือน (เช่น มี.ค. 2569, เม.ย. 2569, พ.ค. 2569) จึงแสดงว่าไม่มีข้อมูล"
   ]
  },
  "lostfoundStatus": {

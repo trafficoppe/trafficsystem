@@ -104,7 +104,7 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   c = await nowCard(page, 'รถเข้าและหมวกนิรภัย'); ok('เดือนนี้: รถเข้า ' + (GNOV.cars + GNOV.motorcycles).toLocaleString('en-US') + ' คัน จาก ' + GNOV.days + ' วันที่มีข้อมูล (เรียกว่า “คันเข้า”)', c.includes((GNOV.cars + GNOV.motorcycles).toLocaleString('en-US') + ' คันเข้า') && c.includes(GNOV.days + ' วัน') && !/เข้าออก/.test(c), c);
   await page.click('.seg.period button:text-is("ปีนี้")'); await page.waitForTimeout(350);
   c = await nowCard(page, 'เหตุการณ์และอุบัติเหตุ'); ok('ปีนี้: เหตุการณ์ 68 · ผู้บาดเจ็บ/ป่วย 39', /68 เหตุการณ์/.test(c) && /39 คน/.test(c), c);
-  c = await nowCard(page, 'จักรยาน Anywheel'); ok('ปีนี้: Anywheel 320,918 ครั้ง + แจ้งว่าข้อมูลถึง 30 มิ.ย.', /320,918 ครั้ง/.test(c) && /ถึง 30 มิ\.ย\. 2569/.test(c), c);
+  c = await nowCard(page, 'จักรยาน Anywheel'); ok('[รอบ 14.3] ปีนี้: Anywheel 628,025 ครั้ง (ม.ค.–ต.ค. 2569 จากไฟล์สรุปที่อ่านต้นทาง 20 พ.ย.) + “ข้อมูลการใช้งานถึง 31 ต.ค. 2569” · ไม่มีข้อความเดิม 30 มิ.ย.', /628,025 ครั้ง/.test(c) && /ข้อมูลการใช้งานถึง 31 ต\.ค\. 2569/.test(c) && /เฉลี่ย\/วันที่มีข้อมูล/.test(c) && !/30 มิ\.ย\./.test(c), c);
   await page.click('.seg.period button:text-is("กำหนดช่วง")'); await page.waitForTimeout(300);
   await page.selectOption('.dash-head select[aria-label="เดือนเริ่มต้น"]', '2026-10'); await page.selectOption('.dash-head select[aria-label="เดือนสิ้นสุด"]', '2026-10'); await page.waitForTimeout(350);
   c = await nowCard(page, 'เหตุการณ์และอุบัติเหตุ');
@@ -162,7 +162,7 @@ const open = async (p, h, sel) => { await p.goto(URL0 + '#' + h); await p.waitFo
   ok('ต.ค.: L&F แจ้งหาย 74 · เก็บได้ 34 · แบบรับคืน 16 ฉบับ · สถานะรับคืนแล้ว 20 (แยกกัน)', /74/.test(tl[0]) && /34/.test(tl[1]) && /16 ฉบับ/.test(tl[2]) && /20/.test(tl[3]), tl.join(' | '));
   ok('ต.ค.: รถยนต์เข้า ' + GOCT.cars.toLocaleString('en-US') + ' · จยย. ' + GOCT.motorcycles.toLocaleString('en-US') + ' (ตรงกับไฟล์ข้อมูล) · รถออกไม่มีข้อมูล + ป้าย “มีเฉพาะจำนวนรถเข้า”', tg[0].includes(GOCT.cars.toLocaleString('en-US')) && tg[1].includes(GOCT.motorcycles.toLocaleString('en-US')) && tg.some(x => /รถออก ยังไม่มีข้อมูลยืนยัน/.test(x)) && /มีเฉพาะจำนวนรถเข้า/.test(await text(page, '#sec-gate .rep-h')), tg.join(' | '));
   ok('ต.ค.: รถราง 33 งาน 58 รอบ 324 กม. 39 คัน-ครั้ง 29.7 ชม. · ผู้โดยสารไม่มีข้อมูล', /33/.test(tt[0]) && /58/.test(tt[1]) && /324/.test(tt[2]) && /39/.test(tt[3]) && /29\.7/.test(tt[4]) && /ต้นทางไม่มีข้อมูล/.test(tt[5]), tt.join(' | '));
-  ok('ต.ค.: Anywheel ไม่มีข้อมูลในช่วง (ไม่แสดง 0)', /ไม่มีข้อมูลในช่วงที่เลือก/.test(ta[0]), ta[0]);
+  ok('[รอบ 14.3] ต.ค.: Anywheel 70,257 ครั้ง · 103,309 กม. (ตรงยอดอ้างอิงจากชีท)', /70,257/.test(ta[0]) && ta.some((x) => /103,309/.test(x)), ta.join(' | '));
   ok('CCTV: MLC/LA/PMH = “ยังไม่มีข้อมูล” (ไม่ใช่ 0)', tc.filter(x => /ยังไม่มีข้อมูล/.test(x)).length === 3 && !tc.some(x => /^(MLC|LA|PMH) 0/.test(x)), tc.join(' | '));
   ok('รถรางแยกส่วนงาน ต.ค. 2569: รวม 33 งาน 58 รอบ', /33.*58/.test((await text(page, '#sec-tram-dept tfoot'))));
   ok('ทุกหมวดมีตารางหรือกราฟ', await page.$$eval('.rep', n => n.every(x => x.querySelector('table, svg, .lf-map, .map-mini'))));

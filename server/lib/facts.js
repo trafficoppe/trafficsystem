@@ -56,6 +56,7 @@ export function applyLive(stats, extra, live) {
   ['incidents', 'lostfound', 'gate'].forEach((k) => { if (live[k] && M[k]) { Object.assign(M[k], live[k]); L.topics[k] = RD[PART[k]] || live[k].readAt || ''; } });
   ['incidentsDaily', 'lostfoundDaily'].forEach((k) => { if (live[k]) X[k] = Object.assign(X[k] || {}, live[k]); });
   if (live.lostfoundStatus && X.lostfoundStatus) Object.assign(X.lostfoundStatus, live.lostfoundStatus);
+  if (live.anywheel) { X.anywheel = Object.assign({}, X.anywheel || {}, live.anywheel); if (RD.anywheel) L.topics.anywheel = RD.anywheel; }      // รอบ 14.3: Anywheel จากต้นทาง (สด หรือผลอ่านสำเร็จล่าสุด) แทนไฟล์สรุป
   const vr = M.vehicleRegistration;
   if (vr) { if (live.studentMoto) { vr.rows['นักศึกษา – รถจักรยานยนต์'] = live.studentMoto.registrations; vr.studentMoto = live.studentMoto; L.topics.vehicle = live.studentMoto.checkedAt; } else if (e.studentMoto) vr.studentMotoErr = e.studentMoto; }
   if (live.ruenthai) { const r = live.ruenthai, rs = X.ruenthaiSurvey || (X.ruenthaiSurvey = {}); rs.total = r.surveys; rs.daily = r.daily; rs.from = r.range.from; rs.to = r.range.to; rs.updated = r.lastEntry; rs.checkedAt = r.checkedAt; rs.live = r; L.topics.ruenthai = r.checkedAt; }
@@ -128,7 +129,12 @@ export function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
   const c = M.cctv;
   if (c && c.monthly && use.has('cctv')) { src.cctv = 'คำขอดูกล้อง CCTV'; c.monthly.forEach((r) => add('คำขอดูกล้อง CCTV (ส่วนกลาง)', mTh(r.month), n(r.count) + ' คำขอ', dTh(c.updated))); add('คำขอดูกล้อง CCTV (ส่วนกลาง)', 'ทั้งหมดที่มีข้อมูล', n(c.total) + ' คำขอ · ไม่มีข้อมูลยืนยันของ MLC, LA, PMH', dTh(c.updated)); }
   const aw = X.anywheel;
-  if (aw && aw.monthly && use.has('anywheel')) { src.anywheel = 'จักรยาน Anywheel'; aw.monthly.forEach((r) => add('จักรยาน Anywheel', mTh(r.month), 'ใช้งาน ' + n(r.trips) + ' ครั้ง, ระยะทาง ' + n(r.km) + ' กม.' + (r.minutes == null ? '' : ', เวลาใช้งาน ' + n(r.minutes) + ' นาที'), dTh(aw.updated))); }
+  if (aw && aw.monthly && use.has('anywheel')) {      // รอบ 14.3: ตัวเลขคิดด้วยโค้ด (รวมทศนิยมก่อนปัด) · แยกเวลาอ่านต้นทางออกจากวันที่ข้อมูลล่าสุด
+    src.anywheel = 'จักรยาน Anywheel'; const awAt = dTh(LI.topics && LI.topics.anywheel ? LI.topics.anywheel : aw.readAt || aw.checkedAt || aw.updated), km = (v) => n(Math.round(v || 0));      // awAt = เวลาอ่านต้นทาง (สด) หรือเวลาทำไฟล์สรุป — ไม่ใช่วันที่ข้อมูลล่าสุด
+    const awFocus = question != null && picked.length <= 3, awM = aw.monthly.slice(awFocus ? -12 : -3);      // ถามเรื่อง Anywheel โดยตรง → 12 เดือน · คำถามกว้าง → 3 เดือนล่าสุด (คุมความยาว)
+    awM.forEach((r) => add('จักรยาน Anywheel', mTh(r.month), n(r.trips) + ' ครั้ง, ' + km(r.km) + ' กม.' + (r.days ? ', ' + r.days + (r.daysInMonth && r.days < r.daysInMonth ? '/' + r.daysInMonth : '') + ' วัน (เฉลี่ย ' + n(Math.round(r.trips / r.days)) + '/วันที่มีข้อมูล)' : '') + (r.minutes == null ? '' : ', ' + n(Math.round(r.minutes)) + ' นาที'), awAt));
+    [...new Set((awFocus ? aw.monthly : awM).map((r) => r.month.slice(0, 4)))].forEach((y) => { const rr = aw.monthly.filter((r) => r.month.slice(0, 4) === y); add('จักรยาน Anywheel', 'ปีปฏิทิน พ.ศ. ' + (+y + 543) + ' (เฉพาะ ' + mTh(rr[0].month) + ' – ' + mTh(rr[rr.length - 1].month) + ')', 'รวม ' + n(sum(rr, (r) => r.trips)) + ' ครั้ง, ระยะทาง ' + km(sum(rr, (r) => r.km)) + ' กม.', awAt); });
+    add('จักรยาน Anywheel', 'วันที่ข้อมูลล่าสุดในต้นทาง', aw.lastDate ? dTh(aw.lastDate) + ' (เดือนที่ไม่มีแถว = ยังไม่มีข้อมูล ห้ามใช้ยอดเดือนอื่นแทน · ไม่ระบุนาที = ต้นทางไม่มีข้อมูลเวลาใช้งาน)' : 'เดือน ' + mTh(aw.lastMonth || aw.monthly[aw.monthly.length - 1].month), awAt); }
   const tr = X.tram;
   if (tr && tr.monthly && use.has('tram')) { src.tram = 'รถรางบริการพิเศษ'; tr.monthly.forEach((r) => add('รถรางบริการพิเศษ', mTh(r.month), n(r.jobs) + ' งาน, ' + n(r.rounds) + ' รอบ, ' + n(r.km) + ' กม., รถที่ให้บริการ ' + n(r.trams) + ' คัน-ครั้ง, ' + n(r.minutes) + ' นาที — ไม่มีข้อมูลจำนวนผู้โดยสาร', dTh(tr.updated))); }
   const sat = M.guardSatisfaction;
@@ -150,9 +156,9 @@ export function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
       add('ลานจอดรถเรือนไทย (อ่านสด)', 'แยกตามหมวด (หน่วย: แบบสำรวจ ยกเว้นประเภทรถเป็นช่องที่กรอก)', 'กลุ่ม: ' + topObj(R.byGroup, 8, 'ฉบับ') + ' · ประเภทผู้ใช้: ' + topObj(R.bySubType, 8, 'ฉบับ') + ' · ประเภทรถ (นับช่องประเภทรถที่กรอก): ' + topObj(R.byCarType, 8, 'ช่อง') + ' · สถานะกล้อง LPR (บันทึกต่อแบบสำรวจ จึงนับเป็นฉบับ ไม่ใช่คัน): ' + topObj(R.byLpr, 8, 'ฉบับ') + ' · คณะ/ส่วนงาน (อันดับแรก): ' + topObj(R.byFaculty, 6, 'ฉบับ'), dTh(R.checkedAt)); }
     else add('ลานจอดรถเรือนไทย (ไฟล์สรุป ไม่ใช่ข้อมูลสด' + (rt.liveErr ? ' — อ่านสดไม่สำเร็จ: ' + why(rt.liveErr) : '') + ')', dTh(rt.from) + ' – ' + dTh(rt.to), 'แบบสำรวจที่ส่งเข้ามา ' + n(rt.total) + ' ฉบับ — ไม่ใช่จำนวนรถและไม่ใช่ยอดอนุมัติ · ไฟล์สรุปไม่มีจำนวนรถหรือการแยกกลุ่ม', dTh(rt.checkedAt)); }
   // รอบ 14·P2: หัวข้อที่มีเฉพาะไฟล์สรุปรายเดือน — ถ้าไม่มีเดือนปัจจุบัน บอกชัดว่ายังไม่มี (กันโมเดลเดา/ใช้เดือนอื่นแทน)
-  [['cctv', c && c.monthly, 'คำขอดูกล้อง CCTV (ส่วนกลาง)', c && c.updated], ['anywheel', aw && aw.monthly, 'จักรยาน Anywheel', aw && aw.updated], ['tram', tr && tr.monthly, 'รถรางบริการพิเศษ', tr && tr.updated]].forEach((x) => {
+  [['cctv', c && c.monthly, 'คำขอดูกล้อง CCTV (ส่วนกลาง)', c && c.updated], ['anywheel', aw && aw.monthly, 'จักรยาน Anywheel', aw && (LI.topics && LI.topics.anywheel || aw.readAt || aw.checkedAt), aw && !aw.snapshot], ['tram', tr && tr.monthly, 'รถรางบริการพิเศษ', tr && tr.updated]].forEach((x) => {
     if (!use.has(x[0]) || !x[1] || !x[1].length || x[1].some((r) => r.month === curM)) return;
-    add(x[2], 'เดือนนี้ ' + mTh(curM), 'ยังไม่มีข้อมูลของเดือนนี้ในไฟล์สรุป — เดือนล่าสุดที่มีคือ ' + mTh(x[1][x[1].length - 1].month) + ' (ห้ามนำเดือนอื่นมาตอบเป็นเดือนนี้)', dTh(x[3])); });
+    add(x[2], 'เดือนนี้ ' + mTh(curM), 'ยังไม่มีข้อมูลของเดือนนี้' + (x[4] ? 'ในต้นทาง' : 'ในไฟล์สรุป') + ' — เดือนล่าสุดที่มีคือ ' + mTh(x[1][x[1].length - 1].month) + ' (ห้ามนำเดือนอื่นมาตอบเป็นเดือนนี้)', dTh(x[3])); });
   const others = Object.keys(TOPICS).filter((k) => !use.has(k));
   if (others.length) L.push('หัวข้ออื่นที่ระบบมีข้อมูล (ไม่ได้แนบมาในรอบนี้ — ถ้าผู้ใช้ถามถึง ให้บอกว่าถามเรื่องนั้นโดยตรงได้): ' + others.map((k) => ({ incidents: 'เหตุการณ์/อุบัติเหตุ', lostfound: 'Lost & Found', gate: 'รถเข้าและหมวกนิรภัย', cctv: 'คำขอดูกล้อง CCTV', anywheel: 'จักรยาน Anywheel', tram: 'รถราง', guard: 'ความพึงพอใจ รปภ.', vehicle: 'ทะเบียนยานพาหนะ', ops: 'ลานจอด/ยานพาหนะของงาน/อุปกรณ์ดับเพลิง', ruenthai: 'ลานจอดเรือนไทย' })[k]).join(', '));
   L.push('เมนูในเว็บนี้ที่แนะนำได้ (เขียนเป็น #รหัส เช่น #traffic หน้าเว็บจะทำเป็นลิงก์ให้): ' + NAV_HINTS.map((h) => h[0] + ' #' + h[1]).join(' · '));
@@ -177,7 +183,7 @@ export function numbersOk(reply, factsText, question) {
 
 // ================= รอบ 14 · P2: ผู้ช่วย AI เลือกข้อมูลก่อนเรียกโมเดล · หลักฐาน/ความสด · ปุ่มดูต่อ · สรุปช่วงที่กำลังดู =================
 // หัวข้อ → ส่วนของสถิติสดที่ต้องอ่าน (ส่วนอื่นใช้ไฟล์สรุปที่แนบกับเว็บ ไม่ต้องอ่านต้นทาง) · ผู้ใช้/โมเดลเลือก SQL/URL/Sheet เองไม่ได้
-export const TOPIC_PARTS = { incidents: ['incidents'], lostfound: ['lostfound', 'lostfoundYear'], gate: ['gate'], vehicle: ['studentMoto'], ruenthai: ['ruenthai'] };
+export const TOPIC_PARTS = { incidents: ['incidents'], lostfound: ['lostfound', 'lostfoundYear'], gate: ['gate'], vehicle: ['studentMoto'], ruenthai: ['ruenthai'], anywheel: ['anywheel'] };
 export function partsFor(topics) { const s = new Set(); topics.forEach((t) => (TOPIC_PARTS[t] || []).forEach((p) => s.add(p))); return [...s]; }
 export function topicsForChat(q, recentUser) { const t = topicsOf(String(q || '') + ' ' + String(recentUser || '')); return t.length ? t : CORE.slice(); }
 // คำทักทาย/ขอบคุณ/ถามเมนู ที่ไม่มีหัวข้อและไม่มีตัวเลข → ตอบจากโค้ด ไม่อ่านแหล่ง ไม่เรียกโมเดล
@@ -212,7 +218,7 @@ export function actionsFor(topics, q, ctx, nowMs) {
 }
 // หลักฐาน/ความสดรายหัวข้อ — คำเดียวกับป้ายสถานะบนหน้าเว็บ: live = ข้อมูลสด (อ่านจากต้นทางเมื่อ …) · stale = ผลที่อ่านสำเร็จล่าสุด (รอบล่าสุดอ่านไม่สำเร็จ) · snapshot = ไฟล์สรุป (ข้อมูลถึง …)
 const EV_NAME = { incidents: 'รายงานเหตุการณ์', lostfound: 'Lost & Found', gate: 'รถเข้าและหมวกนิรภัย', cctv: 'คำขอดูกล้อง CCTV', anywheel: 'จักรยาน Anywheel', tram: 'รถรางบริการพิเศษ', guard: 'ความพึงพอใจ รปภ.', vehicle: 'ทะเบียนยานพาหนะ', ops: 'ทะเบียนของงานจราจร', ruenthai: 'ลานจอดเรือนไทย' };
-const EV_PART = { incidents: 'incidents', lostfound: 'lostfoundYear', gate: 'gate', vehicle: 'studentMoto', ruenthai: 'ruenthai' };
+const EV_PART = { incidents: 'incidents', lostfound: 'lostfoundYear', gate: 'gate', vehicle: 'studentMoto', ruenthai: 'ruenthai', anywheel: 'anywheel' };
 export function evidenceFor(topics, stats, extra, liveInfo) {
   const M = (stats && stats.modules) || {}, X = extra || {}, LI = liveInfo || { topics: {}, errors: {} }, d = (s) => (s ? dTh(String(s).slice(0, 16).replace('T', ' ')) : '');
   const snapAt = { incidents: M.incidents && M.incidents.updated, lostfound: M.lostfound && M.lostfound.updated, gate: M.gate && M.gate.updated, cctv: M.cctv && M.cctv.updated, anywheel: X.anywheel && X.anywheel.updated, tram: X.tram && X.tram.updated,
@@ -253,6 +259,9 @@ export function summarize(stats, extra, ctx, nowMs, liveInfo) {
     if (rr.length) { const days = sum(rr, (r) => r.days), nh = sum(rr, (r) => r.noHelmet), pd = sum(pp, (r) => r.days), pnh = sum(pp, (r) => r.noHelmet);
       pts.push({ topic: 'gate', text: 'รถเข้า ' + label + ' (' + n(days) + ' วันที่มีข้อมูล): รถยนต์ ' + n(sum(rr, (r) => r.cars)) + ' · จักรยานยนต์ ' + n(sum(rr, (r) => r.motorcycles)) + ' · ไม่สวมหมวก ' + n(nh) + ' ราย (เฉลี่ย ' + n(Math.round(nh / Math.max(1, days))) + '/วัน'
         + (pp.length && pd ? ' เทียบ ' + pLabel + ' ' + n(Math.round(pnh / pd)) + '/วัน' : '') + ')' }); } }
+  const aw = X.anywheel;      // รอบ 14.3
+  if (aw && aw.monthly && aw.monthly.length) { const rr = aw.monthly.filter((r) => inR(r.month)), last = aw.monthly[aw.monthly.length - 1];
+    pts.push({ topic: 'anywheel', text: rr.length ? 'Anywheel ' + label + (rr.length < span ? ' (มีข้อมูลเฉพาะ ' + rr.map((r) => mTh(r.month)).join(', ') + ')' : '') + ': ใช้งาน ' + n(sum(rr, (r) => r.trips)) + ' ครั้ง · ระยะทาง ' + n(Math.round(sum(rr, (r) => r.km))) + ' กม.' : 'Anywheel ' + label + ': ยังไม่มีข้อมูลในต้นทาง — ข้อมูลล่าสุดคือ ' + mTh(last.month) + ' (' + n(last.trips) + ' ครั้ง)' }); }
   const ev = evidenceFor([...new Set(pts.map((p) => p.topic))], stats, extra, liveInfo);
   return { label, points: pts.slice(0, 5), evidence: ev };
 }

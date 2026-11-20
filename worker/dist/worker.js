@@ -71,6 +71,10 @@ function applyLive(stats, extra, live) {
     if (live[k]) X[k] = Object.assign(X[k] || {}, live[k]);
   });
   if (live.lostfoundStatus && X.lostfoundStatus) Object.assign(X.lostfoundStatus, live.lostfoundStatus);
+  if (live.anywheel) {
+    X.anywheel = Object.assign({}, X.anywheel || {}, live.anywheel);
+    if (RD.anywheel) L.topics.anywheel = RD.anywheel;
+  }
   const vr = M.vehicleRegistration;
   if (vr) {
     if (live.studentMoto) {
@@ -210,7 +214,14 @@ function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
   const aw = X.anywheel;
   if (aw && aw.monthly && use.has("anywheel")) {
     src.anywheel = "\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19 Anywheel";
-    aw.monthly.forEach((r) => add("\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19 Anywheel", mTh(r.month), "\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19 " + n(r.trips) + " \u0E04\u0E23\u0E31\u0E49\u0E07, \u0E23\u0E30\u0E22\u0E30\u0E17\u0E32\u0E07 " + n(r.km) + " \u0E01\u0E21." + (r.minutes == null ? "" : ", \u0E40\u0E27\u0E25\u0E32\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19 " + n(r.minutes) + " \u0E19\u0E32\u0E17\u0E35"), dTh(aw.updated)));
+    const awAt = dTh(LI.topics && LI.topics.anywheel ? LI.topics.anywheel : aw.readAt || aw.checkedAt || aw.updated), km = (v) => n(Math.round(v || 0));
+    const awFocus = question != null && picked.length <= 3, awM = aw.monthly.slice(awFocus ? -12 : -3);
+    awM.forEach((r) => add("\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19 Anywheel", mTh(r.month), n(r.trips) + " \u0E04\u0E23\u0E31\u0E49\u0E07, " + km(r.km) + " \u0E01\u0E21." + (r.days ? ", " + r.days + (r.daysInMonth && r.days < r.daysInMonth ? "/" + r.daysInMonth : "") + " \u0E27\u0E31\u0E19 (\u0E40\u0E09\u0E25\u0E35\u0E48\u0E22 " + n(Math.round(r.trips / r.days)) + "/\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25)" : "") + (r.minutes == null ? "" : ", " + n(Math.round(r.minutes)) + " \u0E19\u0E32\u0E17\u0E35"), awAt));
+    [...new Set((awFocus ? aw.monthly : awM).map((r) => r.month.slice(0, 4)))].forEach((y) => {
+      const rr = aw.monthly.filter((r) => r.month.slice(0, 4) === y);
+      add("\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19 Anywheel", "\u0E1B\u0E35\u0E1B\u0E0F\u0E34\u0E17\u0E34\u0E19 \u0E1E.\u0E28. " + (+y + 543) + " (\u0E40\u0E09\u0E1E\u0E32\u0E30 " + mTh(rr[0].month) + " \u2013 " + mTh(rr[rr.length - 1].month) + ")", "\u0E23\u0E27\u0E21 " + n(sum(rr, (r) => r.trips)) + " \u0E04\u0E23\u0E31\u0E49\u0E07, \u0E23\u0E30\u0E22\u0E30\u0E17\u0E32\u0E07 " + km(sum(rr, (r) => r.km)) + " \u0E01\u0E21.", awAt);
+    });
+    add("\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19 Anywheel", "\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E43\u0E19\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07", aw.lastDate ? dTh(aw.lastDate) + " (\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27 = \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 \u0E2B\u0E49\u0E32\u0E21\u0E43\u0E0A\u0E49\u0E22\u0E2D\u0E14\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E2D\u0E37\u0E48\u0E19\u0E41\u0E17\u0E19 \xB7 \u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E19\u0E32\u0E17\u0E35 = \u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E40\u0E27\u0E25\u0E32\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19)" : "\u0E40\u0E14\u0E37\u0E2D\u0E19 " + mTh(aw.lastMonth || aw.monthly[aw.monthly.length - 1].month), awAt);
   }
   const tr = X.tram;
   if (tr && tr.monthly && use.has("tram")) {
@@ -250,9 +261,9 @@ function buildFacts(stats, extra, ctx, nowMs, question, liveInfo) {
       add("\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14\u0E23\u0E16\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E44\u0E17\u0E22 (\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14)", "\u0E41\u0E22\u0E01\u0E15\u0E32\u0E21\u0E2B\u0E21\u0E27\u0E14 (\u0E2B\u0E19\u0E48\u0E27\u0E22: \u0E41\u0E1A\u0E1A\u0E2A\u0E33\u0E23\u0E27\u0E08 \u0E22\u0E01\u0E40\u0E27\u0E49\u0E19\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E23\u0E16\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01)", "\u0E01\u0E25\u0E38\u0E48\u0E21: " + topObj(R.byGroup, 8, "\u0E09\u0E1A\u0E31\u0E1A") + " \xB7 \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49: " + topObj(R.bySubType, 8, "\u0E09\u0E1A\u0E31\u0E1A") + " \xB7 \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E23\u0E16 (\u0E19\u0E31\u0E1A\u0E0A\u0E48\u0E2D\u0E07\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E23\u0E16\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01): " + topObj(R.byCarType, 8, "\u0E0A\u0E48\u0E2D\u0E07") + " \xB7 \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E01\u0E25\u0E49\u0E2D\u0E07 LPR (\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E15\u0E48\u0E2D\u0E41\u0E1A\u0E1A\u0E2A\u0E33\u0E23\u0E27\u0E08 \u0E08\u0E36\u0E07\u0E19\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E09\u0E1A\u0E31\u0E1A \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E31\u0E19): " + topObj(R.byLpr, 8, "\u0E09\u0E1A\u0E31\u0E1A") + " \xB7 \u0E04\u0E13\u0E30/\u0E2A\u0E48\u0E27\u0E19\u0E07\u0E32\u0E19 (\u0E2D\u0E31\u0E19\u0E14\u0E31\u0E1A\u0E41\u0E23\u0E01): " + topObj(R.byFaculty, 6, "\u0E09\u0E1A\u0E31\u0E1A"), dTh(R.checkedAt));
     } else add("\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14\u0E23\u0E16\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E44\u0E17\u0E22 (\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2A\u0E14" + (rt.liveErr ? " \u2014 \u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E14\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + why(rt.liveErr) : "") + ")", dTh(rt.from) + " \u2013 " + dTh(rt.to), "\u0E41\u0E1A\u0E1A\u0E2A\u0E33\u0E23\u0E27\u0E08\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32 " + n(rt.total) + " \u0E09\u0E1A\u0E31\u0E1A \u2014 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E08\u0E33\u0E19\u0E27\u0E19\u0E23\u0E16\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E2D\u0E14\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34 \xB7 \u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B\u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E33\u0E19\u0E27\u0E19\u0E23\u0E16\u0E2B\u0E23\u0E37\u0E2D\u0E01\u0E32\u0E23\u0E41\u0E22\u0E01\u0E01\u0E25\u0E38\u0E48\u0E21", dTh(rt.checkedAt));
   }
-  [["cctv", c && c.monthly, "\u0E04\u0E33\u0E02\u0E2D\u0E14\u0E39\u0E01\u0E25\u0E49\u0E2D\u0E07 CCTV (\u0E2A\u0E48\u0E27\u0E19\u0E01\u0E25\u0E32\u0E07)", c && c.updated], ["anywheel", aw && aw.monthly, "\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19 Anywheel", aw && aw.updated], ["tram", tr && tr.monthly, "\u0E23\u0E16\u0E23\u0E32\u0E07\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E1E\u0E34\u0E40\u0E28\u0E29", tr && tr.updated]].forEach((x) => {
+  [["cctv", c && c.monthly, "\u0E04\u0E33\u0E02\u0E2D\u0E14\u0E39\u0E01\u0E25\u0E49\u0E2D\u0E07 CCTV (\u0E2A\u0E48\u0E27\u0E19\u0E01\u0E25\u0E32\u0E07)", c && c.updated], ["anywheel", aw && aw.monthly, "\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19 Anywheel", aw && (LI.topics && LI.topics.anywheel || aw.readAt || aw.checkedAt), aw && !aw.snapshot], ["tram", tr && tr.monthly, "\u0E23\u0E16\u0E23\u0E32\u0E07\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E1E\u0E34\u0E40\u0E28\u0E29", tr && tr.updated]].forEach((x) => {
     if (!use.has(x[0]) || !x[1] || !x[1].length || x[1].some((r) => r.month === curM)) return;
-    add(x[2], "\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49 " + mTh(curM), "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B \u2014 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E17\u0E35\u0E48\u0E21\u0E35\u0E04\u0E37\u0E2D " + mTh(x[1][x[1].length - 1].month) + " (\u0E2B\u0E49\u0E32\u0E21\u0E19\u0E33\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E2D\u0E37\u0E48\u0E19\u0E21\u0E32\u0E15\u0E2D\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49)", dTh(x[3]));
+    add(x[2], "\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49 " + mTh(curM), "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49" + (x[4] ? "\u0E43\u0E19\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07" : "\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E23\u0E38\u0E1B") + " \u2014 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E17\u0E35\u0E48\u0E21\u0E35\u0E04\u0E37\u0E2D " + mTh(x[1][x[1].length - 1].month) + " (\u0E2B\u0E49\u0E32\u0E21\u0E19\u0E33\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E2D\u0E37\u0E48\u0E19\u0E21\u0E32\u0E15\u0E2D\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49)", dTh(x[3]));
   });
   const others = Object.keys(TOPICS).filter((k) => !use.has(k));
   if (others.length) L.push("\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E2D\u0E37\u0E48\u0E19\u0E17\u0E35\u0E48\u0E23\u0E30\u0E1A\u0E1A\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 (\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E41\u0E19\u0E1A\u0E21\u0E32\u0E43\u0E19\u0E23\u0E2D\u0E1A\u0E19\u0E35\u0E49 \u2014 \u0E16\u0E49\u0E32\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E16\u0E32\u0E21\u0E16\u0E36\u0E07 \u0E43\u0E2B\u0E49\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E16\u0E32\u0E21\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E31\u0E49\u0E19\u0E42\u0E14\u0E22\u0E15\u0E23\u0E07\u0E44\u0E14\u0E49): " + others.map((k) => ({ incidents: "\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C/\u0E2D\u0E38\u0E1A\u0E31\u0E15\u0E34\u0E40\u0E2B\u0E15\u0E38", lostfound: "Lost & Found", gate: "\u0E23\u0E16\u0E40\u0E02\u0E49\u0E32\u0E41\u0E25\u0E30\u0E2B\u0E21\u0E27\u0E01\u0E19\u0E34\u0E23\u0E20\u0E31\u0E22", cctv: "\u0E04\u0E33\u0E02\u0E2D\u0E14\u0E39\u0E01\u0E25\u0E49\u0E2D\u0E07 CCTV", anywheel: "\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19 Anywheel", tram: "\u0E23\u0E16\u0E23\u0E32\u0E07", guard: "\u0E04\u0E27\u0E32\u0E21\u0E1E\u0E36\u0E07\u0E1E\u0E2D\u0E43\u0E08 \u0E23\u0E1B\u0E20.", vehicle: "\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30", ops: "\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14/\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30\u0E02\u0E2D\u0E07\u0E07\u0E32\u0E19/\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E14\u0E31\u0E1A\u0E40\u0E1E\u0E25\u0E34\u0E07", ruenthai: "\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E44\u0E17\u0E22" })[k]).join(", "));
@@ -268,7 +279,7 @@ function numbersOk(reply, factsText, question) {
   let body = String(reply).replace(/^\s*\d{1,2}[.)]\s/gm, "").replace(new RegExp("(?:\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\\s*)?\\b\\d{1,2}\\s*(?:-|\u2013|\u0E16\u0E36\u0E07)?\\s*(?:\\d{1,2}\\s*)?" + MONTH_RX, "g"), " ").replace(/วันที่\s*\d{1,2}\b/g, " ").replace(/\b\d{1,2}[:.]\d{2}\s*น\./g, " ").replace(/\b\d{1,2}[:.]\d{2}(?::\d{2})?\b/g, " ").replace(/\b(?:256\d|257\d|201[7-9]|202\d|203[0-2])\b/g, " ").replace(/#[a-z0-9-]+/g, " ");
   return norm(body).every((x) => allowed.has(x));
 }
-var TOPIC_PARTS = { incidents: ["incidents"], lostfound: ["lostfound", "lostfoundYear"], gate: ["gate"], vehicle: ["studentMoto"], ruenthai: ["ruenthai"] };
+var TOPIC_PARTS = { incidents: ["incidents"], lostfound: ["lostfound", "lostfoundYear"], gate: ["gate"], vehicle: ["studentMoto"], ruenthai: ["ruenthai"], anywheel: ["anywheel"] };
 function partsFor(topics) {
   const s = /* @__PURE__ */ new Set();
   topics.forEach((t) => (TOPIC_PARTS[t] || []).forEach((p) => s.add(p)));
@@ -339,7 +350,7 @@ function actionsFor(topics, q, ctx, nowMs) {
   return out.slice(0, 4);
 }
 var EV_NAME = { incidents: "\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C", lostfound: "Lost & Found", gate: "\u0E23\u0E16\u0E40\u0E02\u0E49\u0E32\u0E41\u0E25\u0E30\u0E2B\u0E21\u0E27\u0E01\u0E19\u0E34\u0E23\u0E20\u0E31\u0E22", cctv: "\u0E04\u0E33\u0E02\u0E2D\u0E14\u0E39\u0E01\u0E25\u0E49\u0E2D\u0E07 CCTV", anywheel: "\u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19 Anywheel", tram: "\u0E23\u0E16\u0E23\u0E32\u0E07\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E1E\u0E34\u0E40\u0E28\u0E29", guard: "\u0E04\u0E27\u0E32\u0E21\u0E1E\u0E36\u0E07\u0E1E\u0E2D\u0E43\u0E08 \u0E23\u0E1B\u0E20.", vehicle: "\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E22\u0E32\u0E19\u0E1E\u0E32\u0E2B\u0E19\u0E30", ops: "\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E02\u0E2D\u0E07\u0E07\u0E32\u0E19\u0E08\u0E23\u0E32\u0E08\u0E23", ruenthai: "\u0E25\u0E32\u0E19\u0E08\u0E2D\u0E14\u0E40\u0E23\u0E37\u0E2D\u0E19\u0E44\u0E17\u0E22" };
-var EV_PART = { incidents: "incidents", lostfound: "lostfoundYear", gate: "gate", vehicle: "studentMoto", ruenthai: "ruenthai" };
+var EV_PART = { incidents: "incidents", lostfound: "lostfoundYear", gate: "gate", vehicle: "studentMoto", ruenthai: "ruenthai", anywheel: "anywheel" };
 function evidenceFor(topics, stats, extra, liveInfo) {
   const M = stats && stats.modules || {}, X = extra || {}, LI = liveInfo || { topics: {}, errors: {} }, d = (s) => s ? dTh(String(s).slice(0, 16).replace("T", " ")) : "";
   const snapAt = {
@@ -412,6 +423,11 @@ function summarize(stats, extra, ctx, nowMs, liveInfo) {
       pts.push({ topic: "gate", text: "\u0E23\u0E16\u0E40\u0E02\u0E49\u0E32 " + label + " (" + n(days) + " \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25): \u0E23\u0E16\u0E22\u0E19\u0E15\u0E4C " + n(sum(rr, (r) => r.cars)) + " \xB7 \u0E08\u0E31\u0E01\u0E23\u0E22\u0E32\u0E19\u0E22\u0E19\u0E15\u0E4C " + n(sum(rr, (r) => r.motorcycles)) + " \xB7 \u0E44\u0E21\u0E48\u0E2A\u0E27\u0E21\u0E2B\u0E21\u0E27\u0E01 " + n(nh) + " \u0E23\u0E32\u0E22 (\u0E40\u0E09\u0E25\u0E35\u0E48\u0E22 " + n(Math.round(nh / Math.max(1, days))) + "/\u0E27\u0E31\u0E19" + (pp.length && pd ? " \u0E40\u0E17\u0E35\u0E22\u0E1A " + pLabel + " " + n(Math.round(pnh / pd)) + "/\u0E27\u0E31\u0E19" : "") + ")" });
     }
   }
+  const aw = X.anywheel;
+  if (aw && aw.monthly && aw.monthly.length) {
+    const rr = aw.monthly.filter((r) => inR(r.month)), last = aw.monthly[aw.monthly.length - 1];
+    pts.push({ topic: "anywheel", text: rr.length ? "Anywheel " + label + (rr.length < span ? " (\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E40\u0E09\u0E1E\u0E32\u0E30 " + rr.map((r) => mTh(r.month)).join(", ") + ")" : "") + ": \u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19 " + n(sum(rr, (r) => r.trips)) + " \u0E04\u0E23\u0E31\u0E49\u0E07 \xB7 \u0E23\u0E30\u0E22\u0E30\u0E17\u0E32\u0E07 " + n(Math.round(sum(rr, (r) => r.km))) + " \u0E01\u0E21." : "Anywheel " + label + ": \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E19\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07 \u2014 \u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E04\u0E37\u0E2D " + mTh(last.month) + " (" + n(last.trips) + " \u0E04\u0E23\u0E31\u0E49\u0E07)" });
+  }
   const ev = evidenceFor([...new Set(pts.map((p) => p.topic))], stats, extra, liveInfo);
   return { label, points: pts.slice(0, 5), evidence: ev };
 }
@@ -428,7 +444,7 @@ var Err = class extends Error {
     this.extra = extra;
   }
 };
-var WORKER_REV = "r14.2";
+var WORKER_REV = "r14.3";
 var SEC = { "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin", "x-hub-rev": WORKER_REV };
 var redact = (t) => String(t == null ? "" : t).replace(/https?:\/\/[^\s'")]+/g, "<url>").replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "<email>").replace(/[A-Za-z0-9_-]{24,}/g, "<id>").replace(/\d{6,}/g, "<n>");
 var DIAG_ROUTES = /* @__PURE__ */ new Set(["/api/stats", "/api/data", "/api/img", "/api/chat", "/api/me", "/api/login", "/api/logout", "/api/roster", "/api/health", "/api/relay"]);
@@ -545,10 +561,156 @@ var SOURCES = (env) => ({
   // รอบ 10: Sheet ส่วนตัว (ไม่ได้แชร์ลิงก์) → อ่านผ่าน Apps Script ของเจ้าของไฟล์ (apps-script/HubRelay.gs) เท่านั้น · ตรวจชื่อแท็บ/gid แล้ว 16 พ.ย. 2569
   studentMoto: [env.SHEET_VEH_STUDENT, "1304328494"],
   // MU ฐานข้อมูลลงทะเบียนยานพาหนะ นักศึกษา → Registrations_Motorcycle (gid 1053059692 = Registrations ไม่ใช่รถจักรยานยนต์)
-  ruenthai: [env.SHEET_RUENTHAI, "873571277"]
+  ruenthai: [env.SHEET_RUENTHAI, "873571277"],
   // ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย → RuenThai_Survey (ไม่อ่านแท็บ Tokens)
+  anywheel: [env.SHEET_ANYWHEEL, "0"]
+  // รอบ 14.3: “ข้อมูล Anywheel new” → แท็บ ข้อมูลรายวัน (รหัสไฟล์อยู่ใน env ของ Pages ไม่อยู่ใน Repository)
 });
 var PRIVATE_SRC = /* @__PURE__ */ new Set(["studentMoto", "ruenthai"]);
+var GVIZ_SRC = /* @__PURE__ */ new Set(["anywheel"]);
+var AW_COLS = { date: "\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48", month: "\u0E40\u0E14\u0E37\u0E2D\u0E19", trips: "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E23\u0E31\u0E49\u0E07", meters: "\u0E23\u0E30\u0E22\u0E30\u0E17\u0E32\u0E07(\u0E40\u0E21\u0E15\u0E23)", km: "\u0E23\u0E30\u0E22\u0E30\u0E17\u0E32\u0E07(\u0E01\u0E21.)", minutes: "\u0E40\u0E27\u0E25\u0E32\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19(\u0E19\u0E32\u0E17\u0E35)" };
+async function readGviz(env, key, deps, src) {
+  const url = "https://docs.google.com/spreadsheets/d/" + src[0] + "/gviz/tq?tqx=out:json&headers=1&gid=" + src[1] + "&tq=" + encodeURIComponent("select A,B,C,D,E,F");
+  let r;
+  try {
+    r = await deps.fetch(url, { redirect: "follow", signal: AbortSignal.timeout(SRC_TIMEOUT) });
+  } catch (e) {
+    const x = new Err(502, e && (e.name === "TimeoutError" || e.name === "AbortError") ? "source-timeout" : "source-unreachable");
+    x.causeType = e && e.name;
+    x.stage = "source-fetch";
+    throw x;
+  }
+  if (r.status === 401 || r.status === 403) throw new Err(502, "source-private");
+  if (!r.ok) throw new Err(502, "source-error");
+  let body;
+  try {
+    body = await r.text();
+  } catch (e) {
+    const x = new Err(502, e && (e.name === "TimeoutError" || e.name === "AbortError") ? "source-timeout" : "source-unreachable");
+    x.causeType = e && e.name;
+    x.stage = "source-body";
+    throw x;
+  }
+  const i = body.indexOf("{"), k = body.lastIndexOf("}");
+  if (i < 0 || k < i) throw new Err(502, /<html/i.test(body) ? "source-private" : "source-schema");
+  let j;
+  try {
+    j = JSON.parse(body.slice(i, k + 1));
+  } catch (e) {
+    throw new Err(502, "source-schema");
+  }
+  if (j.status !== "ok") throw new Err(502, (j.errors || []).some((x) => /access|denied|permission|sign/i.test((x.reason || "") + " " + (x.message || ""))) ? "source-private" : "source-schema");
+  const tb = j.table || {};
+  if (!Array.isArray(tb.cols) || !Array.isArray(tb.rows)) throw new Err(502, "source-schema");
+  return { head: tb.cols.map((c) => str(c.label).replace(/\s+/g, "")), rows: tb.rows.map((x) => (x.c || []).map((c) => c == null || c.v === void 0 ? null : c.v)) };
+}
+var serialYMD = (n2) => {
+  const d = new Date(Date.UTC(1899, 11, 30) + Math.round(n2) * 864e5);
+  return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
+};
+function cellYMD(v) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number" && isFinite(v) && v > 2e4 && v < 8e4) return serialYMD(v);
+  const s = String(v).trim();
+  let m;
+  if (m = /^Date\((\d{4}),(\d{1,2}),(\d{1,2})/.exec(s)) return [+m[1], +m[2] + 1, +m[3]];
+  if (m = /^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/.exec(s)) return [+m[1], +m[2], m[3] ? +m[3] : null];
+  if (m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s)) return [+m[3], +m[2], +m[1], "dmy"];
+  return null;
+}
+var cellNum = (v) => {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return isFinite(v) ? v : NaN;
+  const s = String(v).replace(/[\s,]/g, "");
+  return /^-?\d+(\.\d+)?$/.test(s) ? +s : s === "" ? null : NaN;
+};
+var p2 = (n2) => String(n2).padStart(2, "0");
+var TH_MON = ["\u0E21.\u0E04.", "\u0E01.\u0E1E.", "\u0E21\u0E35.\u0E04.", "\u0E40\u0E21.\u0E22.", "\u0E1E.\u0E04.", "\u0E21\u0E34.\u0E22.", "\u0E01.\u0E04.", "\u0E2A.\u0E04.", "\u0E01.\u0E22.", "\u0E15.\u0E04.", "\u0E1E.\u0E22.", "\u0E18.\u0E04."];
+var thM = (mk) => TH_MON[+mk.slice(5, 7) - 1] + " " + (+mk.slice(0, 4) + 543);
+function awNotes(a) {
+  const q = a.quality, part = a.monthly.filter((r) => r.days < r.daysInMonth), noMin = a.monthly.filter((r) => r.minutes == null);
+  const n2 = [
+    "\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E23\u0E32\u0E22\u0E27\u0E31\u0E19 (1 \u0E41\u0E16\u0E27 = 1 \u0E27\u0E31\u0E19) \u0E15\u0E31\u0E49\u0E07\u0E41\u0E15\u0E48 " + thM(a.firstMonth) + " \u2014 \u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E04\u0E37\u0E2D " + (a.lastDate ? +a.lastDate.slice(8) + " " + thM(a.lastDate) : thM(a.lastMonth)) + " \xB7 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27 = \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 0)",
+    "\u0E22\u0E2D\u0E14\u0E23\u0E32\u0E22\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E08\u0E31\u0E14\u0E01\u0E25\u0E38\u0E48\u0E21\u0E15\u0E32\u0E21\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C \u201C\u0E40\u0E14\u0E37\u0E2D\u0E19\u201D \xB7 \u0E23\u0E30\u0E22\u0E30\u0E17\u0E32\u0E07\u0E43\u0E0A\u0E49\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C \u0E23\u0E30\u0E22\u0E30\u0E17\u0E32\u0E07 (\u0E01\u0E21.) (\u0E16\u0E49\u0E32\u0E27\u0E48\u0E32\u0E07\u0E43\u0E0A\u0E49 \u0E40\u0E21\u0E15\u0E23 \xF7 1,000) \xB7 \u0E23\u0E27\u0E21\u0E17\u0E28\u0E19\u0E34\u0E22\u0E21\u0E01\u0E48\u0E2D\u0E19\u0E1B\u0E31\u0E14",
+    "\u0E40\u0E09\u0E25\u0E35\u0E48\u0E22\u0E15\u0E48\u0E2D\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 = \u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E23\u0E31\u0E49\u0E07 \xF7 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25" + (part.length ? " \xB7 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E44\u0E21\u0E48\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E27\u0E31\u0E19: " + part.map((r) => thM(r.month) + " (" + r.days + "/" + r.daysInMonth + " \u0E27\u0E31\u0E19)").join(", ") : "")
+  ];
+  if (noMin.length) n2.push("\u0E40\u0E27\u0E25\u0E32\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19: \u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E40\u0E27\u0E49\u0E19\u0E27\u0E48\u0E32\u0E07\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E21\u0E48\u0E04\u0E23\u0E1A\u0E43\u0E19 " + noMin.length + " \u0E40\u0E14\u0E37\u0E2D\u0E19 (\u0E40\u0E0A\u0E48\u0E19 " + noMin.slice(-3).map((r) => thM(r.month)).join(", ") + ") \u0E08\u0E36\u0E07\u0E41\u0E2A\u0E14\u0E07\u0E27\u0E48\u0E32\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25/\u0E44\u0E21\u0E48\u0E04\u0E23\u0E1A");
+  const bad = [q.unassigned && "\u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 " + q.unassigned, q.badTrips && "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E23\u0E31\u0E49\u0E07\u0E1C\u0E34\u0E14\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A " + q.badTrips, q.missingTrips && "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E23\u0E31\u0E49\u0E07\u0E27\u0E48\u0E32\u0E07 " + q.missingTrips, q.badKm && "\u0E23\u0E30\u0E22\u0E30\u0E17\u0E32\u0E07\u0E1C\u0E34\u0E14\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A " + q.badKm, q.kmConflicts && "\u0E40\u0E21\u0E15\u0E23/\u0E01\u0E21. \u0E44\u0E21\u0E48\u0E15\u0E23\u0E07\u0E01\u0E31\u0E19 " + q.kmConflicts, q.duplicateDates && "\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E0B\u0E49\u0E33 " + q.duplicateDates, q.dateAmbiguous && "\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 " + q.dateAmbiguous].filter(Boolean);
+  n2.push(bad.length ? "\u0E15\u0E23\u0E27\u0E08\u0E04\u0E38\u0E13\u0E20\u0E32\u0E1E: " + bad.join(" \xB7 ") + " \u0E41\u0E16\u0E27 (\u0E44\u0E21\u0E48\u0E19\u0E31\u0E1A\u0E23\u0E27\u0E21\u0E43\u0E19\u0E22\u0E2D\u0E14/\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E44\u0E27\u0E49 \u0E44\u0E21\u0E48\u0E15\u0E31\u0E14\u0E17\u0E34\u0E49\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46)" : "\u0E15\u0E23\u0E27\u0E08\u0E04\u0E38\u0E13\u0E20\u0E32\u0E1E: " + q.rowsTotal + " \u0E41\u0E16\u0E27 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E48\u0E32\u0E1C\u0E34\u0E14\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E0B\u0E49\u0E33 \u0E2B\u0E23\u0E37\u0E2D\u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E08\u0E31\u0E14\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49");
+  return n2;
+}
+function awAggregate(t) {
+  const ix = {};
+  for (const k in AW_COLS) ix[k] = t.head.indexOf(AW_COLS[k].replace(/\s+/g, ""));
+  if (ix.month < 0 || ix.trips < 0 || ix.km < 0 && ix.meters < 0) throw new Err(502, "source-schema", { missing: ["\u0E40\u0E14\u0E37\u0E2D\u0E19", "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E23\u0E31\u0E49\u0E07", "\u0E23\u0E30\u0E22\u0E30\u0E17\u0E32\u0E07 (\u0E01\u0E21.)"].filter((n2, i) => [ix.month, ix.trips, Math.max(ix.km, ix.meters)][i] < 0) });
+  const M = {}, q = { rowsTotal: 0, unassigned: 0, badTrips: 0, missingTrips: 0, badKm: 0, kmFromMeters: 0, kmConflicts: 0, dateAmbiguous: 0, duplicateDates: 0 }, seen = {};
+  let lastDate = "";
+  t.rows.forEach((r) => {
+    const g = (k) => ix[k] >= 0 ? r[ix[k]] : null;
+    if ([g("date"), g("month"), g("trips"), g("km"), g("meters"), g("minutes")].every((v) => v == null || v === "")) return;
+    q.rowsTotal++;
+    const b = cellYMD(g("month"));
+    if (!b || !(b[1] >= 1 && b[1] <= 12)) {
+      q.unassigned++;
+      return;
+    }
+    const mk = b[0] + "-" + p2(b[1]), o = M[mk] || (M[mk] = { month: mk, rows: 0, days: 0, trips: 0, km: 0, kmRows: 0, minutes: 0, minuteRows: 0, dateAmbiguous: 0, _d: /* @__PURE__ */ new Set() });
+    o.rows++;
+    const tr = cellNum(g("trips"));
+    if (tr == null) q.missingTrips++;
+    else if (!(tr >= 0) || Math.round(tr) !== tr) q.badTrips++;
+    else o.trips += tr;
+    const e = cellNum(g("km")), dm = cellNum(g("meters"));
+    if (e != null && e >= 0) {
+      o.km += e;
+      o.kmRows++;
+      if (dm != null && dm >= 0 && Math.abs(dm / 1e3 - e) > 0.5) q.kmConflicts++;
+    } else if (e == null && dm != null && dm >= 0) {
+      o.km += dm / 1e3;
+      o.kmRows++;
+      q.kmFromMeters++;
+    } else if (e != null || dm != null) q.badKm++;
+    const mi = cellNum(g("minutes"));
+    if (mi != null && mi >= 0) {
+      o.minutes += mi;
+      o.minuteRows++;
+    }
+    const a = cellYMD(g("date"));
+    let day = null;
+    if (a && a[0] === b[0]) {
+      if (a[1] === b[1] && a[2]) day = a[2];
+      else if (a[2] === b[1] && a[1] >= 1 && a[1] <= 31) day = a[1];
+    }
+    if (day && day <= new Date(Date.UTC(b[0], b[1], 0)).getUTCDate()) {
+      const dk = mk + "-" + p2(day);
+      if (o._d.has(dk)) q.duplicateDates++;
+      o._d.add(dk);
+      if (dk > lastDate) lastDate = dk;
+      seen[dk] = 1;
+    } else {
+      o.dateAmbiguous++;
+      q.dateAmbiguous++;
+    }
+  });
+  const monthly = Object.keys(M).sort().map((k) => {
+    const o = M[k];
+    return {
+      month: k,
+      rows: o.rows,
+      days: o._d.size + o.dateAmbiguous,
+      verifiedDays: o._d.size,
+      daysInMonth: new Date(Date.UTC(+k.slice(0, 4), +k.slice(5, 7), 0)).getUTCDate(),
+      dateAmbiguous: o.dateAmbiguous,
+      trips: o.trips,
+      km: Math.round(o.km * 1e3) / 1e3,
+      kmRows: o.kmRows,
+      minutes: o.minuteRows && o.minuteRows === o.rows ? Math.round(o.minutes * 100) / 100 : null,
+      minutesPartial: o.minuteRows && o.minuteRows < o.rows ? { minutes: Math.round(o.minutes * 100) / 100, rows: o.minuteRows } : void 0
+    };
+  });
+  if (!monthly.length) throw new Err(502, "source-schema");
+  return { monthly, lastDate, firstMonth: monthly[0].month, lastMonth: monthly[monthly.length - 1].month, quality: q };
+}
 var RELAY_VERSION = "r13";
 var RELAY_OK = ["r13"];
 var RELAY_COLS = {
@@ -645,7 +807,7 @@ var _stat = { reads: {} };
 var SRC_TIMEOUT = 25e3;
 async function srcKey(env, key, deps) {
   const src = SOURCES(env)[key] || [], cfg = PRIVATE_SRC.has(key) ? await relayCfg(env, deps) : null;
-  const via = PRIVATE_SRC.has(key) ? "relay:" + (cfg ? cfg.rev : "none") : env.HUB_GS_URL && env.HUB_SHARED_SECRET ? "hubdata:" + env.HUB_GS_URL : "csv";
+  const via = PRIVATE_SRC.has(key) ? "relay:" + (cfg ? cfg.rev : "none") : GVIZ_SRC.has(key) ? "gviz:a-f" : env.HUB_GS_URL && env.HUB_SHARED_SECRET ? "hubdata:" + env.HUB_GS_URL : "csv";
   return { mk: key + "|" + hashStr(JSON.stringify(src) + "|" + via), cfg };
 }
 async function memoOf(env, key, deps) {
@@ -680,6 +842,11 @@ async function readTable(env, key, deps, mk, cfg) {
     const j = await relayCall(env, deps, { action: "table", source: key, ...RELAY_COLS[key] }, cfg || void 0);
     if (!Array.isArray(j.rows)) throw new Err(502, "source-error");
     rows = j.rows.map((x) => x.map(str));
+  } else if (GVIZ_SRC.has(key)) {
+    const g = await readGviz(env, key, deps, src);
+    const t2 = { head: g.head, rows: g.rows, at: deps.now(), raw: true };
+    memo.set(mk, t2);
+    return t2;
   } else if (env.HUB_GS_URL && env.HUB_SHARED_SECRET) {
     rows = (await hubDataCall(env, deps, key)).rows.map((x) => x.map(str));
   } else {
@@ -994,7 +1161,7 @@ async function login(request, env, deps, net) {
   return json({ ok: true, user: { name: me.name, unit: me.unit, role } }, 200, { "set-cookie": setCookie(tok, hours * 3600) });
 }
 var mapSt = { "\u0E23\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E37\u0E19\u0E41\u0E25\u0E49\u0E27": "returned", "\u0E0A\u0E48\u0E27\u0E22\u0E2B\u0E32\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1E\u0E1A": "searching", "\u0E40\u0E08\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E32\u0E23\u0E31\u0E1A\u0E04\u0E37\u0E19": "unclaimed", "\u0E23\u0E2D\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23": "waiting" };
-var STATS_SCOPES = { all: ["incidents", "lostfound", "lostfoundYear", "gate", "studentMoto", "ruenthai"], core: ["incidents", "lostfound", "lostfoundYear", "gate"], inc: ["incidents"], rest: ["lostfound", "lostfoundYear", "gate"], private: ["studentMoto", "ruenthai"] };
+var STATS_SCOPES = { all: ["incidents", "lostfound", "lostfoundYear", "gate", "studentMoto", "ruenthai", "anywheel"], core: ["incidents", "lostfound", "lostfoundYear", "gate"], inc: ["incidents"], rest: ["lostfound", "lostfoundYear", "gate"], private: ["studentMoto", "ruenthai"], aw: ["anywheel"] };
 var LKG_MAX = 7 * 864e5;
 var lkgCfg = async (env, k, deps) => STATS_SCHEMA + "-" + cacheEpoch + "|" + (await srcKey(env, PART_SRC[k], deps)).mk;
 async function lkgGet(env, k, cfg, now, deps) {
@@ -1019,7 +1186,7 @@ async function lkgPut(env, k, cfg, at, frag, deps) {
 }
 var STATS_TTL = 12e4;
 var STATS_SCHEMA = "s12";
-var PART_SRC = { incidents: "incidents", lostfound: "lostfound", lostfoundYear: "lfYear", gate: "gate", studentMoto: "studentMoto", ruenthai: "ruenthai" };
+var PART_SRC = { incidents: "incidents", lostfound: "lostfound", lostfoundYear: "lfYear", gate: "gate", studentMoto: "studentMoto", ruenthai: "ruenthai", anywheel: "anywheel" };
 var cacheEpoch = 0;
 var hashStr = (t) => {
   let h = 5381;
@@ -1030,6 +1197,11 @@ async function liveStats(env, deps, scope) {
   const sc = scope || "all", names = Array.isArray(sc) ? sc.filter((k) => STATS_SCOPES.all.includes(k)) : Object.prototype.hasOwnProperty.call(STATS_SCOPES, sc) ? STATS_SCOPES[sc] : null;
   if (!names) throw new Err(400, "bad-scope");
   const now = deps.now(), stamp = bkk(now), res = { ok: true, checkedAt: stamp, scope: Array.isArray(sc) ? "parts" : sc, errors: {}, sourceReadAt: {} }, P = {};
+  P.anywheel = async (out) => {
+    const t = await table(env, "anywheel", deps), a = awAggregate(t);
+    out.anywheel = { status: "connected", source: "Sheet \u201C\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 Anywheel new\u201D \u2192 \u0E41\u0E17\u0E47\u0E1A \u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E23\u0E32\u0E22\u0E27\u0E31\u0E19 (\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C \u0E40\u0E14\u0E37\u0E2D\u0E19 \xB7 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E23\u0E31\u0E49\u0E07 \xB7 \u0E23\u0E30\u0E22\u0E30\u0E17\u0E32\u0E07 (\u0E01\u0E21.) \xB7 \u0E40\u0E27\u0E25\u0E32\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19(\u0E19\u0E32\u0E17\u0E35))", readAt: bkk(t.at), updated: a.lastDate || a.lastMonth, lastDate: a.lastDate, firstMonth: a.firstMonth, lastMonth: a.lastMonth, rowsTotal: a.quality.rowsTotal, quality: a.quality, monthly: a.monthly, notes: awNotes(a) };
+    return t.at;
+  };
   P.incidents = async (out) => {
     const at = (await table(env, "incidents", deps)).at, rd = bkk(at), rows = await BUILD.incidents(env, deps), by = {}, mon = {}, daily = {};
     let inj = 0, last = "", lastRec = "";
@@ -1390,7 +1562,7 @@ async function chat(request, env, deps, s) {
     actions: [{ route: "traffic", label: "\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C" }, { route: "gate", label: "\u0E23\u0E16\u0E40\u0E02\u0E49\u0E32\u0E41\u0E25\u0E30\u0E2B\u0E21\u0E27\u0E01\u0E19\u0E34\u0E23\u0E20\u0E31\u0E22" }, { route: "lostfound", label: "Lost & Found" }],
     summary: true
   });
-  const topics = act === "summary" ? ["incidents", "lostfound", "gate"] : topicsForChat(q, recentUser), parts = partsFor(topics);
+  const topics = act === "summary" ? ["incidents", "lostfound", "gate", "anywheel"] : topicsForChat(q, recentUser), parts = partsFor(topics);
   const [stats, extra] = await Promise.all(["data/stats.json", "data/extra.json"].map(async (p) => {
     const r = await asset(env, p, deps, new URL(request.url).origin);
     if (!r.ok) throw new Err(503, "stats-unavailable");
@@ -1871,6 +2043,7 @@ export {
   DIAG_MAX,
   DIAG_PER_REQ,
   Err,
+  GVIZ_SRC,
   IMG_ROWS_PER_STMT,
   IMG_STMTS_PER_BATCH,
   IMG_W,
@@ -1888,6 +2061,8 @@ export {
   _coldIsolate,
   _reset,
   _stat,
+  awAggregate,
+  awNotes,
   clientIp,
   src_default as default,
   handle,

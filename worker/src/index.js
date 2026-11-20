@@ -7,7 +7,7 @@ const REPO = 'https://raw.githubusercontent.com/trafficoppe/trafficsystem/';
 const COOKIE = '__Host-hub_s';
 const BKK = 7 * 3600e3;
 export class Err extends Error { constructor(status, code, extra) { super(code); this.status = status; this.code = code; this.extra = extra; } }
-export const WORKER_REV = 'r14.2';      // รอบ 14.1: รุ่นของบริการ (หัว x-hub-rev) — ใช้ยืนยันว่า API ตอบจากรุ่นที่ Deploy ล่าสุด
+export const WORKER_REV = 'r14.3';      // รอบ 14.1: รุ่นของบริการ (หัว x-hub-rev) — ใช้ยืนยันว่า API ตอบจากรุ่นที่ Deploy ล่าสุด
 const SEC = { 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'referrer-policy': 'strict-origin-when-cross-origin', 'x-hub-rev': WORKER_REV };
 // รอบ 14.1: บันทึกข้อผิดพลาดแบบมีโครงสร้าง (ดูได้จาก real-time logs ของ Pages) — ตัด URL/รหัสยาว/ตัวเลขยาว/อีเมลออกก่อนบันทึก · ไม่บันทึก cookie/token/ข้อมูลดิบ/ข้อมูลบุคคล
 const redact = (t) => String(t == null ? '' : t).replace(/https?:\/\/[^\s'")]+/g, '<url>').replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '<email>').replace(/[A-Za-z0-9_-]{24,}/g, '<id>').replace(/\d{6,}/g, '<n>');
@@ -80,7 +80,8 @@ export const SOURCES = (env) => ({
   areaPhotos: [env.SHEET_OPS, '1509680619'], radio: [env.SHEET_OPS, '1354124607'], events: [env.SHEET_EVENTS, '0'], gps: [env.SHEET_GPS, '1074767452'],
   // รอบ 10: Sheet ส่วนตัว (ไม่ได้แชร์ลิงก์) → อ่านผ่าน Apps Script ของเจ้าของไฟล์ (apps-script/HubRelay.gs) เท่านั้น · ตรวจชื่อแท็บ/gid แล้ว 16 พ.ย. 2569
   studentMoto: [env.SHEET_VEH_STUDENT, '1304328494'],   // MU ฐานข้อมูลลงทะเบียนยานพาหนะ นักศึกษา → Registrations_Motorcycle (gid 1053059692 = Registrations ไม่ใช่รถจักรยานยนต์)
-  ruenthai: [env.SHEET_RUENTHAI, '873571277']            // ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย → RuenThai_Survey (ไม่อ่านแท็บ Tokens)
+  ruenthai: [env.SHEET_RUENTHAI, '873571277'],            // ฐานข้อมูลแบบสำรวจลานจอดรถเรือนไทย → RuenThai_Survey (ไม่อ่านแท็บ Tokens)
+  anywheel: [env.SHEET_ANYWHEEL, '0']                      // รอบ 14.3: “ข้อมูล Anywheel new” → แท็บ ข้อมูลรายวัน (รหัสไฟล์อยู่ใน env ของ Pages ไม่อยู่ใน Repository)
 });
 // ---------- 2.1) ตัวกลางอ่าน Sheet/ภาพส่วนตัว (HubRelay): Apps Script ที่บัญชีผู้มีสิทธิ์ Deploy เอง (Execute as me) ----------
 // แยกจากบริการเดิม HubData (env HUB_GS_URL + HUB_SHARED_SECRET) อย่างเด็ดขาด:
@@ -88,6 +89,77 @@ export const SOURCES = (env) => ({
 //   - HubData (ถ้าผู้ดูแลตั้ง) ใช้เฉพาะแหล่งเดิมที่ไม่ใช่ PRIVATE_SRC — ตั้งค่าหนึ่งไม่ทำให้อีกบริการหรือ Login เปลี่ยนเส้นทาง
 // ค่าลับไม่อยู่ใน Repository/หน้าเว็บ/log
 export const PRIVATE_SRC = new Set(['studentMoto', 'ruenthai']);
+// ---------- รอบ 14.3: Anywheel — อ่านสดจาก Sheet “ข้อมูล Anywheel new” แท็บ ข้อมูลรายวัน (gid 0) ผ่าน GViz ----------
+// ใช้ GViz (ไม่ใช่ CSV export) เพราะต้องการ “ค่าดิบ” (v) — ระยะทาง กม. ในชีทแสดงแบบปัดเป็นจำนวนเต็ม แต่ค่าจริงมีทศนิยม · ขอเฉพาะคอลัมน์ A–F และ GViz คืนเฉพาะแถวที่มีข้อมูล (ไม่ลากกริดว่าง)
+export const GVIZ_SRC = new Set(['anywheel']);
+const AW_COLS = { date: 'วันที่', month: 'เดือน', trips: 'จำนวนครั้ง', meters: 'ระยะทาง(เมตร)', km: 'ระยะทาง(กม.)', minutes: 'เวลาการใช้งาน(นาที)' };
+async function readGviz(env, key, deps, src) {
+  const url = 'https://docs.google.com/spreadsheets/d/' + src[0] + '/gviz/tq?tqx=out:json&headers=1&gid=' + src[1] + '&tq=' + encodeURIComponent('select A,B,C,D,E,F');
+  let r; try { r = await deps.fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(SRC_TIMEOUT) }); } catch (e) { const x = new Err(502, e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'source-timeout' : 'source-unreachable'); x.causeType = e && e.name; x.stage = 'source-fetch'; throw x; }
+  if (r.status === 401 || r.status === 403) throw new Err(502, 'source-private');
+  if (!r.ok) throw new Err(502, 'source-error');
+  let body; try { body = await r.text(); } catch (e) { const x = new Err(502, e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'source-timeout' : 'source-unreachable'); x.causeType = e && e.name; x.stage = 'source-body'; throw x; }
+  const i = body.indexOf('{'), k = body.lastIndexOf('}'); if (i < 0 || k < i) throw new Err(502, /<html/i.test(body) ? 'source-private' : 'source-schema');      // ไม่ได้ JSON (เช่นหน้า Login) = ไม่ได้เปิดสิทธิ์อ่าน
+  let j; try { j = JSON.parse(body.slice(i, k + 1)); } catch (e) { throw new Err(502, 'source-schema'); }
+  if (j.status !== 'ok') throw new Err(502, (j.errors || []).some((x) => /access|denied|permission|sign/i.test((x.reason || '') + ' ' + (x.message || ''))) ? 'source-private' : 'source-schema');
+  const tb = j.table || {}; if (!Array.isArray(tb.cols) || !Array.isArray(tb.rows)) throw new Err(502, 'source-schema');
+  return { head: tb.cols.map((c) => str(c.label).replace(/\s+/g, '')), rows: tb.rows.map((x) => (x.c || []).map((c) => (c == null || c.v === undefined ? null : c.v))) };
+}
+// วันที่ serial ของ Sheets → [ปี, เดือน, วัน] (ฐาน 30 ธ.ค. 1899)
+const serialYMD = (n) => { const d = new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 864e5); return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()]; };
+// ค่าวันที่จาก GViz: "Date(y,m,d)" (m เริ่ม 0) · เลข serial · ข้อความ yyyy-mm(-dd) หรือ d/m/yyyy → [y, m, d|null, 'dmy'?]
+function cellYMD(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number' && isFinite(v) && v > 20000 && v < 80000) return serialYMD(v);
+  const s = String(v).trim(); let m;
+  if ((m = /^Date\((\d{4}),(\d{1,2}),(\d{1,2})/.exec(s))) return [+m[1], +m[2] + 1, +m[3]];
+  if ((m = /^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/.exec(s))) return [+m[1], +m[2], m[3] ? +m[3] : null];
+  if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s))) return [+m[3], +m[2], +m[1], 'dmy'];      // ตามที่ชีทแสดง (d/m/yyyy) — ยังต้องตรวจเทียบกับคอลัมน์เดือนก่อนใช้
+  return null;
+}
+// ตัวเลข: number ตรง ๆ หรือข้อความที่มีแต่ตัวเลข/จุลภาค/ช่องว่าง · ว่าง = null · อื่น ๆ = NaN (นับเป็นค่าผิดรูปแบบ ไม่แปลงเป็น 0)
+const cellNum = (v) => { if (v == null || v === '') return null; if (typeof v === 'number') return isFinite(v) ? v : NaN; const s = String(v).replace(/[\s,]/g, ''); return /^-?\d+(\.\d+)?$/.test(s) ? +s : s === '' ? null : NaN; };
+const p2 = (n) => String(n).padStart(2, '0');
+// รวมยอดรายเดือนจากแถวรายวัน — จัดกลุ่มด้วยคอลัมน์ “เดือน” (ไม่เดาเดือนจากวันที่) · รวมทศนิยมก่อนปัด · ไม่ตัดซ้ำ/ไม่ทิ้งแถวเงียบ ๆ
+// ข้อสังเกตจากผลอ่านจริง (ไม่ฝังเดือน/วันที่ในโค้ด)
+const TH_MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const thM = (mk) => TH_MON[+mk.slice(5, 7) - 1] + ' ' + (+mk.slice(0, 4) + 543);
+export function awNotes(a) {
+  const q = a.quality, part = a.monthly.filter((r) => r.days < r.daysInMonth), noMin = a.monthly.filter((r) => r.minutes == null);
+  const n = ['ต้นทางเป็นข้อมูลรายวัน (1 แถว = 1 วัน) ตั้งแต่ ' + thM(a.firstMonth) + ' — ข้อมูลการใช้งานล่าสุดคือ ' + (a.lastDate ? (+a.lastDate.slice(8)) + ' ' + thM(a.lastDate) : thM(a.lastMonth)) + ' · เดือนที่ไม่มีแถว = ยังไม่มีข้อมูล (ไม่ใช่ 0)',
+    'ยอดรายเดือนจัดกลุ่มตามคอลัมน์ “เดือน” · ระยะทางใช้คอลัมน์ ระยะทาง (กม.) (ถ้าว่างใช้ เมตร ÷ 1,000) · รวมทศนิยมก่อนปัด',
+    'เฉลี่ยต่อวันที่มีข้อมูล = จำนวนครั้ง ÷ จำนวนวันที่มีแถวข้อมูล' + (part.length ? ' · เดือนที่มีข้อมูลไม่ครบทุกวัน: ' + part.map((r) => thM(r.month) + ' (' + r.days + '/' + r.daysInMonth + ' วัน)').join(', ') : '')];
+  if (noMin.length) n.push('เวลาการใช้งาน: ต้นทางเว้นว่างหรือไม่ครบใน ' + noMin.length + ' เดือน (เช่น ' + noMin.slice(-3).map((r) => thM(r.month)).join(', ') + ') จึงแสดงว่าไม่มีข้อมูล/ไม่ครบ');
+  const bad = [q.unassigned && 'แถวที่อ่านเดือนไม่ได้ ' + q.unassigned, q.badTrips && 'จำนวนครั้งผิดรูปแบบ ' + q.badTrips, q.missingTrips && 'จำนวนครั้งว่าง ' + q.missingTrips, q.badKm && 'ระยะทางผิดรูปแบบ ' + q.badKm, q.kmConflicts && 'เมตร/กม. ไม่ตรงกัน ' + q.kmConflicts, q.duplicateDates && 'วันที่ซ้ำ ' + q.duplicateDates, q.dateAmbiguous && 'วันที่ยืนยันไม่ได้ ' + q.dateAmbiguous].filter(Boolean);
+  n.push(bad.length ? 'ตรวจคุณภาพ: ' + bad.join(' · ') + ' แถว (ไม่นับรวมในยอด/รายงานไว้ ไม่ตัดทิ้งเงียบ ๆ)' : 'ตรวจคุณภาพ: ' + q.rowsTotal + ' แถว ไม่มีค่าผิดรูปแบบ วันที่ซ้ำ หรือแถวที่จัดเดือนไม่ได้');
+  return n;
+}
+export function awAggregate(t) {
+  const ix = {}; for (const k in AW_COLS) ix[k] = t.head.indexOf(AW_COLS[k].replace(/\s+/g, ''));
+  if (ix.month < 0 || ix.trips < 0 || (ix.km < 0 && ix.meters < 0)) throw new Err(502, 'source-schema', { missing: ['เดือน', 'จำนวนครั้ง', 'ระยะทาง (กม.)'].filter((n, i) => [ix.month, ix.trips, Math.max(ix.km, ix.meters)][i] < 0) });
+  const M = {}, q = { rowsTotal: 0, unassigned: 0, badTrips: 0, missingTrips: 0, badKm: 0, kmFromMeters: 0, kmConflicts: 0, dateAmbiguous: 0, duplicateDates: 0 }, seen = {}; let lastDate = '';
+  t.rows.forEach((r) => {
+    const g = (k) => (ix[k] >= 0 ? r[ix[k]] : null); if ([g('date'), g('month'), g('trips'), g('km'), g('meters'), g('minutes')].every((v) => v == null || v === '')) return;
+    q.rowsTotal++; const b = cellYMD(g('month'));
+    if (!b || !(b[1] >= 1 && b[1] <= 12)) { q.unassigned++; return; }                     // เดือนอ่านไม่ได้ → ไม่จัดเข้าเดือนใด (รายงานจำนวน)
+    const mk = b[0] + '-' + p2(b[1]), o = M[mk] || (M[mk] = { month: mk, rows: 0, days: 0, trips: 0, km: 0, kmRows: 0, minutes: 0, minuteRows: 0, dateAmbiguous: 0, _d: new Set() }); o.rows++;
+    const tr = cellNum(g('trips')); if (tr == null) q.missingTrips++; else if (!(tr >= 0) || Math.round(tr) !== tr) q.badTrips++; else o.trips += tr;
+    const e = cellNum(g('km')), dm = cellNum(g('meters'));
+    if (e != null && e >= 0) { o.km += e; o.kmRows++; if (dm != null && dm >= 0 && Math.abs(dm / 1000 - e) > 0.5) q.kmConflicts++; }
+    else if (e == null && dm != null && dm >= 0) { o.km += dm / 1000; o.kmRows++; q.kmFromMeters++; }      // กม. ว่าง แต่มีเมตรที่ถูกต้อง → เมตร/1000
+    else if (e != null || dm != null) q.badKm++;
+    const mi = cellNum(g('minutes')); if (mi != null && mi >= 0) { o.minutes += mi; o.minuteRows++; }
+    // วันที่: ใช้เมื่อพิสูจน์ได้จากคอลัมน์เดือน (เดือนตรง หรือวัน/เดือนสลับแล้วตรง) — ไม่ตรงทั้งสองแบบ = คลุมเครือ (ยังนับยอดรายเดือน)
+    const a = cellYMD(g('date')); let day = null;
+    if (a && a[0] === b[0]) { if (a[1] === b[1] && a[2]) day = a[2]; else if (a[2] === b[1] && a[1] >= 1 && a[1] <= 31) day = a[1]; }
+    if (day && day <= new Date(Date.UTC(b[0], b[1], 0)).getUTCDate()) { const dk = mk + '-' + p2(day); if (o._d.has(dk)) q.duplicateDates++; o._d.add(dk); if (dk > lastDate) lastDate = dk; seen[dk] = 1; }
+    else { o.dateAmbiguous++; q.dateAmbiguous++; }
+  });
+  const monthly = Object.keys(M).sort().map((k) => { const o = M[k]; return { month: k, rows: o.rows, days: o._d.size + o.dateAmbiguous, verifiedDays: o._d.size, daysInMonth: new Date(Date.UTC(+k.slice(0, 4), +k.slice(5, 7), 0)).getUTCDate(), dateAmbiguous: o.dateAmbiguous,
+    trips: o.trips, km: Math.round(o.km * 1000) / 1000, kmRows: o.kmRows, minutes: o.minuteRows && o.minuteRows === o.rows ? Math.round(o.minutes * 100) / 100 : null, minutesPartial: o.minuteRows && o.minuteRows < o.rows ? { minutes: Math.round(o.minutes * 100) / 100, rows: o.minuteRows } : undefined }; });
+  if (!monthly.length) throw new Err(502, 'source-schema');
+  return { monthly, lastDate, firstMonth: monthly[0].month, lastMonth: monthly[monthly.length - 1].month, quality: q };
+}
 export const RELAY_VERSION = 'r13', RELAY_OK = ['r13'];      // r13 = ข้อผิดพลาดชั่วคราวตอนตรวจโฟลเดอร์ไม่ถูกจำเป็น “นอกโฟลเดอร์” (รับเฉพาะรุ่นที่ระบุ ต้องตรงกับ apps-script/HubRelay.gs)
 // ขอเฉพาะคอลัมน์ที่ใช้ (สคริปต์ตรวจรายการอนุญาตซ้ำอีกชั้น) · present = ส่งแค่ “มี/ไม่มีค่า” ไม่ส่งเนื้อข้อมูล (เช่น ทะเบียนรถ)
 export const RELAY_COLS = {
@@ -137,7 +209,7 @@ const SRC_TIMEOUT = 25e3;
 //   เปลี่ยนค่าตั้งบนเครื่องเดิม → คีย์ใหม่ อ่านใหม่ทันที · งานอ่านของค่าตั้งเดิมที่จบทีหลังเขียนได้แค่คีย์เดิม (ไม่ทับของใหม่) · คีย์เก่าของแหล่งเดียวกันถูกลบตอนค้นครั้งถัดไป
 async function srcKey(env, key, deps) {
   const src = SOURCES(env)[key] || [], cfg = PRIVATE_SRC.has(key) ? await relayCfg(env, deps) : null;
-  const via = PRIVATE_SRC.has(key) ? 'relay:' + (cfg ? cfg.rev : 'none') : env.HUB_GS_URL && env.HUB_SHARED_SECRET ? 'hubdata:' + env.HUB_GS_URL : 'csv';
+  const via = PRIVATE_SRC.has(key) ? 'relay:' + (cfg ? cfg.rev : 'none') : GVIZ_SRC.has(key) ? 'gviz:a-f' : env.HUB_GS_URL && env.HUB_SHARED_SECRET ? 'hubdata:' + env.HUB_GS_URL : 'csv';
   return { mk: key + '|' + hashStr(JSON.stringify(src) + '|' + via), cfg };
 }
 async function memoOf(env, key, deps) { return memo.get((await srcKey(env, key, deps)).mk); }
@@ -157,6 +229,8 @@ async function readTable(env, key, deps, mk, cfg) {
   if (PRIVATE_SRC.has(key)) {                              // Sheet ส่วนตัว → HubRelay เท่านั้น
     const j = await relayCall(env, deps, { action: 'table', source: key, ...RELAY_COLS[key] }, cfg || undefined);
     if (!Array.isArray(j.rows)) throw new Err(502, 'source-error'); rows = j.rows.map((x) => x.map(str));
+  } else if (GVIZ_SRC.has(key)) {                         // รอบ 14.3: ค่าดิบ (ตัวเลข/วันที่) ไม่แปลงเป็นข้อความ
+    const g = await readGviz(env, key, deps, src); const t = { head: g.head, rows: g.rows, at: deps.now(), raw: true }; memo.set(mk, t); return t;
   } else if (env.HUB_GS_URL && env.HUB_SHARED_SECRET) {     // บริการเดิม HubData (ถ้าผู้ดูแลตั้งไว้) สำหรับแหล่งเดิมเท่านั้น
     rows = (await hubDataCall(env, deps, key)).rows.map((x) => x.map(str));
   } else {
@@ -300,20 +374,25 @@ const mapSt = { 'รับของคืนแล้ว': 'returned', 'ช่�
 // รอบ 12: อ่านแต่ละชุดพร้อมกัน (ชุดช้าไม่หน่วงชุดอื่น) · เลือกชุดได้ด้วย scope (allowlist) · ผลรวมของแต่ละชุด (ไม่มีข้อมูลบุคคล) แคชข้ามเครื่องรับคำขอได้ไม่เกิน 2 นาที
 //   checkedAt = เวลาที่ตอบคำขอนี้ · sourceReadAt[ชุด] = เวลาที่อ่านต้นทางของชุดนั้นจริง (ไม่ใช้เวลาตอบแคชแทนเวลาอ่านต้นทาง)
 // รอบ 14: inc = เหตุการณ์อย่างเดียว (หน้า traffic ไม่ต้องรอแหล่งอื่น) · rest = L&F + รถเข้า · core/all คงไว้เพื่อความเข้ากันได้
-export const STATS_SCOPES = { all: ['incidents', 'lostfound', 'lostfoundYear', 'gate', 'studentMoto', 'ruenthai'], core: ['incidents', 'lostfound', 'lostfoundYear', 'gate'], inc: ['incidents'], rest: ['lostfound', 'lostfoundYear', 'gate'], private: ['studentMoto', 'ruenthai'] };
+export const STATS_SCOPES = { all: ['incidents', 'lostfound', 'lostfoundYear', 'gate', 'studentMoto', 'ruenthai', 'anywheel'], core: ['incidents', 'lostfound', 'lostfoundYear', 'gate'], inc: ['incidents'], rest: ['lostfound', 'lostfoundYear', 'gate'], private: ['studentMoto', 'ruenthai'], aw: ['anywheel'] };      // รอบ 14.3: aw = Anywheel (คำขอแยก ไม่ให้ชุดหลักรอ)
 // รอบ 14: ผลรวมที่อ่านสำเร็จล่าสุดรายแหล่ง (last-known-good) เก็บใน D1 เดิม ตาราง stats_lkg (แยกจากข้อมูลธุรกิจ · เฉพาะผลรวม ไม่มีข้อมูลบุคคล)
 //   ใช้เมื่อรอบนี้อ่านต้นทางไม่สำเร็จเท่านั้น · อายุไม่เกิน 7 วัน · คีย์ผูกรุ่นค่าตั้งแหล่ง/ตัวกลาง (cfgKey) · ตอบเป็น stale[k] = { at, error } ไม่ใส่ใน sourceReadAt
 export const LKG_MAX = 7 * 86400e3;
 const lkgCfg = async (env, k, deps) => STATS_SCHEMA + '-' + cacheEpoch + '|' + (await srcKey(env, PART_SRC[k], deps)).mk;      // ผูกค่าตั้งของแหล่งนั้น (ไม่ขึ้นกับ scope ที่ขอ)
 async function lkgGet(env, k, cfg, now, deps) { try { const r = await env.DB.prepare('SELECT at, frag FROM stats_lkg WHERE k = ? AND cfg = ?').bind(k, cfg).first(); if (!r || typeof r.at !== 'number' || !(now - r.at >= 0 && now - r.at <= LKG_MAX)) return null; const f = JSON.parse(r.frag); return f && typeof f === 'object' && !Array.isArray(f) ? { at: r.at, frag: f } : null; } catch (e) { logErr('lkg-read-error', { part: k, stage: 'lkg-read' }, e, env, deps); return null; } }      // รอบ 14.1: รูปแบบผิด/หมดอายุ → ไม่มีผลสำรอง
 async function lkgPut(env, k, cfg, at, frag, deps) { try { await env.DB.prepare('INSERT INTO stats_lkg(k, cfg, at, frag) VALUES(?, ?, ?, ?) ON CONFLICT(k) DO UPDATE SET cfg = excluded.cfg, at = excluded.at, frag = excluded.frag WHERE excluded.at >= stats_lkg.at OR excluded.cfg <> stats_lkg.cfg').bind(k, cfg, at, JSON.stringify(frag)).run(); return true; } catch (e) { logErr('lkg-write-error', { part: k, stage: 'lkg-write' }, e, env, deps); return false; } }      // รอบ 14.1: เก็บไม่ได้ไม่กระทบคำตอบ แต่ต้องมีหลักฐานใน log
-const STATS_TTL = 120e3, STATS_SCHEMA = 's12', PART_SRC = { incidents: 'incidents', lostfound: 'lostfound', lostfoundYear: 'lfYear', gate: 'gate', studentMoto: 'studentMoto', ruenthai: 'ruenthai' };
+const STATS_TTL = 120e3, STATS_SCHEMA = 's12', PART_SRC = { incidents: 'incidents', lostfound: 'lostfound', lostfoundYear: 'lfYear', gate: 'gate', studentMoto: 'studentMoto', ruenthai: 'ruenthai', anywheel: 'anywheel' };
 let cacheEpoch = 0;
 const hashStr = (t) => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) >>> 0; return h.toString(36); };
 async function liveStats(env, deps, scope) {
   const sc = scope || 'all', names = Array.isArray(sc) ? sc.filter((k) => STATS_SCOPES.all.includes(k)) : Object.prototype.hasOwnProperty.call(STATS_SCOPES, sc) ? STATS_SCOPES[sc] : null; if (!names) throw new Err(400, 'bad-scope');     // รอบ 14: รายการส่วน (ภายในบริการเท่านั้น — ผู้ช่วย AI)     // รอบ 13: เฉพาะค่าในรายการจริง (constructor/__proto__ → 400)
   // รอบ 13: แต่ละส่วนคืน “เวลาอ่านต้นทางจริง” ของตารางที่ใช้ (t.at) และใช้เวลานี้ในทุก field ของส่วนนั้น — ไม่ใช้เวลาตอบคำขอ (stamp) แทน
   const now = deps.now(), stamp = bkk(now), res = { ok: true, checkedAt: stamp, scope: Array.isArray(sc) ? 'parts' : sc, errors: {}, sourceReadAt: {} }, P = {};
+  P.anywheel = async (out) => {      // รอบ 14.3: ยอดรายเดือนจากแถวรายวัน (ไม่ส่งแถวรายวันออกไป)
+    const t = await table(env, 'anywheel', deps), a = awAggregate(t);
+    out.anywheel = { status: 'connected', source: 'Sheet “ข้อมูล Anywheel new” → แท็บ ข้อมูลรายวัน (คอลัมน์ เดือน · จำนวนครั้ง · ระยะทาง (กม.) · เวลาการใช้งาน(นาที))', readAt: bkk(t.at), updated: a.lastDate || a.lastMonth, lastDate: a.lastDate, firstMonth: a.firstMonth, lastMonth: a.lastMonth, rowsTotal: a.quality.rowsTotal, quality: a.quality, monthly: a.monthly, notes: awNotes(a) };
+    return t.at;
+  };
   P.incidents = async (out) => {
     const at = (await table(env, 'incidents', deps)).at, rd = bkk(at), rows = await BUILD.incidents(env, deps), by = {}, mon = {}, daily = {}; let inj = 0, last = '', lastRec = '';
     rows.forEach((r) => { const m = r.date.slice(0, 7), n = r.injured || 0; (by[r.type] = by[r.type] || { type: r.type, count: 0, injuredOrIll: 0 }).count++; by[r.type].injuredOrIll += n; inj += n;
@@ -487,7 +566,7 @@ async function chat(request, env, deps, s) {
   const ck = act === 'chat' ? cannedKind(q) : '';
   if (ck) return json({ status: 'success', mode: 'canned', reply: cannedReply(ck), verified: true, sources: [], asOf: '', live: false, liveTopics: [], snapshot: [], evidence: [], reads: [], ms: Date.now() - t0,
     actions: [{ route: 'traffic', label: 'รายงานเหตุการณ์' }, { route: 'gate', label: 'รถเข้าและหมวกนิรภัย' }, { route: 'lostfound', label: 'Lost & Found' }], summary: true });
-  const topics = act === 'summary' ? ['incidents', 'lostfound', 'gate'] : topicsForChat(q, recentUser), parts = partsFor(topics);
+  const topics = act === 'summary' ? ['incidents', 'lostfound', 'gate', 'anywheel'] : topicsForChat(q, recentUser), parts = partsFor(topics);
   const [stats, extra] = await Promise.all(['data/stats.json', 'data/extra.json'].map(async (p) => { const r = await asset(env, p, deps, new URL(request.url).origin); if (!r.ok) throw new Err(503, 'stats-unavailable'); return r.json(); }));
   let live = null; if (parts.length) { try { live = await liveStats(env, deps, parts); } catch (e) { live = null; } }          // อ่านเฉพาะส่วนของหัวข้อนี้ (ไม่อ่านครบ 6 แหล่งทุกคำถาม)
   const liveInfo = applyLive(stats, extra, live), tRead = Date.now() - t0;      // ชุดเดียวกับหน้าเว็บ (รวมผลอ่านสำเร็จล่าสุด) · เวลาอ่านของแต่ละหัวข้อ = เวลาอ่านต้นทางจริง

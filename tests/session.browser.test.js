@@ -425,7 +425,7 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
     await pg.evaluate(() => { document.querySelector('#banner details').open = true; Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.reject(new Error('denied')) } }); });
     await pg.click('#banner .banner-rep button'); await pg.waitForTimeout(300);
     const rep = await pg.evaluate(() => { const ta = document.querySelector('#banner .banner-rep textarea'); return { ta: ta ? ta.value : '', sel: ta ? ta.selectionEnd - ta.selectionStart : 0, msg: (document.querySelector('#banner .banner-rep-msg') || {}).textContent || '' }; });
-    ok('[รอบ 14.2] “คัดลอกรายงานปัญหา” (clipboard ใช้ไม่ได้) → แสดงข้อความให้เลือกเอง · มีเวลาพร้อมเขตเวลา/หน้า/รุ่นหน้าเว็บ+บริการ/แหล่ง/HTTP/code/stage/ref/สถานะที่แสดง · ไม่มีชื่อผู้ใช้', /เวลาไทย UTC\+7/.test(rep.ta) && /หน้า: #dashboard/.test(rep.ta) && /รุ่นบริการ: r14\.2/.test(rep.ta) && /- รายงานเหตุการณ์: แสดง .* · HTTP 200 · code source-timeout · stage source · ref dev\w+/.test(rep.ta) && rep.sel === rep.ta.length && rep.sel > 0 && !/ผู้ใช้สมมติ|0123/.test(rep.ta) && /เลือกไว้แล้ว/.test(rep.msg), rep.ta);
+    ok('[รอบ 14.2] “คัดลอกรายงานปัญหา” (clipboard ใช้ไม่ได้) → แสดงข้อความให้เลือกเอง · มีเวลาพร้อมเขตเวลา/หน้า/รุ่นหน้าเว็บ+บริการ/แหล่ง/HTTP/code/stage/ref/สถานะที่แสดง · ไม่มีชื่อผู้ใช้', /เวลาไทย UTC\+7/.test(rep.ta) && /หน้า: #dashboard/.test(rep.ta) && /รุ่นบริการ: r14\.3/.test(rep.ta) && /- รายงานเหตุการณ์: แสดง .* · HTTP 200 · code source-timeout · stage source · ref dev\w+/.test(rep.ta) && rep.sel === rep.ta.length && rep.sel > 0 && !/ผู้ใช้สมมติ|0123/.test(rep.ta) && /เลือกไว้แล้ว/.test(rep.msg), rep.ta);
     // เน็ตหลุด → “เชื่อมต่อบริการไม่สำเร็จ” + ไม่มีรหัสอ้างอิง (ไม่สร้างรหัสเอง) · กลับมา → คำเตือนหาย
     await M.ctx.setOffline(true); await pg.evaluate(() => { window.__hub.live(); }); await pg.waitForTimeout(1200); const d4 = await det();
     await M.ctx.setOffline(false); await refresh(); const d5 = await det();
@@ -498,15 +498,39 @@ const shot = async (p, name, full) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recur
     await page.unroute('**/api/stats?scope=private'); await login(page, '0123'); await page.waitForSelector('#userBox'); await page.waitForTimeout(1500);
     // (2) คำตอบของรุ่น Login ก่อนหน้าที่มาช้า ไม่ลดตัวนับงานของรุ่นใหม่ (ไม่ยิงคำขอซ้ำซ้อนระหว่างรุ่นใหม่ยังรอ) และไม่ทำให้ข้อมูลเดิมกลับมา
     await page.route('**/api/stats?*', async (r) => { await new Promise((ok2) => setTimeout(ok2, 3000)); r.continue().catch(() => {}); });
-    const n0 = statsN(), t0 = Date.now(); await page.evaluate(() => window.__hub.live());                              // รุ่น 1: 2 คำขอ (ช้า 3 วินาที)
+    const n0 = statsN(), t0 = Date.now(); await page.evaluate(() => window.__hub.live());                              // รุ่น 1: 4 คำขอ (รอบ 14.3 เพิ่ม scope=aw · ช้า 3 วินาที)
     await page.request.get(BASE + '/__test/expire'); await go(page, 'staff'); await page.waitForSelector('#loginView');     // session หมดอายุ → กลับหน้า Login (รุ่น 2)
-    await login(page, '0123'); await page.waitForSelector('#userBox');                                                     // รุ่น 3: เริ่มอ่านสดใหม่ทันที (2 คำขอ)
+    await login(page, '0123'); await page.waitForSelector('#userBox');                                                     // รุ่น 3: เริ่มอ่านสดใหม่ทันที (4 คำขอ)
     const wait = 3000 + 250 - (Date.now() - t0); if (wait > 0) await page.waitForTimeout(wait);                           // คำตอบรุ่น 1 กลับมาแล้ว แต่รุ่น 3 ยังรอ
     const mid = statsN(); await page.evaluate(() => window.__hub.live()); await page.waitForTimeout(200); const after = statsN();
     await page.unroute('**/api/stats?*'); await page.waitForTimeout(3500);
-    ok('[รอบ 13·race] คำตอบรุ่น Login ก่อนมาช้า → ไม่ลดตัวนับงานของรุ่นใหม่ (เรียกซ้ำระหว่างรุ่นใหม่ยังรอ = ไม่ยิงคำขอเพิ่ม) · รุ่นใหม่เริ่มอ่านได้ทันที', mid - n0 === 6 && after === mid, 'issued ' + (mid - n0) + ' then +' + (after - mid));
+    ok('[รอบ 13·race] คำตอบรุ่น Login ก่อนมาช้า → ไม่ลดตัวนับงานของรุ่นใหม่ (เรียกซ้ำระหว่างรุ่นใหม่ยังรอ = ไม่ยิงคำขอเพิ่ม) · รุ่นใหม่เริ่มอ่านได้ทันที', mid - n0 === 8 && after === mid, 'issued ' + (mid - n0) + ' then +' + (after - mid));
     ok('[รอบ 13·race] หลัง Login ใหม่ หน้าแสดงข้อมูลของ session ปัจจุบัน (ไม่ค้างหน้า Login / ไม่มี error)', await T(page, '#loginView').count() === 0 && /อ่านจากต้นทาง/.test(await txt(page, '#stamp')), await txt(page, '#stamp'));
     page.off('request', onReq);
+  }
+  { // ===== รอบ 14.3 (local-mock): Anywheel อ่านจากชีท (GViz จำลอง) แยกคำขอ · เดือนที่ยังไม่มีข้อมูล · แถวใหม่ขึ้นเองหลังรอบอัปเดต · ล้มแล้วใช้ผลสำเร็จล่าสุดโดยไม่เตือนแหล่งอื่น =====
+    const M = await mk(); const pg = M.page; await pg.clock.setFixedTime(new Date('2026-11-20T03:00:00Z'));      // เวลาเบราว์เซอร์คงที่ (20 พ.ย. 2569 10:00 น.) — ไม่ขึ้นกับวันที่รันทดสอบ
+    let nAw = 0; pg.on('request', (r) => { if (/\/stats\?scope=aw/.test(r.url())) nAw++; });
+    await pg.goto(BASE + '/#dashboard'); await pg.waitForSelector('#loginView'); await login(pg, '0123'); await pg.waitForSelector('#userBox'); await pg.waitForTimeout(2500);
+    const card = () => pg.evaluate(() => { const c = [...document.querySelectorAll('.card.now')].find((x) => /Anywheel/.test(x.querySelector('h3').textContent)); return c ? { badge: (c.querySelector('.now-badge') || {}).textContent || '', main: (c.querySelector('.now-main b') || {}).textContent || (c.querySelector('.now-na') || {}).textContent || '', note: (c.querySelector('.now-note') || {}).textContent || '', stale: !!c.querySelector('.now-badge.stale') } : null; });
+    const c1 = await card();
+    ok('[รอบ 14.3] Dashboard: Anywheel อ่านสด (ยอดจากชีทจำลอง ต.ค. = 2,000 ไม่ใช่ยอดฝัง) · เลือก “วันนี้” (พ.ย.) แต่ยังไม่มีแถว พ.ย. → “ล่าสุด ต.ค. 69” + “ยังไม่มีข้อมูล…” ไม่แสดง ต.ค. เป็น พ.ย. · คำขอ scope=aw แยก 1 ครั้ง', c1 && c1.main === '2,000' && /ล่าสุด ต\.ค\. 69/.test(c1.badge) && c1.stale && /ยังไม่มีข้อมูล/.test(c1.note) && /ข้อมูลการใช้งานถึง 31 ต\.ค\. 2569/.test(c1.note) && nAw === 1, JSON.stringify({ c1, nAw }));
+    await go(pg, 'tram'); await pg.waitForTimeout(400);
+    const tram = () => pg.evaluate(() => { const h = [...document.querySelectorAll('#view h2, #view h3')].find((x) => /สรุปการใช้จักรยาน Anywheel/.test(x.textContent)); const sec = h && h.closest('section, .sec'); return sec ? sec.innerText.replace(/\s+/g, ' ') : ''; });
+    const t1 = await tram();
+    ok('[รอบ 14.3] หน้ารถรางและ Anywheel: แยก “อ่านจากต้นทางเมื่อ …” กับ “ข้อมูลการใช้งานถึง 31 ต.ค. 2569” · ป้าย “เฉลี่ยต่อวันที่มีข้อมูล” · ไม่มีข้อความเดิม “30 มิ.ย.”', /ข้อมูลสด · อ่านจากต้นทางเมื่อ/.test(t1) && /ข้อมูลการใช้งานถึง 31 ต\.ค\. 2569/.test(t1) && /เฉลี่ยต่อวันที่มีข้อมูล/.test(t1) && !/30 มิ\.ย\./.test(t1), t1.slice(0, 400));
+    // แถว พ.ย. ใหม่ในต้นทาง → หลังหมดอายุแคช (120 วิ) รอบอัปเดตถัดไปแสดงเอง ไม่ต้อง Deploy/โหลดหน้าใหม่
+    await go(pg, 'dashboard'); await pg.evaluate(() => { window.__noReload = 1; });
+    let adv = 0; const refresh = async () => { adv += 130; await page.request.get(BASE + '/__test/clock/130'); await pg.evaluate(() => window.__hub.live()); await pg.waitForTimeout(1800); };
+    await page.request.get(BASE + '/__test/aw/addnov'); await refresh(); const c2 = await card();
+    ok('[รอบ 14.3] เพิ่มแถว 15 พ.ย. ในชีทจำลอง → การ์ดเป็น “พ.ย. 69” 777 ครั้ง หลังรอบอัปเดต (ไม่โหลดหน้าใหม่)', c2 && c2.main === '777' && /พ\.ย\. 69/.test(c2.badge) && !c2.stale && await pg.evaluate(() => window.__noReload === 1), JSON.stringify(c2));
+    // ต้นทาง Anywheel ล้ม → ใช้ผลสำเร็จล่าสุด (777) พร้อมบอกเวลา · ไม่ขึ้นแถบเตือนของแหล่งอื่น · ตัวเลขไม่เป็น 0
+    await page.request.get(BASE + '/__test/aw/down'); await refresh(); const c3 = await card(), ban3 = await pg.evaluate(() => document.getElementById('banner').hidden);
+    await go(pg, 'tram'); await pg.waitForTimeout(400); const t3 = await tram();
+    ok('[รอบ 14.3] Anywheel อ่านล้มหลังเคยสำเร็จ → ยังแสดง 777 (ไม่เติม 0) · หน้า Anywheel บอก “ใช้ข้อมูลที่อ่านสำเร็จล่าสุดเมื่อ …” · แถบเตือนของเหตุการณ์/L&F/รถเข้า ไม่ขึ้น', c3 && c3.main === '777' && ban3 && /ใช้ข้อมูลที่อ่านสำเร็จล่าสุดเมื่อ/.test(t3), JSON.stringify({ c3, ban3, t3: t3.slice(0, 300) }));
+    await page.request.get(BASE + '/__test/aw/up'); await page.request.get(BASE + '/__test/aw/reset'); await refresh(); await go(pg, 'tram'); await pg.waitForTimeout(400); const t4 = await tram();
+    ok('[รอบ 14.3] ต้นทางกลับมา → กลับเป็น “ข้อมูลสด” เอง', /ข้อมูลสด · อ่านจากต้นทางเมื่อ/.test(t4), t4.slice(0, 200));
+    await shot(pg, '14_3_anywheel_tram_MOCK'); await M.ctx.close(); await page.request.get(BASE + '/__test/clock/-' + adv);
   }
   // ---------- 8) Logout / หมดอายุ ----------
   await page.click('#userBox .ub-out'); await page.waitForSelector('#loginView');
