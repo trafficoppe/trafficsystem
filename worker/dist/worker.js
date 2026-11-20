@@ -72,7 +72,7 @@ function applyLive(stats, extra, live) {
   });
   if (live.lostfoundStatus && X.lostfoundStatus) Object.assign(X.lostfoundStatus, live.lostfoundStatus);
   if (live.anywheel) {
-    X.anywheel = Object.assign({}, X.anywheel || {}, live.anywheel);
+    X.anywheel = Object.assign({}, X.anywheel || {}, live.anywheel, { snapshot: false });
     if (RD.anywheel) L.topics.anywheel = RD.anywheel;
   }
   const vr = M.vehicleRegistration;

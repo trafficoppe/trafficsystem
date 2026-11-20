@@ -56,7 +56,7 @@ export function applyLive(stats, extra, live) {
   ['incidents', 'lostfound', 'gate'].forEach((k) => { if (live[k] && M[k]) { Object.assign(M[k], live[k]); L.topics[k] = RD[PART[k]] || live[k].readAt || ''; } });
   ['incidentsDaily', 'lostfoundDaily'].forEach((k) => { if (live[k]) X[k] = Object.assign(X[k] || {}, live[k]); });
   if (live.lostfoundStatus && X.lostfoundStatus) Object.assign(X.lostfoundStatus, live.lostfoundStatus);
-  if (live.anywheel) { X.anywheel = Object.assign({}, X.anywheel || {}, live.anywheel); if (RD.anywheel) L.topics.anywheel = RD.anywheel; }      // รอบ 14.3: Anywheel จากต้นทาง (สด หรือผลอ่านสำเร็จล่าสุด) แทนไฟล์สรุป
+  if (live.anywheel) { X.anywheel = Object.assign({}, X.anywheel || {}, live.anywheel, { snapshot: false }); if (RD.anywheel) L.topics.anywheel = RD.anywheel; }      // รอบ 14.3: Anywheel จากต้นทาง (สด หรือผลอ่านสำเร็จล่าสุด) แทนไฟล์สรุป
   const vr = M.vehicleRegistration;
   if (vr) { if (live.studentMoto) { vr.rows['นักศึกษา – รถจักรยานยนต์'] = live.studentMoto.registrations; vr.studentMoto = live.studentMoto; L.topics.vehicle = live.studentMoto.checkedAt; } else if (e.studentMoto) vr.studentMotoErr = e.studentMoto; }
   if (live.ruenthai) { const r = live.ruenthai, rs = X.ruenthaiSurvey || (X.ruenthaiSurvey = {}); rs.total = r.surveys; rs.daily = r.daily; rs.from = r.range.from; rs.to = r.range.to; rs.updated = r.lastEntry; rs.checkedAt = r.checkedAt; rs.live = r; L.topics.ruenthai = r.checkedAt; }

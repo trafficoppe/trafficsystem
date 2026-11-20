@@ -1540,8 +1540,8 @@
         figure('ระยะทางรายเดือน', 'หน่วย: กิโลเมตร', tramChart('km', 'ระยะทาง', 'กม.', C.c4)), figure('แยกตามส่วนงาน — ' + mFull(t.byDept.month), 'หน่วย: งาน · ท้ายแท่ง = จำนวนรอบ', tramDeptChart())]));
       v.appendChild(section('ตารางรายเดือน', {}, [table(['เดือน', 'งาน', 'รอบ', 'ระยะทาง (กม.)', 'รถ (คัน-ครั้ง)', 'เวลา (ชม.)'], tr.map(function (r) { return [mFull(r.month), r.jobs, r.rounds, r.km, r.trams, num(r.minutes / 60, 1)]; }), { num: [1, 2, 3, 4, 5] })])); }
     if (aw) { var awm = aw.monthly.filter(function (r) { return inRange(r.month); }), as = function (k2) { return awm.reduce(function (a, r) { return a + (r[k2] || 0); }, 0); };
-      v.appendChild(section('สรุปการใช้จักรยาน Anywheel', { note: rangeText() + ' · ' + awDataTxt() }, [awStateNode()].concat(awm.length ? [kpiGrid([
-        { icon: 'chart', label: 'จำนวนครั้งการใช้งาน', value: num(as('trips')), unit: 'ครั้ง', scope: rangeText(), color: C.c1 }, { icon: 'map', label: 'ระยะทางรวม', value: num(Math.round(as('km'))), unit: 'กม.', color: C.c4 },
+      v.appendChild(section('สรุปการใช้จักรยาน Anywheel', { note: rangeText() }, [awStateNode()].concat(awm.length ? [kpiGrid([
+        { icon: 'chart', label: 'จำนวนครั้งการใช้งาน', value: num(as('trips')), unit: 'ครั้ง', scope: awScope(awm), color: C.c1 }, { icon: 'map', label: 'ระยะทางรวม', value: num(Math.round(as('km'))), unit: 'กม.', color: C.c4 },
         { icon: 'calendar', label: 'เฉลี่ยต่อวันที่มีข้อมูล', value: num(Math.round(as('trips') / as('days'))), unit: 'ครั้ง/วัน', color: C.c3 }]),
         el('div', { class: 'grid2', style: 'margin-top:14px' }, [figure('จำนวนครั้งการใช้งานรายเดือน', 'หน่วย: ครั้ง', bars(mCols(awm), [{ name: 'จำนวนครั้งการใช้งาน', color: C.c1, values: awm.map(function (r) { return r.trips; }) }], { unit: 'ครั้ง', int: true, h: 230 })),
           figure('ตารางรายเดือน', 'หน่วย: ครั้ง · กม. · ชม.', table(['เดือน', 'วันที่มีข้อมูล', 'จำนวนครั้ง', 'ระยะทาง (กม.)', 'เวลาใช้งาน (ชม.)'], awm.map(function (r) { return [mFull(r.month), awDaysTxt(r), num(r.trips), num(Math.round(r.km)), awMinTxt(r)]; }), { num: [1, 2, 3, 4] }))])]
@@ -2537,6 +2537,7 @@
   }
   function awStateNode() { var p = el('p', { class: 'src-state', role: 'status', text: awStateTxt() }); p.classList.add('live-ts'); p.__ts = awStateTxt; return p; }
   function awMinTxt(r) { return r.minutes != null ? num(Math.round(r.minutes / 60)) : r.minutesPartial ? 'ไม่ครบ (' + r.minutesPartial.rows + '/' + r.rows + ' วัน)' : 'ไม่มีข้อมูล'; }
+  function awScope(rows) { var end = state.to || MONTHS[MONTHS.length - 1] || ''; return rows.length && rows[rows.length - 1].month < end ? 'มีข้อมูล ' + mLabel(rows[0].month) + ' – ' + mLabel(rows[rows.length - 1].month) + ' (ยังไม่มี ' + mLabel(end) + ')' : rangeText(); }      /* รอบ 14.3: ช่วงที่เลือกเกินเดือนที่มีข้อมูล → บอกช่วงที่รวมจริง */
   function awDaysTxt(r) { return r.daysInMonth && r.days < r.daysInMonth ? r.days + ' / ' + r.daysInMonth : String(r.days); }
   document.addEventListener('visibilitychange', function () { if (!document.hidden && AUTH.user && (live.due || (live.last && Date.now() - live.last > 5 * 60000))) liveRefresh(); });
   /* รอบ 13 ต่อ: แผงแชทใช้ attribute hidden (ไม่มี class open) — เดิมตรวจ .chat-panel.open จึงไม่เคยเลื่อนการวาดขณะแชทเปิด
