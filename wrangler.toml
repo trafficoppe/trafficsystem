@@ -17,6 +17,7 @@ SHEET_EVENTS = "10Wsa6OY4N2Yzxc2SsSpuHU_LXT7Tl9E1I7_ohb0UCGE"
 SHEET_GPS = "1dKbEjoIBxq16fnA3CELf0CHpOjS2I9gDWoz2OfvqHwg"
 SHEET_VEH_STUDENT = "1v0LYqEkWIb3MaNKqp1T50tBlDmYn7UP8xl36cPlpllQ"   # ส่วนตัว — อ่านผ่านตัวกลาง apps-script/HubRelay.gs เท่านั้น
 SHEET_RUENTHAI = "1CcOw6B9ajfga0TptvO15XnwIfC9IrW1Oh2kR1doAHZA"      # ส่วนตัว — อ่านผ่านตัวกลาง apps-script/HubRelay.gs เท่านั้น
+SHEET_ANYWHEEL = "1glTfy2Ev1zmr4oqaRJAPKpBvHy-jHD0_-WOSFDd9HEA"      # รอบ 14.3: “ข้อมูล Anywheel new” แท็บ ข้อมูลรายวัน (gid 0) — อ่านผ่าน GViz (แชร์แบบผู้มีลิงก์)
 AI_MODEL = "@cf/aisingapore/gemma-sea-lion-v4-27b-it"
 SESSION_HOURS = "12"
 CHAT_RATE_PER_MIN = "6"
